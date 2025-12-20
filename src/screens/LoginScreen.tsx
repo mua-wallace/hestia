@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
-import { colors, typography, spacing } from '../theme';
-import Input from '../components/Input';
-import Button from '../components/Button';
+import { colors, typography } from '../theme';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+// Design is based on iPhone 16 Pro Max (440px width, 956px height)
+const DESIGN_WIDTH = 440;
+const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
 export default function LoginScreen() {
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [email, setEmail] = useState('Stellakitou@mandarinorientalsavoy.ch');
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState('**********************');
 
   const handleLogin = () => {
     // TODO: Implement login logic
@@ -20,169 +23,337 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        {/* Logo placeholder */}
-        <View style={styles.logoContainer}>
-          <View style={styles.logo} />
-        </View>
-        <View style={styles.brandContainer}>
-          <Text style={styles.brandName}>Hestia</Text>
-        </View>
-        
-        <TouchableOpacity style={styles.languageSelector}>
-          <Text style={styles.languageText}>
-            Language <Text style={styles.languageValue}>EN</Text>
-          </Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      {/* Header Section (Group 208) */}
+      {/* Logo (Group 207) - x=35, y=85, 34.673×32.711px */}
+      <Image 
+        source={require('../../assets/header-logo.png')} 
+        style={styles.headerLogo}
+        resizeMode="contain"
+      />
+      
+      {/* Hestia Text - x=80.18, y=96.79, 69.816×18.812px */}
+      <Text style={styles.hestiaText}>Hestia</Text>
+      
+      {/* Language Selector - x=259, y=97 */}
+      <TouchableOpacity style={styles.languageSelector}>
+        <Text style={styles.languageText}>
+          Language <Text style={styles.languageValue}>EN</Text>
+        </Text>
+      </TouchableOpacity>
+      
+      {/* Dropdown Arrow - x=380, y=104, 17×8px (facing down) */}
+      <Image 
+        source={require('../../assets/dropdown-arrow-down.png')} 
+        style={styles.dropdownArrow}
+        resizeMode="contain"
+      />
 
+      {/* Divider Line (Vector 41) - x=-1, y=144, 440×0px */}
+      <View style={styles.divider} />
+
+      {/* Log in Title - x=35, y=189, 109×39px */}
       <Text style={styles.title}>Log in</Text>
 
-      <View style={styles.form}>
-        <Input
-          label="Company email"
+      {/* Company Email Section */}
+      {/* Label - x=35, y=308 */}
+      <Text style={styles.emailLabel}>Company email</Text>
+      
+      {/* Input Field (Rectangle 113) - x=35, y=338, 370×70px */}
+      <View style={styles.emailInputContainer}>
+        <TextInput
+          style={styles.emailInput}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
-          style={styles.input}
         />
+      </View>
 
-        <Input
-          label="Password"
+      {/* Password Section */}
+      {/* Label - x=35, y=426 */}
+      <Text style={styles.passwordLabel}>Password</Text>
+      
+      {/* Input Field (Rectangle 114) - x=36, y=456, 370×70px */}
+      <View style={styles.passwordInputContainer}>
+        <TextInput
+          style={styles.passwordInput}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          style={styles.input}
         />
-
-        <Button
-          title="Sign In"
-          onPress={handleLogin}
-          style={styles.loginButton}
-        />
-
-        <TouchableOpacity style={styles.recoverPassword}>
-          <Text style={styles.recoverPasswordText}>Recover Password</Text>
-        </TouchableOpacity>
       </View>
 
-      <View style={styles.customerService}>
-        <View style={styles.serviceIcon} />
-        <View style={styles.serviceContent}>
-          <Text style={styles.serviceTitle}>Customer Service</Text>
-          <Text style={styles.serviceSubtitle}>Having issues with the app?</Text>
-        </View>
+      {/* Sign In Button (Rectangle 115) - x=35, y=568, 370×70px */}
+      <TouchableOpacity style={styles.signInButton} onPress={handleLogin}>
+        <Text style={styles.signInText}>Sign In</Text>
+      </TouchableOpacity>
+
+      {/* Recover Password Section */}
+      {/* Background (Rectangle 116) - x=36, y=665, 370×70px */}
+      <View style={styles.recoverPasswordContainer}>
+        {/* Text - x=137, y=690 (relative: x=101, y=25) */}
+        <Text style={styles.recoverPasswordText}>Recover Password</Text>
       </View>
-    </ScrollView>
+      
+      {/* Recover Password Arrow - x=305.5, y=709, 8×17px (absolute position, facing right) */}
+      <Image 
+        source={require('../../assets/recover-arrow-right.png')} 
+        style={styles.recoverArrow}
+        resizeMode="contain"
+      />
+
+      {/* Customer Service Section (Group 210) */}
+      {/* Background (Rectangle 117) - x=62, y=839, 317×71px, borderRadius 81px */}
+      <View style={styles.customerServiceContainer}>
+        {/* Logo Icon (Group 207) - x=95, y=852, 42.07×39.689px */}
+        <Image 
+          source={require('../../assets/customer-service-logo.png')} 
+          style={styles.customerServiceLogo}
+          resizeMode="contain"
+        />
+        
+        {/* Phone Icon (Vector) - x=109.07, y=864.99, 20×20px */}
+        <Image 
+          source={require('../../assets/phone-icon.png')} 
+          style={styles.phoneIcon}
+          resizeMode="contain"
+        />
+        
+        {/* Customer Service Text - x=154, y=855, 128×17px */}
+        <Text style={styles.customerServiceTitle}>Customer Service</Text>
+        
+        {/* Having issues text - x=154, y=875, 216×22px */}
+        <Text style={styles.customerServiceSubtitle}>Having issues with the app?</Text>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.secondary,
+    backgroundColor: '#eef0f6', // Exact color from Figma
   },
-  content: {
-    padding: 35,
-    paddingTop: 85,
+  // Header Logo (Group 207) - x=35, y=85, 34.673×32.711px
+  headerLogo: {
+    position: 'absolute',
+    left: 35 * scaleX,
+    top: 85 * scaleX,
+    width: 34.673 * scaleX,
+    height: 32.711 * scaleX,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 50,
-  },
-  logoContainer: {
-    width: 35,
-    height: 33,
-    marginRight: 45,
-  },
-  logo: {
-    width: 35,
-    height: 33,
-    backgroundColor: colors.primary.main,
-    borderRadius: 4,
-  },
-  brandContainer: {
-    flex: 1,
-  },
-  brandName: {
-    fontSize: 19,
+  // Hestia Text - x=80.18, y=96.79, 69.816×18.812px
+  hestiaText: {
+    position: 'absolute',
+    left: 80.18 * scaleX,
+    top: 96.79 * scaleX,
+    width: 69.816 * scaleX,
+    height: 18.812 * scaleX,
+    fontSize: 19 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular,
+    fontWeight: typography.fontWeights.regular as any,
     color: colors.text.primary,
   },
+  // Language Selector - x=259, y=97
   languageSelector: {
     position: 'absolute',
-    right: 0,
-    top: 12,
+    left: 259 * scaleX,
+    top: 97 * scaleX,
   },
   languageText: {
-    fontSize: parseInt(typography.fontSizes['2xl']),
+    fontSize: 17 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light,
+    fontWeight: typography.fontWeights.light as any,
     color: colors.primary.main,
   },
   languageValue: {
-    fontWeight: typography.fontWeights.bold,
-    color: colors.text.pink,
+    fontWeight: typography.fontWeights.bold as any,
+    color: '#ff46a3', // Exact pink color from Figma
   },
+  // Dropdown Arrow - x=380, y=104, 17×8px
+  dropdownArrow: {
+    position: 'absolute',
+    left: 380 * scaleX,
+    top: 104 * scaleX,
+    width: 17 * scaleX,
+    height: 8 * scaleX,
+  },
+  // Divider Line (Vector 41) - x=-1, y=144, 440×0px
+  divider: {
+    position: 'absolute',
+    left: -1 * scaleX,
+    top: 144 * scaleX,
+    width: 440 * scaleX,
+    height: 1, // Minimal height for visibility
+    backgroundColor: colors.border.light,
+  },
+  // Log in Title - x=35, y=189, 109×39px
   title: {
-    fontSize: parseInt(typography.fontSizes['8xl']),
+    position: 'absolute',
+    left: 35 * scaleX,
+    top: 189 * scaleX,
+    width: 109 * scaleX,
+    height: 39 * scaleX,
+    fontSize: 34 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold,
+    fontWeight: typography.fontWeights.bold as any,
     color: colors.primary.main,
-    marginBottom: 30,
   },
-  form: {
-    marginBottom: 40,
+  // Company Email Label - x=35, y=308
+  emailLabel: {
+    position: 'absolute',
+    left: 35 * scaleX,
+    top: 308 * scaleX,
+    width: 121 * scaleX,
+    height: 22 * scaleX,
+    fontSize: 17 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.regular as any,
+    color: colors.text.primary,
   },
-  input: {
-    marginBottom: 20,
+  // Email Input Container (Rectangle 113) - x=35, y=338, 370×70px
+  emailInputContainer: {
+    position: 'absolute',
+    left: 35 * scaleX,
+    top: 338 * scaleX,
+    width: 370 * scaleX,
+    height: 70 * scaleX,
+    backgroundColor: colors.background.primary,
   },
-  loginButton: {
-    marginTop: 20,
-    marginBottom: 20,
+  emailInput: {
+    flex: 1,
+    paddingHorizontal: 12 * scaleX, // x=47 - x=35 = 12px padding
+    fontSize: 17 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.light as any,
+    color: colors.text.primary,
   },
-  recoverPassword: {
+  // Password Label - x=35, y=426
+  passwordLabel: {
+    position: 'absolute',
+    left: 35 * scaleX,
+    top: 426 * scaleX,
+    width: 121 * scaleX,
+    height: 22 * scaleX,
+    fontSize: 17 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.regular as any,
+    color: colors.text.primary,
+  },
+  // Password Input Container (Rectangle 114) - x=36, y=456, 370×70px
+  passwordInputContainer: {
+    position: 'absolute',
+    left: 36 * scaleX,
+    top: 456 * scaleX,
+    width: 370 * scaleX,
+    height: 70 * scaleX,
+    backgroundColor: colors.background.primary,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 9 * scaleX, // x=45 - x=36 = 9px padding
+    fontSize: 17 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.light as any,
+    color: colors.text.primary,
+  },
+  // Sign In Button (Rectangle 115) - x=35, y=568, 370×70px
+  signInButton: {
+    position: 'absolute',
+    left: 35 * scaleX,
+    top: 568 * scaleX,
+    width: 370 * scaleX,
+    height: 70 * scaleX,
+    backgroundColor: colors.primary.main,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+  },
+  signInText: {
+    fontSize: 18 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.regular as any,
+    color: colors.text.white,
+  },
+  // Recover Password Container (Rectangle 116) - x=36, y=665, 370×70px
+  recoverPasswordContainer: {
+    position: 'absolute',
+    left: 36 * scaleX,
+    top: 665 * scaleX,
+    width: 370 * scaleX,
+    height: 70 * scaleX,
+    backgroundColor: colors.background.secondary,
+    borderWidth: 1,
+    borderColor: colors.border.light,
   },
   recoverPasswordText: {
-    fontSize: parseInt(typography.fontSizes['3xl']),
+    position: 'absolute',
+    left: 101 * scaleX, // 137 - 36 = 101px from container left
+    top: 25 * scaleX, // 690 - 665 = 25px from container top
+    fontSize: 18 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular,
+    fontWeight: typography.fontWeights.regular as any,
     color: colors.primary.main,
   },
-  customerService: {
+  // Recover Arrow - x=305.5, y=709, 8×17px (absolute position, not relative to container)
+  recoverArrow: {
+    position: 'absolute',
+    left: 305.5 * scaleX, // Absolute position from Figma
+    top: 709 * scaleX, // Absolute position from Figma
+    width: 8 * scaleX,
+    height: 17 * scaleX,
+  },
+  // Customer Service Container (Rectangle 117) - x=62, y=839, 317×71px
+  customerServiceContainer: {
+    position: 'absolute',
+    left: 62 * scaleX,
+    top: 839 * scaleX,
+    width: 317 * scaleX,
+    height: 71 * scaleX,
+    backgroundColor: 'rgba(217,217,217,0.3)', // Exact color from Figma
+    borderRadius: 81 * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 40,
-    paddingLeft: 60,
+    paddingLeft: 33 * scaleX, // x=95 - x=62 = 33px padding
   },
-  serviceIcon: {
-    width: 42,
-    height: 40,
-    backgroundColor: colors.primary.main,
-    borderRadius: 4,
-    marginRight: 15,
+  // Customer Service Logo (Group 207) - x=95, y=852, 42.07×39.689px (relative: x=33, y=13)
+  customerServiceLogo: {
+    position: 'absolute',
+    left: 33 * scaleX,
+    top: 13 * scaleX,
+    width: 42.07 * scaleX,
+    height: 39.689 * scaleX,
   },
-  serviceContent: {
-    flex: 1,
+  // Phone Icon (Vector) - x=109.07, y=864.99, 20×20px (relative: x=47.07, y=25.99)
+  phoneIcon: {
+    position: 'absolute',
+    left: 47.07 * scaleX,
+    top: 25.99 * scaleX,
+    width: 20 * scaleX,
+    height: 20 * scaleX,
   },
-  serviceTitle: {
-    fontSize: parseInt(typography.fontSizes.lg),
+  // Customer Service Title - x=154, y=855, 128×17px (relative: x=92, y=16)
+  customerServiceTitle: {
+    position: 'absolute',
+    left: 92 * scaleX,
+    top: 16 * scaleX,
+    width: 128 * scaleX,
+    height: 17 * scaleX,
+    fontSize: 15 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold,
+    fontWeight: typography.fontWeights.bold as any,
     color: colors.primary.main,
-    marginBottom: 4,
   },
-  serviceSubtitle: {
-    fontSize: parseInt(typography.fontSizes.lg),
+  // Customer Service Subtitle - x=154, y=875, 216×22px (relative: x=92, y=36)
+  customerServiceSubtitle: {
+    position: 'absolute',
+    left: 92 * scaleX,
+    top: 36 * scaleX,
+    width: 216 * scaleX,
+    height: 22 * scaleX,
+    fontSize: 15 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light,
+    fontWeight: typography.fontWeights.light as any,
     color: colors.text.primary,
   },
 });
-
