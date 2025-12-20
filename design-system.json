@@ -1,0 +1,247 @@
+{
+  "name": "Hestia Design System",
+  "version": "1.0.0",
+  "description": "Design system for Hestia housekeeping management app",
+  "colors": {
+    "primary": {
+      "main": "#5a759d",
+      "light": "#607aa1",
+      "dark": "#334866"
+    },
+    "status": {
+      "dirty": "#f92424",
+      "inProgress": "#f0be1b",
+      "cleaned": "#4a91fc",
+      "inspected": "#41d541",
+      "priority": "#ffebeb",
+      "priorityText": "#f92424"
+    },
+    "background": {
+      "primary": "#ffffff",
+      "secondary": "#eef0f6",
+      "tertiary": "#f1f6fc",
+      "card": "#f9fafc",
+      "header": "#e4eefe",
+      "overlay": "rgba(228, 228, 228, 0.1)"
+    },
+    "text": {
+      "primary": "#1e1e1e",
+      "secondary": "#334866",
+      "tertiary": "#a0a0a0",
+      "light": "#b1afaf",
+      "white": "#ffffff",
+      "accent": "#5a759d",
+      "pink": "#ff46a3"
+    },
+    "border": {
+      "light": "#dbdbdb",
+      "medium": "#e3e3e3",
+      "dark": "#e6e6e6"
+    },
+    "badge": {
+      "eta": "#e9f7e9",
+      "etd": "#ffe3e3",
+      "group": "#ffebeb",
+      "priority": "#ffebeb"
+    },
+    "shadow": {
+      "nav": "0px 0px 105.1px -35px rgba(100, 131, 176, 0.4)"
+    }
+  },
+  "typography": {
+    "fontFamily": {
+      "primary": "Helvetica",
+      "secondary": "Inter"
+    },
+    "fontWeights": {
+      "light": "300",
+      "regular": "400",
+      "semibold": "600",
+      "bold": "700"
+    },
+    "fontSizes": {
+      "xs": "11px",
+      "sm": "12px",
+      "base": "13px",
+      "md": "14px",
+      "lg": "15px",
+      "xl": "16px",
+      "2xl": "17px",
+      "3xl": "18px",
+      "4xl": "20px",
+      "5xl": "21px",
+      "6xl": "22px",
+      "7xl": "24px",
+      "8xl": "34px",
+      "9xl": "39px"
+    },
+    "lineHeights": {
+      "tight": "1.147",
+      "normal": "normal"
+    }
+  },
+  "spacing": {
+    "xs": "4px",
+    "sm": "8px",
+    "md": "12px",
+    "lg": "16px",
+    "xl": "20px",
+    "2xl": "24px",
+    "3xl": "32px",
+    "4xl": "40px",
+    "5xl": "48px",
+    "6xl": "64px"
+  },
+  "borderRadius": {
+    "none": "0",
+    "sm": "6px",
+    "md": "9px",
+    "lg": "10px",
+    "xl": "12px",
+    "2xl": "17px",
+    "3xl": "31px",
+    "4xl": "37px",
+    "5xl": "41px",
+    "6xl": "44px",
+    "7xl": "45px",
+    "8xl": "68px",
+    "9xl": "81px",
+    "10xl": "82px",
+    "full": "9999px"
+  },
+  "components": {
+    "button": {
+      "primary": {
+        "backgroundColor": "#5a759d",
+        "textColor": "#ffffff",
+        "height": "70px",
+        "borderRadius": "0px",
+        "fontSize": "18px",
+        "fontWeight": "regular"
+      },
+      "secondary": {
+        "backgroundColor": "transparent",
+        "textColor": "#5a759d",
+        "borderColor": "#5a759d",
+        "borderWidth": "1px"
+      },
+      "status": {
+        "height": "70px",
+        "width": "134px",
+        "borderRadius": "45px"
+      }
+    },
+    "input": {
+      "height": "70px",
+      "backgroundColor": "#ffffff",
+      "borderColor": "#dbdbdb",
+      "borderWidth": "1px",
+      "borderRadius": "0px",
+      "fontSize": "17px",
+      "padding": "20px"
+    },
+    "card": {
+      "backgroundColor": "#f9fafc",
+      "borderColor": "#e3e3e3",
+      "borderWidth": "1px",
+      "borderRadius": "9px",
+      "padding": "20px",
+      "shadow": "none"
+    },
+    "statusBadge": {
+      "size": "50px",
+      "borderRadius": "37px",
+      "fontSize": "20px",
+      "fontWeight": "bold"
+    },
+    "navigation": {
+      "height": "152px",
+      "backgroundColor": "#ffffff",
+      "borderColor": "#e6e6e6",
+      "borderWidth": "1px",
+      "shadow": "0px 0px 105.1px -35px rgba(100, 131, 176, 0.4)"
+    },
+    "header": {
+      "height": "133px",
+      "backgroundColor": "#e4eefe"
+    },
+    "searchBar": {
+      "height": "59px",
+      "backgroundColor": "#f1f6fc",
+      "borderRadius": "82px",
+      "padding": "20px"
+    }
+  },
+  "roomStatus": {
+    "dirty": {
+      "color": "#f92424",
+      "backgroundColor": "#f92424",
+      "icon": "dirty"
+    },
+    "inProgress": {
+      "color": "#f0be1b",
+      "backgroundColor": "#f0be1b",
+      "icon": "inProgress"
+    },
+    "cleaned": {
+      "color": "#4a91fc",
+      "backgroundColor": "#4a91fc",
+      "icon": "cleaned"
+    },
+    "inspected": {
+      "color": "#41d541",
+      "backgroundColor": "#41d541",
+      "icon": "inspected"
+    },
+    "priority": {
+      "color": "#f92424",
+      "backgroundColor": "#ffebeb",
+      "icon": "priority"
+    }
+  },
+  "roomTypes": {
+    "arrival": "Arrival",
+    "departure": "Departure",
+    "stayover": "Stayover",
+    "turndown": "Turndown",
+    "vacant": "Vacant"
+  },
+  "screens": {
+    "splash": {
+      "backgroundColor": "#5a759d",
+      "textColor": "#ffffff"
+    },
+    "login": {
+      "backgroundColor": "#eef0f6",
+      "inputBackground": "#ffffff",
+      "buttonBackground": "#5a759d"
+    },
+    "dashboard": {
+      "backgroundColor": "#ffffff",
+      "cardBackground": "rgba(238, 240, 246, 0.35)"
+    }
+  },
+  "icons": {
+    "sizes": {
+      "xs": "8px",
+      "sm": "14px",
+      "md": "20px",
+      "lg": "24px",
+      "xl": "32px",
+      "2xl": "44px"
+    }
+  },
+  "animations": {
+    "duration": {
+      "fast": "150ms",
+      "normal": "300ms",
+      "slow": "500ms"
+    },
+    "easing": {
+      "easeIn": "ease-in",
+      "easeOut": "ease-out",
+      "easeInOut": "ease-in-out"
+    }
+  }
+}
+
