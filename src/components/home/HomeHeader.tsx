@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native';
 import { UserProfile, ShiftType } from '../../types/home.types';
 import { colors, typography } from '../../theme';
@@ -27,6 +27,13 @@ export default function HomeHeader({
   onMenuPress,
   onBellPress,
 }: HomeHeaderProps) {
+  const [searchText, setSearchText] = useState('');
+
+  const handleSearchChange = (text: string) => {
+    setSearchText(text);
+    onSearch(text);
+  };
+
   return (
     <View style={styles.container}>
       {/* Profile Section */}
@@ -69,12 +76,22 @@ export default function HomeHeader({
       {/* Search Bar and Menu */}
       <View style={styles.searchBarContainer}>
         <View style={styles.searchBar}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search Rooms, Guests, Floors etc"
-            placeholderTextColor="rgba(0,0,0,0.36)"
-            onChangeText={onSearch}
-          />
+          <View style={styles.searchInputContainer}>
+            <TextInput
+              style={styles.searchInput}
+              value={searchText}
+              onChangeText={handleSearchChange}
+              placeholder=""
+            />
+            {searchText === '' && (
+              <View style={styles.placeholderContainer} pointerEvents="none">
+                <Text style={styles.placeholderText}>
+                  <Text style={styles.placeholderBold}>Search </Text>
+                  <Text style={styles.placeholderNormal}>Rooms, Guests, Floors etc</Text>
+                </Text>
+              </View>
+            )}
+          </View>
           <TouchableOpacity
             style={styles.searchIconButton}
             onPress={() => {/* Search action */}}
@@ -209,12 +226,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20 * scaleX,
   },
-  searchInput: {
+  searchInputContainer: {
     flex: 1,
+    position: 'relative',
+    height: '100%',
+    justifyContent: 'center',
+  },
+  searchInput: {
     fontSize: 13 * scaleX,
     fontFamily: 'Inter',
-    fontWeight: '300' as any, // Light weight for placeholder
+    fontWeight: '300' as any,
     color: colors.text.primary,
+    padding: 0,
+    height: '100%',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    backgroundColor: 'transparent',
+  },
+  placeholderContainer: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  placeholderText: {
+    fontSize: 13 * scaleX,
+    fontFamily: 'Inter',
+    color: 'rgba(0,0,0,0.36)',
+    includeFontPadding: false,
+  },
+  placeholderBold: {
+    fontWeight: '600' as any, // Semi-bold for "Search"
+  },
+  placeholderNormal: {
+    fontWeight: '300' as any, // Light for rest of text
   },
   searchIconButton: {
     width: 26 * scaleX,
