@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingHorizontal: 20 * scaleX,
-    marginTop: 20 * scaleX,
+    marginTop: 30 * scaleX, // Increased from 20 to 30 for more space
   },
 });
 

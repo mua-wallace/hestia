@@ -22,16 +22,16 @@ export default function BottomTabBar({ activeTab, onTabPress, chatBadgeCount = 0
           label="Home"
           active={activeTab === 'Home'}
           onPress={() => onTabPress('Home')}
-          iconWidth={28}
-          iconHeight={14}
+          iconWidth={30}
+          iconHeight={30}
         />
         <TabBarItem
           icon={require('../../../assets/icons/navigation/rooms-icon.png')}
           label="Rooms"
           active={activeTab === 'Rooms'}
           onPress={() => onTabPress('Rooms')}
-          iconWidth={27}
-          iconHeight={26}
+          iconWidth={40}
+          iconHeight={30}
         />
         <TabBarItem
           icon={require('../../../assets/icons/navigation/chat-icon.png')}
