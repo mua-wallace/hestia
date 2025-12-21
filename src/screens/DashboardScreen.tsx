@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, typography } from '../theme';
 
-export default function DashboardScreen() {
+export default function HomePageScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Dashboard Screen</Text>
+      <Text style={styles.text}>Home Page Screen</Text>
     </View>
   );
 }

@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
+import HomeScreen from '../screens/HomeScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import RoomsScreen from '../screens/RoomsScreen';
 import ChatScreen from '../screens/ChatScreen';
@@ -30,20 +31,13 @@ function MainTabs() {
         tabBarActiveTintColor: '#5a759d',
         tabBarInactiveTintColor: '#5a759d',
         tabBarStyle: {
-          height: 152,
-          borderTopWidth: 1,
-          borderTopColor: '#e6e6e6',
-          shadowColor: 'rgba(100, 131, 176, 0.4)',
-          shadowOffset: { width: 0, height: -35 },
-          shadowOpacity: 1,
-          shadowRadius: 105.1,
-          elevation: 10,
+          display: 'none', // Hide default tab bar since HomeScreen has custom one
         },
       }}
     >
       <Tab.Screen 
         name="Home" 
-        component={DashboardScreen}
+        component={HomeScreen}
         options={{
           tabBarLabel: 'Home',
         }}
