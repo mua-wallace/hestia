@@ -12,10 +12,19 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
+const LANGUAGES = [
+  { code: 'EN', name: 'English' },
+  { code: 'FR', name: 'French' },
+  { code: 'DE', name: 'German' },
+  { code: 'IT', name: 'Italian' },
+];
+
 export default function LoginScreen() {
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [email, setEmail] = useState('Stellakitou@mandarinorientalsavoy.ch');
   const [password, setPassword] = useState('**********************');
+  const [selectedLanguage, setSelectedLanguage] = useState('EN');
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
   const handleLogin = () => {
     // TODO: Implement login logic
@@ -35,19 +44,67 @@ export default function LoginScreen() {
       {/* Hestia Text - x=80.18, y=96.79, 69.816×18.812px */}
       <Text style={styles.hestiaText}>Hestia</Text>
       
-      {/* Language Selector - x=259, y=97 */}
-      <TouchableOpacity style={styles.languageSelector}>
-        <Text style={styles.languageText}>
-          Language <Text style={styles.languageValue}>EN</Text>
-        </Text>
-      </TouchableOpacity>
-      
-      {/* Dropdown Arrow - x=380, y=104, 17×8px (facing down) */}
-      <Image 
-        source={require('../../assets/dropdown-arrow-down.png')} 
-        style={styles.dropdownArrow}
-        resizeMode="contain"
-      />
+      {/* Language Selector with Dropdown Arrow - centered */}
+      <View style={styles.languageSelectorContainer}>
+        <TouchableOpacity 
+          style={styles.languageSelector}
+          onPress={() => setShowLanguageDropdown(!showLanguageDropdown)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.languageText}>
+            Language <Text style={styles.languageValue}>{selectedLanguage}</Text>
+          </Text>
+        </TouchableOpacity>
+        
+        {/* Dropdown Arrow - vertically centered with text */}
+        <TouchableOpacity 
+          style={styles.dropdownArrowContainer}
+          onPress={() => setShowLanguageDropdown(!showLanguageDropdown)}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Image 
+            source={require('../../assets/dropdown-arrow.png')} 
+            style={[
+              styles.dropdownArrow,
+              showLanguageDropdown && styles.dropdownArrowOpen
+            ]}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Language Dropdown Menu */}
+      {showLanguageDropdown && (
+        <>
+          {/* Backdrop to close dropdown when clicking outside */}
+          <TouchableOpacity 
+            style={styles.dropdownBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowLanguageDropdown(false)}
+          />
+          <View style={styles.languageDropdownMenu}>
+            {LANGUAGES.map((lang) => (
+              <TouchableOpacity
+                key={lang.code}
+                style={styles.languageDropdownItem}
+                onPress={() => {
+                  setSelectedLanguage(lang.code);
+                  setShowLanguageDropdown(false);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.languageDropdownText,
+                  selectedLanguage === lang.code && styles.languageDropdownTextSelected
+                ]}>
+                  {lang.name} ({lang.code})
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>
+      )}
 
       {/* Divider Line (Vector 41) - x=-1, y=144, 440×0px */}
       <View style={styles.divider} />
@@ -91,17 +148,23 @@ export default function LoginScreen() {
 
       {/* Recover Password Section */}
       {/* Background (Rectangle 116) - x=36, y=665, 370×70px */}
-      <View style={styles.recoverPasswordContainer}>
-        {/* Text - x=137, y=690 (relative: x=101, y=25) */}
-        <Text style={styles.recoverPasswordText}>Recover Password</Text>
-      </View>
-      
-      {/* Recover Password Arrow - x=305.5, y=709, 8×17px (absolute position, facing right) */}
-      <Image 
-        source={require('../../assets/recover-arrow-right.png')} 
-        style={styles.recoverArrow}
-        resizeMode="contain"
-      />
+      <TouchableOpacity 
+        style={styles.recoverPasswordContainer}
+        onPress={() => {/* TODO: Navigate to recover password */}}
+        activeOpacity={0.7}
+      >
+        <View style={styles.recoverPasswordContent}>
+          {/* Text - centered with arrow */}
+          <Text style={styles.recoverPasswordText}>Recover Password</Text>
+          
+          {/* Recover Password Arrow - vertically and horizontally centered with text */}
+          <Image 
+            source={require('../../assets/recover-arrow.png')} 
+            style={styles.recoverArrow}
+            resizeMode="contain"
+          />
+        </View>
+      </TouchableOpacity>
 
       {/* Customer Service Section (Group 210) */}
       {/* Background (Rectangle 117) - x=62, y=839, 317×71px, borderRadius 81px */}
@@ -155,11 +218,16 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.regular as any,
     color: colors.text.primary,
   },
-  // Language Selector - x=259, y=97
-  languageSelector: {
+  // Language Selector Container - wraps text and arrow for vertical centering
+  languageSelectorContainer: {
     position: 'absolute',
     left: 259 * scaleX,
     top: 97 * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  languageSelector: {
+    // No positioning needed - within flex container
   },
   languageText: {
     fontSize: 17 * scaleX,
@@ -171,13 +239,62 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.bold as any,
     color: '#ff46a3', // Exact pink color from Figma
   },
-  // Dropdown Arrow - x=380, y=104, 17×8px
+  // Dropdown Arrow Container - vertically centered with text
+  dropdownArrowContainer: {
+    width: 20 * scaleX, // Larger container to prevent clipping
+    height: 20 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8 * scaleX, // Small gap between text and arrow
+  },
   dropdownArrow: {
+    width: 18 * scaleX, // Actual image dimensions (18x9)
+    height: 9 * scaleX,
+    tintColor: colors.primary.main, // Match the color scheme
+    // No rotation needed - arrow already points in correct direction
+  },
+  dropdownArrowOpen: {
+    transform: [{ rotate: '180deg' }], // Flip when dropdown is open
+  },
+  // Dropdown backdrop (closes dropdown when clicking outside)
+  dropdownBackdrop: {
     position: 'absolute',
-    left: 380 * scaleX,
-    top: 104 * scaleX,
-    width: 17 * scaleX,
-    height: 8 * scaleX,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
+  },
+  // Language Dropdown Menu
+  languageDropdownMenu: {
+    position: 'absolute',
+    left: 259 * scaleX,
+    top: 120 * scaleX,
+    backgroundColor: colors.background.primary,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    borderRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 1000,
+  },
+  languageDropdownItem: {
+    paddingHorizontal: 16 * scaleX,
+    paddingVertical: 12 * scaleX,
+    minWidth: 150 * scaleX,
+  },
+  languageDropdownText: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.regular as any,
+    color: colors.text.primary,
+  },
+  languageDropdownTextSelected: {
+    fontWeight: typography.fontWeights.bold as any,
+    color: '#ff46a3',
   },
   // Divider Line (Vector 41) - x=-1, y=144, 440×0px
   divider: {
@@ -285,23 +402,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.secondary,
     borderWidth: 1,
     borderColor: colors.border.light,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Content wrapper for text and arrow
+  recoverPasswordContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8 * scaleX, // Space between text and arrow
   },
   recoverPasswordText: {
-    position: 'absolute',
-    left: 101 * scaleX, // 137 - 36 = 101px from container left
-    top: 25 * scaleX, // 690 - 665 = 25px from container top
     fontSize: 18 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.regular as any,
     color: colors.primary.main,
   },
-  // Recover Arrow - x=305.5, y=709, 8×17px (absolute position, not relative to container)
+  // Recover Arrow - centered with text
   recoverArrow: {
-    position: 'absolute',
-    left: 305.5 * scaleX, // Absolute position from Figma
-    top: 709 * scaleX, // Absolute position from Figma
-    width: 8 * scaleX,
+    width: 8 * scaleX, // Original asset dimensions (8x17, pointing right)
     height: 17 * scaleX,
+    // No rotation needed - arrow already points right as per Figma design
   },
   // Customer Service Container (Rectangle 117) - x=62, y=839, 317×71px
   customerServiceContainer: {
