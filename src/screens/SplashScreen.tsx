@@ -31,7 +31,7 @@ export default function SplashScreen() {
       <View style={styles.logoTitleGroup}>
         {/* Logo (Group 207) - absolute position: x=124, y=376 */}
         <Image 
-          source={require('../../assets/logo.png')} 
+          source={require('../../assets/logos/logo.png')} 
           style={styles.logo}
           resizeMode="contain"
         />
