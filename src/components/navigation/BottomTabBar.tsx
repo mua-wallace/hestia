@@ -10,10 +10,11 @@ const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 interface BottomTabBarProps {
   activeTab: string;
   onTabPress: (tab: string) => void;
+  onMorePress: () => void;
   chatBadgeCount?: number;
 }
 
-export default function BottomTabBar({ activeTab, onTabPress, chatBadgeCount = 0 }: BottomTabBarProps) {
+export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatBadgeCount = 0 }: BottomTabBarProps) {
   return (
     <View style={styles.container}>
       <View style={styles.tabsContainer}>
@@ -22,16 +23,16 @@ export default function BottomTabBar({ activeTab, onTabPress, chatBadgeCount = 0
           label="Home"
           active={activeTab === 'Home'}
           onPress={() => onTabPress('Home')}
-          iconWidth={30}
-          iconHeight={30}
+          iconWidth={36}
+          iconHeight={36}
         />
         <TabBarItem
           icon={require('../../../assets/icons/navigation/rooms-icon.png')}
           label="Rooms"
           active={activeTab === 'Rooms'}
           onPress={() => onTabPress('Rooms')}
-          iconWidth={40}
-          iconHeight={30}
+          iconWidth={50}
+          iconHeight={36}
         />
         <TabBarItem
           icon={require('../../../assets/icons/navigation/chat-icon.png')}
@@ -39,24 +40,24 @@ export default function BottomTabBar({ activeTab, onTabPress, chatBadgeCount = 0
           active={activeTab === 'Chat'}
           badge={chatBadgeCount}
           onPress={() => onTabPress('Chat')}
-          iconWidth={30}
-          iconHeight={30}
+          iconWidth={36}
+          iconHeight={36}
         />
         <TabBarItem
           icon={require('../../../assets/icons/navigation/tickets-icon.png')}
           label="Tickets"
           active={activeTab === 'Tickets'}
           onPress={() => onTabPress('Tickets')}
-          iconWidth={25}
-          iconHeight={29}
+          iconWidth={29}
+          iconHeight={34}
         />
         <TabBarItem
           icon={require('../../../assets/icons/navigation/more-icon.png')}
           label="More"
-          active={activeTab === 'More'}
-          onPress={() => onTabPress('More')}
-          iconWidth={36}
-          iconHeight={20}
+          active={false}
+          onPress={onMorePress}
+          iconWidth={44}
+          iconHeight={22}
         />
       </View>
     </View>

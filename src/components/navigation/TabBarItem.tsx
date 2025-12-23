@@ -54,8 +54,8 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     position: 'relative',
-    width: 36 * scaleX, // Accommodate largest icon (More: 36x20)
-    height: 30 * scaleX, // Accommodate tallest icon (Chat: 30x30)
+    width: 50 * scaleX, // Accommodate largest icon (Rooms: 50x36)
+    height: 36 * scaleX, // Accommodate tallest icon (Home/Rooms/Chat: 36x36)
     marginBottom: 4 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',

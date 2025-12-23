@@ -16,7 +16,10 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hestia.app"
+      "bundleIdentifier": "com.hestia.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +30,12 @@
     },
     "web": {
       "favicon": "./assets/app/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "812d1d0f-dd1e-4634-9ebc-c3a124ab1aa5"
+      }
+    },
+    "owner": "wallice-dev"
   }
 }
-

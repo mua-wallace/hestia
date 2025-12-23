@@ -51,11 +51,11 @@ export default function LoginScreen() {
           onPress={() => setShowLanguageDropdown(!showLanguageDropdown)}
           activeOpacity={0.7}
         >
-          <Text style={styles.languageText}>
+        <Text style={styles.languageText}>
             Language <Text style={styles.languageValue}>{selectedLanguage}</Text>
-          </Text>
-        </TouchableOpacity>
-        
+        </Text>
+      </TouchableOpacity>
+      
         {/* Dropdown Arrow - vertically centered with text */}
         <TouchableOpacity 
           style={styles.dropdownArrowContainer}
@@ -63,14 +63,14 @@ export default function LoginScreen() {
           activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Image 
+      <Image 
             source={require('../../assets/icons/dropdown-arrow.png')} 
             style={[
               styles.dropdownArrow,
               showLanguageDropdown && styles.dropdownArrowOpen
             ]}
-            resizeMode="contain"
-          />
+        resizeMode="contain"
+      />
         </TouchableOpacity>
       </View>
 
@@ -155,14 +155,14 @@ export default function LoginScreen() {
       >
         <View style={styles.recoverPasswordContent}>
           {/* Text - centered with arrow */}
-          <Text style={styles.recoverPasswordText}>Recover Password</Text>
-          
+        <Text style={styles.recoverPasswordText}>Recover Password</Text>
+      
         {/* Recover Password Arrow - vertically and horizontally centered with text */}
-        <Image 
+      <Image 
           source={require('../../assets/icons/recover-arrow.png')} 
-          style={styles.recoverArrow}
-          resizeMode="contain"
-        />
+        style={styles.recoverArrow}
+        resizeMode="contain"
+      />
         </View>
       </TouchableOpacity>
 

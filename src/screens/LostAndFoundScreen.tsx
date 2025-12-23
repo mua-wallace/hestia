@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
 import { colors, typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
@@ -23,25 +23,17 @@ type MainTabsParamList = {
   Settings: undefined;
 };
 
-type ChatScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, 'Chat'>;
+type LostAndFoundScreenNavigationProp = NativeStackNavigationProp<MainTabsParamList, 'LostAndFound'>;
 
-export default function ChatScreen() {
-  const navigation = useNavigation<ChatScreenNavigationProp>();
-  const [activeTab, setActiveTab] = useState('Chat');
+export default function LostAndFoundScreen() {
+  const navigation = useNavigation<LostAndFoundScreenNavigationProp>();
+  const [activeTab, setActiveTab] = useState('Home');
   const [showMorePopup, setShowMorePopup] = useState(false);
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
     setShowMorePopup(false);
-    if (tab === 'Home') {
-      navigation.navigate('Home');
-    } else if (tab === 'Rooms') {
-      navigation.navigate('Rooms');
-    } else if (tab === 'Chat') {
-      navigation.navigate('Chat');
-    } else if (tab === 'Tickets') {
-      navigation.navigate('Tickets');
-    }
+    navigation.navigate(tab as keyof MainTabsParamList);
   };
 
   const handleMorePress = () => {
@@ -69,10 +61,18 @@ export default function ChatScreen() {
     setShowMorePopup(false);
   };
 
+  const handleBack = () => {
+    navigation.navigate('Home');
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.contentArea}>
-        <Text style={styles.text}>Chat Screen</Text>
+      <View style={styles.content}>
+        <Text style={styles.title}>Lost & Found</Text>
+        <Text style={styles.subtitle}>Coming Soon</Text>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <Text style={styles.backButtonText}>Back to Home</Text>
+        </TouchableOpacity>
         
         {showMorePopup && (
           <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
@@ -102,15 +102,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.primary,
   },
-  contentArea: {
+  content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingBottom: 152 * scaleX,
-  },
-  text: {
-    fontSize: parseInt(typography.fontSizes['4xl']),
-    color: colors.text.primary,
   },
   contentBlurOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -119,6 +115,28 @@ const styles = StyleSheet.create({
   blurOverlayDarkener: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(200, 200, 200, 0.6)',
+  },
+  title: {
+    fontSize: 28 * scaleX,
+    fontWeight: 'bold',
+    color: colors.text.primary,
+    marginBottom: 10 * scaleX,
+  },
+  subtitle: {
+    fontSize: 18 * scaleX,
+    color: colors.text.secondary,
+    marginBottom: 30 * scaleX,
+  },
+  backButton: {
+    backgroundColor: colors.primary.main,
+    paddingHorizontal: 30 * scaleX,
+    paddingVertical: 12 * scaleX,
+    borderRadius: 8 * scaleX,
+  },
+  backButtonText: {
+    color: '#ffffff',
+    fontSize: 16 * scaleX,
+    fontWeight: '600',
   },
 });
 

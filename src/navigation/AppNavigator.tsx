@@ -8,7 +8,9 @@ import DashboardScreen from '../screens/DashboardScreen';
 import RoomsScreen from '../screens/RoomsScreen';
 import ChatScreen from '../screens/ChatScreen';
 import TicketsScreen from '../screens/TicketsScreen';
-import MoreScreen from '../screens/MoreScreen';
+import LostAndFoundScreen from '../screens/LostAndFoundScreen';
+import StaffScreen from '../screens/StaffScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -20,8 +22,18 @@ export type RootStackParamList = {
   CreateTicket: undefined;
 };
 
+export type MainTabsParamList = {
+  Home: undefined;
+  Rooms: undefined;
+  Chat: undefined;
+  Tickets: undefined;
+  LostAndFound: undefined;
+  Staff: undefined;
+  Settings: undefined;
+};
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<MainTabsParamList>();
 
 function MainTabs() {
   return (
@@ -63,11 +75,26 @@ function MainTabs() {
           tabBarLabel: 'Tickets',
         }}
       />
+      {/* Hidden screens - accessible via More popup */}
       <Tab.Screen 
-        name="More" 
-        component={MoreScreen}
+        name="LostAndFound" 
+        component={LostAndFoundScreen}
         options={{
-          tabBarLabel: 'More',
+          tabBarButton: () => null, // Hide from tab bar
+        }}
+      />
+      <Tab.Screen 
+        name="Staff" 
+        component={StaffScreen}
+        options={{
+          tabBarButton: () => null, // Hide from tab bar
+        }}
+      />
+      <Tab.Screen 
+        name="Settings" 
+        component={SettingsScreen}
+        options={{
+          tabBarButton: () => null, // Hide from tab bar
         }}
       />
     </Tab.Navigator>
