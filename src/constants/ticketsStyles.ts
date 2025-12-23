@@ -57,27 +57,33 @@ export const TICKETS_TABS = {
     myTickets: {
       left: 25,
       top: 158,
+      width: 82, // Text width from Figma
+      indicatorWidth: 92, // Indicator width from Figma (wider than text)
     },
     all: {
       left: 170,
       top: 158,
+      width: 18, // Text width from Figma
+      indicatorWidth: 18, // Same as text width
     },
     open: {
       left: 223,
       top: 158,
+      width: 41, // Text width from Figma
+      indicatorWidth: 41, // Same as text width
     },
     closed: {
       left: 287,
       top: 158,
+      width: 51, // Text width from Figma
+      indicatorWidth: 51, // Same as text width
     },
   },
   indicator: {
     height: 4,
     backgroundColor: '#5a759d',
     borderRadius: 2,
-    top: 189, // Below tabs
-    left: 19, // Aligned with "My Tickets" tab
-    width: 92, // Width of "My Tickets" text + padding
+    top: 189, // Below tabs (y=189 from screen top, container top=158, so 189-158=31px from container top)
   },
 } as const;
 
@@ -287,7 +293,8 @@ export const TICKETS_TYPOGRAPHY = {
     fontSize: 16,
     fontWeight: 'light' as const,
     activeFontWeight: 'bold' as const,
-    color: '#5a759d',
+    color: '#a0a0a0', // Inactive tab color (grey)
+    activeColor: '#5a759d', // Active tab color (blue)
   },
   ticketTitle: {
     fontSize: 16,

@@ -23,7 +23,6 @@ export const mockTicketsData: TicketsScreenData = {
       roomNumber: '301',
       category: 'Laundry',
       categoryIcon: require('../../assets/icons/tickets/laundry-icon.png'),
-      dueTime: '10 mins',
       createdBy: {
         name: 'Stella Kitou',
         avatar: require('../../assets/icons/home/profile-avatar.png'),

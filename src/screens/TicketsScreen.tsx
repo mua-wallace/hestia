@@ -8,12 +8,10 @@ import MorePopup from '../components/more/MorePopup';
 import TicketsHeader from '../components/tickets/TicketsHeader';
 import TicketsTabs from '../components/tickets/TicketsTabs';
 import TicketCard from '../components/tickets/TicketCard';
-import CreateTicketMenu from '../components/tickets/CreateTicketMenu';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockTicketsData } from '../data/mockTicketsData';
 import { MoreMenuItemId } from '../types/more.types';
 import { TicketTab, TicketData } from '../types/tickets.types';
-import { CreateTicketMenuOption } from '../components/tickets/CreateTicketMenu';
 import {
   TICKETS_HEADER,
   TICKETS_TABS,
@@ -39,7 +37,6 @@ export default function TicketsScreen() {
   const navigation = useNavigation<TicketsScreenNavigationProp>();
   const [activeTab, setActiveTab] = useState('Tickets');
   const [showMorePopup, setShowMorePopup] = useState(false);
-  const [showCreateTicketMenu, setShowCreateTicketMenu] = useState(false);
   const [selectedTab, setSelectedTab] = useState<TicketTab>('myTickets');
   const [tickets] = useState<TicketData[]>(mockTicketsData.tickets);
   const [refreshing, setRefreshing] = useState(false);
@@ -88,23 +85,9 @@ export default function TicketsScreen() {
   };
 
   const handleCreatePress = () => {
-    setShowCreateTicketMenu(true);
-  };
-
-  const handleCreateTicketMenuOptionPress = (option: CreateTicketMenuOption) => {
-    setShowCreateTicketMenu(false);
-    if (option === 'newTicket') {
-      console.log('New Ticket pressed');
-      // TODO: Navigate to create ticket screen
-      // navigation.navigate('CreateTicket');
-    } else if (option === 'quickTicket') {
-      console.log('Quick Ticket pressed');
-      // TODO: Navigate to quick ticket screen
-    }
-  };
-
-  const handleCloseCreateTicketMenu = () => {
-    setShowCreateTicketMenu(false);
+    // TODO: Navigate to create ticket screen
+    console.log('Create ticket pressed');
+    // navigation.navigate('CreateTicket');
   };
 
   const handleTabChange = (tab: TicketTab) => {
@@ -173,7 +156,7 @@ export default function TicketsScreen() {
         </ScrollView>
 
         {/* Blur Overlay for content only */}
-        {(showMorePopup || showCreateTicketMenu) && (
+        {showMorePopup && (
           <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
             <View style={styles.blurOverlayDarkener} />
           </BlurView>
@@ -203,13 +186,6 @@ export default function TicketsScreen() {
         onClose={handleClosePopup}
         onMenuItemPress={handleMenuItemPress}
       />
-
-      {/* Create Ticket Menu */}
-      <CreateTicketMenu
-        visible={showCreateTicketMenu}
-        onClose={handleCloseCreateTicketMenu}
-        onOptionPress={handleCreateTicketMenuOptionPress}
-      />
     </View>
   );
 }
@@ -234,7 +210,7 @@ const styles = StyleSheet.create({
   divider: {
     height: TICKET_DIVIDER.height,
     backgroundColor: TICKET_DIVIDER.color,
-    marginHorizontal: TICKET_DIVIDER.marginHorizontal * scaleX,
+    marginHorizontal: 16 * scaleX,
     marginVertical: 8 * scaleX,
   },
   contentBlurOverlay: {
