@@ -1,17 +1,27 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
-import { colors, typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
+import TicketsHeader from '../components/tickets/TicketsHeader';
+import TicketsTabs from '../components/tickets/TicketsTabs';
+import TicketCard from '../components/tickets/TicketCard';
+import CreateTicketMenu from '../components/tickets/CreateTicketMenu';
 import { mockHomeData } from '../data/mockHomeData';
+import { mockTicketsData } from '../data/mockTicketsData';
 import { MoreMenuItemId } from '../types/more.types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+import { TicketTab, TicketData } from '../types/tickets.types';
+import { CreateTicketMenuOption } from '../components/tickets/CreateTicketMenu';
+import {
+  TICKETS_HEADER,
+  TICKETS_TABS,
+  TICKETS_SPACING,
+  TICKETS_COLORS,
+  TICKET_DIVIDER,
+  scaleX,
+} from '../constants/ticketsStyles';
 
 type MainTabsParamList = {
   Home: undefined;
@@ -29,6 +39,10 @@ export default function TicketsScreen() {
   const navigation = useNavigation<TicketsScreenNavigationProp>();
   const [activeTab, setActiveTab] = useState('Tickets');
   const [showMorePopup, setShowMorePopup] = useState(false);
+  const [showCreateTicketMenu, setShowCreateTicketMenu] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<TicketTab>('myTickets');
+  const [tickets] = useState<TicketData[]>(mockTicketsData.tickets);
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
@@ -69,29 +83,132 @@ export default function TicketsScreen() {
     setShowMorePopup(false);
   };
 
+  const handleBackPress = () => {
+    navigation.goBack();
+  };
+
+  const handleCreatePress = () => {
+    setShowCreateTicketMenu(true);
+  };
+
+  const handleCreateTicketMenuOptionPress = (option: CreateTicketMenuOption) => {
+    setShowCreateTicketMenu(false);
+    if (option === 'newTicket') {
+      console.log('New Ticket pressed');
+      // TODO: Navigate to create ticket screen
+      // navigation.navigate('CreateTicket');
+    } else if (option === 'quickTicket') {
+      console.log('Quick Ticket pressed');
+      // TODO: Navigate to quick ticket screen
+    }
+  };
+
+  const handleCloseCreateTicketMenu = () => {
+    setShowCreateTicketMenu(false);
+  };
+
+  const handleTabChange = (tab: TicketTab) => {
+    setSelectedTab(tab);
+    // TODO: Filter tickets based on selected tab
+  };
+
+  const handleTicketPress = (ticket: TicketData) => {
+    // TODO: Navigate to ticket detail screen
+    console.log('Ticket pressed:', ticket.id);
+    // navigation.navigate('TicketDetail', { ticketId: ticket.id });
+  };
+
+  const handleStatusPress = (ticket: TicketData) => {
+    // TODO: Handle status change
+    console.log('Status pressed for ticket:', ticket.id);
+  };
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
+
+  // Filter tickets based on selected tab
+  const filteredTickets = tickets.filter((ticket) => {
+    if (selectedTab === 'myTickets') {
+      // TODO: Filter by current user's tickets
+      return true;
+    } else if (selectedTab === 'open') {
+      return ticket.status === 'unsolved';
+    } else if (selectedTab === 'closed') {
+      return ticket.status === 'done';
+    }
+    return true; // 'all' shows all tickets
+  });
+
   return (
     <View style={styles.container}>
-      <View style={styles.contentArea}>
-        <Text style={styles.text}>Tickets Screen</Text>
-        
-        {showMorePopup && (
+      {/* Scrollable Content */}
+      <View style={styles.scrollContainer}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={!showMorePopup}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {/* Ticket Cards */}
+          {filteredTickets.map((ticket, index) => (
+            <React.Fragment key={ticket.id}>
+              <TicketCard
+                ticket={ticket}
+                onPress={() => handleTicketPress(ticket)}
+                onStatusPress={() => handleStatusPress(ticket)}
+              />
+              {/* Divider */}
+              {index < filteredTickets.length - 1 && (
+                <View style={styles.divider} />
+              )}
+            </React.Fragment>
+          ))}
+        </ScrollView>
+
+        {/* Blur Overlay for content only */}
+        {(showMorePopup || showCreateTicketMenu) && (
           <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
             <View style={styles.blurOverlayDarkener} />
           </BlurView>
         )}
       </View>
-      
+
+      {/* Header - Fixed at top */}
+      <TicketsHeader
+        onBackPress={handleBackPress}
+        onCreatePress={handleCreatePress}
+      />
+
+      {/* Tabs - Fixed below header */}
+      <TicketsTabs selectedTab={selectedTab} onTabPress={handleTabChange} />
+
+      {/* Bottom Navigation */}
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
         onMorePress={handleMorePress}
         chatBadgeCount={mockHomeData.notifications.chat}
       />
-      
+
+      {/* More Popup */}
       <MorePopup
         visible={showMorePopup}
         onClose={handleClosePopup}
         onMenuItemPress={handleMenuItemPress}
+      />
+
+      {/* Create Ticket Menu */}
+      <CreateTicketMenu
+        visible={showCreateTicketMenu}
+        onClose={handleCloseCreateTicketMenu}
+        onOptionPress={handleCreateTicketMenuOptionPress}
       />
     </View>
   );
@@ -100,20 +217,32 @@ export default function TicketsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.primary,
+    backgroundColor: TICKETS_COLORS.background,
   },
-  contentArea: {
+  scrollContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 152 * scaleX,
+    position: 'relative',
   },
-  text: {
-    fontSize: parseInt(typography.fontSizes['4xl']),
-    color: colors.text.primary,
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: TICKETS_SPACING.contentPaddingTop * scaleX,
+    paddingBottom: TICKETS_SPACING.contentPaddingBottom * scaleX,
+    minHeight: '100%',
+  },
+  divider: {
+    height: TICKET_DIVIDER.height,
+    backgroundColor: TICKET_DIVIDER.color,
+    marginHorizontal: TICKET_DIVIDER.marginHorizontal * scaleX,
+    marginVertical: 8 * scaleX,
   },
   contentBlurOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: (TICKETS_HEADER.height + TICKETS_TABS.container.height) * scaleX, // Start below header and tabs
+    left: 0,
+    right: 0,
+    bottom: 152 * scaleX, // Stop above bottom nav
     zIndex: 1,
   },
   blurOverlayDarkener: {
