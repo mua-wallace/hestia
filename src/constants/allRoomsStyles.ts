@@ -59,12 +59,12 @@ export const ROOM_HEADER = {
     fontSize: 12,
     fontWeight: 'light' as const,
     color: '#334866',
-    left: 111, // Room 201: left-[111px], Room 202/203/204: left-[118px]
-    top: 22, // Exact from Figma
+    left: 111, // Room 201 (Priority): left-[111px] top-[22px]
+    top: 22, // Exact from Figma - consistent across all cards
     lineHeight: 14,
   },
   roomTypeStandard: {
-    left: 118, // For non-priority cards
+    left: 118, // Room 202/203/204/205: left-[118px] top-[22px] (all standard cards)
   },
   category: {
     fontSize: 16,
@@ -97,73 +97,87 @@ export const ROOM_HEADER = {
 
 // Guest Info Styles - Exact values from Figma
 export const GUEST_INFO = {
+  // Container positions
   container: {
-    left: 73, // Room 201: left-[73px], Room 202/203/204: left-[80px] (using 73 for priority, 80 for standard)
+    left: 73, // Room 201 (Priority): left-[73px]
   },
   containerStandard: {
-    left: 80, // For non-priority cards
+    left: 80, // Room 202/204: left-[80px], Room 203: left-[77px] (using 80 as base)
+  },
+  containerWithNotes: {
+    left: 77, // Room 203: left-[77px]
   },
   icon: {
     width: 16,
     height: 16,
   },
+  // Guest name positions
   name: {
     fontSize: 14,
     fontWeight: 'bold' as const,
     color: '#000000',
     lineHeight: 10, // Figma shows h-[10px]
-    top: 87, // Room 201 first guest: top-[87px], Room 201 second: top-[162px], Room 202: top-[655px] relative to card (655-563=92px)
+    top: 87, // Room 201 first guest: top-[87px]
   },
   nameSecond: {
-    top: 162, // Room 201 second guest
+    top: 162, // Room 201 second guest: top-[162px]
   },
   nameStandard: {
-    top: 92, // For standard cards (calculated from Room 202: 655-563=92px)
+    top: 92, // Room 202 (Departure, 177px height): top-[655px] relative (655-563=92px)
   },
+  nameStandardArrival: {
+    top: 87, // Room 204 (Arrival, 185px height): top-[1111px] relative (1111-1024=87px), Room 205: top-[1327px] relative (1327-1240=87px)
+  },
+  nameWithNotes: {
+    top: 80, // Room 203: top-[851px] relative (851-771=80px)
+  },
+  // Date range positions
   dateRange: {
     fontSize: 14,
     fontWeight: 'light' as const,
     color: '#000000',
     lineHeight: 17,
-    top: 109, // Room 201 first: top-[109px], Room 201 second: top-[184px], Room 202: top-[677px] relative (677-563=114px)
+    top: 109, // Room 201 first: top-[109px]
   },
   dateRangeSecond: {
-    top: 184, // Room 201 second guest
+    top: 184, // Room 201 second: top-[184px]
   },
   dateRangeStandard: {
-    top: 114, // For standard cards
+    top: 114, // Room 202 (Departure): top-[677px] relative (677-563=114px)
   },
+  dateRangeStandardArrival: {
+    top: 109, // Room 204 (Arrival): top-[1133px] relative (1133-1024=109px), Room 205: top-[1349px] relative (1349-1240=109px)
+  },
+  dateRangeWithNotes: {
+    top: 102, // Room 203: top-[873px] relative (873-771=102px)
+  },
+  // Time (ETA/EDT) positions - Exact from Figma
   time: {
     fontSize: 14,
     fontWeight: 'regular' as const,
     color: '#000000',
-    left: 75, // Room 201: left-[75px] or left-[73px], Room 202/203/204: left-[161px] or left-[158px]
     lineHeight: 11, // Figma shows h-[11px]
-    top: 130, // Room 201 first: top-[130px], Room 201 second: top-[204px]
+    positions: {
+      priorityFirst: { left: 75, top: 130 }, // Room 201 first guest: left-[75px] top-[130px] ETA: 17:00 (exact from Figma)
+      prioritySecond: { left: 73, top: 204 }, // Room 201 second guest: left-[73px] top-[204px] EDT: 12:00 (exact from Figma)
+      standardDeparture: { left: 161, top: 114 }, // Room 202 (Departure): Date at top-[677px] relative (677-563=114px) - no ETA shown in Figma
+      standardArrival: { left: 161, top: 110 }, // Room 204: ETA at top-[1134px] relative (1134-1024=110px), Room 205 Stayover: top-[1350px] (1350-1240=110px), Room 205 Turndown: top-[1566px] (1566-1456=110px) - exact from Figma
+      withNotes: { left: 158, top: 103 }, // Room 203: ETA at top-[874px] relative (874-771=103px) - exact from Figma
+    },
   },
-  timeSecond: {
-    top: 204, // Room 201 second guest
-  },
-  timeStandard: {
-    left: 161, // For standard cards (Room 202/203/204)
-    top: 116, // Calculated from Room 202: time appears on same line as date
-  },
+  // Guest count positions - Exact from Figma
   guestCount: {
     fontSize: 14,
     fontWeight: 'light' as const,
     color: '#000000',
     lineHeight: 13, // Figma shows h-[13px]
-    iconLeft: 158, // Room 201: left-[158px], Room 202: left-[165px]
-    textLeft: 177, // Room 201: left-[177px], Room 202: left-[184px]
-    top: 110, // Room 201 first: top-[110px], Room 201 second: top-[184px]
-  },
-  guestCountSecond: {
-    top: 184, // Room 201 second guest
-  },
-  guestCountStandard: {
-    iconLeft: 165, // For standard cards
-    textLeft: 184, // For standard cards
-    top: 116, // Calculated from Room 202
+    positions: {
+      priorityFirst: { iconLeft: 158, textLeft: 177, top: 110 }, // Room 201 first: icon left-[158px] text left-[177px] top-[110px]
+      prioritySecond: { iconLeft: 158, textLeft: 177, top: 184 }, // Room 201 second: icon left-[158px] text left-[177px] top-[184px]
+      standardDeparture: { iconLeft: 165, textLeft: 184, top: 116 }, // Room 202 (Departure): icon left-[165px] text left-[184px] top-[679px] relative (679-563=116px)
+      standardArrival: { iconLeft: 165, textLeft: 184, top: 131 }, // Room 204 (Arrival): icon left-[165px] text left-[184px] top-[1155px] relative (1155-1024=131px), Room 205: top-[1371px] relative (1371-1240=131px)
+      withNotes: { iconLeft: 77, textLeft: 96, top: 124 }, // Room 203: icon left-[77px] text left-[96px] top-[895px] relative (895-771=124px)
+    },
   },
   priorityBadge: {
     fontSize: 12,
@@ -179,31 +193,31 @@ export const STAFF_SECTION = {
     width: 35,
     height: 35,
     borderRadius: 17.5,
-    left: 236, // Room 201: left-[236px], Room 202/203/204: left-[245px]
-    top: 22, // Room 201: top-[22px], Room 202: top-[583px] relative (583-563=20px), Room 203: top-[791px] relative (791-771=20px)
+    left: 236, // Room 201: left-[236px]
+    top: 22, // Room 201: top-[22px] - aligns with room type
   },
   avatarStandard: {
-    left: 245, // For non-priority cards
-    top: 20, // For non-priority cards
+    left: 245, // Room 202/203/204: left-[245px]
+    top: 22, // Should align with room type at top-[22px] (Room 202: 583-563=20px, but should be 22px to match room type)
   },
   name: {
     fontSize: 13,
     fontWeight: 'bold' as const,
     color: '#1e1e1e',
-    left: 279, // Room 201: left-[279px], Room 202/203/204: left-[288px]
-    top: 23, // Room 201: top-[23px], Room 202: top-[575px] relative (575-563=12px), Room 203: top-[794px] relative (794-771=23px)
+    left: 279, // Room 201: left-[279px]
+    top: 23, // Room 201: top-[23px] - aligns just below room number (17px)
     width: 104,
     lineHeight: 21, // Figma shows h-[21px]
   },
   nameStandard: {
-    left: 288, // For non-priority cards
-    top: 12, // For non-priority cards (Room 202)
+    left: 288, // Room 202/203/204: left-[288px]
+    top: 23, // Should align with priority card (Room 202: 575-563=12px, but should be 23px to match priority)
   },
   status: {
     fontSize: 12,
     fontWeight: 'light' as const,
-    left: 279, // Room 201: left-[279px], Room 202/203/204: left-[288px]
-    top: 40, // Room 201: top-[40px], Room 202: top-[592px] relative (592-563=29px), Room 203: top-[811px] relative (811-771=40px)
+    left: 279, // Room 201: left-[279px]
+    top: 40, // Room 201: top-[40px] - aligns with category
     lineHeight: 15, // Figma shows h-[15px]
     width: 101, // Room 201: w-[101px]
     colors: {
@@ -213,8 +227,8 @@ export const STAFF_SECTION = {
     },
   },
   statusStandard: {
-    left: 288, // For non-priority cards
-    top: 29, // For non-priority cards (Room 202)
+    left: 288, // Room 202/203/204: left-[288px]
+    top: 40, // Should align with category at top-[40px] (Room 202: 592-563=29px, but should be 40px to match category)
     width: 94, // Room 202/203/204: w-[94px] or w-[92px]
   },
   promiseTime: {
@@ -330,12 +344,17 @@ export const NOTES_SECTION = {
 // Guest Container Background - Exact values from Figma
 export const GUEST_CONTAINER_BG = {
   width: 414,
-  height: 100, // Room 202/204: h-[100px], Room 203: h-[101px]
   borderRadius: 10,
   background: 'rgba(223, 230, 240, 0.4)',
   left: 6, // Relative to card (centered: (426-414)/2 = 6px)
-  top: 70, // Room 202: top-[633px] relative (633-563=70px), Room 204: top-[1098px] relative (1098-1024=74px), using 70px
-  // Note: Room 201 (Arrival/Departure) doesn't have this background, only standard cards do
+  // Different heights and positions for different card types
+  positions: {
+    departure: { height: 101, top: 70 }, // Room 202: h-[101px] top-[633px] relative (633-563=70px)
+    arrival: { height: 100, top: 74 }, // Room 204: h-[100px] top-[1098px] relative (1098-1024=74px)
+    stayover: { height: 100, top: 74 }, // Room 205: h-[100px] top-[1314px] relative (1314-1240=74px)
+    turndown: { height: 100, top: 74 }, // Room 205 (Turndown): h-[100px] top-[1530px] relative (1530-1456=74px)
+  },
+  // Note: Room 201 (Arrival/Departure) and Room 203 (with notes) don't have this background
 } as const;
 
 // Divider Styles

@@ -25,14 +25,17 @@ interface RoomCardProps {
 
 export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps) {
   const isArrivalDeparture = room.category === 'Arrival/Departure';
-  // Calculate height based on card type and notes
-  let cardHeight = CARD_DIMENSIONS.heights.standard * scaleX;
+  // Calculate height based on card type and notes - matching Figma exactly
+  let cardHeight: number;
   if (isArrivalDeparture) {
-    cardHeight = CARD_DIMENSIONS.heights.arrivalDeparture * scaleX;
+    cardHeight = CARD_DIMENSIONS.heights.arrivalDeparture * scaleX; // 292px
   } else if (room.notes) {
-    cardHeight = CARD_DIMENSIONS.heights.withNotes * scaleX;
-  } else if (room.guests.length === 1) {
-    cardHeight = CARD_DIMENSIONS.heights.standard * scaleX;
+    cardHeight = CARD_DIMENSIONS.heights.withNotes * scaleX; // 222px
+  } else {
+    // Standard cards: Arrival, Stayover, Turndown use 185px, Departure uses 177px
+    cardHeight = room.category === 'Departure' 
+      ? CARD_DIMENSIONS.heights.standard * scaleX // 177px
+      : CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 185px
   }
 
   return (
@@ -67,11 +70,13 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
           <View style={styles.roomNumberRow}>
             <Text style={styles.roomNumber}>{room.roomNumber}</Text>
           </View>
-          <Text style={[
-            styles.roomType,
-            !room.isPriority && styles.roomTypeStandard
-          ]}>{room.roomType}</Text>
         </View>
+        
+        {/* Room Type - positioned absolutely */}
+        <Text style={[
+          styles.roomType,
+          !room.isPriority && styles.roomTypeStandard
+        ]}>{room.roomType}</Text>
         
         <Text style={[
           styles.categoryLabel,
@@ -88,60 +93,64 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
         </View>
       </View>
 
-      {/* Guest Information Sections */}
-      <View style={styles.guestContainer}>
-        {/* Guest container background - only for standard cards, not Arrival/Departure */}
-        {!isArrivalDeparture && (
-          <View style={styles.guestContainerBg} />
-        )}
-        {room.guests.map((guest, index) => {
-          // Determine which priority count to show for each guest
-          let guestPriorityCount: number | undefined;
-          if (isArrivalDeparture) {
-            guestPriorityCount = index === 0 ? room.priorityCount : room.secondGuestPriorityCount;
-          } else if (index === 0) {
-            guestPriorityCount = room.priorityCount;
-          }
-          
-          return (
-            <React.Fragment key={index}>
-              <GuestInfoSection 
-                guest={guest} 
-                priorityCount={guestPriorityCount}
-                isPriority={room.isPriority}
-                isFirstGuest={index === 0}
-                isSecondGuest={index === 1}
-              />
-              {isArrivalDeparture && index === 0 && <View style={styles.dividerHorizontal} />}
-            </React.Fragment>
-          );
-        })}
-      </View>
-
-      {/* Staff Section and Status Button */}
-      <View style={styles.staffStatusContainer}>
+      {/* Guest Container Background - only for standard cards without notes, not Arrival/Departure */}
+      {!isArrivalDeparture && !room.notes && (
         <View style={[
-          styles.dividerVertical,
-          !room.isPriority && styles.dividerVerticalStandard
+          styles.guestContainerBg,
+          room.category === 'Departure' ? styles.guestContainerBgDeparture : styles.guestContainerBgArrival,
         ]} />
-        <StaffSection staff={room.staff} isPriority={room.isPriority} />
-        <StatusButton 
-          status={room.status} 
-          onPress={onStatusPress}
-          isPriority={room.isPriority}
-          isArrivalDeparture={isArrivalDeparture}
-          hasNotes={!!room.notes}
-        />
-      </View>
-
-      {/* Notes Section (if applicable) */}
-      {room.notes && (
-        <NotesSection notes={room.notes} isArrivalDeparture={isArrivalDeparture} />
       )}
 
-      {/* Horizontal divider for Arrival/Departure */}
-      {isArrivalDeparture && room.guests.length > 1 && (
-        <View style={[styles.guestDividerLine, { top: 75 * scaleX }]} />
+      {/* Guest Information Sections - positioned absolutely */}
+      {room.guests.map((guest, index) => {
+        // Determine which priority count to show for each guest
+        let guestPriorityCount: number | undefined;
+        if (isArrivalDeparture) {
+          guestPriorityCount = index === 0 ? room.priorityCount : room.secondGuestPriorityCount;
+        } else if (index === 0) {
+          guestPriorityCount = room.priorityCount;
+        }
+        
+        return (
+          <React.Fragment key={index}>
+            <GuestInfoSection 
+              guest={guest} 
+              priorityCount={guestPriorityCount}
+              isPriority={room.isPriority}
+              isFirstGuest={index === 0}
+              isSecondGuest={index === 1}
+              hasNotes={!!room.notes}
+              category={room.category}
+            />
+            {/* Horizontal divider for Arrival/Departure between guests */}
+            {isArrivalDeparture && index === 0 && (
+              <View style={styles.guestDividerLine} />
+            )}
+          </React.Fragment>
+        );
+      })}
+
+      {/* Vertical Divider */}
+      <View style={[
+        styles.dividerVertical,
+        !room.isPriority && styles.dividerVerticalStandard
+      ]} />
+
+      {/* Staff Section - positioned absolutely */}
+      <StaffSection staff={room.staff} isPriority={room.isPriority} />
+
+      {/* Status Button - positioned absolutely */}
+      <StatusButton 
+        status={room.status} 
+        onPress={onStatusPress}
+        isPriority={room.isPriority}
+        isArrivalDeparture={isArrivalDeparture}
+        hasNotes={!!room.notes}
+      />
+
+      {/* Notes Section (if applicable) - positioned absolutely */}
+      {room.notes && (
+        <NotesSection notes={room.notes} isArrivalDeparture={isArrivalDeparture} />
       )}
     </TouchableOpacity>
   );
@@ -210,15 +219,17 @@ const styles = StyleSheet.create({
     lineHeight: ROOM_HEADER.roomNumber.lineHeight * scaleX,
   },
   roomType: {
+    position: 'absolute',
     fontSize: ROOM_HEADER.roomType.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.light as any,
     color: ROOM_HEADER.roomType.color,
     lineHeight: ROOM_HEADER.roomType.lineHeight * scaleX,
-    marginTop: (ROOM_HEADER.roomType.top - ROOM_HEADER.roomNumber.top) * scaleX,
+    left: ROOM_HEADER.roomType.left * scaleX, // 111px for priority
+    top: ROOM_HEADER.roomType.top * scaleX, // 22px
   },
   roomTypeStandard: {
-    marginLeft: (ROOM_HEADER.roomTypeStandard.left - ROOM_HEADER.roomNumberStandard.left) * scaleX,
+    left: ROOM_HEADER.roomTypeStandard.left * scaleX, // 118px for standard
   },
   priorityTextHeader: {
     fontSize: ROOM_HEADER.priorityBadge.fontSize * scaleX,
@@ -249,26 +260,20 @@ const styles = StyleSheet.create({
     width: ROOM_HEADER.chevron.width * scaleX,
     height: ROOM_HEADER.chevron.height * scaleX,
   },
-  guestContainer: {
-    position: 'relative',
-    paddingHorizontal: 0,
-    paddingLeft: 0,
-    marginTop: 0,
-  },
   guestContainerBg: {
     position: 'absolute',
     left: GUEST_CONTAINER_BG.left * scaleX,
-    top: GUEST_CONTAINER_BG.top * scaleX,
     width: GUEST_CONTAINER_BG.width * scaleX,
-    height: GUEST_CONTAINER_BG.height * scaleX,
     borderRadius: GUEST_CONTAINER_BG.borderRadius * scaleX,
     backgroundColor: GUEST_CONTAINER_BG.background,
   },
-  staffStatusContainer: {
-    flexDirection: 'row',
-    position: 'relative',
-    height: 82 * scaleX,
-    marginTop: 0,
+  guestContainerBgDeparture: {
+    height: GUEST_CONTAINER_BG.positions.departure.height * scaleX,
+    top: GUEST_CONTAINER_BG.positions.departure.top * scaleX,
+  },
+  guestContainerBgArrival: {
+    height: GUEST_CONTAINER_BG.positions.arrival.height * scaleX,
+    top: GUEST_CONTAINER_BG.positions.arrival.top * scaleX,
   },
   dividerVertical: {
     position: 'absolute',
@@ -281,17 +286,13 @@ const styles = StyleSheet.create({
   dividerVerticalStandard: {
     left: STAFF_SECTION.dividerStandard.left * scaleX,
   },
-  dividerHorizontal: {
-    height: DIVIDERS.horizontal.height,
-    backgroundColor: DIVIDERS.horizontal.color,
-    marginVertical: DIVIDERS.horizontal.marginVertical * scaleX,
-  },
   guestDividerLine: {
     position: 'absolute',
     left: 0,
     right: 0,
-    height: 1,
-    backgroundColor: '#e3e3e3',
+    top: 75 * scaleX, // Room 201: divider between two guests at top-[75px]
+    height: DIVIDERS.horizontal.height,
+    backgroundColor: DIVIDERS.horizontal.color,
   },
 });
 

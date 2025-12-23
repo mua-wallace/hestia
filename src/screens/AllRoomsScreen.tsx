@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 217 * scaleX, // Header height
+    paddingTop: (217 + 23) * scaleX, // Header height (217px) + spacing from search input (23px)
     paddingBottom: 152 * scaleX + 20 * scaleX, // Bottom nav height + extra padding
   },
   contentBlurOverlay: {

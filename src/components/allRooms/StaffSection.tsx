@@ -10,12 +10,16 @@ interface StaffSectionProps {
 }
 
 export default function StaffSection({ staff, isPriority = false }: StaffSectionProps) {
-  const avatarLeft = isPriority ? STAFF_SECTION.avatar.left : STAFF_SECTION.avatarStandard.left;
-  const avatarTop = isPriority ? STAFF_SECTION.avatar.top : STAFF_SECTION.avatarStandard.top;
-  const nameLeft = isPriority ? STAFF_SECTION.name.left : STAFF_SECTION.nameStandard.left;
-  const nameTop = isPriority ? STAFF_SECTION.name.top : STAFF_SECTION.nameStandard.top;
-  const statusLeft = isPriority ? STAFF_SECTION.status.left : STAFF_SECTION.statusStandard.left;
-  const statusTop = isPriority ? STAFF_SECTION.status.top : STAFF_SECTION.statusStandard.top;
+  if (!staff) {
+    return null;
+  }
+
+  const avatarLeft = isPriority ? STAFF_SECTION.avatar.left : (STAFF_SECTION.avatarStandard?.left ?? STAFF_SECTION.avatar.left);
+  const avatarTop = isPriority ? STAFF_SECTION.avatar.top : (STAFF_SECTION.avatarStandard?.top ?? STAFF_SECTION.avatar.top);
+  const nameLeft = isPriority ? STAFF_SECTION.name.left : (STAFF_SECTION.nameStandard?.left ?? STAFF_SECTION.name.left);
+  const nameTop = isPriority ? STAFF_SECTION.name.top : (STAFF_SECTION.nameStandard?.top ?? STAFF_SECTION.name.top);
+  const statusLeft = isPriority ? STAFF_SECTION.status.left : (STAFF_SECTION.statusStandard?.left ?? STAFF_SECTION.status.left);
+  const statusTop = isPriority ? STAFF_SECTION.status.top : (STAFF_SECTION.statusStandard?.top ?? STAFF_SECTION.status.top);
 
   return (
     <View style={styles.container}>
@@ -27,11 +31,11 @@ export default function StaffSection({ staff, isPriority = false }: StaffSection
             style={styles.avatar}
             resizeMode="cover"
           />
-        ) : (
+        ) : staff.initials ? (
           <View style={styles.initialsCircle}>
-            <Text style={styles.initialsText}>{staff.initials}</Text>
+            <Text style={styles.initialsText}>{String(staff.initials)}</Text>
           </View>
-        )}
+        ) : null}
       </View>
 
       {/* Staff Name */}
@@ -67,9 +71,11 @@ export default function StaffSection({ staff, isPriority = false }: StaffSection
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
-    width: '100%',
-    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   avatarContainer: {
     position: 'absolute',

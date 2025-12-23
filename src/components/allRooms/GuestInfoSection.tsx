@@ -10,6 +10,8 @@ interface GuestInfoSectionProps {
   isPriority?: boolean;
   isFirstGuest?: boolean;
   isSecondGuest?: boolean;
+  hasNotes?: boolean;
+  category?: string; // To determine if it's Arrival vs Departure
 }
 
 export default function GuestInfoSection({ 
@@ -18,23 +20,73 @@ export default function GuestInfoSection({
   isPriority = false,
   isFirstGuest = true,
   isSecondGuest = false,
+  hasNotes = false,
+  category = '',
 }: GuestInfoSectionProps) {
-  const containerLeft = isPriority ? GUEST_INFO.container.left : GUEST_INFO.containerStandard.left;
-  const nameTop = isSecondGuest 
-    ? GUEST_INFO.nameSecond.top 
-    : (isPriority ? GUEST_INFO.name.top : GUEST_INFO.nameStandard.top);
-  const dateTop = isSecondGuest 
-    ? GUEST_INFO.dateRangeSecond.top 
-    : (isPriority ? GUEST_INFO.dateRange.top : GUEST_INFO.dateRangeStandard.top);
-  const timeLeft = isPriority ? GUEST_INFO.time.left : GUEST_INFO.timeStandard.left;
-  const timeTop = isSecondGuest 
-    ? GUEST_INFO.timeSecond.top 
-    : (isPriority ? GUEST_INFO.time.top : GUEST_INFO.timeStandard.top);
-  const countIconLeft = isPriority ? GUEST_INFO.guestCount.iconLeft : GUEST_INFO.guestCountStandard.iconLeft;
-  const countTextLeft = isPriority ? GUEST_INFO.guestCount.textLeft : GUEST_INFO.guestCountStandard.textLeft;
-  const countTop = isSecondGuest 
-    ? GUEST_INFO.guestCountSecond.top 
-    : (isPriority ? GUEST_INFO.guestCount.top : GUEST_INFO.guestCountStandard.top);
+  const isArrival = category === 'Arrival';
+  const isDeparture = category === 'Departure';
+  
+  // Determine container left position
+  let containerLeft: number;
+  if (isPriority) {
+    containerLeft = GUEST_INFO.container.left; // 73px
+  } else if (hasNotes) {
+    containerLeft = GUEST_INFO.containerWithNotes.left; // 77px
+  } else {
+    containerLeft = GUEST_INFO.containerStandard.left; // 80px
+  }
+
+  // Determine name top position
+  let nameTop: number;
+  if (isPriority) {
+    nameTop = isSecondGuest ? GUEST_INFO.nameSecond.top : GUEST_INFO.name.top;
+  } else if (hasNotes) {
+    nameTop = GUEST_INFO.nameWithNotes.top;
+  } else if (isArrival) {
+    nameTop = GUEST_INFO.nameStandardArrival.top; // 87px for Arrival cards
+  } else {
+    nameTop = GUEST_INFO.nameStandard.top; // 92px for Departure cards
+  }
+
+  // Determine date range top position
+  let dateTop: number;
+  if (isPriority) {
+    dateTop = isSecondGuest ? GUEST_INFO.dateRangeSecond.top : GUEST_INFO.dateRange.top;
+  } else if (hasNotes) {
+    dateTop = GUEST_INFO.dateRangeWithNotes.top;
+  } else if (isArrival) {
+    dateTop = GUEST_INFO.dateRangeStandardArrival.top; // 109px for Arrival cards
+  } else {
+    dateTop = GUEST_INFO.dateRangeStandard.top; // 114px for Departure cards
+  }
+
+  // Determine time (ETA/EDT) position - exact from Figma
+  let timePos: { left: number; top: number };
+  if (isPriority) {
+    timePos = isSecondGuest 
+      ? GUEST_INFO.time.positions.prioritySecond 
+      : GUEST_INFO.time.positions.priorityFirst;
+  } else if (hasNotes) {
+    timePos = GUEST_INFO.time.positions.withNotes; // Room 203: left-[158px] top-[103px]
+  } else if (isArrival) {
+    timePos = GUEST_INFO.time.positions.standardArrival; // Room 204/205: left-[161px] top-[110px]
+  } else {
+    timePos = GUEST_INFO.time.positions.standardDeparture; // Room 202: left-[161px] top-[114px] (no ETA shown)
+  }
+
+  // Determine guest count position
+  let countPos: { iconLeft: number; textLeft: number; top: number };
+  if (isPriority) {
+    countPos = isSecondGuest 
+      ? GUEST_INFO.guestCount.positions.prioritySecond 
+      : GUEST_INFO.guestCount.positions.priorityFirst;
+  } else if (hasNotes) {
+    countPos = GUEST_INFO.guestCount.positions.withNotes;
+  } else if (isArrival) {
+    countPos = GUEST_INFO.guestCount.positions.standardArrival; // For Arrival cards
+  } else {
+    countPos = GUEST_INFO.guestCount.positions.standardDeparture; // For Departure cards
+  }
 
   // Priority badge positioning from Figma
   const priorityBadgeLeft = isPriority 
@@ -56,7 +108,7 @@ export default function GuestInfoSection({
         <Text style={styles.guestName}>{guest.name}</Text>
       </View>
       
-      {/* Priority Badge - positioned absolutely */}
+      {/* Priority Badge - positioned absolutely relative to card */}
       {priorityCount ? (
         <Text style={[
           styles.priorityCount, 
@@ -72,22 +124,37 @@ export default function GuestInfoSection({
       {/* Date Range */}
       <View style={[styles.detailsRow, { top: dateTop * scaleX }]}>
         <Text style={styles.dateRange}>{guest.dateRange}</Text>
-        {guest.timeLabel && guest.time && (
-          <Text style={[styles.time, { left: timeLeft * scaleX }]}>
-            {guest.timeLabel}: {guest.time}
-          </Text>
-        )}
       </View>
 
+      {/* Time (ETA/EDT) - positioned absolutely relative to card - exact from Figma */}
+      {guest.timeLabel && guest.time && timePos && (
+        <Text style={[
+          styles.time, 
+          { 
+            // Time positions in constants are relative to card, but container has left offset
+            // So we need to subtract containerLeft to position relative to container
+            left: ((timePos.left ?? 0) - containerLeft) * scaleX,
+            // Use exact top position from Figma (ETA is 1px below date range in Figma)
+            top: (timePos.top ?? 0) * scaleX,
+          }
+        ]}>
+          {guest.timeLabel}: {guest.time}
+        </Text>
+      )}
+
       {/* Guest Count */}
-      <View style={[styles.countRow, { top: countTop * scaleX }]}>
-        <Image
-          source={require('../../../assets/icons/rooms/guest-icon.png')}
-          style={[styles.countIcon, { left: countIconLeft * scaleX }]}
-          resizeMode="contain"
-        />
-        <Text style={[styles.countText, { left: countTextLeft * scaleX }]}>{guest.guestCount}</Text>
-      </View>
+      {countPos && (
+        <View style={[styles.countRow, { top: (countPos.top ?? 0) * scaleX }]}>
+          <Image
+            source={require('../../../assets/icons/rooms/guest-icon.png')}
+            style={[styles.countIcon, { left: ((countPos.iconLeft ?? 0) - containerLeft) * scaleX }]}
+            resizeMode="contain"
+          />
+          <Text style={[styles.countText, { left: ((countPos.textLeft ?? 0) - containerLeft) * scaleX }]}>
+            {guest.guestCount}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -129,7 +196,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     left: 0,
-    gap: 8 * scaleX,
   },
   dateRange: {
     fontSize: GUEST_INFO.dateRange.fontSize * scaleX,
@@ -145,7 +211,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.regular as any,
     color: GUEST_INFO.time.color,
     lineHeight: GUEST_INFO.time.lineHeight * scaleX,
-    top: 0,
   },
   countRow: {
     position: 'absolute',
@@ -168,7 +233,6 @@ const styles = StyleSheet.create({
     color: GUEST_INFO.guestCount.color,
     lineHeight: GUEST_INFO.guestCount.lineHeight * scaleX,
     top: 0,
-    marginLeft: 4 * scaleX,
   },
 });
 
