@@ -75,7 +75,7 @@ export default function AllRoomsHeader({
               <View style={styles.placeholderContainer} pointerEvents="none">
                 <Text style={styles.placeholderText}>
                   <Text style={styles.placeholderBold}>Search </Text>
-                  <Text>Rooms, Guests, etc</Text>
+                  <Text style={styles.placeholderText}>Rooms, Guests, etc</Text>
                 </Text>
               </View>
             )}

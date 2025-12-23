@@ -1,43 +1,54 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
 import { NotesInfo } from '../../types/allRooms.types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+import { scaleX, NOTES_SECTION } from '../../constants/allRoomsStyles';
 
 interface NotesSectionProps {
   notes: NotesInfo;
+  isArrivalDeparture?: boolean;
 }
 
-export default function NotesSection({ notes }: NotesSectionProps) {
+export default function NotesSection({ notes, isArrivalDeparture = false }: NotesSectionProps) {
+  const position = isArrivalDeparture 
+    ? NOTES_SECTION.positions.arrivalDeparture 
+    : NOTES_SECTION.positions.withNotes;
+  const iconPos = isArrivalDeparture 
+    ? NOTES_SECTION.icon.positions.arrivalDeparture 
+    : NOTES_SECTION.icon.positions.withNotes;
+  const badgePos = isArrivalDeparture 
+    ? NOTES_SECTION.badge.positions.arrivalDeparture 
+    : NOTES_SECTION.badge.positions.withNotes;
+  const textPos = isArrivalDeparture 
+    ? NOTES_SECTION.text.positions.arrivalDeparture 
+    : NOTES_SECTION.text.positions.withNotes;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { left: position.left * scaleX, top: position.top * scaleX }]}>
       {/* Notes Icon */}
       <Image
         source={require('../../../assets/icons/rooms/notes-icon.png')}
-        style={styles.notesIcon}
+        style={[styles.notesIcon, { left: iconPos.left * scaleX, top: iconPos.top * scaleX }]}
         resizeMode="contain"
       />
       
       {notes.hasRushed && (
         <Image
           source={require('../../../assets/icons/rooms/rushed-icon.png')}
-          style={styles.rushedIcon}
+          style={[styles.rushedIcon, { left: NOTES_SECTION.rushedIcon.left * scaleX, top: NOTES_SECTION.rushedIcon.top * scaleX }]}
           resizeMode="contain"
         />
       )}
 
       {/* Count Badge */}
-      <View style={styles.badgeContainer}>
+      <View style={[styles.badgeContainer, { left: badgePos.left * scaleX, top: badgePos.top * scaleX }]}>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{notes.count}</Text>
         </View>
       </View>
 
       {/* Text */}
-      <Text style={styles.notesText}>
+      <Text style={[styles.notesText, { left: textPos.left * scaleX, top: textPos.top * scaleX }]}>
         {notes.hasRushed ? 'Rushed and notes' : `${notes.count} notes`}
       </Text>
     </View>
@@ -47,51 +58,50 @@ export default function NotesSection({ notes }: NotesSectionProps) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 12 * scaleX,
-    left: 19 * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background.primary,
-    borderRadius: 10 * scaleX,
-    paddingVertical: 8 * scaleX,
-    paddingHorizontal: 12 * scaleX,
-    height: 54 * scaleX,
+    backgroundColor: NOTES_SECTION.background,
+    borderRadius: NOTES_SECTION.borderRadius * scaleX,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    height: NOTES_SECTION.height * scaleX,
+    width: NOTES_SECTION.width * scaleX,
   },
   notesIcon: {
-    width: 31.974 * scaleX,
-    height: 31.974 * scaleX,
-    marginRight: 8 * scaleX,
+    position: 'absolute',
+    width: NOTES_SECTION.icon.width * scaleX,
+    height: NOTES_SECTION.icon.height * scaleX,
   },
   rushedIcon: {
-    width: 31.974 * scaleX,
-    height: 31.974 * scaleX,
-    marginRight: 8 * scaleX,
+    position: 'absolute',
+    width: NOTES_SECTION.rushedIcon.width * scaleX,
+    height: NOTES_SECTION.rushedIcon.height * scaleX,
   },
   badgeContainer: {
     position: 'absolute',
-    left: 50 * scaleX,
-    top: 12 * scaleX,
   },
   badge: {
-    width: 20.455 * scaleX,
-    height: 20.455 * scaleX,
-    borderRadius: 10.2275 * scaleX,
-    backgroundColor: '#f92424',
+    width: NOTES_SECTION.badge.width * scaleX,
+    height: NOTES_SECTION.badge.height * scaleX,
+    borderRadius: NOTES_SECTION.badge.borderRadius * scaleX,
+    backgroundColor: NOTES_SECTION.badge.backgroundColor,
     justifyContent: 'center',
     alignItems: 'center',
   },
   badgeText: {
-    fontSize: 15 * scaleX,
+    fontSize: NOTES_SECTION.badge.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.light as any,
-    color: colors.text.white,
+    color: NOTES_SECTION.badge.color,
+    lineHeight: NOTES_SECTION.badge.lineHeight * scaleX,
   },
   notesText: {
-    fontSize: 14 * scaleX,
+    position: 'absolute',
+    fontSize: NOTES_SECTION.text.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
-    color: colors.primary.main,
-    marginLeft: 12 * scaleX,
+    color: NOTES_SECTION.text.color,
+    lineHeight: NOTES_SECTION.text.lineHeight * scaleX,
   },
 });
 

@@ -1,15 +1,21 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
 import { RoomCardData, CATEGORY_ICONS } from '../../types/allRooms.types';
 import GuestInfoSection from './GuestInfoSection';
 import StaffSection from './StaffSection';
 import StatusButton from './StatusButton';
 import NotesSection from './NotesSection';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+import {
+  scaleX,
+  CARD_DIMENSIONS,
+  CARD_COLORS,
+  ROOM_HEADER,
+  GUEST_INFO,
+  GUEST_CONTAINER_BG,
+  STAFF_SECTION,
+  DIVIDERS,
+} from '../../constants/allRoomsStyles';
 
 interface RoomCardProps {
   room: RoomCardData;
@@ -19,7 +25,15 @@ interface RoomCardProps {
 
 export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps) {
   const isArrivalDeparture = room.category === 'Arrival/Departure';
-  const cardHeight = isArrivalDeparture ? 292 * scaleX : (room.notes ? 222 * scaleX : 177 * scaleX);
+  // Calculate height based on card type and notes
+  let cardHeight = CARD_DIMENSIONS.heights.standard * scaleX;
+  if (isArrivalDeparture) {
+    cardHeight = CARD_DIMENSIONS.heights.arrivalDeparture * scaleX;
+  } else if (room.notes) {
+    cardHeight = CARD_DIMENSIONS.heights.withNotes * scaleX;
+  } else if (room.guests.length === 1) {
+    cardHeight = CARD_DIMENSIONS.heights.standard * scaleX;
+  }
 
   return (
     <TouchableOpacity
@@ -35,7 +49,10 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
       {/* Room Header */}
       <View style={styles.roomHeader}>
         {/* Room number badge with icon */}
-        <View style={styles.roomBadge}>
+        <View style={[
+          styles.roomBadge,
+          !room.isPriority && styles.roomBadgeStandard
+        ]}>
           <Image
             source={CATEGORY_ICONS[room.category]}
             style={styles.roomIcon}
@@ -43,15 +60,23 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
           />
         </View>
         
-        <View style={styles.roomInfo}>
-          <Text style={styles.roomNumber}>{room.roomNumber}</Text>
-          <Text style={styles.roomType}>{room.roomType}</Text>
-          {room.priorityCount && (
-            <Text style={styles.priorityText}>{room.priorityCount}</Text>
-          )}
+        <View style={[
+          styles.roomInfo,
+          !room.isPriority && styles.roomInfoStandard
+        ]}>
+          <View style={styles.roomNumberRow}>
+            <Text style={styles.roomNumber}>{room.roomNumber}</Text>
+          </View>
+          <Text style={[
+            styles.roomType,
+            !room.isPriority && styles.roomTypeStandard
+          ]}>{room.roomType}</Text>
         </View>
         
-        <Text style={styles.categoryLabel}>{room.category}</Text>
+        <Text style={[
+          styles.categoryLabel,
+          !room.isPriority && styles.categoryLabelStandard
+        ]}>{room.category}</Text>
         
         {/* Chevron arrow */}
         <View style={styles.chevronContainer}>
@@ -65,24 +90,53 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
 
       {/* Guest Information Sections */}
       <View style={styles.guestContainer}>
-        {room.guests.map((guest, index) => (
-          <React.Fragment key={index}>
-            <GuestInfoSection guest={guest} priorityCount={index === 0 ? room.priorityCount : undefined} />
-            {isArrivalDeparture && index === 0 && <View style={styles.dividerHorizontal} />}
-          </React.Fragment>
-        ))}
+        {/* Guest container background - only for standard cards, not Arrival/Departure */}
+        {!isArrivalDeparture && (
+          <View style={styles.guestContainerBg} />
+        )}
+        {room.guests.map((guest, index) => {
+          // Determine which priority count to show for each guest
+          let guestPriorityCount: number | undefined;
+          if (isArrivalDeparture) {
+            guestPriorityCount = index === 0 ? room.priorityCount : room.secondGuestPriorityCount;
+          } else if (index === 0) {
+            guestPriorityCount = room.priorityCount;
+          }
+          
+          return (
+            <React.Fragment key={index}>
+              <GuestInfoSection 
+                guest={guest} 
+                priorityCount={guestPriorityCount}
+                isPriority={room.isPriority}
+                isFirstGuest={index === 0}
+                isSecondGuest={index === 1}
+              />
+              {isArrivalDeparture && index === 0 && <View style={styles.dividerHorizontal} />}
+            </React.Fragment>
+          );
+        })}
       </View>
 
       {/* Staff Section and Status Button */}
       <View style={styles.staffStatusContainer}>
-        <View style={styles.dividerVertical} />
-        <StaffSection staff={room.staff} />
-        <StatusButton status={room.status} onPress={onStatusPress} />
+        <View style={[
+          styles.dividerVertical,
+          !room.isPriority && styles.dividerVerticalStandard
+        ]} />
+        <StaffSection staff={room.staff} isPriority={room.isPriority} />
+        <StatusButton 
+          status={room.status} 
+          onPress={onStatusPress}
+          isPriority={room.isPriority}
+          isArrivalDeparture={isArrivalDeparture}
+          hasNotes={!!room.notes}
+        />
       </View>
 
       {/* Notes Section (if applicable) */}
       {room.notes && (
-        <NotesSection notes={room.notes} />
+        <NotesSection notes={room.notes} isArrivalDeparture={isArrivalDeparture} />
       )}
 
       {/* Horizontal divider for Arrival/Departure */}
@@ -95,97 +149,142 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f9fafc',
-    borderRadius: 9 * scaleX,
+    backgroundColor: CARD_COLORS.background,
+    borderRadius: CARD_DIMENSIONS.borderRadius * scaleX,
     borderWidth: 1,
-    borderColor: '#e3e3e3',
-    marginHorizontal: 7 * scaleX,
-    marginBottom: 16 * scaleX,
+    borderColor: CARD_COLORS.border,
+    marginHorizontal: CARD_DIMENSIONS.marginHorizontal * scaleX,
+    marginBottom: CARD_DIMENSIONS.marginBottom * scaleX,
     position: 'relative',
+    width: CARD_DIMENSIONS.width * scaleX,
   },
   priorityBorder: {
-    borderColor: '#f92424',
+    borderColor: CARD_COLORS.priorityBorder,
     borderWidth: 1,
   },
   priorityBackground: {
-    backgroundColor: 'rgba(249, 36, 36, 0.08)',
+    backgroundColor: CARD_COLORS.priorityBackground,
   },
   roomHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 17 * scaleX,
-    paddingHorizontal: 14 * scaleX,
-    marginBottom: 8 * scaleX,
+    alignItems: 'flex-start',
+    paddingTop: ROOM_HEADER.paddingTop * scaleX,
+    paddingHorizontal: ROOM_HEADER.paddingHorizontal * scaleX,
+    marginBottom: 0,
+    position: 'relative',
   },
   roomBadge: {
-    width: 29.348 * scaleX,
-    height: 29.348 * scaleX,
+    position: 'absolute',
+    width: ROOM_HEADER.icon.width * scaleX,
+    height: ROOM_HEADER.icon.height * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
+    left: ROOM_HEADER.icon.left * scaleX,
+    top: ROOM_HEADER.icon.top * scaleX,
+  },
+  roomBadgeStandard: {
+    left: ROOM_HEADER.iconStandard.left * scaleX,
   },
   roomIcon: {
-    width: 29.348 * scaleX,
-    height: 29.348 * scaleX,
+    width: ROOM_HEADER.icon.width * scaleX,
+    height: ROOM_HEADER.icon.height * scaleX,
   },
   roomInfo: {
-    marginLeft: 8 * scaleX,
+    position: 'absolute',
+    left: ROOM_HEADER.roomNumber.left * scaleX,
+    top: ROOM_HEADER.roomNumber.top * scaleX,
+  },
+  roomInfoStandard: {
+    left: ROOM_HEADER.roomNumberStandard.left * scaleX,
+  },
+  roomNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8 * scaleX,
   },
   roomNumber: {
-    fontSize: 21 * scaleX,
+    fontSize: ROOM_HEADER.roomNumber.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
-    color: '#334866',
+    color: ROOM_HEADER.roomNumber.color,
+    lineHeight: ROOM_HEADER.roomNumber.lineHeight * scaleX,
   },
   roomType: {
-    fontSize: 12 * scaleX,
+    fontSize: ROOM_HEADER.roomType.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.light as any,
-    color: '#334866',
-    marginTop: 2 * scaleX,
+    color: ROOM_HEADER.roomType.color,
+    lineHeight: ROOM_HEADER.roomType.lineHeight * scaleX,
+    marginTop: (ROOM_HEADER.roomType.top - ROOM_HEADER.roomNumber.top) * scaleX,
   },
-  priorityText: {
-    fontSize: 12 * scaleX,
+  roomTypeStandard: {
+    marginLeft: (ROOM_HEADER.roomTypeStandard.left - ROOM_HEADER.roomNumberStandard.left) * scaleX,
+  },
+  priorityTextHeader: {
+    fontSize: ROOM_HEADER.priorityBadge.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.light as any,
-    color: '#334866',
-    marginTop: 24 * scaleX,
+    color: ROOM_HEADER.priorityBadge.color,
+    lineHeight: ROOM_HEADER.roomType.lineHeight * scaleX,
   },
   categoryLabel: {
-    fontSize: 16 * scaleX,
+    position: 'absolute',
+    fontSize: ROOM_HEADER.category.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
-    color: '#334866',
-    marginLeft: 6 * scaleX,
-    marginTop: 23 * scaleX,
+    color: ROOM_HEADER.category.color,
+    left: ROOM_HEADER.category.left * scaleX,
+    top: ROOM_HEADER.category.top * scaleX,
+    lineHeight: ROOM_HEADER.category.lineHeight * scaleX,
+  },
+  categoryLabelStandard: {
+    left: ROOM_HEADER.categoryStandard.left * scaleX,
   },
   chevronContainer: {
     position: 'absolute',
-    right: 15 * scaleX,
-    top: 29 * scaleX,
+    right: (CARD_DIMENSIONS.width - 401 - ROOM_HEADER.chevron.width) * scaleX, // 401px from left in Figma = 25px from right, minus icon width
+    top: ROOM_HEADER.chevron.top * scaleX,
   },
   chevronIcon: {
-    width: 7 * scaleX,
-    height: 14 * scaleX,
+    width: ROOM_HEADER.chevron.width * scaleX,
+    height: ROOM_HEADER.chevron.height * scaleX,
   },
   guestContainer: {
-    paddingHorizontal: 14 * scaleX,
+    position: 'relative',
+    paddingHorizontal: 0,
+    paddingLeft: 0,
+    marginTop: 0,
+  },
+  guestContainerBg: {
+    position: 'absolute',
+    left: GUEST_CONTAINER_BG.left * scaleX,
+    top: GUEST_CONTAINER_BG.top * scaleX,
+    width: GUEST_CONTAINER_BG.width * scaleX,
+    height: GUEST_CONTAINER_BG.height * scaleX,
+    borderRadius: GUEST_CONTAINER_BG.borderRadius * scaleX,
+    backgroundColor: GUEST_CONTAINER_BG.background,
   },
   staffStatusContainer: {
     flexDirection: 'row',
     position: 'relative',
+    height: 82 * scaleX,
+    marginTop: 0,
   },
   dividerVertical: {
     position: 'absolute',
-    left: 227 * scaleX,
-    top: 11 * scaleX,
-    width: 1,
-    height: 50.5 * scaleX,
-    backgroundColor: '#e3e3e3',
+    left: STAFF_SECTION.divider.left * scaleX,
+    top: STAFF_SECTION.divider.top * scaleX,
+    width: STAFF_SECTION.divider.width,
+    height: STAFF_SECTION.divider.height * scaleX,
+    backgroundColor: STAFF_SECTION.divider.color,
+  },
+  dividerVerticalStandard: {
+    left: STAFF_SECTION.dividerStandard.left * scaleX,
   },
   dividerHorizontal: {
-    height: 1,
-    backgroundColor: '#e3e3e3',
-    marginVertical: 12 * scaleX,
+    height: DIVIDERS.horizontal.height,
+    backgroundColor: DIVIDERS.horizontal.color,
+    marginVertical: DIVIDERS.horizontal.marginVertical * scaleX,
   },
   guestDividerLine: {
     position: 'absolute',

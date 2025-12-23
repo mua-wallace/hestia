@@ -34,7 +34,8 @@ export interface RoomCardData {
   staff: StaffInfo;
   isPriority: boolean; // Red border for priority rooms
   notes?: NotesInfo;
-  priorityCount?: number; // Number badge for priority (e.g., 11, 22)
+  priorityCount?: number; // Number badge for priority (e.g., 11 for first guest)
+  secondGuestPriorityCount?: number; // For Arrival/Departure rooms with 2 guests (e.g., 22)
 }
 
 export interface AllRoomsScreenData {

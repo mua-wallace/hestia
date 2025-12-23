@@ -10,7 +10,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       category: 'Arrival/Departure',
       status: 'InProgress',
       isPriority: true,
-      priorityCount: 11,
+      priorityCount: 11, // First guest has 11
       guests: [
         {
           name: 'Mr Mohamed. B',
@@ -37,7 +37,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         count: 3,
         hasRushed: true,
       },
-      priorityCount: 22,
+      secondGuestPriorityCount: 22, // Second guest has 22
     },
     {
       id: 'room-202',
