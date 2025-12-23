@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   popupWrapper: {
     position: 'absolute',
     bottom: 162 * scaleX, // Position above bottom nav
-    right: 62 * scaleX, // Center above More icon
+    right: 20 * scaleX, // Positioned further to the right as per Figma design
     zIndex: 1001, // Above everything including bottom nav
   },
   popupContainer: {
@@ -88,8 +88,11 @@ const styles = StyleSheet.create({
     borderTopColor: '#ffffff',
     marginTop: -1, // Overlap slightly to remove any gap
     position: 'absolute',
-    left: '50%', // Center horizontally
-    marginLeft: -12 * scaleX, // Offset by half the triangle width
+    // Align triangle tip with More icon center
+    // More icon center: 56px from screen right
+    // Popup right edge: 20px from screen right
+    // Triangle offset: 20 - 56 = -36px (so triangle is 36px inside from popup right edge)
+    right: 36 * scaleX, // Position triangle tip to align with More icon center
     bottom: -9 * scaleX, // Position at bottom of popup
   },
 });

@@ -126,15 +126,19 @@ export default function GuestInfoSection({
         <Text style={styles.dateRange}>{guest.dateRange}</Text>
       </View>
 
-      {/* Time (ETA/EDT) - positioned absolutely relative to card - exact from Figma */}
+      {/* Time (ETA/EDT) - positioned using exact Figma values */}
       {guest.timeLabel && guest.time && timePos && (
         <Text style={[
           styles.time, 
           { 
-            // Time positions in constants are relative to card, but container has left offset
-            // So we need to subtract containerLeft to position relative to container
+            // Time positions in constants are relative to card
+            // Container has left offset, so subtract containerLeft to position relative to container
+            // Room 204: ETA at left-[161px] relative to card, container at left-[80px]
+            // So ETA relative to container: 161 - 80 = 81px
             left: ((timePos.left ?? 0) - containerLeft) * scaleX,
-            // Use exact top position from Figma (ETA is 1px below date range in Figma)
+            // Use exact top position from Figma (relative to card)
+            // Room 204: ETA at top-[1134px] relative to card (1134-1024=110px)
+            // Room 203: ETA at top-[874px] relative to card (874-771=103px)
             top: (timePos.top ?? 0) * scaleX,
           }
         ]}>

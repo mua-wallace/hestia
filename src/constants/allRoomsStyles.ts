@@ -102,10 +102,10 @@ export const GUEST_INFO = {
     left: 73, // Room 201 (Priority): left-[73px]
   },
   containerStandard: {
-    left: 80, // Room 202/204: left-[80px], Room 203: left-[77px] (using 80 as base)
+    left: 73, // Room 204: name/date at x=80 absolute, card starts at x=7, so relative to card: 80-7=73px
   },
   containerWithNotes: {
-    left: 77, // Room 203: left-[77px]
+    left: 70, // Room 203: name at x=77 absolute, card starts at x=7, so relative to card: 77-7=70px
   },
   icon: {
     width: 16,
@@ -161,8 +161,8 @@ export const GUEST_INFO = {
       priorityFirst: { left: 75, top: 130 }, // Room 201 first guest: left-[75px] top-[130px] ETA: 17:00 (exact from Figma)
       prioritySecond: { left: 73, top: 204 }, // Room 201 second guest: left-[73px] top-[204px] EDT: 12:00 (exact from Figma)
       standardDeparture: { left: 161, top: 114 }, // Room 202 (Departure): Date at top-[677px] relative (677-563=114px) - no ETA shown in Figma
-      standardArrival: { left: 161, top: 110 }, // Room 204: ETA at top-[1134px] relative (1134-1024=110px), Room 205 Stayover: top-[1350px] (1350-1240=110px), Room 205 Turndown: top-[1566px] (1566-1456=110px) - exact from Figma
-      withNotes: { left: 158, top: 103 }, // Room 203: ETA at top-[874px] relative (874-771=103px) - exact from Figma
+      standardArrival: { left: 154, top: 110 }, // Room 204: ETA at x=161 absolute, card starts at x=7, so relative to card: 161-7=154px. Top: 1134-1024=110px
+      withNotes: { left: 151, top: 103 }, // Room 203: ETA at x=158 absolute, card starts at x=7, so relative to card: 158-7=151px. Top: 874-771=103px
     },
   },
   // Guest count positions - Exact from Figma
