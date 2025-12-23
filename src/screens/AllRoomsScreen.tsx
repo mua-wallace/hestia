@@ -1,19 +1,18 @@
 import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet, Dimensions, RefreshControl } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { CompositeNavigationProp } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { BlurView } from 'expo-blur';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme';
 import { ShiftType } from '../types/home.types';
-import { mockHomeData } from '../data/mockHomeData';
-import HomeHeader from '../components/home/HomeHeader';
-import CategoryCard from '../components/home/CategoryCard';
+import { mockAllRoomsData } from '../data/mockAllRoomsData';
+import { RoomCardData } from '../types/allRooms.types';
+import AllRoomsHeader from '../components/allRooms/AllRoomsHeader';
+import RoomCard from '../components/allRooms/RoomCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
 import { MoreMenuItemId } from '../types/more.types';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import { BlurView } from 'expo-blur';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -29,41 +28,53 @@ type MainTabsParamList = {
   Settings: undefined;
 };
 
-type HomeScreenNavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<MainTabsParamList, 'Home'>,
-  NativeStackNavigationProp<RootStackParamList>
->;
+type AllRoomsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, 'Rooms'>;
 
-export default function HomeScreen() {
-  const navigation = useNavigation<HomeScreenNavigationProp>();
-  const [homeData, setHomeData] = useState(mockHomeData);
-  const [activeTab, setActiveTab] = useState('Home');
+export default function AllRoomsScreen() {
+  const navigation = useNavigation<AllRoomsScreenNavigationProp>();
+  const route = useRoute();
+  const [allRoomsData, setAllRoomsData] = useState(mockAllRoomsData);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('Rooms');
   const [showMorePopup, setShowMorePopup] = useState(false);
+  
+  // Check if we came from a stack navigation (show back button) or tab navigation (don't show)
+  const showBackButton = route.params?.showBackButton ?? false;
 
   const handleShiftToggle = (shift: ShiftType) => {
-    setHomeData(prev => ({ ...prev, selectedShift: shift }));
+    setAllRoomsData(prev => ({ ...prev, selectedShift: shift }));
   };
 
   const handleSearch = (text: string) => {
-    // TODO: Implement search logic
+    setSearchQuery(text);
+    // TODO: Implement search filtering logic
     console.log('Search:', text);
   };
 
-  const handleMenuPress = () => {
-    // TODO: Implement menu logic
-    console.log('Menu pressed');
+  const handleFilterPress = () => {
+    // TODO: Implement filter modal
+    console.log('Filter pressed');
   };
 
-  const handleBellPress = () => {
-    // TODO: Implement notifications
-    console.log('Bell pressed');
+  const handleBackPress = () => {
+    navigation.goBack();
+  };
+
+  const handleRoomPress = (room: RoomCardData) => {
+    // TODO: Navigate to room detail screen
+    console.log('Room pressed:', room.roomNumber);
+    // navigation.navigate('RoomDetail', { roomId: room.id });
+  };
+
+  const handleStatusPress = (room: RoomCardData) => {
+    // TODO: Implement status change modal/action
+    console.log('Status pressed for room:', room.roomNumber);
   };
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
-    setShowMorePopup(false); // Close popup when switching tabs
-    // Navigate to the respective screen
+    setShowMorePopup(false);
     if (tab === 'Home') {
       navigation.navigate('Home');
     } else if (tab === 'Rooms') {
@@ -100,18 +111,20 @@ export default function HomeScreen() {
     setShowMorePopup(false);
   };
 
-  const handleCategoryPress = () => {
-    // Navigate to All Rooms screen with back button
-    navigation.navigate('AllRooms', { showBackButton: true } as any);
-  };
-
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    // TODO: Fetch fresh data
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
   }, []);
+
+  // Filter rooms based on search query
+  const filteredRooms = searchQuery
+    ? allRoomsData.rooms.filter(room =>
+        room.roomNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.guests.some(guest => guest.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : allRoomsData.rooms;
 
   return (
     <View style={styles.container}>
@@ -126,8 +139,13 @@ export default function HomeScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {homeData.categories.map((category) => (
-            <CategoryCard key={category.id} category={category} onPress={handleCategoryPress} />
+          {filteredRooms.map((room) => (
+            <RoomCard
+              key={room.id}
+              room={room}
+              onPress={() => handleRoomPress(room)}
+              onStatusPress={() => handleStatusPress(room)}
+            />
           ))}
         </ScrollView>
         
@@ -140,14 +158,13 @@ export default function HomeScreen() {
       </View>
 
       {/* Header - Fixed at top (no blur) */}
-      <HomeHeader
-        user={homeData.user}
-        selectedShift={homeData.selectedShift}
-        date={homeData.date}
+      <AllRoomsHeader
+        selectedShift={allRoomsData.selectedShift}
         onShiftToggle={handleShiftToggle}
         onSearch={handleSearch}
-        onMenuPress={handleMenuPress}
-        onBellPress={handleBellPress}
+        onFilterPress={handleFilterPress}
+        onBackPress={showBackButton ? handleBackPress : undefined}
+        showBackButton={showBackButton}
       />
 
       {/* Bottom Navigation (no blur) */}
@@ -155,7 +172,7 @@ export default function HomeScreen() {
         activeTab={activeTab}
         onTabPress={handleTabPress}
         onMorePress={handleMorePress}
-        chatBadgeCount={homeData.notifications.chat}
+        chatBadgeCount={0}
       />
 
       {/* More Popup */}
@@ -175,17 +192,18 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
+    position: 'relative',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 334 * scaleX, // Header height (includes search bar)
+    paddingTop: 217 * scaleX, // Header height
     paddingBottom: 152 * scaleX + 20 * scaleX, // Bottom nav height + extra padding
   },
   contentBlurOverlay: {
     position: 'absolute',
-    top: 334 * scaleX, // Start below header
+    top: 217 * scaleX, // Start below header
     left: 0,
     right: 0,
     bottom: 152 * scaleX, // Stop above bottom nav

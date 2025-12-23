@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { CategorySection } from '../../types/home.types';
 import { colors, typography } from '../../theme';
 import StatusIndicator from './StatusIndicator';
@@ -11,6 +11,7 @@ const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
 interface CategoryCardProps {
   category: CategorySection;
+  onPress?: () => void;
 }
 
 // Status configuration
@@ -37,9 +38,9 @@ const STATUS_CONFIG = {
   },
 };
 
-export default function CategoryCard({ category }: CategoryCardProps) {
+export default function CategoryCard({ category, onPress }: CategoryCardProps) {
   return (
-    <View style={styles.container}>
+    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
       {/* Left colored border */}
       <View style={[styles.leftBorder, { backgroundColor: category.borderColor }]} />
 
@@ -81,7 +82,7 @@ export default function CategoryCard({ category }: CategoryCardProps) {
           label={STATUS_CONFIG.inspected.label}
         />
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

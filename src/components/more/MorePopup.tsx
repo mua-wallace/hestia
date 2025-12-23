@@ -54,8 +54,8 @@ const styles = StyleSheet.create({
   },
   popupWrapper: {
     position: 'absolute',
-    bottom: 132 * scaleX, // Adjusted spacing above bottom nav
-    right: 26 * scaleX, // Position from right to align with More icon
+    bottom: 162 * scaleX, // Position above bottom nav
+    right: 62 * scaleX, // Center above More icon
     zIndex: 1001, // Above everything including bottom nav
   },
   popupContainer: {
@@ -88,7 +88,8 @@ const styles = StyleSheet.create({
     borderTopColor: '#ffffff',
     marginTop: -1, // Overlap slightly to remove any gap
     position: 'absolute',
-    right: 30 * scaleX, // Position to align with More icon center
+    left: '50%', // Center horizontally
+    marginLeft: -12 * scaleX, // Offset by half the triangle width
     bottom: -9 * scaleX, // Position at bottom of popup
   },
 });

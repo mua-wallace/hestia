@@ -1,0 +1,234 @@
+import React from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native';
+import { colors, typography } from '../../theme';
+import AMPMToggle from '../home/AMPMToggle';
+import { ShiftType } from '../../types/home.types';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const DESIGN_WIDTH = 440;
+const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+
+interface AllRoomsHeaderProps {
+  selectedShift: ShiftType;
+  onShiftToggle: (shift: ShiftType) => void;
+  onSearch: (text: string) => void;
+  onFilterPress: () => void;
+  onBackPress?: () => void; // Optional - only show if provided
+  showBackButton?: boolean; // Control back button visibility
+}
+
+export default function AllRoomsHeader({
+  selectedShift,
+  onShiftToggle,
+  onSearch,
+  onFilterPress,
+  onBackPress,
+  showBackButton = true,
+}: AllRoomsHeaderProps) {
+  const [searchText, setSearchText] = React.useState('');
+  
+  const handleSearchChange = (text: string) => {
+    setSearchText(text);
+    onSearch(text);
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Blue gradient background */}
+      <View style={styles.headerBackground} />
+      
+      {/* Top section with back button, title, and AM/PM toggle */}
+      <View style={styles.topSection}>
+        {showBackButton && onBackPress && (
+          <TouchableOpacity style={styles.backButton} onPress={onBackPress} activeOpacity={0.7}>
+            <Image
+              source={require('../../../assets/icons/navigation/back-arrow.png')}
+              style={styles.backArrow}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        )}
+        
+        <Text style={[styles.title, !showBackButton && styles.titleNoBack]}>All Rooms</Text>
+        
+        <View style={styles.toggleContainer}>
+          <AMPMToggle
+            selectedShift={selectedShift}
+            onToggle={onShiftToggle}
+          />
+        </View>
+      </View>
+      
+      {/* Search bar section */}
+      <View style={styles.searchSection}>
+        <View style={styles.searchBar}>
+          <View style={styles.searchInputWrapper}>
+            <TextInput
+              style={styles.searchInput}
+              value={searchText}
+              onChangeText={handleSearchChange}
+              placeholderTextColor="transparent" // Hide native placeholder
+            />
+            
+            {/* Custom placeholder */}
+            {searchText === '' && (
+              <View style={styles.placeholderContainer} pointerEvents="none">
+                <Text style={styles.placeholderText}>
+                  <Text style={styles.placeholderBold}>Search </Text>
+                  <Text>Rooms, Guests, etc</Text>
+                </Text>
+              </View>
+            )}
+          </View>
+          
+          <View style={styles.searchIconContainer}>
+            <Image
+              source={require('../../../assets/icons/home/search-icon.png')}
+              style={styles.searchIcon}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+        
+        <TouchableOpacity style={styles.filterButton} onPress={onFilterPress} activeOpacity={0.7}>
+          <Image
+            source={require('../../../assets/icons/home/menu-icon.png')}
+            style={styles.filterIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 217 * scaleX, // Adjusted to fit search bar
+    zIndex: 10,
+  },
+  headerBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 133 * scaleX,
+    backgroundColor: '#e4eefe', // Light blue background
+  },
+  topSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 27 * scaleX,
+    paddingTop: 69 * scaleX,
+    height: 133 * scaleX,
+  },
+  backButton: {
+    width: 28 * scaleX,
+    height: 28 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backArrow: {
+    width: 14 * scaleX,
+    height: 28 * scaleX,
+    transform: [{ rotate: '270deg' }], // Rotate to point left
+  },
+  title: {
+    fontSize: 24 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.bold as any,
+    color: '#607aa1',
+    position: 'absolute',
+    left: 27 * scaleX,
+    top: 69 * scaleX,
+    marginLeft: 41 * scaleX, // Space for back button
+  },
+  titleNoBack: {
+    marginLeft: 0, // No space needed when no back button
+  },
+  toggleContainer: {
+    position: 'absolute',
+    right: 32.5 * scaleX,
+    top: 65 * scaleX,
+  },
+  searchSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 26 * scaleX,
+    marginTop: 25 * scaleX,
+    gap: 12 * scaleX,
+  },
+  searchBar: {
+    flex: 1,
+    height: 59 * scaleX,
+    backgroundColor: '#f1f6fc',
+    borderRadius: 82 * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 20 * scaleX,
+    paddingRight: 20 * scaleX,
+    position: 'relative',
+  },
+  searchInputWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  searchInput: {
+    fontSize: 13 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.light as any,
+    color: colors.text.primary,
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    height: 59 * scaleX,
+  },
+  placeholderContainer: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  placeholderText: {
+    fontSize: 13 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.light as any,
+    color: '#b1afaf',
+    opacity: 0.36,
+  },
+  placeholderBold: {
+    fontWeight: typography.fontWeights.semiBold as any,
+  },
+  searchIconContainer: {
+    width: 19 * scaleX,
+    height: 19 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10 * scaleX,
+  },
+  searchIcon: {
+    width: 19 * scaleX,
+    height: 19 * scaleX,
+    tintColor: '#b1afaf',
+    transform: [{ rotate: '270deg' }],
+  },
+  filterButton: {
+    width: 26 * scaleX,
+    height: 26 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterIcon: {
+    width: 26 * scaleX,
+    height: 26 * scaleX,
+  },
+});
+

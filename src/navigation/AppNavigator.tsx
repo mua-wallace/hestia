@@ -11,11 +11,13 @@ import TicketsScreen from '../screens/TicketsScreen';
 import LostAndFoundScreen from '../screens/LostAndFoundScreen';
 import StaffScreen from '../screens/StaffScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import AllRoomsScreen from '../screens/AllRoomsScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   Main: undefined;
+  AllRooms: { showBackButton?: boolean };
   RoomDetails: { roomId: string };
   ChatDetail: { chatId: string };
   TicketDetail: { ticketId: string };
@@ -56,7 +58,7 @@ function MainTabs() {
       />
       <Tab.Screen 
         name="Rooms" 
-        component={RoomsScreen}
+        component={AllRoomsScreen}
         options={{
           tabBarLabel: 'Rooms',
         }}
@@ -112,6 +114,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Splash" component={SplashScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Main" component={MainTabs} />
+      <Stack.Screen name="AllRooms" component={AllRoomsScreen} />
     </Stack.Navigator>
   );
 }
