@@ -163,8 +163,7 @@ export default function AllRoomsScreen() {
         onShiftToggle={handleShiftToggle}
         onSearch={handleSearch}
         onFilterPress={handleFilterPress}
-        onBackPress={showBackButton ? handleBackPress : undefined}
-        showBackButton={showBackButton}
+        onBackPress={handleBackPress}
       />
 
       {/* Bottom Navigation (no blur) */}

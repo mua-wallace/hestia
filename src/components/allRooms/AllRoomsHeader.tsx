@@ -13,8 +13,7 @@ interface AllRoomsHeaderProps {
   onShiftToggle: (shift: ShiftType) => void;
   onSearch: (text: string) => void;
   onFilterPress: () => void;
-  onBackPress?: () => void; // Optional - only show if provided
-  showBackButton?: boolean; // Control back button visibility
+  onBackPress?: () => void; // Optional - navigation handler
 }
 
 export default function AllRoomsHeader({
@@ -23,7 +22,6 @@ export default function AllRoomsHeader({
   onSearch,
   onFilterPress,
   onBackPress,
-  showBackButton = true,
 }: AllRoomsHeaderProps) {
   const [searchText, setSearchText] = React.useState('');
   
@@ -39,17 +37,20 @@ export default function AllRoomsHeader({
       
       {/* Top section with back button, title, and AM/PM toggle */}
       <View style={styles.topSection}>
-        {showBackButton && onBackPress && (
-          <TouchableOpacity style={styles.backButton} onPress={onBackPress} activeOpacity={0.7}>
-            <Image
-              source={require('../../../assets/icons/navigation/back-arrow.png')}
-              style={styles.backArrow}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        )}
+        {/* Back arrow - always visible as per Figma design */}
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={onBackPress || (() => {})} 
+          activeOpacity={0.7}
+        >
+          <Image
+            source={require('../../../assets/icons/navigation/back-arrow.png')}
+            style={styles.backArrow}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
         
-        <Text style={[styles.title, !showBackButton && styles.titleNoBack]}>All Rooms</Text>
+        <Text style={styles.title}>All Rooms</Text>
         
         <View style={styles.toggleContainer}>
           <AMPMToggle
@@ -128,15 +129,18 @@ const styles = StyleSheet.create({
     height: 133 * scaleX,
   },
   backButton: {
-    width: 28 * scaleX,
-    height: 28 * scaleX,
+    position: 'absolute',
+    left: 27 * scaleX,
+    top: 69 * scaleX,
+    width: 32 * scaleX, // Increased size for better visibility
+    height: 32 * scaleX, // Increased size for better visibility
     justifyContent: 'center',
     alignItems: 'center',
   },
   backArrow: {
-    width: 14 * scaleX,
-    height: 28 * scaleX,
-    transform: [{ rotate: '270deg' }], // Rotate to point left
+    width: 32 * scaleX, // Increased icon size to match Figma visual appearance
+    height: 32 * scaleX, // Increased icon size to match Figma visual appearance
+    transform: [{ rotate: '270deg' }], // Rotate to point left (as per Figma)
   },
   title: {
     fontSize: 24 * scaleX,
@@ -144,12 +148,8 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.bold as any,
     color: '#607aa1',
     position: 'absolute',
-    left: 27 * scaleX,
+    left: 69 * scaleX, // Exact position from Figma: 69px (27px arrow start + 14px arrow width + 28px spacing)
     top: 69 * scaleX,
-    marginLeft: 41 * scaleX, // Space for back button
-  },
-  titleNoBack: {
-    marginLeft: 0, // No space needed when no back button
   },
   toggleContainer: {
     position: 'absolute',
