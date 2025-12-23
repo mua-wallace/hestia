@@ -54,9 +54,9 @@ const styles = StyleSheet.create({
   },
   popupWrapper: {
     position: 'absolute',
-    bottom: 152 * scaleX, // Just above bottom nav
+    bottom: 132 * scaleX, // Adjusted spacing above bottom nav
     right: 26 * scaleX, // Position from right to align with More icon
-    zIndex: 1000, // Above blur overlay
+    zIndex: 1001, // Above everything including bottom nav
   },
   popupContainer: {
     width: 316 * scaleX,

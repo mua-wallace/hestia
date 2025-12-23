@@ -79,13 +79,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 105.1 * scaleX / 3,
     elevation: 8,
+    zIndex: 100, // Ensure it stays on top
   },
   tabsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Align items at top
     paddingHorizontal: 34 * scaleX,
-    paddingTop: 43 * scaleX,
+    paddingTop: 30 * scaleX, // Reduced top padding
+    paddingBottom: 20 * scaleX, // Added bottom padding for labels
   },
 });
 

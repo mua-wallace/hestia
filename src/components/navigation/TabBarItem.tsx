@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: 50 * scaleX, // Accommodate largest icon (Rooms: 50x36)
     height: 36 * scaleX, // Accommodate tallest icon (Home/Rooms/Chat: 36x36)
-    marginBottom: 4 * scaleX,
+    marginBottom: 8 * scaleX, // Increased spacing for better visual balance
     justifyContent: 'center',
     alignItems: 'center',
   },
