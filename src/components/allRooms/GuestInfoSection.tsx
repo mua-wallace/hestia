@@ -155,7 +155,7 @@ export default function GuestInfoSection({
             resizeMode="contain"
           />
           <Text style={[styles.countText, { left: ((countPos.textLeft ?? 0) - containerLeft) * scaleX }]}>
-            {guest.guestCount}
+            {guest.guestCount || ''}
           </Text>
         </View>
       )}

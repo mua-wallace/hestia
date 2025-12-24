@@ -43,18 +43,18 @@ export default function AllRoomsHeader({
           onPress={onBackPress || (() => {})} 
           activeOpacity={0.7}
         >
-          <Image
-            source={require('../../../assets/icons/navigation/back-arrow.png')}
-            style={styles.backArrow}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
+            <Image
+              source={require('../../../assets/icons/navigation/back-arrow.png')}
+              style={styles.backArrow}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
         
         <Text style={styles.title}>All Rooms</Text>
         
         <View style={styles.toggleContainer}>
           <AMPMToggle
-            selectedShift={selectedShift}
+            selected={selectedShift}
             onToggle={onShiftToggle}
           />
         </View>
