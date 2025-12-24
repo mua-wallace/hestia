@@ -53,30 +53,18 @@ function MainTabs() {
       <Tab.Screen 
         name="Home" 
         component={HomeScreen}
-        options={{
-          tabBarLabel: 'Home',
-        }}
       />
       <Tab.Screen 
         name="Rooms" 
         component={AllRoomsScreen}
-        options={{
-          tabBarLabel: 'Rooms',
-        }}
       />
       <Tab.Screen 
         name="Chat" 
         component={ChatScreen}
-        options={{
-          tabBarLabel: 'Chat',
-        }}
       />
       <Tab.Screen 
         name="Tickets" 
         component={TicketsScreen}
-        options={{
-          tabBarLabel: 'Tickets',
-        }}
       />
       {/* Hidden screens - accessible via More popup */}
       <Tab.Screen 
