@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
-import { GuestInfo } from '../../types/allRooms.types';
-import { scaleX, GUEST_INFO } from '../../constants/allRoomsStyles';
+import { scaleX } from '../../constants/allRoomsStyles';
+import type { GuestInfo } from '../../types/allRooms.types';
+import { GUEST_INFO } from '../../constants/allRoomsStyles';
 
 interface GuestInfoSectionProps {
   guest: GuestInfo;

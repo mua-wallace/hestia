@@ -4,8 +4,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
-import DashboardScreen from '../screens/DashboardScreen';
-import RoomsScreen from '../screens/RoomsScreen';
 import ChatScreen from '../screens/ChatScreen';
 import TicketsScreen from '../screens/TicketsScreen';
 import LostAndFoundScreen from '../screens/LostAndFoundScreen';
@@ -13,27 +11,7 @@ import StaffScreen from '../screens/StaffScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import AllRoomsScreen from '../screens/AllRoomsScreen';
 import CreateTicketScreen from '../screens/CreateTicketScreen';
-
-export type RootStackParamList = {
-  Splash: undefined;
-  Login: undefined;
-  Main: undefined;
-  AllRooms: { showBackButton?: boolean };
-  RoomDetails: { roomId: string };
-  ChatDetail: { chatId: string };
-  TicketDetail: { ticketId: string };
-  CreateTicket: undefined;
-};
-
-export type MainTabsParamList = {
-  Home: undefined;
-  Rooms: undefined;
-  Chat: undefined;
-  Tickets: undefined;
-  LostAndFound: undefined;
-  Staff: undefined;
-  Settings: undefined;
-};
+import type { RootStackParamList, MainTabsParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabsParamList>();

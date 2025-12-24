@@ -1,3 +1,12 @@
+/**
+ * Core type definitions
+ * Central export point for all types
+ */
+
+// Re-export navigation types
+export type { RootStackParamList, MainTabsParamList } from '@navigation/types';
+
+// Room types
 export type RoomStatus = 'dirty' | 'inProgress' | 'cleaned' | 'inspected' | 'priority';
 export type RoomType = 'arrival' | 'departure' | 'stayover' | 'turndown' | 'vacant';
 

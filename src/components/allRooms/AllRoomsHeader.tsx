@@ -1,12 +1,9 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
+import { scaleX } from '../../constants/allRoomsStyles';
 import AMPMToggle from '../home/AMPMToggle';
-import { ShiftType } from '../../types/home.types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+import type { ShiftType } from '../../types/home.types';
 
 interface AllRoomsHeaderProps {
   selectedShift: ShiftType;

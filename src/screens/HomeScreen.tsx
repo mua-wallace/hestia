@@ -1,33 +1,26 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Dimensions, RefreshControl } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
+import { Dimensions } from 'react-native';
 import { colors } from '../theme';
-import { ShiftType } from '../types/home.types';
-import { mockHomeData } from '../data/mockHomeData';
-import HomeHeader from '../components/home/HomeHeader';
-import CategoryCard from '../components/home/CategoryCard';
-import BottomTabBar from '../components/navigation/BottomTabBar';
-import MorePopup from '../components/more/MorePopup';
-import { MoreMenuItemId } from '../types/more.types';
-import { RootStackParamList } from '../navigation/AppNavigator';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+import type { ShiftType } from '../types/home.types';
+import { mockHomeData } from '../data/mockHomeData';
+import type { MoreMenuItemId } from '../types/more.types';
+import type { RootStackParamList } from '../navigation/types';
+import HomeHeader from '../components/home/HomeHeader';
+import CategoryCard from '../components/home/CategoryCard';
+import BottomTabBar from '../components/navigation/BottomTabBar';
+import MorePopup from '../components/more/MorePopup';
 
-type MainTabsParamList = {
-  Home: undefined;
-  Rooms: undefined;
-  Chat: undefined;
-  Tickets: undefined;
-  LostAndFound: undefined;
-  Staff: undefined;
-  Settings: undefined;
-};
+import type { MainTabsParamList } from '../navigation/types';
 
 type HomeScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabsParamList, 'Home'>,

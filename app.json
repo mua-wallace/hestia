@@ -23,9 +23,15 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/app/adaptive-icon.png"
+        "foregroundImage": "./assets/app/adaptive-icon.png",
+        "backgroundColor": "#5a759d"
       },
-      "package": "com.hestia.app"
+      "package": "com.hestia.app",
+      "splash": {
+        "image": "./assets/app/splash.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#5a759d"
+      }
     },
     "web": {
       "favicon": "./assets/app/favicon.png"

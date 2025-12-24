@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { colors, borderRadius, getStatusColor, getStatusBackgroundColor } from '../theme';
-import { RoomStatus } from '../types';
+import type { RoomStatus } from '../types';
 
 interface StatusBadgeProps {
   status: RoomStatus;

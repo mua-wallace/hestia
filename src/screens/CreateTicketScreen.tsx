@@ -21,7 +21,7 @@ import {
   CREATE_TICKET_TYPOGRAPHY,
   scaleX,
 } from '../constants/createTicketStyles';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import type { RootStackParamList } from '../navigation/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

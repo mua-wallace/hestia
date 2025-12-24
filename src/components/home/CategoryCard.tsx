@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { CategorySection } from '../../types/home.types';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import type { CategorySection } from '../../types/home.types';
 import { colors, typography } from '../../theme';
-import StatusIndicator from './StatusIndicator';
-import PriorityBadge from './PriorityBadge';
+import { Dimensions } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+import StatusIndicator from './StatusIndicator';
+import PriorityBadge from './PriorityBadge';
 
 interface CategoryCardProps {
   category: CategorySection;

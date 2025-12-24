@@ -1,13 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
-import { RoomCardData, CATEGORY_ICONS } from '../../types/allRooms.types';
-import GuestInfoSection from './GuestInfoSection';
-import StaffSection from './StaffSection';
-import StatusButton from './StatusButton';
-import NotesSection from './NotesSection';
+import { scaleX } from '../../constants/allRoomsStyles';
+import type { RoomCardData } from '../../types/allRooms.types';
+import { CATEGORY_ICONS } from '../../types/allRooms.types';
 import {
-  scaleX,
   CARD_DIMENSIONS,
   CARD_COLORS,
   ROOM_HEADER,
@@ -16,6 +13,10 @@ import {
   STAFF_SECTION,
   DIVIDERS,
 } from '../../constants/allRoomsStyles';
+import GuestInfoSection from './GuestInfoSection';
+import StaffSection from './StaffSection';
+import StatusButton from './StatusButton';
+import NotesSection from './NotesSection';
 
 interface RoomCardProps {
   room: RoomCardData;

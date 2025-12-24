@@ -20,6 +20,24 @@
       ],
       "@utils/*": [
         "./src/utils/*"
+      ],
+      "@hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@services/*": [
+        "./src/services/*"
+      ],
+      "@config/*": [
+        "./src/config/*"
+      ],
+      "@types/*": [
+        "./src/types/*"
+      ],
+      "@data/*": [
+        "./src/data/*"
+      ],
+      "@constants/*": [
+        "./src/constants/*"
       ]
     }
   },
