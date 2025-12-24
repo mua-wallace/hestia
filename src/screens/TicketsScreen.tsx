@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { BlurView } from 'expo-blur';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
@@ -32,9 +34,11 @@ type MainTabsParamList = {
 };
 
 type TicketsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, 'Tickets'>;
+type StackNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function TicketsScreen() {
   const navigation = useNavigation<TicketsScreenNavigationProp>();
+  const stackNavigation = useNavigation<StackNavigationProp>();
   const [activeTab, setActiveTab] = useState('Tickets');
   const [showMorePopup, setShowMorePopup] = useState(false);
   const [selectedTab, setSelectedTab] = useState<TicketTab>('myTickets');
@@ -85,9 +89,7 @@ export default function TicketsScreen() {
   };
 
   const handleCreatePress = () => {
-    // TODO: Navigate to create ticket screen
-    console.log('Create ticket pressed');
-    // navigation.navigate('CreateTicket');
+    stackNavigation.navigate('CreateTicket');
   };
 
   const handleTabChange = (tab: TicketTab) => {

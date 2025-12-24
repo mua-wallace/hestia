@@ -12,6 +12,7 @@ import LostAndFoundScreen from '../screens/LostAndFoundScreen';
 import StaffScreen from '../screens/StaffScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import AllRoomsScreen from '../screens/AllRoomsScreen';
+import CreateTicketScreen from '../screens/CreateTicketScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -115,6 +116,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen name="AllRooms" component={AllRoomsScreen} />
+      <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
     </Stack.Navigator>
   );
 }
