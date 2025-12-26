@@ -73,12 +73,12 @@ export default function NewChatMenu({
         {/* Menu Popup */}
         <View style={styles.menuContainer}>
           <MenuItem
-            icon={require('../../../assets/icons/more/staff-icon.png')} // Temporary: using staff icon as placeholder for group icon
+            icon={require('../../../assets/icons/staff-icon.png')} // Temporary: using staff icon as placeholder for group icon
             label="Create Chat Group"
             onPress={handleCreateGroup}
           />
           <MenuItem
-            icon={require('../../../assets/icons/navigation/chat-icon.png')} // Temporary: using chat icon as placeholder for new chat icon
+            icon={require('../../../assets/icons/chat-icon.png')} // Temporary: using chat icon as placeholder for new chat icon
             label="New Chat"
             onPress={handleNewChat}
             isLast

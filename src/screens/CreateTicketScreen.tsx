@@ -50,37 +50,37 @@ const DEPARTMENTS: Department[] = [
   {
     id: 'engineering',
     name: 'Engineering',
-    icon: require('../../assets/icons/tickets/engineering-icon.png'),
+    icon: require('../../assets/icons/engineering-icon.png'),
   },
   {
     id: 'hskPortier',
     name: 'HSK Portier',
-    icon: require('../../assets/icons/tickets/hsk-portier-icon.png'),
+    icon: require('../../assets/icons/hsk-portier-icon.png'),
   },
   {
     id: 'inRoomDining',
     name: 'In Room Dining',
-    icon: require('../../assets/icons/tickets/in-room-dining-icon.png'),
+    icon: require('../../assets/icons/in-room-dining-icon.png'),
   },
   {
     id: 'laundry',
     name: 'Laundry',
-    icon: require('../../assets/icons/tickets/laundry-icon.png'),
+    icon: require('../../assets/icons/laundry-icon.png'),
   },
   {
     id: 'concierge',
     name: 'Concierge',
-    icon: require('../../assets/icons/tickets/concierge-icon.png'),
+    icon: require('../../assets/icons/concierge-icon.png'),
   },
   {
     id: 'reception',
     name: 'Reception',
-    icon: require('../../assets/icons/tickets/reception-icon.png'),
+    icon: require('../../assets/icons/reception-icon.png'),
   },
   {
     id: 'it',
     name: 'IT',
-    icon: require('../../assets/icons/tickets/it-icon.png'),
+    icon: require('../../assets/icons/it-icon.png'),
   },
 ];
 
@@ -127,7 +127,7 @@ export default function CreateTicketScreen() {
             activeOpacity={0.7}
           >
             <Image
-              source={require('../../assets/icons/navigation/back-arrow.png')}
+              source={require('../../assets/icons/back-arrow.png')}
               style={styles.backArrow}
               resizeMode="contain"
             />

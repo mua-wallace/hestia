@@ -80,12 +80,12 @@ export default function CreateTicketMenu({
         {/* Menu Popup */}
         <View style={styles.menuContainer}>
           <MenuItem
-            icon={require('../../../assets/icons/navigation/tickets-icon.png')}
+            icon={require('../../../assets/icons/tickets-icon.png')}
             label="New Ticket"
             onPress={handleNewTicket}
           />
           <MenuItem
-            icon={require('../../../assets/icons/navigation/tickets-icon.png')}
+            icon={require('../../../assets/icons/tickets-icon.png')}
             label="Quick Ticket"
             onPress={handleQuickTicket}
             isLast

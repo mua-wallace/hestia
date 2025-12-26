@@ -87,7 +87,7 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
         {/* Chevron arrow */}
         <View style={styles.chevronContainer}>
           <Image
-            source={require('../../../assets/icons/home/menu-icon.png')}
+            source={require('../../../assets/icons/menu-icon.png')}
             style={styles.chevronIcon}
             resizeMode="contain"
           />

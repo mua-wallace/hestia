@@ -19,22 +19,22 @@ interface CategoryCardProps {
 const STATUS_CONFIG = {
   dirty: {
     color: '#f92424',
-    icon: require('../../../assets/icons/home/dirty-icon.png'),
+    icon: require('../../../assets/icons/dirty-icon.png'),
     label: 'Dirty',
   },
   inProgress: {
     color: '#f0be1b',
-    icon: require('../../../assets/icons/home/in-progress-icon.png'),
+    icon: require('../../../assets/icons/in-progress-icon.png'),
     label: 'In Progress',
   },
   cleaned: {
     color: '#4a91fc',
-    icon: require('../../../assets/icons/home/cleaned-icon.png'),
+    icon: require('../../../assets/icons/cleaned-icon.png'),
     label: 'Cleaned',
   },
   inspected: {
     color: '#41d541',
-    icon: require('../../../assets/icons/home/inspected-icon.png'),
+    icon: require('../../../assets/icons/inspected-icon.png'),
     label: 'Inspected',
   },
 };

@@ -40,7 +40,7 @@ export default function HomeHeader({
       <View style={styles.profileSection}>
         <View style={styles.profileImageContainer}>
           <Image
-            source={require('../../../assets/icons/home/profile-image.png')}
+            source={require('../../../assets/icons/profile-image.png')}
             style={styles.profileImage}
             resizeMode="cover"
           />
@@ -48,7 +48,7 @@ export default function HomeHeader({
             <View style={styles.flagContainer}>
               <View style={styles.flagCircle}>
                 <Image
-                  source={require('../../../assets/icons/home/flag-icon.png')}
+                  source={require('../../../assets/icons/flag-icon.png')}
                   style={styles.flagIcon}
                   resizeMode="contain"
                 />
@@ -98,7 +98,7 @@ export default function HomeHeader({
             activeOpacity={0.7}
           >
             <Image
-              source={require('../../../assets/icons/home/search-icon.png')}
+              source={require('../../../assets/icons/search-icon.png')}
               style={styles.searchIcon}
               resizeMode="contain"
             />
@@ -110,7 +110,7 @@ export default function HomeHeader({
           activeOpacity={0.7}
         >
           <Image
-            source={require('../../../assets/icons/home/menu-icon.png')}
+            source={require('../../../assets/icons/menu-icon.png')}
             style={styles.menuIcon}
             resizeMode="contain"
           />

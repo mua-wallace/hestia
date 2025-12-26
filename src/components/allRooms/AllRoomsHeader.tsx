@@ -41,7 +41,7 @@ export default function AllRoomsHeader({
           activeOpacity={0.7}
         >
             <Image
-              source={require('../../../assets/icons/navigation/back-arrow.png')}
+              source={require('../../../assets/icons/back-arrow.png')}
               style={styles.backArrow}
               resizeMode="contain"
             />
@@ -81,7 +81,7 @@ export default function AllRoomsHeader({
           
           <View style={styles.searchIconContainer}>
             <Image
-              source={require('../../../assets/icons/home/search-icon.png')}
+              source={require('../../../assets/icons/search-icon.png')}
               style={styles.searchIcon}
               resizeMode="contain"
             />
@@ -90,7 +90,7 @@ export default function AllRoomsHeader({
         
         <TouchableOpacity style={styles.filterButton} onPress={onFilterPress} activeOpacity={0.7}>
           <Image
-            source={require('../../../assets/icons/home/menu-icon.png')}
+            source={require('../../../assets/icons/menu-icon.png')}
             style={styles.filterIcon}
             resizeMode="contain"
           />

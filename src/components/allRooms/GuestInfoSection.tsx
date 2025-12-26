@@ -102,7 +102,7 @@ export default function GuestInfoSection({
       {/* Guest Icon and Name */}
       <View style={[styles.guestRow, { top: nameTop * scaleX }]}>
         <Image
-          source={require('../../../assets/icons/rooms/guest-icon.png')}
+          source={require('../../../assets/icons/guest-icon.png')}
           style={styles.guestIcon}
           resizeMode="contain"
         />
@@ -151,7 +151,7 @@ export default function GuestInfoSection({
       {countPos && (
         <View style={[styles.countRow, { top: (countPos.top ?? 0) * scaleX }]}>
           <Image
-            source={require('../../../assets/icons/rooms/guest-icon.png')}
+            source={require('../../../assets/icons/guest-icon.png')}
             style={[styles.countIcon, { left: ((countPos.iconLeft ?? 0) - containerLeft) * scaleX }]}
             resizeMode="contain"
           />

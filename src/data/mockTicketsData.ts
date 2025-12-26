@@ -11,10 +11,10 @@ export const mockTicketsData: TicketsScreenData = {
       dueTime: '10 mins',
       createdBy: {
         name: 'Stella Kitou',
-        avatar: require('../../assets/icons/home/profile-avatar.png'),
+        avatar: require('../../assets/icons/profile-avatar.png'),
       },
       status: 'unsolved',
-      locationIcon: require('../../assets/icons/home/menu-icon.png'), // Placeholder for location pin icon
+      locationIcon: require('../../assets/icons/menu-icon.png'), // Placeholder for location pin icon
     },
     {
       id: 'ticket-2',
@@ -22,13 +22,13 @@ export const mockTicketsData: TicketsScreenData = {
       description: 'Guest wants his laundry back',
       roomNumber: '301',
       category: 'Laundry',
-      categoryIcon: require('../../assets/icons/tickets/laundry-icon.png'),
+      categoryIcon: require('../../assets/icons/laundry-icon.png'),
       createdBy: {
         name: 'Stella Kitou',
-        avatar: require('../../assets/icons/home/profile-avatar.png'),
+        avatar: require('../../assets/icons/profile-avatar.png'),
       },
       status: 'done',
-      locationIcon: require('../../assets/icons/home/menu-icon.png'), // Placeholder for location pin icon
+      locationIcon: require('../../assets/icons/menu-icon.png'), // Placeholder for location pin icon
     },
   ],
 };

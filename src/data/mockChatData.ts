@@ -7,7 +7,7 @@ export const mockChatData: ChatItemData[] = [
     lastMessage: 'I just checked the room',
     lastMessageSender: 'Zoe:',
     unreadCount: 11,
-    avatar: require('../../assets/icons/home/profile-avatar.png'),
+    avatar: require('../../assets/icons/profile-avatar.png'),
     isGroup: true,
   },
   {
@@ -15,7 +15,7 @@ export const mockChatData: ChatItemData[] = [
     name: 'Etleva Hoxha',
     lastMessage: 'Hello Stella',
     unreadCount: 1,
-    avatar: require('../../assets/icons/home/profile-avatar.png'),
+    avatar: require('../../assets/icons/profile-avatar.png'),
     isGroup: false,
   },
 ];

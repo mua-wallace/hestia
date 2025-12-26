@@ -14,7 +14,7 @@ export default function PriorityBadge({ count }: PriorityBadgeProps) {
   return (
     <View style={styles.container}>
       <Image
-        source={require('../../../assets/icons/home/priority-icon.png')}
+        source={require('../../../assets/icons/priority-icon.png')}
         style={styles.icon}
         resizeMode="contain"
       />

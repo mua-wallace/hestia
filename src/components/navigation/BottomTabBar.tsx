@@ -19,7 +19,7 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatB
     <View style={styles.container}>
       <View style={styles.tabsContainer}>
         <TabBarItem
-          icon={require('../../../assets/icons/navigation/home-icon.png')}
+          icon={require('../../../assets/icons/home-icon.png')}
           label="Home"
           active={activeTab === 'Home'}
           onPress={() => onTabPress('Home')}
@@ -27,7 +27,7 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatB
           iconHeight={36}
         />
         <TabBarItem
-          icon={require('../../../assets/icons/navigation/rooms-icon.png')}
+          icon={require('../../../assets/icons/rooms-icon.png')}
           label="Rooms"
           active={activeTab === 'Rooms'}
           onPress={() => onTabPress('Rooms')}
@@ -35,7 +35,7 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatB
           iconHeight={36}
         />
         <TabBarItem
-          icon={require('../../../assets/icons/navigation/chat-icon.png')}
+          icon={require('../../../assets/icons/chat-icon.png')}
           label="Chat"
           active={activeTab === 'Chat'}
           badge={chatBadgeCount}
@@ -44,7 +44,7 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatB
           iconHeight={36}
         />
         <TabBarItem
-          icon={require('../../../assets/icons/navigation/tickets-icon.png')}
+          icon={require('../../../assets/icons/tickets-icon.png')}
           label="Tickets"
           active={activeTab === 'Tickets'}
           onPress={() => onTabPress('Tickets')}
@@ -52,7 +52,7 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatB
           iconHeight={34}
         />
         <TabBarItem
-          icon={require('../../../assets/icons/navigation/more-icon.png')}
+          icon={require('../../../assets/icons/more-icon.png')}
           label="More"
           active={false}
           onPress={onMorePress}

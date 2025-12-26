@@ -27,14 +27,14 @@ export default function NotesSection({ notes, isArrivalDeparture = false }: Note
     <View style={[styles.container, { left: position.left * scaleX, top: position.top * scaleX }]}>
       {/* Notes Icon */}
       <Image
-        source={require('../../../assets/icons/rooms/notes-icon.png')}
+        source={require('../../../assets/icons/notes-icon.png')}
         style={[styles.notesIcon, { left: iconPos.left * scaleX, top: iconPos.top * scaleX }]}
         resizeMode="contain"
       />
       
       {notes.hasRushed && (
         <Image
-          source={require('../../../assets/icons/rooms/rushed-icon.png')}
+          source={require('../../../assets/icons/rushed-icon.png')}
           style={[styles.rushedIcon, { left: NOTES_SECTION.rushedIcon.left * scaleX, top: NOTES_SECTION.rushedIcon.top * scaleX }]}
           resizeMode="contain"
         />

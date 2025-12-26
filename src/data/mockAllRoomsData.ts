@@ -28,7 +28,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         },
       ],
       staff: {
-        avatar: require('../../assets/icons/home/profile-avatar.png'),
+        avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Etleva Hoxha',
         statusText: 'Started: 40 mins',
         statusColor: '#1e1e1e',
@@ -81,7 +81,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         },
       ],
       staff: {
-        avatar: require('../../assets/icons/home/profile-avatar.png'),
+        avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Finished: 60 mins',
         statusColor: '#41d541',
@@ -108,7 +108,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         },
       ],
       staff: {
-        avatar: require('../../assets/icons/home/profile-avatar.png'),
+        avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Finished: 65 mins',
         statusColor: '#f92424',
@@ -131,7 +131,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         },
       ],
       staff: {
-        avatar: require('../../assets/icons/home/profile-avatar.png'),
+        avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Finished: 65 mins',
         statusColor: '#f92424',
@@ -154,7 +154,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         },
       ],
       staff: {
-        avatar: require('../../assets/icons/home/profile-avatar.png'),
+        avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Finished: 65 mins',
         statusColor: '#f92424',

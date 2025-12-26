@@ -31,7 +31,7 @@ export default function TicketsHeader({
           activeOpacity={0.7}
         >
           <Image
-            source={require('../../../assets/icons/navigation/back-arrow.png')}
+            source={require('../../../assets/icons/back-arrow.png')}
             style={styles.backArrow}
             resizeMode="contain"
           />

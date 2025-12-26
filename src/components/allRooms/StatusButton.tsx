@@ -59,7 +59,7 @@ export default function StatusButton({
       
       {/* Chevron arrow */}
       <Image
-        source={require('../../../assets/icons/home/menu-icon.png')}
+        source={require('../../../assets/icons/menu-icon.png')}
         style={styles.chevron}
         resizeMode="contain"
       />

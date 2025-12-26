@@ -62,7 +62,7 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
       {/* Location Icon */}
       <View style={styles.locationIconContainer}>
         <Image
-          source={require('../../../assets/icons/tickets/location-pin-icon.png')}
+          source={require('../../../assets/icons/location-pin-icon.png')}
           style={styles.locationPinIcon}
           resizeMode="contain"
         />
@@ -114,8 +114,8 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
           <Image
             source={
               ticket.status === 'done'
-                ? require('../../../assets/icons/tickets/thumbs-up-icon.png')
-                : require('../../../assets/icons/tickets/thumbs-down-icon.png')
+                ? require('../../../assets/icons/thumbs-up-icon.png')
+                : require('../../../assets/icons/thumbs-down-icon.png')
             }
             style={[
               styles.statusIcon,

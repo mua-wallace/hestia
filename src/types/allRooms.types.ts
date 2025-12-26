@@ -52,31 +52,31 @@ export interface StatusConfig {
 export const STATUS_CONFIGS: Record<RoomStatus, StatusConfig> = {
   Dirty: {
     color: '#f92424',
-    icon: require('../../assets/icons/rooms/dirty-status-icon.png'),
+    icon: require('../../assets/icons/dirty-status-icon.png'),
     label: 'Dirty',
   },
   InProgress: {
     color: '#ffc107',
-    icon: require('../../assets/icons/rooms/inprogress-status-icon.png'),
+    icon: require('../../assets/icons/inprogress-status-icon.png'),
     label: 'In Progress',
   },
   Cleaned: {
     color: '#5a759d',
-    icon: require('../../assets/icons/rooms/cleaned-status-icon.png'),
+    icon: require('../../assets/icons/cleaned-status-icon.png'),
     label: 'Cleaned',
   },
   Inspected: {
     color: '#41d541',
-    icon: require('../../assets/icons/rooms/inspected-status-icon.png'),
+    icon: require('../../assets/icons/inspected-status-icon.png'),
     label: 'Inspected',
   },
 };
 
 export const CATEGORY_ICONS: Record<RoomCategory, any> = {
-  'Arrival': require('../../assets/icons/rooms/arrival-icon.png'),
-  'Departure': require('../../assets/icons/rooms/departure-icon.png'),
-  'Stayover': require('../../assets/icons/rooms/stayover-icon.png'),
-  'Turndown': require('../../assets/icons/rooms/turndown-icon.png'),
-  'Arrival/Departure': require('../../assets/icons/rooms/arrival-departure-icon.png'),
+  'Arrival': require('../../assets/icons/arrival-icon.png'),
+  'Departure': require('../../assets/icons/departure-icon.png'),
+  'Stayover': require('../../assets/icons/stayover-icon.png'),
+  'Turndown': require('../../assets/icons/turndown-icon.png'),
+  'Arrival/Departure': require('../../assets/icons/arrival-departure-icon.png'),
 };
 
