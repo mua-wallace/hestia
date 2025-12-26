@@ -52,12 +52,12 @@ export interface StatusConfig {
 export const STATUS_CONFIGS: Record<RoomStatus, StatusConfig> = {
   Dirty: {
     color: '#f92424',
-    icon: require('../../assets/icons/dirty-status-icon.png'),
+    icon: require('../../assets/icons/dirty-state-icon.png'),
     label: 'Dirty',
   },
   InProgress: {
     color: '#ffc107',
-    icon: require('../../assets/icons/inprogress-status-icon.png'),
+    icon: require('../../assets/icons/in-progess-state-icon.png'),
     label: 'In Progress',
   },
   Cleaned: {

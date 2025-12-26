@@ -50,8 +50,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         {
           name: 'Mr Mohamed. B',
           dateRange: '07/10-15/10',
-          time: '17:00',
-          timeLabel: 'ETA',
+          time: '12:00',
+          timeLabel: 'EDT', // Departure cards should have EDT, not ETA
           guestCount: '2/2',
         },
       ],

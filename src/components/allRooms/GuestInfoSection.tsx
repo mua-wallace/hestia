@@ -13,6 +13,7 @@ interface GuestInfoSectionProps {
   isSecondGuest?: boolean;
   hasNotes?: boolean;
   category?: string; // To determine if it's Arrival vs Departure
+  isArrivalDeparture?: boolean; // To know if this is an Arrival/Departure card
 }
 
 export default function GuestInfoSection({ 
@@ -23,18 +24,38 @@ export default function GuestInfoSection({
   isSecondGuest = false,
   hasNotes = false,
   category = '',
+  isArrivalDeparture = false,
 }: GuestInfoSectionProps) {
   const isArrival = category === 'Arrival';
   const isDeparture = category === 'Departure';
   
+  // Determine which guest icon to use
+  // For Arrival/Departure cards: use guest-arrival-icon for ETA guests, guest-departure-icon for EDT guests
+  // For regular Arrival cards: use guest-arrival-icon
+  // For regular Departure cards: use guest-departure-icon
+  // For other cards: use guest-icon (fallback)
+  let guestIconSource;
+  if (isArrivalDeparture) {
+    guestIconSource = guest.timeLabel === 'ETA' 
+      ? require('../../../assets/icons/guest-arrival-icon.png')
+      : require('../../../assets/icons/guest-departure-icon.png');
+  } else if (isArrival) {
+    guestIconSource = require('../../../assets/icons/guest-arrival-icon.png');
+  } else if (isDeparture) {
+    guestIconSource = require('../../../assets/icons/guest-departure-icon.png');
+  } else {
+    guestIconSource = require('../../../assets/icons/guest-icon.png');
+  }
+  
   // Determine container left position
+  // For Arrival/Departure cards, both guests should use the same left position
   let containerLeft: number;
   if (isPriority) {
-    containerLeft = GUEST_INFO.container.left; // 73px
+    containerLeft = GUEST_INFO.container.left; // 73px - same for both guests in Arrival/Departure
   } else if (hasNotes) {
-    containerLeft = GUEST_INFO.containerWithNotes.left; // 77px
+    containerLeft = GUEST_INFO.containerWithNotes.left; // 70px
   } else {
-    containerLeft = GUEST_INFO.containerStandard.left; // 80px
+    containerLeft = GUEST_INFO.containerStandard.left; // 73px
   }
 
   // Determine name top position
@@ -62,7 +83,8 @@ export default function GuestInfoSection({
   }
 
   // Determine time (ETA/EDT) position - exact from Figma
-  let timePos: { left: number; top: number };
+  // For Departure cards, only show time if it's EDT (not ETA)
+  let timePos: { left: number; top: number } | null = null;
   if (isPriority) {
     timePos = isSecondGuest 
       ? GUEST_INFO.time.positions.prioritySecond 
@@ -71,8 +93,11 @@ export default function GuestInfoSection({
     timePos = GUEST_INFO.time.positions.withNotes; // Room 203: left-[158px] top-[103px]
   } else if (isArrival) {
     timePos = GUEST_INFO.time.positions.standardArrival; // Room 204/205: left-[161px] top-[110px]
-  } else {
-    timePos = GUEST_INFO.time.positions.standardDeparture; // Room 202: left-[161px] top-[114px] (no ETA shown)
+  } else if (isDeparture) {
+    // For Departure cards, only show time if it's EDT
+    if (guest.timeLabel === 'EDT') {
+      timePos = GUEST_INFO.time.positions.standardDeparture; // Room 202: left-[161px] top-[114px]
+    }
   }
 
   // Determine guest count position
@@ -102,11 +127,19 @@ export default function GuestInfoSection({
       {/* Guest Icon and Name */}
       <View style={[styles.guestRow, { top: nameTop * scaleX }]}>
         <Image
-          source={require('../../../assets/icons/guest-icon.png')}
-          style={styles.guestIcon}
+          source={guestIconSource}
+          style={[
+            styles.guestIcon,
+            // Remove tintColor for arrival/departure icons to preserve their original colors
+            (isArrivalDeparture || isArrival || isDeparture) && styles.guestIconNoTint
+          ]}
           resizeMode="contain"
         />
-        <Text style={styles.guestName}>{guest.name}</Text>
+        <View style={styles.guestNameContainer}>
+          <Text style={styles.guestName} numberOfLines={1} ellipsizeMode="tail">
+            {guest.name}
+          </Text>
+        </View>
       </View>
       
       {/* Priority Badge - positioned absolutely relative to card */}
@@ -151,7 +184,7 @@ export default function GuestInfoSection({
       {countPos && (
         <View style={[styles.countRow, { top: (countPos.top ?? 0) * scaleX }]}>
           <Image
-            source={require('../../../assets/icons/guest-icon.png')}
+            source={require('../../../assets/icons/people-icon.png')}
             style={[styles.countIcon, { left: ((countPos.iconLeft ?? 0) - containerLeft) * scaleX }]}
             resizeMode="contain"
           />
@@ -172,14 +205,23 @@ const styles = StyleSheet.create({
   guestRow: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Align to top for vertical alignment with header icon
     left: 0,
+    width: 200 * scaleX, // Fixed width to prevent text overflow
   },
   guestIcon: {
     width: GUEST_INFO.icon.width * scaleX,
     height: GUEST_INFO.icon.height * scaleX,
-    marginRight: 4 * scaleX,
+    marginRight: 8 * scaleX, // Proper spacing between icon and text
+    marginTop: 0, // Align icon top with text baseline
     tintColor: '#334866',
+  },
+  guestIconNoTint: {
+    tintColor: undefined, // Remove tint to preserve original icon colors (green/red arrows)
+  },
+  guestNameContainer: {
+    flex: 1,
+    justifyContent: 'center',
   },
   guestName: {
     fontSize: GUEST_INFO.name.fontSize * scaleX,

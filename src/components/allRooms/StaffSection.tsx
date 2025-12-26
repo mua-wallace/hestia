@@ -65,6 +65,23 @@ export default function StaffSection({ staff, isPriority = false }: StaffSection
           {staff.promiseTime}
         </Text>
       )}
+
+      {/* Forward Arrow Icon */}
+      <View style={[
+        styles.forwardArrowContainer,
+        {
+          left: isPriority 
+            ? STAFF_SECTION.forwardArrow.left * scaleX 
+            : (STAFF_SECTION.forwardArrowStandard?.left ?? STAFF_SECTION.forwardArrow.left) * scaleX,
+          top: STAFF_SECTION.forwardArrow.top * scaleX,
+        }
+      ]}>
+        <Image
+          source={require('../../../assets/icons/forward-arrow-icon.png')}
+          style={styles.forwardArrowIcon}
+          resizeMode="contain"
+        />
+      </View>
     </View>
   );
 }
@@ -130,6 +147,16 @@ const styles = StyleSheet.create({
     color: STAFF_SECTION.promiseTime.color,
     lineHeight: STAFF_SECTION.promiseTime.lineHeight * scaleX,
     width: STAFF_SECTION.promiseTime.width * scaleX,
+  },
+  forwardArrowContainer: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  forwardArrowIcon: {
+    width: STAFF_SECTION.forwardArrow.width * scaleX,
+    height: STAFF_SECTION.forwardArrow.height * scaleX,
+    tintColor: '#1e1e1e', // Light black as in Figma for better visibility
   },
 });
 

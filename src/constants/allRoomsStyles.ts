@@ -41,6 +41,10 @@ export const ROOM_HEADER = {
     left: 14, // Room 201: left-[14px], Room 202/203/204: left-[21px] (average: 17.5, using 14 for priority card)
     top: 24.59, // Exact from Figma
   },
+  iconArrivalDeparture: {
+    width: 45, // Updated size for Arrival/Departure icon
+    height: 29.348,
+  },
   iconStandard: {
     left: 21, // For non-priority cards
   },
@@ -240,6 +244,15 @@ export const STAFF_SECTION = {
     lineHeight: 15, // Figma shows h-[15px]
     width: 139, // Room 202: w-[139px]
   },
+  forwardArrow: {
+    width: 10, // Increased size for better visibility
+    height: 18, // Increased size for better visibility
+    left: 390, // Positioned to the right of staff name/status
+    top: 29, // Aligned with staff section
+  },
+  forwardArrowStandard: {
+    left: 399, // For non-priority cards
+  },
   divider: {
     left: 227, // Room 201: left-[227px], Room 202/203/204: left-[235px]
     top: 11, // Room 201: top-[11px], Room 202: top-[574.5px] relative (574.5-563=11.5px)
@@ -262,6 +275,10 @@ export const STATUS_BUTTON = {
   icon: {
     width: 31,
     height: 31,
+  },
+  iconInProgress: {
+    width: 134, // Same size as button container for InProgress icon
+    height: 70,
   },
   chevron: {
     width: 7,

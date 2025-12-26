@@ -55,11 +55,15 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
         {/* Room number badge with icon */}
         <View style={[
           styles.roomBadge,
-          !room.isPriority && styles.roomBadgeStandard
+          !room.isPriority && styles.roomBadgeStandard,
+          isArrivalDeparture && styles.roomBadgeArrivalDeparture
         ]}>
           <Image
             source={CATEGORY_ICONS[room.category]}
-            style={styles.roomIcon}
+            style={[
+              styles.roomIcon,
+              isArrivalDeparture && styles.roomIconArrivalDeparture
+            ]}
             resizeMode="contain"
           />
         </View>
@@ -83,15 +87,6 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
           styles.categoryLabel,
           !room.isPriority && styles.categoryLabelStandard
         ]}>{room.category}</Text>
-        
-        {/* Chevron arrow */}
-        <View style={styles.chevronContainer}>
-          <Image
-            source={require('../../../assets/icons/menu-icon.png')}
-            style={styles.chevronIcon}
-            resizeMode="contain"
-          />
-        </View>
       </View>
 
       {/* Guest Container Background - only for standard cards without notes, not Arrival/Departure */}
@@ -122,6 +117,7 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
               isSecondGuest={index === 1}
               hasNotes={!!room.notes}
               category={room.category}
+              isArrivalDeparture={isArrivalDeparture}
             />
             {/* Horizontal divider for Arrival/Departure between guests */}
             {isArrivalDeparture && index === 0 && (
@@ -192,12 +188,20 @@ const styles = StyleSheet.create({
     left: ROOM_HEADER.icon.left * scaleX,
     top: ROOM_HEADER.icon.top * scaleX,
   },
+  roomBadgeArrivalDeparture: {
+    width: ROOM_HEADER.iconArrivalDeparture.width * scaleX,
+    height: ROOM_HEADER.iconArrivalDeparture.height * scaleX,
+  },
   roomBadgeStandard: {
     left: ROOM_HEADER.iconStandard.left * scaleX,
   },
   roomIcon: {
     width: ROOM_HEADER.icon.width * scaleX,
     height: ROOM_HEADER.icon.height * scaleX,
+  },
+  roomIconArrivalDeparture: {
+    width: ROOM_HEADER.iconArrivalDeparture.width * scaleX,
+    height: ROOM_HEADER.iconArrivalDeparture.height * scaleX,
   },
   roomInfo: {
     position: 'absolute',
@@ -251,15 +255,6 @@ const styles = StyleSheet.create({
   },
   categoryLabelStandard: {
     left: ROOM_HEADER.categoryStandard.left * scaleX,
-  },
-  chevronContainer: {
-    position: 'absolute',
-    right: (CARD_DIMENSIONS.width - 401 - ROOM_HEADER.chevron.width) * scaleX, // 401px from left in Figma = 25px from right, minus icon width
-    top: ROOM_HEADER.chevron.top * scaleX,
-  },
-  chevronIcon: {
-    width: ROOM_HEADER.chevron.width * scaleX,
-    height: ROOM_HEADER.chevron.height * scaleX,
   },
   guestContainerBg: {
     position: 'absolute',
