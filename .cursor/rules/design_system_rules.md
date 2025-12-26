@@ -23,6 +23,7 @@ This document provides comprehensive rules for integrating Figma designs into th
 **Location:** `design-system.json` (root directory)
 
 This is the single source of truth for all design tokens. The file contains:
+
 - Colors (primary, status, background, text, border, badge, shadow)
 - Typography (font families, weights, sizes, line heights)
 - Spacing scale
@@ -33,6 +34,8 @@ This is the single source of truth for all design tokens. The file contains:
 - Animation durations and easing
 
 **Usage Pattern:**
+
+```typescript
 ```typescript
 // src/theme/index.ts
 import designSystem from '../../design-system.json';
@@ -42,6 +45,7 @@ export const colors = theme.colors;
 export const typography = theme.typography;
 export const spacing = theme.spacing;
 ```
+
 
 **Key Principle:** Always reference tokens from `design-system.json` via the theme module. Never hardcode design values.
 
@@ -54,6 +58,8 @@ export const spacing = theme.spacing;
 **Location:** `design-system.json` → `colors`
 
 **Structure:**
+
+```json
 ```json
 {
   "primary": { "main", "light", "dark" },
@@ -67,6 +73,8 @@ export const spacing = theme.spacing;
 ```
 
 **Usage:**
+
+```typescript
 ```typescript
 import { colors } from '../theme';
 
@@ -79,7 +87,10 @@ backgroundColor: '#5a759d'
 color: '#1e1e1e'
 ```
 
+
 **Room Status Colors:**
+
+```typescript
 ```typescript
 import { getStatusColor, getStatusBackgroundColor } from '../theme';
 
@@ -88,24 +99,30 @@ const statusColor = getStatusColor('dirty'); // Returns '#f92424'
 const bgColor = getStatusBackgroundColor('priority'); // Returns '#ffebeb'
 ```
 
+
 ### 2. Typography Tokens
 
 **Location:** `design-system.json` → `typography`
 
 **Font Families:**
+
 - Primary: `Helvetica` (default)
 - Secondary: `Inter` (when specified)
 
 **Font Weights:**
+
 - `light`: 300
 - `regular`: 400
 - `semibold`: 600
 - `bold`: 700
 
 **Font Sizes:**
+
 Range from `xs` (11px) to `9xl` (39px). See `design-system.json` for complete scale.
 
 **Usage:**
+
+```typescript
 ```typescript
 import { typography } from '../theme';
 
@@ -117,6 +134,7 @@ const textStyle = {
 };
 ```
 
+
 **Important:** Font sizes in `design-system.json` are strings (e.g., "18px"). Use `parseInt()` when applying to numeric properties.
 
 ### 3. Spacing Tokens
@@ -126,12 +144,15 @@ const textStyle = {
 **Scale:** `xs` (4px) → `6xl` (64px)
 
 **Usage:**
+
+```typescript
 ```typescript
 import { spacing } from '../theme';
 
 padding: spacing.lg, // 16px
 marginVertical: spacing.md, // 12px
 ```
+
 
 **Note:** For responsive scaling, use the scaling utilities (see [Styling Approach](#styling-approach)).
 
@@ -142,6 +163,8 @@ marginVertical: spacing.md, // 12px
 **Scale:** `none` (0) → `full` (9999px)
 
 **Usage:**
+
+```typescript
 ```typescript
 import { borderRadius } from '../theme';
 
@@ -149,11 +172,13 @@ borderRadius: parseInt(borderRadius.md), // 9px
 borderRadius: parseInt(borderRadius['7xl']), // 45px
 ```
 
+
 ### 5. Component Tokens
 
 **Location:** `design-system.json` → `components`
 
 Pre-defined tokens for common components:
+
 - `button`: primary, secondary, status variants
 - `input`: height, colors, border, padding
 - `card`: background, border, padding, shadow
@@ -163,12 +188,15 @@ Pre-defined tokens for common components:
 - `searchBar`: height, background, borderRadius, padding
 
 **Usage:**
+
+```typescript
 ```typescript
 import { components } from '../theme';
 
 const buttonHeight = parseInt(components.button.primary.height); // 70px
 const cardPadding = parseInt(components.card.padding); // 20px
 ```
+
 
 ---
 
@@ -179,6 +207,8 @@ const cardPadding = parseInt(components.card.padding); // 20px
 **Location:** `src/components/`
 
 **Structure:**
+
+```
 ```
 src/components/
 ├── [feature]/          # Feature-specific components (e.g., home/, allRooms/, tickets/)
@@ -191,6 +221,7 @@ src/components/
 └── ...
 ```
 
+
 ### Component Patterns
 
 #### 1. Base Components (Shared)
@@ -198,12 +229,15 @@ src/components/
 **Location:** `src/components/`
 
 **Examples:**
+
 - `Button.tsx` - Reusable button with variants (primary, secondary, status)
 - `Card.tsx` - Card container with variants (default, status)
 - `Input.tsx` - Form input component
 - `StatusBadge.tsx` - Status indicator badge
 
 **Pattern:**
+
+```typescript
 ```typescript
 // src/components/Button.tsx
 import { colors, typography, borderRadius } from '../theme';
@@ -230,16 +264,20 @@ export default function Button({ variant = 'primary', ...props }: ButtonProps) {
 }
 ```
 
+
 #### 2. Feature Components
 
 **Location:** `src/components/[feature]/`
 
 **Examples:**
+
 - `src/components/home/` - Home screen components
 - `src/components/allRooms/` - All Rooms screen components
 - `src/components/tickets/` - Tickets screen components
 
 **Pattern:**
+
+```typescript
 ```typescript
 // Feature-specific component
 import { colors, typography } from '../../theme';
@@ -261,6 +299,7 @@ export default function FeatureComponent() {
 **Current Status:** No Storybook or component documentation system in place.
 
 **Recommendation:** When creating new components:
+
 1. Add JSDoc comments for props
 2. Include usage examples in component file
 3. Reference Figma design URL in component comments
@@ -274,11 +313,13 @@ export default function FeatureComponent() {
 **Framework:** React Native (v0.81.5) with Expo (v54.0.30)
 
 **Navigation:**
+
 - `@react-navigation/native` (v6.1.9)
 - `@react-navigation/native-stack` (v6.9.17)
 - `@react-navigation/bottom-tabs` (v6.5.11)
 
 **Key Libraries:**
+
 - `react-native-gesture-handler` - Gesture handling
 - `react-native-safe-area-context` - Safe area handling
 - `react-native-screens` - Native screen optimization
@@ -306,7 +347,10 @@ export default function FeatureComponent() {
 - `tsconfig.json` - TypeScript configuration
 
 **Module Resolution:**
+
 Babel plugin `babel-plugin-module-resolver` configured with aliases:
+
+```javascript
 ```javascript
 {
   '@': './src',
@@ -328,6 +372,7 @@ import { colors } from '@theme';
 import Button from '../components/Button';
 ```
 
+
 ---
 
 ## Asset Management
@@ -336,7 +381,7 @@ import Button from '../components/Button';
 
 **Location:** `assets/`
 
-```
+```text
 assets/
 ├── app/                    # App configuration assets
 │   ├── icon.png
@@ -355,9 +400,12 @@ assets/
     └── customer-service-logo.png
 ```
 
+
 ### Asset Import Pattern
 
 **Icons:**
+
+```typescript
 ```typescript
 // ✅ Correct - Direct require
 <Image source={require('../../assets/icons/home-icon.png')} />
@@ -371,6 +419,8 @@ const STATUS_CONFIG = {
 ```
 
 **Logos:**
+
+```typescript
 ```typescript
 <Image 
   source={require('../../assets/logos/logo.png')} 
@@ -386,6 +436,7 @@ const STATUS_CONFIG = {
 - Manual compression recommended
 
 **Best Practices:**
+
 1. Use PNG for icons (transparency support)
 2. Use JPG for photos (smaller file size)
 3. Keep assets optimized (compressed) before committing
@@ -410,12 +461,14 @@ const STATUS_CONFIG = {
 **Pattern:** `[purpose]-icon.png` (kebab-case)
 
 **Examples:**
+
 - `home-icon.png`
 - `chat-icon.png`
 - `dirty-status-icon.png`
 - `arrival-departure-icon.png`
 
 **Naming Guidelines:**
+
 1. Use kebab-case
 2. Be descriptive (purpose-based, not appearance-based)
 3. Include `-icon` suffix for clarity
@@ -424,6 +477,8 @@ const STATUS_CONFIG = {
 ### Icon Usage Patterns
 
 #### Pattern 1: Direct Require in Component
+
+```typescript
 ```typescript
 <Image 
   source={require('../../../assets/icons/home-icon.png')}
@@ -433,6 +488,8 @@ const STATUS_CONFIG = {
 ```
 
 #### Pattern 2: Icon Constants/Object
+
+```typescript
 ```typescript
 // In type definitions or constants
 const STATUS_ICONS = {
@@ -444,6 +501,8 @@ const STATUS_ICONS = {
 ```
 
 #### Pattern 3: Icon in Type Definitions
+
+```typescript
 ```typescript
 // src/types/allRooms.types.ts
 export const ROOM_TYPE_ICONS = {
@@ -458,6 +517,7 @@ export const ROOM_TYPE_ICONS = {
 **Token Location:** `design-system.json` → `icons.sizes`
 
 **Available Sizes:**
+
 - `xs`: 8px
 - `sm`: 14px
 - `md`: 20px
@@ -466,17 +526,22 @@ export const ROOM_TYPE_ICONS = {
 - `2xl`: 44px
 
 **Usage:**
+
+```typescript
 ```typescript
 import { theme } from '../theme';
 
 const iconSize = parseInt(theme.icons.sizes.md); // 20px
 ```
 
+
 **Note:** Icon sizes from Figma should match these tokens. If a custom size is needed, document it in the component.
 
 ### Icon Styling
 
 **Common Patterns:**
+
+```typescript
 ```typescript
 // Fixed size
 <Image 

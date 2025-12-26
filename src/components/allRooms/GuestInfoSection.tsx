@@ -124,22 +124,20 @@ export default function GuestInfoSection({
 
   return (
     <View style={[styles.container, { left: containerLeft * scaleX }]}>
-      {/* Guest Icon and Name */}
+      {/* Guest Icon and Name - Icon positioned to align with room header icon */}
       <View style={[styles.guestRow, { top: nameTop * scaleX }]}>
         <Image
           source={guestIconSource}
           style={[
             styles.guestIcon,
-            // Remove tintColor for arrival/departure icons to preserve their original colors
-            (isArrivalDeparture || isArrival || isDeparture) && styles.guestIconNoTint
+            // Apply light dark tint for arrival/departure icons to match design
+            (isArrivalDeparture || isArrival || isDeparture) && styles.guestIconLightDark
           ]}
           resizeMode="contain"
         />
-        <View style={styles.guestNameContainer}>
-          <Text style={styles.guestName} numberOfLines={1} ellipsizeMode="tail">
-            {guest.name}
-          </Text>
-        </View>
+        <Text style={styles.guestName} numberOfLines={1} ellipsizeMode="tail">
+          {guest.name}
+        </Text>
       </View>
       
       {/* Priority Badge - positioned absolutely relative to card */}
@@ -205,23 +203,18 @@ const styles = StyleSheet.create({
   guestRow: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'flex-start', // Align to top for vertical alignment with header icon
+    alignItems: 'center', // Center align for proper vertical alignment
     left: 0,
     width: 200 * scaleX, // Fixed width to prevent text overflow
   },
   guestIcon: {
     width: GUEST_INFO.icon.width * scaleX,
     height: GUEST_INFO.icon.height * scaleX,
-    marginRight: 8 * scaleX, // Proper spacing between icon and text
-    marginTop: 0, // Align icon top with text baseline
+    marginRight: 4 * scaleX, // Reduced spacing to bring icon closer to name
     tintColor: '#334866',
   },
-  guestIconNoTint: {
-    tintColor: undefined, // Remove tint to preserve original icon colors (green/red arrows)
-  },
-  guestNameContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  guestIconLightDark: {
+    tintColor: '#1e1e1e', // Light dark color as in design for arrival/departure icons
   },
   guestName: {
     fontSize: GUEST_INFO.name.fontSize * scaleX,
@@ -229,6 +222,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.bold as any,
     color: GUEST_INFO.name.color,
     lineHeight: GUEST_INFO.name.lineHeight * scaleX,
+    flex: 1, // Allow text to take remaining space
   },
   priorityCount: {
     position: 'absolute',

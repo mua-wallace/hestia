@@ -11,7 +11,9 @@ import AllRoomsHeader from '../components/allRooms/AllRoomsHeader';
 import RoomCard from '../components/allRooms/RoomCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
+import FilterModal from '../components/filter/FilterModal';
 import { MoreMenuItemId } from '../types/more.types';
+import { FilterState } from '../types/filter.types';
 import { BlurView } from 'expo-blur';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -38,6 +40,22 @@ export default function AllRoomsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('Rooms');
   const [showMorePopup, setShowMorePopup] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<FilterState>({
+    roomState: {
+      dirty: false,
+      inProgress: false,
+      cleaned: false,
+      inspected: false,
+      priority: false,
+    },
+    guest: {
+      arrivals: false,
+      departures: false,
+      turnDown: false,
+      stayOver: false,
+    },
+  });
   
   // Check if we came from a stack navigation (show back button) or tab navigation (don't show)
   const showBackButton = route.params?.showBackButton ?? false;
@@ -53,8 +71,34 @@ export default function AllRoomsScreen() {
   };
 
   const handleFilterPress = () => {
-    // TODO: Implement filter modal
-    console.log('Filter pressed');
+    setShowFilterModal(true);
+  };
+
+  const handleFilterClose = () => {
+    setShowFilterModal(false);
+  };
+
+  const handleFilterApply = (filters: FilterState) => {
+    setActiveFilters(filters);
+    // TODO: Apply filters to room list
+    console.log('Filters applied:', filters);
+  };
+
+  const handleGoToResults = () => {
+    // Filters are already applied via handleFilterApply
+    // Close modal and show filtered results
+    console.log('Go to results');
+  };
+
+  const handleAdvanceFilter = () => {
+    // TODO: Navigate to advance filter screen or show additional options
+    console.log('Advance filter');
+  };
+
+  // Calculate filtered room count (for now, just return total)
+  const getFilteredRoomCount = () => {
+    // TODO: Implement actual filtering logic
+    return allRoomsData.rooms.length;
   };
 
   const handleBackPress = () => {
@@ -179,6 +223,17 @@ export default function AllRoomsScreen() {
         visible={showMorePopup}
         onClose={handleClosePopup}
         onMenuItemPress={handleMenuItemPress}
+      />
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={showFilterModal}
+        onClose={handleFilterClose}
+        onApply={handleFilterApply}
+        onGoToResults={handleGoToResults}
+        onAdvanceFilter={handleAdvanceFilter}
+        resultCount={getFilteredRoomCount()}
+        initialFilters={activeFilters}
       />
     </View>
   );

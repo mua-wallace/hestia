@@ -112,8 +112,8 @@ export const GUEST_INFO = {
     left: 70, // Room 203: name at x=77 absolute, card starts at x=7, so relative to card: 77-7=70px
   },
   icon: {
-    width: 16,
-    height: 16,
+    width: 28.371,
+    height: 29.919,
   },
   // Guest name positions
   name: {
