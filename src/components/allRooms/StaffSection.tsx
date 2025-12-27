@@ -7,19 +7,36 @@ import { scaleX, STAFF_SECTION } from '../../constants/allRoomsStyles';
 interface StaffSectionProps {
   staff: StaffInfo;
   isPriority?: boolean;
+  category?: string; // To determine if it's Departure card
 }
 
-export default function StaffSection({ staff, isPriority = false }: StaffSectionProps) {
+export default function StaffSection({ staff, isPriority = false, category = '' }: StaffSectionProps) {
   if (!staff) {
     return null;
   }
 
+  const isDeparture = category === 'Departure';
+  const hasPromiseTime = !!staff.promiseTime;
+
+  // Departure cards have different positioning due to promiseTime
   const avatarLeft = isPriority ? STAFF_SECTION.avatar.left : (STAFF_SECTION.avatarStandard?.left ?? STAFF_SECTION.avatar.left);
   const avatarTop = isPriority ? STAFF_SECTION.avatar.top : (STAFF_SECTION.avatarStandard?.top ?? STAFF_SECTION.avatar.top);
-  const nameLeft = isPriority ? STAFF_SECTION.name.left : (STAFF_SECTION.nameStandard?.left ?? STAFF_SECTION.name.left);
-  const nameTop = isPriority ? STAFF_SECTION.name.top : (STAFF_SECTION.nameStandard?.top ?? STAFF_SECTION.name.top);
+  const nameLeft = isPriority 
+    ? STAFF_SECTION.name.left 
+    : (isDeparture && hasPromiseTime && STAFF_SECTION.nameStandardDeparture
+      ? STAFF_SECTION.nameStandardDeparture.left
+      : (STAFF_SECTION.nameStandard?.left ?? STAFF_SECTION.name.left));
+  const nameTop = isPriority 
+    ? STAFF_SECTION.name.top 
+    : (isDeparture && hasPromiseTime && STAFF_SECTION.nameStandardDeparture
+      ? STAFF_SECTION.nameStandardDeparture.top
+      : (STAFF_SECTION.nameStandard?.top ?? STAFF_SECTION.name.top));
   const statusLeft = isPriority ? STAFF_SECTION.status.left : (STAFF_SECTION.statusStandard?.left ?? STAFF_SECTION.status.left);
-  const statusTop = isPriority ? STAFF_SECTION.status.top : (STAFF_SECTION.statusStandard?.top ?? STAFF_SECTION.status.top);
+  const statusTop = isPriority 
+    ? STAFF_SECTION.status.top 
+    : (isDeparture && hasPromiseTime && STAFF_SECTION.statusStandardDeparture
+      ? STAFF_SECTION.statusStandardDeparture.top
+      : (STAFF_SECTION.statusStandard?.top ?? STAFF_SECTION.status.top));
 
   return (
     <View style={styles.container}>
@@ -47,6 +64,7 @@ export default function StaffSection({ staff, isPriority = false }: StaffSection
       <Text style={[
         styles.statusText,
         !isPriority && styles.statusTextStandard,
+        isDeparture && hasPromiseTime && styles.statusTextDeparture,
         { 
           color: staff.statusColor,
           left: statusLeft * scaleX,
@@ -138,6 +156,9 @@ const styles = StyleSheet.create({
   },
   statusTextStandard: {
     width: STAFF_SECTION.statusStandard.width * scaleX,
+  },
+  statusTextDeparture: {
+    width: (STAFF_SECTION.statusStandardDeparture?.width ?? STAFF_SECTION.statusStandard.width) * scaleX,
   },
   promiseTime: {
     position: 'absolute',

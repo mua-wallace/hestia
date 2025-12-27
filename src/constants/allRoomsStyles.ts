@@ -251,8 +251,12 @@ export const STAFF_SECTION = {
     lineHeight: 21, // Height: 21px (lineHeight matches height)
   },
   nameStandard: {
-    left: 281, // Room 202/203/204: x=288 from screen, card at x=7, so 288-7=281px relative to card
+    left: 281, // Room 203/204: x=288 from screen, card at x=7, so 288-7=281px relative to card
     top: 23, // Room 203: y=794 from screen, card at y=771, so 794-771=23px. Room 204: y=1047 from screen, card at y=1024, so 1047-1024=23px
+  },
+  nameStandardDeparture: {
+    left: 281, // Room 202 (Departure): x=288 from screen, card at x=7, so 288-7=281px relative to card
+    top: 12, // Room 202: y=575 from screen, card at y=563, so 575-563=12px relative to card (different from other cards)
   },
   status: {
     fontSize: 12,
@@ -269,8 +273,13 @@ export const STAFF_SECTION = {
   },
   statusStandard: {
     left: 281, // Room 202/203/204: x=288 from screen, card at x=7, so 288-7=281px relative to card
-    top: 40, // Room 203: y=811 from screen, card at y=771, so 811-771=40px. Room 202: y=592, card y=563, so 592-563=29px (different, but using 40 for consistency with other cards)
+    top: 40, // Room 203: y=811 from screen, card at y=771, so 811-771=40px. Room 204: y=1070 from screen, card at y=1024, so 1070-1024=46px
     width: 94, // Room 203: w-[94px] from Figma
+  },
+  statusStandardDeparture: {
+    left: 281, // Room 202 (Departure): x=288 from screen, card at x=7, so 288-7=281px relative to card
+    top: 29, // Room 202: y=592 from screen, card at y=563, so 592-563=29px relative to card (different from other cards due to promiseTime)
+    width: 92, // Room 202: w-[92px] from Figma
   },
   promiseTime: {
     fontSize: 13,

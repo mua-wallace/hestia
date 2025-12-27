@@ -134,7 +134,7 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
       ]} />
 
       {/* Staff Section - positioned absolutely */}
-      <StaffSection staff={room.staff} isPriority={room.isPriority} />
+      <StaffSection staff={room.staff} isPriority={room.isPriority} category={room.category} />
 
       {/* Status Button - positioned absolutely */}
       <StatusButton 
