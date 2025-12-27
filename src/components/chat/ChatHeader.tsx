@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { typography } from '../../theme';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { typography, colors } from '../../theme';
 import {
   CHAT_HEADER,
   SEARCH_BAR,
@@ -8,12 +8,14 @@ import {
   CHAT_TYPOGRAPHY,
   scaleX,
 } from '../../constants/chatStyles';
+import SearchInput from '../SearchInput';
 
 interface ChatHeaderProps {
   onBackPress?: () => void;
   onSearch: (text: string) => void;
   onFilterPress?: () => void;
   onMessagePress?: () => void;
+  searchPlaceholder?: string | { bold: string; normal: string }; // Optional dynamic placeholder
 }
 
 export default function ChatHeader({
@@ -21,11 +23,9 @@ export default function ChatHeader({
   onSearch,
   onFilterPress,
   onMessagePress,
+  searchPlaceholder = 'Search',
 }: ChatHeaderProps) {
-  const [searchText, setSearchText] = React.useState('');
-
   const handleSearchChange = (text: string) => {
-    setSearchText(text);
     onSearch(text);
   };
 
@@ -67,29 +67,24 @@ export default function ChatHeader({
       {/* Search bar section */}
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
-          <View style={styles.searchInputWrapper}>
-            <TextInput
-              style={styles.searchInput}
-              value={searchText}
-              onChangeText={handleSearchChange}
-              placeholderTextColor="transparent"
-            />
+          <SearchInput
+            placeholder={searchPlaceholder}
+            onSearch={handleSearchChange}
+            inputStyle={styles.searchInput}
+            placeholderStyle={styles.placeholderText}
+            inputWrapperStyle={styles.searchInputWrapper}
+          />
 
-            {/* Custom placeholder */}
-            {searchText === '' && (
-              <View style={styles.placeholderContainer} pointerEvents="none">
-                <Text style={styles.placeholderText}>Search</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.searchIconContainer}>
+          <TouchableOpacity
+            style={styles.searchIconContainer}
+            activeOpacity={0.7}
+          >
             <Image
               source={require('../../../assets/icons/search-icon.png')}
               style={styles.searchIcon}
               resizeMode="contain"
             />
-          </View>
+          </TouchableOpacity>
         </View>
 
         {onFilterPress && (
@@ -199,9 +194,7 @@ const styles = StyleSheet.create({
     paddingRight: SEARCH_BAR.container.paddingRight * scaleX,
   },
   searchInputWrapper: {
-    flex: 1,
     justifyContent: 'center',
-    position: 'relative',
   },
   searchInput: {
     fontSize: CHAT_TYPOGRAPHY.searchPlaceholder.fontSize * scaleX,
@@ -213,14 +206,6 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
     height: SEARCH_BAR.container.height * scaleX,
   },
-  placeholderContainer: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    zIndex: 1,
-  },
   placeholderText: {
     fontSize: CHAT_TYPOGRAPHY.searchPlaceholder.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
@@ -229,17 +214,16 @@ const styles = StyleSheet.create({
     opacity: CHAT_TYPOGRAPHY.searchPlaceholder.opacity,
   },
   searchIconContainer: {
-    width: SEARCH_BAR.searchIcon.width * scaleX,
-    height: SEARCH_BAR.searchIcon.height * scaleX,
+    width: 26 * scaleX,
+    height: 26 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 10 * scaleX,
   },
   searchIcon: {
-    width: SEARCH_BAR.searchIcon.width * scaleX,
-    height: SEARCH_BAR.searchIcon.height * scaleX,
-    tintColor: '#b1afaf',
-    transform: [{ rotate: '270deg' }],
+    width: 19 * scaleX,
+    height: 19 * scaleX,
+    tintColor: colors.primary.main,
   },
   filterButton: {
     width: SEARCH_BAR.filterIcon.width * scaleX,

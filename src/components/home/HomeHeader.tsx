@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native';
 import { UserProfile, ShiftType } from '../../types/home.types';
 import { colors, typography } from '../../theme';
 import AMPMToggle from './AMPMToggle';
+import SearchInput from '../SearchInput';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -16,6 +17,7 @@ interface HomeHeaderProps {
   onSearch: (text: string) => void;
   onMenuPress: () => void;
   onBellPress: () => void;
+  searchPlaceholder?: string | { bold: string; normal: string }; // Optional dynamic placeholder
 }
 
 export default function HomeHeader({
@@ -26,11 +28,9 @@ export default function HomeHeader({
   onSearch,
   onMenuPress,
   onBellPress,
+  searchPlaceholder = { bold: 'Search ', normal: 'Rooms, Guests, Floors etc' },
 }: HomeHeaderProps) {
-  const [searchText, setSearchText] = useState('');
-
   const handleSearchChange = (text: string) => {
-    setSearchText(text);
     onSearch(text);
   };
 
@@ -76,22 +76,15 @@ export default function HomeHeader({
       {/* Search Bar and Menu */}
       <View style={styles.searchBarContainer}>
         <View style={styles.searchBar}>
-          <View style={styles.searchInputContainer}>
-            <TextInput
-              style={styles.searchInput}
-              value={searchText}
-              onChangeText={handleSearchChange}
-              placeholder=""
-            />
-            {searchText === '' && (
-              <View style={styles.placeholderContainer} pointerEvents="none">
-                <Text style={styles.placeholderText}>
-                  <Text style={styles.placeholderBold}>Search </Text>
-                  <Text style={styles.placeholderNormal}>Rooms, Guests, Floors etc</Text>
-                </Text>
-              </View>
-            )}
-          </View>
+          <SearchInput
+            placeholder={searchPlaceholder}
+            onSearch={handleSearchChange}
+            inputStyle={styles.searchInput}
+            placeholderStyle={styles.placeholderText}
+            placeholderBoldStyle={styles.placeholderBold}
+            placeholderNormalStyle={styles.placeholderNormal}
+            inputWrapperStyle={styles.searchInputContainer}
+          />
           <TouchableOpacity
             style={styles.searchIconButton}
             onPress={() => {/* Search action */}}
@@ -227,33 +220,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20 * scaleX,
   },
   searchInputContainer: {
-    flex: 1,
-    position: 'relative',
     height: '100%',
-    justifyContent: 'center',
   },
   searchInput: {
-    fontSize: 13 * scaleX,
     fontFamily: 'Inter',
     fontWeight: '300' as any,
-    color: colors.text.primary,
     padding: 0,
     height: '100%',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
     backgroundColor: 'transparent',
   },
-  placeholderContainer: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    zIndex: 1,
-  },
   placeholderText: {
-    fontSize: 13 * scaleX,
     fontFamily: 'Inter',
     color: 'rgba(0,0,0,0.36)',
     includeFontPadding: false,

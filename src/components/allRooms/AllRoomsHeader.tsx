@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
 import { scaleX } from '../../constants/allRoomsStyles';
 import AMPMToggle from '../home/AMPMToggle';
+import SearchInput from '../SearchInput';
 import type { ShiftType } from '../../types/home.types';
 
 interface AllRoomsHeaderProps {
@@ -11,6 +12,7 @@ interface AllRoomsHeaderProps {
   onSearch: (text: string) => void;
   onFilterPress: () => void;
   onBackPress?: () => void; // Optional - navigation handler
+  searchPlaceholder?: string | { bold: string; normal: string }; // Optional dynamic placeholder
 }
 
 export default function AllRoomsHeader({
@@ -19,11 +21,9 @@ export default function AllRoomsHeader({
   onSearch,
   onFilterPress,
   onBackPress,
+  searchPlaceholder = { bold: 'Search ', normal: 'Rooms, Guests, etc' },
 }: AllRoomsHeaderProps) {
-  const [searchText, setSearchText] = React.useState('');
-  
   const handleSearchChange = (text: string) => {
-    setSearchText(text);
     onSearch(text);
   };
 
@@ -60,32 +60,26 @@ export default function AllRoomsHeader({
       {/* Search bar section */}
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
-          <View style={styles.searchInputWrapper}>
-            <TextInput
-              style={styles.searchInput}
-              value={searchText}
-              onChangeText={handleSearchChange}
-              placeholderTextColor="transparent" // Hide native placeholder
-            />
-            
-            {/* Custom placeholder */}
-            {searchText === '' && (
-              <View style={styles.placeholderContainer} pointerEvents="none">
-                <Text style={styles.placeholderText}>
-                  <Text style={styles.placeholderBold}>Search </Text>
-                  <Text style={styles.placeholderText}>Rooms, Guests, etc</Text>
-                </Text>
-              </View>
-            )}
-          </View>
+          <SearchInput
+            placeholder={searchPlaceholder}
+            onSearch={handleSearchChange}
+            inputStyle={styles.searchInput}
+            placeholderStyle={styles.placeholderText}
+            placeholderBoldStyle={styles.placeholderBold}
+            placeholderNormalStyle={styles.placeholderText}
+            inputWrapperStyle={styles.searchInputWrapper}
+          />
           
-          <View style={styles.searchIconContainer}>
+          <TouchableOpacity
+            style={styles.searchIconContainer}
+            activeOpacity={0.7}
+          >
             <Image
               source={require('../../../assets/icons/search-icon.png')}
               style={styles.searchIcon}
               resizeMode="contain"
             />
-          </View>
+          </TouchableOpacity>
         </View>
         
         <TouchableOpacity style={styles.filterButton} onPress={onFilterPress} activeOpacity={0.7}>
@@ -172,27 +166,13 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   searchInputWrapper: {
-    flex: 1,
     justifyContent: 'center',
-    position: 'relative',
   },
   searchInput: {
-    fontSize: 13 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
-    color: colors.text.primary,
     paddingVertical: 0,
     includeFontPadding: false,
     textAlignVertical: 'center',
     height: 59 * scaleX,
-  },
-  placeholderContainer: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    zIndex: 1,
   },
   placeholderText: {
     fontSize: 13 * scaleX,
@@ -205,8 +185,8 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.semiBold as any,
   },
   searchIconContainer: {
-    width: 19 * scaleX,
-    height: 19 * scaleX,
+    width: 26 * scaleX,
+    height: 26 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 10 * scaleX,
@@ -214,8 +194,7 @@ const styles = StyleSheet.create({
   searchIcon: {
     width: 19 * scaleX,
     height: 19 * scaleX,
-    tintColor: '#b1afaf',
-    transform: [{ rotate: '270deg' }],
+    tintColor: colors.primary.main,
   },
   filterButton: {
     width: 26 * scaleX,
