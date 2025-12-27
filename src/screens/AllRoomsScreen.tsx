@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, ScrollView, StyleSheet, Dimensions, RefreshControl } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,11 +6,12 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme';
 import { ShiftType } from '../types/home.types';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
-import { RoomCardData } from '../types/allRooms.types';
+import { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import AllRoomsHeader from '../components/allRooms/AllRoomsHeader';
 import RoomCard from '../components/allRooms/RoomCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
+import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import { MoreMenuItemId } from '../types/more.types';
 import { BlurView } from 'expo-blur';
 
@@ -38,6 +39,11 @@ export default function AllRoomsScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('Rooms');
   const [showMorePopup, setShowMorePopup] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [selectedRoomForStatusChange, setSelectedRoomForStatusChange] = useState<RoomCardData | null>(null);
+  const [selectedCardTop, setSelectedCardTop] = useState<number>(0);
+  const [selectedCardHeight, setSelectedCardHeight] = useState<number>(0);
+  const cardRefs = useRef<{ [key: string]: any }>({});
   
   // Check if we came from a stack navigation (show back button) or tab navigation (don't show)
   const showBackButton = route.params?.showBackButton ?? false;
@@ -68,8 +74,91 @@ export default function AllRoomsScreen() {
   };
 
   const handleStatusPress = (room: RoomCardData) => {
-    // TODO: Implement status change modal/action
-    console.log('Status pressed for room:', room.roomNumber);
+    // Only show modal if status is InProgress
+    if (room.status === 'InProgress') {
+      // Calculate card height based on card type
+      const isArrivalDeparture = room.category === 'Arrival/Departure';
+      let cardHeight: number;
+      if (isArrivalDeparture) {
+        cardHeight = 292; // CARD_DIMENSIONS.heights.arrivalDeparture
+      } else if (room.notes) {
+        cardHeight = 222; // CARD_DIMENSIONS.heights.withNotes
+      } else if (room.category === 'Departure') {
+        cardHeight = 177; // CARD_DIMENSIONS.heights.standard
+      } else {
+        cardHeight = 185; // CARD_DIMENSIONS.heights.withGuestInfo
+      }
+
+      // Measure card position
+      const cardRef = cardRefs.current[room.id];
+      if (cardRef) {
+        cardRef.measureInWindow((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
+          setSelectedCardTop(pageY);
+          setSelectedCardHeight(cardHeight * scaleX);
+          setSelectedRoomForStatusChange(room);
+          setShowStatusModal(true);
+        });
+      } else {
+        // Fallback: estimate position based on room index
+        const roomIndex = filteredRooms.findIndex(r => r.id === room.id);
+        const HEADER_HEIGHT = 217;
+        const CARD_SPACING = 16;
+        const CARD_HEIGHT_AVG = 200; // Average card height
+        const estimatedTop = HEADER_HEIGHT + (roomIndex * (CARD_HEIGHT_AVG + CARD_SPACING));
+        setSelectedCardTop(estimatedTop * scaleX);
+        setSelectedCardHeight(cardHeight * scaleX);
+        setSelectedRoomForStatusChange(room);
+        setShowStatusModal(true);
+      }
+    } else {
+      // For other statuses, handle differently or do nothing
+      console.log('Status pressed for room:', room.roomNumber, 'status:', room.status);
+    }
+  };
+
+  const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['status'] => {
+    switch (option) {
+      case 'Dirty':
+        return 'Dirty';
+      case 'Cleaned':
+        return 'Cleaned';
+      case 'Inspected':
+        return 'Inspected';
+      case 'Priority':
+      case 'Pause':
+      case 'ReturnLater':
+      case 'RefuseService':
+      case 'PromisedTime':
+        // These might be actions/metadata, not status changes
+        // For now, keep InProgress status
+        return 'InProgress';
+      default:
+        return 'InProgress';
+    }
+  };
+
+  const handleStatusSelect = (statusOption: StatusChangeOption) => {
+    if (!selectedRoomForStatusChange) return;
+
+    // Map status option to RoomStatus
+    const newStatus = mapStatusOptionToRoomStatus(statusOption);
+
+    // Update room status in state
+    setAllRoomsData((prev) => ({
+      ...prev,
+      rooms: prev.rooms.map((room) =>
+        room.id === selectedRoomForStatusChange.id
+          ? { ...room, status: newStatus }
+          : room
+      ),
+    }));
+
+    // Reset state
+    setShowStatusModal(false);
+    setSelectedRoomForStatusChange(null);
+
+    // TODO: Save to backend/API
+    console.log('Status changed for room:', selectedRoomForStatusChange.roomNumber, 'to:', newStatus);
   };
 
   const handleTabPress = (tab: string) => {
@@ -134,7 +223,7 @@ export default function AllRoomsScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          scrollEnabled={!showMorePopup}
+          scrollEnabled={!showMorePopup && !showStatusModal}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -142,6 +231,11 @@ export default function AllRoomsScreen() {
           {filteredRooms.map((room) => (
             <RoomCard
               key={room.id}
+              ref={(ref) => {
+                if (ref) {
+                  cardRefs.current[room.id] = ref;
+                }
+              }}
               room={room}
               onPress={() => handleRoomPress(room)}
               onStatusPress={() => handleStatusPress(room)}
@@ -149,9 +243,23 @@ export default function AllRoomsScreen() {
           ))}
         </ScrollView>
         
-        {/* Blur Overlay for content only */}
+        {/* Blur Overlay for More Popup - covers content area */}
         {showMorePopup && (
           <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
+            <View style={styles.blurOverlayDarkener} />
+          </BlurView>
+        )}
+        
+        {/* Blur Overlay for Status Modal - starts from bottom of target card, covers everything below including tabs */}
+        {showStatusModal && selectedCardTop > 0 && (
+          <BlurView 
+            intensity={80} 
+            style={[
+              styles.statusModalBlurOverlay,
+              { top: selectedCardTop + selectedCardHeight }
+            ]} 
+            tint="light"
+          >
             <View style={styles.blurOverlayDarkener} />
           </BlurView>
         )}
@@ -180,6 +288,21 @@ export default function AllRoomsScreen() {
         onClose={handleClosePopup}
         onMenuItemPress={handleMenuItemPress}
       />
+
+      {/* Status Change Modal */}
+      <StatusChangeModal
+        visible={showStatusModal}
+        onClose={() => {
+          setShowStatusModal(false);
+          setSelectedRoomForStatusChange(null);
+          setSelectedCardTop(0);
+          setSelectedCardHeight(0);
+        }}
+        onStatusSelect={handleStatusSelect}
+        currentStatus={selectedRoomForStatusChange?.status || 'InProgress'}
+        room={selectedRoomForStatusChange || undefined}
+        cardTop={selectedCardTop}
+      />
     </View>
   );
 }
@@ -206,6 +329,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 152 * scaleX, // Stop above bottom nav
+    zIndex: 1,
+  },
+  statusModalBlurOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0, // Extends to bottom of screen, covering tabs
     zIndex: 1,
   },
   blurOverlayDarkener: {

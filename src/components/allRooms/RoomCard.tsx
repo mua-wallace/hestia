@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
 import { scaleX } from '../../constants/allRoomsStyles';
@@ -22,9 +22,10 @@ interface RoomCardProps {
   room: RoomCardData;
   onPress: () => void;
   onStatusPress: () => void;
+  onLayout?: (event: any) => void; // Optional layout handler for position tracking
 }
 
-export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps) {
+const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, onStatusPress, onLayout }, ref) => {
   const isArrivalDeparture = room.category === 'Arrival/Departure';
   // Calculate height based on card type and notes - matching Figma exactly
   let cardHeight: number;
@@ -41,6 +42,7 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
 
   return (
     <TouchableOpacity
+      ref={ref}
       style={[
         styles.container,
         { height: cardHeight },
@@ -48,6 +50,7 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
         room.isPriority && styles.priorityBackground,
       ]}
       onPress={onPress}
+      onLayout={onLayout}
       activeOpacity={0.7}
     >
       {/* Room Header */}
@@ -151,7 +154,9 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
       )}
     </TouchableOpacity>
   );
-}
+});
+
+export default RoomCard;
 
 const styles = StyleSheet.create({
   container: {
