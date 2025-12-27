@@ -125,6 +125,10 @@ export const GUEST_INFO = {
     left: 17, // Room 202 (Departure): icon at x=24 from screen, x=24-7=17px from card
     top: 93, // Room 202: icon at y=656 from screen, y=656-563=93px from card
   },
+  iconWithNotes: {
+    left: 14, // Room 203 (with notes): icon at x=21 from screen, card at x=7, so 21-7=14px from card
+    top: 89, // Room 203: icon at y=860 from screen, card at y=771, so 860-771=89px from card
+  },
   // Guest name styles
   name: {
     fontSize: 14,
@@ -208,7 +212,7 @@ export const GUEST_INFO = {
       prioritySecond: { iconLeft: 158, textLeft: 177, top: 184 }, // Room 201 second: icon left-[158px] text left-[177px] top-[184px]
       standardDeparture: { iconLeft: 158, textLeft: 177, iconTop: 114, textTop: 114 }, // Room 202 (Departure): icon and text positioned next to date. Date at top-[114px] (y=677 from screen, 677-563=114), so icon/text at same y=114px. Icon at x=158, text at x=177
       standardArrival: { iconLeft: 165, textLeft: 184, top: 131 }, // Room 204 (Arrival): icon left-[165px] text left-[184px] top-[1155px] relative (1155-1024=131px), Room 205: top-[1371px] relative (1371-1240=131px)
-      withNotes: { iconLeft: 77, textLeft: 96, top: 124 }, // Room 203: icon left-[77px] text left-[96px] top-[895px] relative (895-771=124px)
+      withNotes: { iconLeft: 70, textLeft: 89, iconTop: 125, textTop: 124 }, // Room 203: icon at x=77, y=896 (screen) = x=70, y=125 (card). Text at x=96, y=895 (screen) = x=89, y=124 (card). Container at x=70, so icon at 70-70=0, text at 89-70=19 relative to container
     },
   },
   priorityBadge: {
@@ -219,7 +223,7 @@ export const GUEST_INFO = {
     positions: {
       firstGuest: { left: 182, top: 89 }, // Room 201 first guest badge "11"
       secondGuest: { left: 152, top: 164 }, // Room 201 second guest badge "22"
-      standard: { left: 185, top: 82 }, // Room 203 badge "11" (relative to card top: 853-771=82px)
+      standard: { left: 178, top: 82 }, // Room 203 badge "11": x=185 from screen, card at x=7, so 185-7=178px relative to card. y=853-771=82px
     },
   },
 } as const;
@@ -234,8 +238,8 @@ export const STAFF_SECTION = {
     top: 22, // Room 201: top-[22px] - aligns with room type
   },
   avatarStandard: {
-    left: 245, // Room 202/203/204: left-[245px]
-    top: 22, // Should align with room type at top-[22px] (Room 202: 583-563=20px, but should be 22px to match room type)
+    left: 238, // Room 202 (Departure): x=245 from screen, card at x=7, so 245-7=238px relative to card. Room 202: avatar at y=583 from screen, card at y=563, so 583-563=20px
+    top: 20, // Room 202: y=583 from screen, card at y=563, so 583-563=20px relative to card
   },
   name: {
     fontSize: 13,
@@ -243,12 +247,12 @@ export const STAFF_SECTION = {
     color: '#1e1e1e',
     left: 279, // Room 201: left-[279px]
     top: 23, // Room 201: top-[23px] - aligns just below room number (17px)
-    width: 104,
-    lineHeight: 21, // Figma shows h-[21px]
+    width: 104, // Width: 104px
+    lineHeight: 21, // Height: 21px (lineHeight matches height)
   },
   nameStandard: {
-    left: 288, // Room 202/203/204: left-[288px]
-    top: 23, // Should align with priority card (Room 202: 575-563=12px, but should be 23px to match priority)
+    left: 281, // Room 202/203/204: x=288 from screen, card at x=7, so 288-7=281px relative to card
+    top: 23, // Room 203: y=794 from screen, card at y=771, so 794-771=23px. Room 204: y=1047 from screen, card at y=1024, so 1047-1024=23px
   },
   status: {
     fontSize: 12,
@@ -264,16 +268,16 @@ export const STAFF_SECTION = {
     },
   },
   statusStandard: {
-    left: 288, // Room 202/203/204: left-[288px]
-    top: 40, // Should align with category at top-[40px] (Room 202: 592-563=29px, but should be 40px to match category)
-    width: 94, // Room 202/203/204: w-[94px] or w-[92px]
+    left: 281, // Room 202/203/204: x=288 from screen, card at x=7, so 288-7=281px relative to card
+    top: 40, // Room 203: y=811 from screen, card at y=771, so 811-771=40px. Room 202: y=592, card y=563, so 592-563=29px (different, but using 40 for consistency with other cards)
+    width: 94, // Room 203: w-[94px] from Figma
   },
   promiseTime: {
     fontSize: 13,
     fontWeight: 'bold' as const,
     color: '#1e1e1e',
-    left: 288, // Room 202: left-[288px]
-    top: 44, // Room 202: top-[607px] relative (607-563=44px)
+    left: 281, // Room 202 (Departure): x=288 from screen, card at x=7, so 288-7=281px relative to card
+    top: 44, // Room 202: y=607 from screen, card at y=563, so 607-563=44px relative to card
     lineHeight: 15, // Figma shows h-[15px]
     width: 139, // Room 202: w-[139px]
   },
@@ -287,14 +291,15 @@ export const STAFF_SECTION = {
     left: 399, // For non-priority cards
   },
   divider: {
-    left: 227, // Room 201: left-[227px], Room 202/203/204: left-[235px]
-    top: 11, // Room 201: top-[11px], Room 202: top-[574.5px] relative (574.5-563=11.5px)
+    left: 227, // Room 201: left-[227px] relative to card
+    top: 11.5, // Room 201: top-[11px], Room 202: top-[574.5px] from screen, card at y=563, so 574.5-563=11.5px relative to card
     width: 1,
     height: 50.5,
     color: '#e3e3e3',
   },
   dividerStandard: {
-    left: 235, // For non-priority cards
+    left: 228, // Room 202 (Departure): x=235 from screen, card at x=7, so 235-7=228px relative to card
+    top: 11.5, // Room 202: y=574.5 from screen, card at y=563, so 574.5-563=11.5px relative to card
   },
 } as const;
 

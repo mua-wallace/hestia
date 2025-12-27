@@ -281,6 +281,7 @@ const styles = StyleSheet.create({
   },
   dividerVerticalStandard: {
     left: STAFF_SECTION.dividerStandard.left * scaleX,
+    top: (STAFF_SECTION.dividerStandard.top ?? STAFF_SECTION.divider.top) * scaleX,
   },
   guestDividerLine: {
     position: 'absolute',

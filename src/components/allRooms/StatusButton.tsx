@@ -21,7 +21,9 @@ export default function StatusButton({
   const config = STATUS_CONFIGS[status];
   const isInProgress = status === 'InProgress';
   const isDirty = status === 'Dirty';
-  const showIconOnly = isInProgress || isDirty; // Both InProgress and Dirty show icon only
+  const isCleaned = status === 'Cleaned';
+  const isInspected = status === 'Inspected';
+  const showIconOnly = isInProgress || isDirty || isCleaned || isInspected; // All statuses show icon only
   
   // Determine button position based on card type
   let buttonLeft: number;
@@ -90,14 +92,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     justifyContent: 'center',
     alignItems: 'center',
-    // No background, no border, no shadow for icon-only statuses (InProgress, Dirty)
+    // No background, no border, no shadow for icon-only statuses (InProgress, Dirty, Cleaned, Inspected)
   },
   icon: {
     width: STATUS_BUTTON.icon.width * scaleX,
     height: STATUS_BUTTON.icon.height * scaleX,
   },
   iconLarge: {
-    // Larger icon size for icon-only statuses (InProgress, Dirty) to match Figma design
+    // Larger icon size for icon-only statuses (InProgress, Dirty, Cleaned, Inspected) to match Figma design
     width: STATUS_BUTTON.iconInProgress.width * scaleX,
     height: STATUS_BUTTON.iconInProgress.height * scaleX,
   },

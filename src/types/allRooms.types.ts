@@ -62,12 +62,12 @@ export const STATUS_CONFIGS: Record<RoomStatus, StatusConfig> = {
   },
   Cleaned: {
     color: '#5a759d',
-    icon: require('../../assets/icons/cleaned-status-icon.png'),
+    icon: require('../../assets/icons/cleaned-state-icon.png'),
     label: 'Cleaned',
   },
   Inspected: {
     color: '#41d541',
-    icon: require('../../assets/icons/inspected-status-icon.png'),
+    icon: require('../../assets/icons/inspected-state-icon.png'),
     label: 'Inspected',
   },
 };

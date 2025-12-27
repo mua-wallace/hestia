@@ -26,20 +26,19 @@ export default function GuestInfoSection({
   category = '',
   isArrivalDeparture = false,
 }: GuestInfoSectionProps) {
+  // Determine card type characteristics
   const isArrival = category === 'Arrival';
   const isDeparture = category === 'Departure';
+  const isStayover = category === 'Stayover';
+  const isTurndown = category === 'Turndown';
   
-  // Determine which guest icon to use
-  // For Arrival/Departure cards: use guest-arrival-icon for ETA guests, guest-departure-icon for EDT guests
-  // For regular Arrival cards: use guest-arrival-icon
-  // For regular Departure cards: use guest-departure-icon
-  // For other cards: use guest-icon (fallback)
+  // Determine which guest icon to use based on card category
   let guestIconSource;
   if (isArrivalDeparture) {
     guestIconSource = guest.timeLabel === 'ETA' 
       ? require('../../../assets/icons/guest-arrival-icon.png')
       : require('../../../assets/icons/guest-departure-icon.png');
-  } else if (isArrival) {
+  } else if (isArrival || isStayover || isTurndown) {
     guestIconSource = require('../../../assets/icons/guest-arrival-icon.png');
   } else if (isDeparture) {
     guestIconSource = require('../../../assets/icons/guest-departure-icon.png');
@@ -47,112 +46,113 @@ export default function GuestInfoSection({
     guestIconSource = require('../../../assets/icons/guest-icon.png');
   }
   
-  // Determine container left position
-  // For Arrival/Departure cards, both guests should use the same left position
-  let containerLeft: number;
-  if (isPriority) {
-    containerLeft = GUEST_INFO.container.left; // 73px - same for both guests in Arrival/Departure
-  } else if (hasNotes) {
-    containerLeft = GUEST_INFO.containerWithNotes.left; // 70px
-  } else {
-    containerLeft = GUEST_INFO.containerStandard.left; // 73px
-  }
+  // Determine container left position - reusable logic
+  // Turndown uses same as cards with notes, Stayover uses standard
+  const containerLeft = isPriority 
+    ? GUEST_INFO.container.left 
+    : hasNotes || isTurndown
+      ? GUEST_INFO.containerWithNotes.left 
+      : GUEST_INFO.containerStandard.left;
 
-  // Determine name top position
-  let nameTop: number;
-  if (isPriority) {
-    nameTop = isSecondGuest ? GUEST_INFO.nameSecond.top : GUEST_INFO.name.top;
-  } else if (hasNotes) {
-    nameTop = GUEST_INFO.nameWithNotes.top;
-  } else if (isArrival) {
-    nameTop = GUEST_INFO.nameStandardArrival.top; // 87px for Arrival cards
-  } else {
-    nameTop = GUEST_INFO.nameStandard.top; // 92px for Departure cards
-  }
+  // Determine name top position - consolidated logic
+  // Stayover: like Departure, Turndown: like Arrival with notes
+  const nameTop = isPriority
+    ? (isSecondGuest ? GUEST_INFO.nameSecond.top : GUEST_INFO.name.top)
+    : hasNotes || isTurndown
+      ? GUEST_INFO.nameWithNotes.top
+      : isStayover
+        ? GUEST_INFO.nameStandard.top // Stayover: like Departure
+        : isArrival
+          ? GUEST_INFO.nameStandardArrival.top // Arrival
+          : GUEST_INFO.nameStandard.top; // Departure
 
-  // Determine date range top position
-  let dateTop: number;
-  if (isPriority) {
-    dateTop = isSecondGuest ? GUEST_INFO.dateRangeSecond.top : GUEST_INFO.dateRange.top;
-  } else if (hasNotes) {
-    dateTop = GUEST_INFO.dateRangeWithNotes.top;
-  } else if (isArrival) {
-    dateTop = GUEST_INFO.dateRangeStandardArrival.top; // 109px for Arrival cards
-  } else {
-    dateTop = GUEST_INFO.dateRangeStandard.top; // 114px for Departure cards
-  }
+  // Determine date range top position - consolidated logic
+  // Stayover: like Departure, Turndown: like Arrival with notes
+  const dateTop = isPriority
+    ? (isSecondGuest ? GUEST_INFO.dateRangeSecond.top : GUEST_INFO.dateRange.top)
+    : hasNotes || isTurndown
+      ? GUEST_INFO.dateRangeWithNotes.top
+      : isStayover
+        ? GUEST_INFO.dateRangeStandard.top // Stayover: like Departure
+        : isArrival
+          ? GUEST_INFO.dateRangeStandardArrival.top // Arrival
+          : GUEST_INFO.dateRangeStandard.top; // Departure
 
-  // Determine time (ETA/EDT) position - exact from Figma
-  // For Departure cards, only show time if it's EDT (not ETA)
-  let timePos: { left: number; top: number } | null = null;
-  if (isPriority) {
-    timePos = isSecondGuest 
-      ? GUEST_INFO.time.positions.prioritySecond 
-      : GUEST_INFO.time.positions.priorityFirst;
-  } else if (hasNotes) {
-    timePos = GUEST_INFO.time.positions.withNotes; // Room 203: left-[158px] top-[103px]
-  } else if (isArrival) {
-    timePos = GUEST_INFO.time.positions.standardArrival; // Room 204/205: left-[161px] top-[110px]
-  } else if (isDeparture) {
-    // Departure cards: don't show EDT time
-    timePos = null;
-  }
+  // Determine time (ETA/EDT) position - consolidated logic
+  // Stayover: like Departure (no time), Turndown: like Arrival with notes
+  const timePos: { left: number; top: number } | null = isPriority
+    ? (isSecondGuest ? GUEST_INFO.time.positions.prioritySecond : GUEST_INFO.time.positions.priorityFirst)
+    : hasNotes || isTurndown
+      ? GUEST_INFO.time.positions.withNotes
+      : isStayover
+        ? null // Stayover: like Departure (no time)
+        : isArrival
+          ? GUEST_INFO.time.positions.standardArrival // Arrival
+          : null; // Departure cards don't show time
 
-  // Determine guest count position
-  let countPos: { iconLeft: number; textLeft: number; top?: number; iconTop?: number; textTop?: number };
-  if (isPriority) {
-    countPos = isSecondGuest 
-      ? GUEST_INFO.guestCount.positions.prioritySecond 
-      : GUEST_INFO.guestCount.positions.priorityFirst;
-  } else if (hasNotes) {
-    countPos = GUEST_INFO.guestCount.positions.withNotes;
-  } else if (isArrival) {
-    countPos = GUEST_INFO.guestCount.positions.standardArrival; // For Arrival cards
-  } else {
-    countPos = GUEST_INFO.guestCount.positions.standardDeparture; // For Departure cards
-  }
+  // Determine guest count position - consolidated logic
+  // Stayover: like Departure, Turndown: like Arrival with notes
+  const countPos: { iconLeft: number; textLeft: number; top?: number; iconTop?: number; textTop?: number } = isPriority
+    ? (isSecondGuest ? GUEST_INFO.guestCount.positions.prioritySecond : GUEST_INFO.guestCount.positions.priorityFirst)
+    : hasNotes || isTurndown
+      ? GUEST_INFO.guestCount.positions.withNotes
+      : isStayover
+        ? GUEST_INFO.guestCount.positions.standardDeparture // Stayover: like Departure
+        : isArrival
+          ? GUEST_INFO.guestCount.positions.standardArrival // Arrival
+          : GUEST_INFO.guestCount.positions.standardDeparture; // Departure
 
-  // Priority badge positioning from Figma
+  // Priority badge positioning - consolidated logic
   const priorityBadgeLeft = isPriority 
-    ? (isSecondGuest ? 152 : 182) // Room 201: first guest 182px, second guest 152px
-    : 185; // Room 203: 185px relative to card
+    ? (isSecondGuest ? 152 : 182)
+    : GUEST_INFO.priorityBadge.positions.standard.left;
   const priorityBadgeTop = isPriority
-    ? (isSecondGuest ? 164 : 89) // Room 201: first guest 89px, second guest 164px
-    : 82; // Room 203: 853-771=82px relative to card
+    ? (isSecondGuest ? 164 : 89)
+    : GUEST_INFO.priorityBadge.positions.standard.top;
 
-  // For Arrival/Departure priority cards and standard Departure cards, guest icons are positioned absolutely
-  // Get exact positions from Figma
+  // Determine guest icon absolute positioning - consolidated logic
+  // Stayover: like Departure, Turndown: like Arrival with notes
   let guestIconPos: { left: number; top: number } | null = null;
   if (isArrivalDeparture && isPriority) {
     guestIconPos = isSecondGuest
       ? GUEST_INFO.iconArrivalDeparture.positions.secondGuest
       : GUEST_INFO.iconArrivalDeparture.positions.firstGuest;
-  } else if (isDeparture && !isPriority && !hasNotes) {
-    // Standard Departure cards: icon positioned absolutely
+  } else if ((isDeparture || isStayover) && !isPriority && !hasNotes) {
+    // Stayover: like Departure - icon positioned absolutely
     guestIconPos = {
       left: GUEST_INFO.iconStandardDeparture.left,
       top: GUEST_INFO.iconStandardDeparture.top,
     };
+  } else if (hasNotes || isTurndown) {
+    // Turndown: like Arrival with notes - icon positioned absolutely
+    guestIconPos = {
+      left: GUEST_INFO.iconWithNotes.left,
+      top: GUEST_INFO.iconWithNotes.top,
+    };
   }
+
+  // Determine icon tint color - preserve original colors for arrival/departure icons
+  const iconTintColor: string | undefined = (isArrivalDeparture || isArrival || isDeparture || isStayover || isTurndown)
+    ? undefined // Preserve original icon colors
+    : '#334866'; // Default color for other icons
   
   return (
     <View style={[styles.container, { left: containerLeft * scaleX }]}>
-      {/* Guest Icon - positioned absolutely for Arrival/Departure priority cards and standard Departure cards */}
+      {/* Guest Icon - positioned absolutely for Arrival/Departure priority cards, standard Departure cards, and cards with notes */}
       {guestIconPos !== null ? (
         <Image
           source={guestIconSource}
           style={[
-            // Use larger icon size (same as Arrival/Departure) for departure cards
             styles.guestIconAbsolute,
             { 
               // Position relative to container: icon position relative to card - containerLeft
               // Arrival/Departure: First guest: left=17-73=-56px, top=88px; Second guest: left=18-73=-55px, top=173px
               // Standard Departure: left=17-73=-56px, top=93px
+              // With notes: left=14-70=-56px, top=89px
               left: (guestIconPos.left - containerLeft) * scaleX,
               top: guestIconPos.top * scaleX,
+              tintColor: iconTintColor, // Apply tint color (green for arrival, red for departure, or undefined to preserve original)
             },
-            // Remove tintColor for arrival/departure icons to preserve their original colors
-            styles.guestIconNoTint
           ]}
           resizeMode="contain"
         />
@@ -166,8 +166,8 @@ export default function GuestInfoSection({
             source={guestIconSource}
             style={[
               styles.guestIcon,
-              // Remove tintColor for arrival/departure icons to preserve their original colors
-              (isArrival || isDeparture) && styles.guestIconNoTint
+              // Remove tintColor for arrival/departure/stayover/turndown icons to preserve their original colors
+              (isArrival || isDeparture || isStayover || isTurndown) && styles.guestIconNoTint
             ]}
             resizeMode="contain"
           />
