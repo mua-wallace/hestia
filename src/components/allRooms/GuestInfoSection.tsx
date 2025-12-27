@@ -47,60 +47,52 @@ export default function GuestInfoSection({
   }
   
   // Determine container left position - reusable logic
-  // Turndown uses same as cards with notes, Stayover uses standard
+  // Turndown and Stayover use same as cards with notes
   const containerLeft = isPriority 
     ? GUEST_INFO.container.left 
-    : hasNotes || isTurndown
+    : hasNotes || isTurndown || isStayover
       ? GUEST_INFO.containerWithNotes.left 
       : GUEST_INFO.containerStandard.left;
 
   // Determine name top position - consolidated logic
-  // Stayover: like Departure, Turndown: like Arrival with notes
+  // Stayover: like Turndown (Arrival with notes), Turndown: like Arrival with notes
   const nameTop = isPriority
     ? (isSecondGuest ? GUEST_INFO.nameSecond.top : GUEST_INFO.name.top)
-    : hasNotes || isTurndown
+    : hasNotes || isTurndown || isStayover
       ? GUEST_INFO.nameWithNotes.top
-      : isStayover
-        ? GUEST_INFO.nameStandard.top // Stayover: like Departure
-        : isArrival
-          ? GUEST_INFO.nameStandardArrival.top // Arrival
-          : GUEST_INFO.nameStandard.top; // Departure
+      : isArrival
+        ? GUEST_INFO.nameStandardArrival.top // Arrival
+        : GUEST_INFO.nameStandard.top; // Departure
 
   // Determine date range top position - consolidated logic
-  // Stayover: like Departure, Turndown: like Arrival with notes
+  // Stayover: like Turndown (Arrival with notes), Turndown: like Arrival with notes
   const dateTop = isPriority
     ? (isSecondGuest ? GUEST_INFO.dateRangeSecond.top : GUEST_INFO.dateRange.top)
-    : hasNotes || isTurndown
+    : hasNotes || isTurndown || isStayover
       ? GUEST_INFO.dateRangeWithNotes.top
-      : isStayover
-        ? GUEST_INFO.dateRangeStandard.top // Stayover: like Departure
-        : isArrival
-          ? GUEST_INFO.dateRangeStandardArrival.top // Arrival
-          : GUEST_INFO.dateRangeStandard.top; // Departure
+      : isArrival
+        ? GUEST_INFO.dateRangeStandardArrival.top // Arrival
+        : GUEST_INFO.dateRangeStandard.top; // Departure
 
   // Determine time (ETA/EDT) position - consolidated logic
-  // Stayover: like Departure (no time), Turndown: like Arrival with notes
+  // Stayover: like Turndown (Arrival with notes), Turndown: like Arrival with notes
   const timePos: { left: number; top: number } | null = isPriority
     ? (isSecondGuest ? GUEST_INFO.time.positions.prioritySecond : GUEST_INFO.time.positions.priorityFirst)
-    : hasNotes || isTurndown
+    : hasNotes || isTurndown || isStayover
       ? GUEST_INFO.time.positions.withNotes
-      : isStayover
-        ? null // Stayover: like Departure (no time)
-        : isArrival
-          ? GUEST_INFO.time.positions.standardArrival // Arrival
-          : null; // Departure cards don't show time
+      : isArrival
+        ? GUEST_INFO.time.positions.standardArrival // Arrival
+        : null; // Departure cards don't show time
 
   // Determine guest count position - consolidated logic
-  // Stayover: like Departure, Turndown: like Arrival with notes
+  // Stayover: like Turndown (Arrival with notes), Turndown: like Arrival with notes
   const countPos: { iconLeft: number; textLeft: number; top?: number; iconTop?: number; textTop?: number } = isPriority
     ? (isSecondGuest ? GUEST_INFO.guestCount.positions.prioritySecond : GUEST_INFO.guestCount.positions.priorityFirst)
-    : hasNotes || isTurndown
+    : hasNotes || isTurndown || isStayover
       ? GUEST_INFO.guestCount.positions.withNotes
-      : isStayover
-        ? GUEST_INFO.guestCount.positions.standardDeparture // Stayover: like Departure
-        : isArrival
-          ? GUEST_INFO.guestCount.positions.standardArrival // Arrival
-          : GUEST_INFO.guestCount.positions.standardDeparture; // Departure
+      : isArrival
+        ? GUEST_INFO.guestCount.positions.standardArrival // Arrival
+        : GUEST_INFO.guestCount.positions.standardDeparture; // Departure
 
   // Priority badge positioning - consolidated logic
   const priorityBadgeLeft = isPriority 
@@ -111,20 +103,20 @@ export default function GuestInfoSection({
     : GUEST_INFO.priorityBadge.positions.standard.top;
 
   // Determine guest icon absolute positioning - consolidated logic
-  // Stayover: like Departure, Turndown: like Arrival with notes
+  // Stayover: like Turndown (Arrival with notes), Turndown: like Arrival with notes
   let guestIconPos: { left: number; top: number } | null = null;
   if (isArrivalDeparture && isPriority) {
     guestIconPos = isSecondGuest
       ? GUEST_INFO.iconArrivalDeparture.positions.secondGuest
       : GUEST_INFO.iconArrivalDeparture.positions.firstGuest;
-  } else if ((isDeparture || isStayover) && !isPriority && !hasNotes) {
-    // Stayover: like Departure - icon positioned absolutely
+  } else if (isDeparture && !isPriority && !hasNotes) {
+    // Departure: icon positioned absolutely
     guestIconPos = {
       left: GUEST_INFO.iconStandardDeparture.left,
       top: GUEST_INFO.iconStandardDeparture.top,
     };
-  } else if (hasNotes || isTurndown) {
-    // Turndown: like Arrival with notes - icon positioned absolutely
+  } else if (hasNotes || isTurndown || isStayover) {
+    // Turndown and Stayover: like Arrival with notes - icon positioned absolutely
     guestIconPos = {
       left: GUEST_INFO.iconWithNotes.left,
       top: GUEST_INFO.iconWithNotes.top,
