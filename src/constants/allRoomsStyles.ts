@@ -116,6 +116,14 @@ export const GUEST_INFO = {
   iconArrivalDeparture: {
     width: 28.371, // Larger icon size for Arrival/Departure guest icons
     height: 29.919,
+    positions: {
+      firstGuest: { left: 17, top: 88 }, // Room 201 first guest icon: x=17, y=88 (from Figma)
+      secondGuest: { left: 18, top: 173 }, // Room 201 second guest icon: x=18, y=173 (from Figma)
+    },
+  },
+  iconStandardDeparture: {
+    left: 17, // Room 202 (Departure): icon at x=24 from screen, x=24-7=17px from card
+    top: 93, // Room 202: icon at y=656 from screen, y=656-563=93px from card
   },
   // Guest name styles
   name: {
@@ -180,7 +188,7 @@ export const GUEST_INFO = {
     positions: {
       priorityFirst: { left: 75, top: 130 }, // Room 201 first guest: left-[75px] top-[130px] ETA: 17:00 (exact from Figma)
       prioritySecond: { left: 73, top: 204 }, // Room 201 second guest: left-[73px] top-[204px] EDT: 12:00 (exact from Figma)
-      standardDeparture: { left: 161, top: 114 }, // Room 202 (Departure): Date at top-[677px] relative (677-563=114px) - no ETA shown in Figma
+      standardDeparture: { left: 154, top: 115 }, // Room 202 (Departure): EDT positioned below date range, similar to arrival cards. Date at top-[677px]=114px, so EDT at 115px (1px below). Left matches arrival pattern at x=154px (161-7=154 from card)
       standardArrival: { left: 154, top: 110 }, // Room 204: ETA at x=161 absolute, card starts at x=7, so relative to card: 161-7=154px. Top: 1134-1024=110px
       withNotes: { left: 151, top: 103 }, // Room 203: ETA at x=158 absolute, card starts at x=7, so relative to card: 158-7=151px. Top: 874-771=103px
     },
@@ -191,10 +199,14 @@ export const GUEST_INFO = {
     fontWeight: 'light' as const,
     color: '#000000',
     lineHeight: 13, // Figma shows h-[13px]
+    icon: {
+      width: 13, // Person icon size for guest count
+      height: 12,
+    },
     positions: {
       priorityFirst: { iconLeft: 158, textLeft: 177, top: 110 }, // Room 201 first: icon left-[158px] text left-[177px] top-[110px]
       prioritySecond: { iconLeft: 158, textLeft: 177, top: 184 }, // Room 201 second: icon left-[158px] text left-[177px] top-[184px]
-      standardDeparture: { iconLeft: 165, textLeft: 184, top: 116 }, // Room 202 (Departure): icon left-[165px] text left-[184px] top-[679px] relative (679-563=116px)
+      standardDeparture: { iconLeft: 158, textLeft: 177, iconTop: 114, textTop: 114 }, // Room 202 (Departure): icon and text positioned next to date. Date at top-[114px] (y=677 from screen, 677-563=114), so icon/text at same y=114px. Icon at x=158, text at x=177
       standardArrival: { iconLeft: 165, textLeft: 184, top: 131 }, // Room 204 (Arrival): icon left-[165px] text left-[184px] top-[1155px] relative (1155-1024=131px), Room 205: top-[1371px] relative (1371-1240=131px)
       withNotes: { iconLeft: 77, textLeft: 96, top: 124 }, // Room 203: icon left-[77px] text left-[96px] top-[895px] relative (895-771=124px)
     },

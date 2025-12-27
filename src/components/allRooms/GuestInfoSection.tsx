@@ -94,14 +94,12 @@ export default function GuestInfoSection({
   } else if (isArrival) {
     timePos = GUEST_INFO.time.positions.standardArrival; // Room 204/205: left-[161px] top-[110px]
   } else if (isDeparture) {
-    // For Departure cards, only show time if it's EDT
-    if (guest.timeLabel === 'EDT') {
-      timePos = GUEST_INFO.time.positions.standardDeparture; // Room 202: left-[161px] top-[114px]
-    }
+    // Departure cards: don't show EDT time
+    timePos = null;
   }
 
   // Determine guest count position
-  let countPos: { iconLeft: number; textLeft: number; top: number };
+  let countPos: { iconLeft: number; textLeft: number; top?: number; iconTop?: number; textTop?: number };
   if (isPriority) {
     countPos = isSecondGuest 
       ? GUEST_INFO.guestCount.positions.prioritySecond 
@@ -122,25 +120,36 @@ export default function GuestInfoSection({
     ? (isSecondGuest ? 164 : 89) // Room 201: first guest 89px, second guest 164px
     : 82; // Room 203: 853-771=82px relative to card
 
-  // For Arrival/Departure priority cards, guest icons are positioned absolutely
-  // First guest icon at x=17px, second guest icon at x=18px (from Figma)
-  const guestIconLeftAbsolute = isArrivalDeparture && isPriority 
-    ? (isSecondGuest ? 18 : 17) 
-    : null;
+  // For Arrival/Departure priority cards and standard Departure cards, guest icons are positioned absolutely
+  // Get exact positions from Figma
+  let guestIconPos: { left: number; top: number } | null = null;
+  if (isArrivalDeparture && isPriority) {
+    guestIconPos = isSecondGuest
+      ? GUEST_INFO.iconArrivalDeparture.positions.secondGuest
+      : GUEST_INFO.iconArrivalDeparture.positions.firstGuest;
+  } else if (isDeparture && !isPriority && !hasNotes) {
+    // Standard Departure cards: icon positioned absolutely
+    guestIconPos = {
+      left: GUEST_INFO.iconStandardDeparture.left,
+      top: GUEST_INFO.iconStandardDeparture.top,
+    };
+  }
   
   return (
     <View style={[styles.container, { left: containerLeft * scaleX }]}>
-      {/* Guest Icon - positioned absolutely for Arrival/Departure priority cards */}
-      {guestIconLeftAbsolute !== null ? (
+      {/* Guest Icon - positioned absolutely for Arrival/Departure priority cards and standard Departure cards */}
+      {guestIconPos !== null ? (
         <Image
           source={guestIconSource}
           style={[
+            // Use larger icon size (same as Arrival/Departure) for departure cards
             styles.guestIconAbsolute,
             { 
-              // Position relative to container: iconLeftAbsolute - containerLeft
-              // First guest: 17 - 73 = -56px, Second guest: 18 - 73 = -55px
-              left: (guestIconLeftAbsolute - containerLeft) * scaleX,
-              top: nameTop * scaleX,
+              // Position relative to container: icon position relative to card - containerLeft
+              // Arrival/Departure: First guest: left=17-73=-56px, top=88px; Second guest: left=18-73=-55px, top=173px
+              // Standard Departure: left=17-73=-56px, top=93px
+              left: (guestIconPos.left - containerLeft) * scaleX,
+              top: guestIconPos.top * scaleX,
             },
             // Remove tintColor for arrival/departure icons to preserve their original colors
             styles.guestIconNoTint
@@ -152,7 +161,7 @@ export default function GuestInfoSection({
       {/* Guest Name - for Arrival/Departure, name starts at left: 0 (which is containerLeft = 73px relative to card) */}
       {/* For other cards, icon is in the guestRow with the name */}
       <View style={[styles.guestRow, { top: nameTop * scaleX }]}>
-        {guestIconLeftAbsolute === null && (
+        {guestIconPos === null && (
           <Image
             source={guestIconSource}
             style={[
@@ -163,7 +172,7 @@ export default function GuestInfoSection({
             resizeMode="contain"
           />
         )}
-        <View style={[styles.guestNameContainer, guestIconLeftAbsolute !== null && styles.guestNameContainerNoIcon]}>
+        <View style={[styles.guestNameContainer, guestIconPos !== null && styles.guestNameContainerNoIcon]}>
           <Text style={styles.guestName} numberOfLines={1} ellipsizeMode="tail">
             {guest.name}
           </Text>
@@ -210,16 +219,28 @@ export default function GuestInfoSection({
 
       {/* Guest Count */}
       {countPos && (
-        <View style={[styles.countRow, { top: (countPos.top ?? 0) * scaleX }]}>
+        <>
           <Image
             source={require('../../../assets/icons/people-icon.png')}
-            style={[styles.countIcon, { left: ((countPos.iconLeft ?? 0) - containerLeft) * scaleX }]}
+            style={[
+              styles.countIcon, 
+              { 
+                left: ((countPos.iconLeft ?? 0) - containerLeft) * scaleX,
+                top: ((countPos.iconTop ?? countPos.top ?? 0)) * scaleX,
+              }
+            ]}
             resizeMode="contain"
           />
-          <Text style={[styles.countText, { left: ((countPos.textLeft ?? 0) - containerLeft) * scaleX }]}>
+          <Text style={[
+            styles.countText, 
+            { 
+              left: ((countPos.textLeft ?? 0) - containerLeft) * scaleX,
+              top: ((countPos.textTop ?? countPos.top ?? 0)) * scaleX,
+            }
+          ]}>
             {guest.guestCount || ''}
           </Text>
-        </View>
+        </>
       )}
     </View>
   );
@@ -296,17 +317,11 @@ const styles = StyleSheet.create({
     color: GUEST_INFO.time.color,
     lineHeight: GUEST_INFO.time.lineHeight * scaleX,
   },
-  countRow: {
-    position: 'absolute',
-    flexDirection: 'row',
-    alignItems: 'center',
-    left: 0,
-  },
   countIcon: {
     position: 'absolute',
-    width: GUEST_INFO.icon.width * scaleX,
-    height: GUEST_INFO.icon.height * scaleX,
-    top: 0,
+    width: GUEST_INFO.guestCount.icon.width * scaleX,
+    height: GUEST_INFO.guestCount.icon.height * scaleX,
+    // top is set inline
     tintColor: '#334866',
   },
   countText: {
@@ -316,7 +331,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.light as any,
     color: GUEST_INFO.guestCount.color,
     lineHeight: GUEST_INFO.guestCount.lineHeight * scaleX,
-    top: 0,
+    // top is set inline
   },
 });
 
