@@ -122,20 +122,48 @@ export default function GuestInfoSection({
     ? (isSecondGuest ? 164 : 89) // Room 201: first guest 89px, second guest 164px
     : 82; // Room 203: 853-771=82px relative to card
 
+  // For Arrival/Departure priority cards, guest icons are positioned absolutely
+  // First guest icon at x=17px, second guest icon at x=18px (from Figma)
+  const guestIconLeftAbsolute = isArrivalDeparture && isPriority 
+    ? (isSecondGuest ? 18 : 17) 
+    : null;
+  
   return (
     <View style={[styles.container, { left: containerLeft * scaleX }]}>
-      {/* Guest Icon and Name */}
-      <View style={[styles.guestRow, { top: nameTop * scaleX }]}>
+      {/* Guest Icon - positioned absolutely for Arrival/Departure priority cards */}
+      {guestIconLeftAbsolute !== null ? (
         <Image
           source={guestIconSource}
           style={[
-            styles.guestIcon,
+            styles.guestIconAbsolute,
+            { 
+              // Position relative to container: iconLeftAbsolute - containerLeft
+              // First guest: 17 - 73 = -56px, Second guest: 18 - 73 = -55px
+              left: (guestIconLeftAbsolute - containerLeft) * scaleX,
+              top: nameTop * scaleX,
+            },
             // Remove tintColor for arrival/departure icons to preserve their original colors
-            (isArrivalDeparture || isArrival || isDeparture) && styles.guestIconNoTint
+            styles.guestIconNoTint
           ]}
           resizeMode="contain"
         />
-        <View style={styles.guestNameContainer}>
+      ) : null}
+      
+      {/* Guest Name - for Arrival/Departure, name starts at left: 0 (which is containerLeft = 73px relative to card) */}
+      {/* For other cards, icon is in the guestRow with the name */}
+      <View style={[styles.guestRow, { top: nameTop * scaleX }]}>
+        {guestIconLeftAbsolute === null && (
+          <Image
+            source={guestIconSource}
+            style={[
+              styles.guestIcon,
+              // Remove tintColor for arrival/departure icons to preserve their original colors
+              (isArrival || isDeparture) && styles.guestIconNoTint
+            ]}
+            resizeMode="contain"
+          />
+        )}
+        <View style={[styles.guestNameContainer, guestIconLeftAbsolute !== null && styles.guestNameContainerNoIcon]}>
           <Text style={styles.guestName} numberOfLines={1} ellipsizeMode="tail">
             {guest.name}
           </Text>
@@ -216,12 +244,21 @@ const styles = StyleSheet.create({
     marginTop: 0, // Align icon top with text baseline
     tintColor: '#334866',
   },
+  guestIconAbsolute: {
+    position: 'absolute',
+    width: GUEST_INFO.iconArrivalDeparture.width * scaleX,
+    height: GUEST_INFO.iconArrivalDeparture.height * scaleX,
+    tintColor: '#334866',
+  },
   guestIconNoTint: {
     tintColor: undefined, // Remove tint to preserve original icon colors (green/red arrows)
   },
   guestNameContainer: {
     flex: 1,
     justifyContent: 'center',
+  },
+  guestNameContainerNoIcon: {
+    marginLeft: 0, // No margin when icon is positioned separately
   },
   guestName: {
     fontSize: GUEST_INFO.name.fontSize * scaleX,

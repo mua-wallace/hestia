@@ -92,9 +92,7 @@ export const ROOM_HEADER = {
     fontWeight: 'light' as const,
     color: '#334866',
     positions: {
-      firstGuest: { left: 182, top: 89 }, // Room 201 first guest badge "11"
-      secondGuest: { left: 152, top: 164 }, // Room 201 second guest badge "22"
-      standard: { left: 185, top: 853 }, // Room 203 badge "11" (relative to card top: 853-771=82px)
+      standard: { left: 185, top: 82 }, // Room 203 badge "11" (relative to card top: 853-771=82px)
     },
   },
 } as const;
@@ -115,6 +113,17 @@ export const GUEST_INFO = {
     width: 16,
     height: 16,
   },
+  iconArrivalDeparture: {
+    width: 28.371, // Larger icon size for Arrival/Departure guest icons
+    height: 29.919,
+  },
+  // Guest name styles
+  name: {
+    fontSize: 14,
+    fontWeight: 'bold' as const,
+    color: '#000000',
+    lineHeight: 10, // Figma shows h-[10px]
+  },
   // Guest name positions
   name: {
     fontSize: 14,
@@ -134,6 +143,13 @@ export const GUEST_INFO = {
   },
   nameWithNotes: {
     top: 80, // Room 203: top-[851px] relative (851-771=80px)
+  },
+  // Date range styles
+  dateRange: {
+    fontSize: 14,
+    fontWeight: 'light' as const,
+    color: '#000000',
+    lineHeight: 17,
   },
   // Date range positions
   dateRange: {
@@ -188,6 +204,11 @@ export const GUEST_INFO = {
     fontWeight: 'light' as const,
     color: '#334866',
     lineHeight: 11, // Figma shows h-[11px]
+    positions: {
+      firstGuest: { left: 182, top: 89 }, // Room 201 first guest badge "11"
+      secondGuest: { left: 152, top: 164 }, // Room 201 second guest badge "22"
+      standard: { left: 185, top: 82 }, // Room 203 badge "11" (relative to card top: 853-771=82px)
+    },
   },
 } as const;
 
