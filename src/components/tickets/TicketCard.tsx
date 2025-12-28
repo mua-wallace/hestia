@@ -35,10 +35,11 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
       {ticket.dueTime && (
         <View style={[
           styles.dueDateBadge,
-          // First ticket (TV not working) has centered badge, second (Deliver Laundry) has top-left
-          ticket.id === 'ticket-1' ? styles.dueDateBadgeCentered : styles.dueDateBadgeTopLeft
+          styles.dueDateBadgeTopLeft
         ]}>
-          <Text style={styles.dueDateText}>Due in: {ticket.dueTime}</Text>
+          <Text style={styles.dueDateText} numberOfLines={1}>
+            Due in: {ticket.dueTime}
+          </Text>
         </View>
       )}
 
@@ -57,7 +58,10 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
         <>
           <Image
             source={ticket.categoryIcon}
-            style={styles.categoryIcon}
+            style={[
+              styles.categoryIcon,
+              ticket.category.toLowerCase() === 'laundry' && { tintColor: '#f92424' },
+            ]}
             resizeMode="contain"
           />
           <Text style={styles.categoryText}>{ticket.category}</Text>
@@ -67,7 +71,7 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
       {/* Location Icon */}
       <View style={styles.locationIconContainer}>
         <Image
-          source={require('../../../assets/icons/location-pin-icon.png')}
+          source={require('../../../assets/icons/location.png')}
           style={styles.locationPinIcon}
           resizeMode="contain"
         />
@@ -122,8 +126,8 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
           <Image
             source={
               ticket.status === 'done'
-                ? require('../../../assets/icons/thumbs-up-icon.png')
-                : require('../../../assets/icons/thumbs-down-icon.png')
+                ? require('../../../assets/icons/done.png')
+                : require('../../../assets/icons/unsolved.png')
             }
             style={[
               styles.statusIcon,
@@ -133,6 +137,7 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
                 top: (statusConfig.iconTop - statusConfig.top) * scaleX,
                 width: statusConfig.iconWidth * scaleX,
                 height: statusConfig.iconHeight * scaleX,
+                tintColor: ticket.status === 'done' ? '#ffffff' : '#f92424',
                 transform: statusConfig.iconRotate
                   ? [{ rotate: `${statusConfig.iconRotate}deg` }]
                   : [],
@@ -179,8 +184,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: TICKET_CONTENT.dueDateBadge.backgroundColor,
     borderRadius: TICKET_CONTENT.dueDateBadge.borderRadius * scaleX,
-    paddingHorizontal: TICKET_CONTENT.dueDateBadge.paddingHorizontal * scaleX,
-    paddingVertical: TICKET_CONTENT.dueDateBadge.paddingVertical * scaleX,
+    paddingLeft: TICKET_CONTENT.dueDateBadge.paddingHorizontal * scaleX,
+    paddingRight: TICKET_CONTENT.dueDateBadge.paddingHorizontal * scaleX,
+    paddingTop: TICKET_CONTENT.dueDateBadge.paddingVertical * scaleX,
+    paddingBottom: TICKET_CONTENT.dueDateBadge.paddingVertical * scaleX,
+    overflow: 'hidden',
+    alignSelf: 'flex-start',
   },
   dueDateBadgeCentered: {
     // First card: centered position from constants
@@ -197,6 +206,11 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: TICKETS_TYPOGRAPHY.dueDate.fontWeight as any,
     color: TICKETS_TYPOGRAPHY.dueDate.color,
+    textAlign: 'left',
+    includeFontPadding: false,
+    padding: 0,
+    margin: 0,
+    lineHeight: TICKETS_TYPOGRAPHY.dueDate.fontSize * 1.2 * scaleX,
   },
   title: {
     position: 'absolute',
@@ -250,9 +264,6 @@ const styles = StyleSheet.create({
     width: TICKET_LOCATION.pinIcon.width * scaleX,
     height: TICKET_LOCATION.pinIcon.height * scaleX,
     tintColor: '#ffffff',
-    position: 'absolute',
-    left: (TICKET_LOCATION.pinIcon.left - TICKET_LOCATION.icon.left) * scaleX,
-    top: (TICKET_LOCATION.pinIcon.top - TICKET_LOCATION.icon.top) * scaleX,
   },
   locationLabel: {
     position: 'absolute',
@@ -326,11 +337,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     height: TICKET_STATUS.button.height * scaleX,
     borderRadius: TICKET_STATUS.button.borderRadius * scaleX,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   statusIcon: {
-    tintColor: '#ffffff',
+    // Icon tint color will be handled per status if needed
   },
   statusText: {
     fontSize: TICKETS_TYPOGRAPHY.statusButton.fontSize * scaleX,

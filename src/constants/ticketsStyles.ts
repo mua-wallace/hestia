@@ -142,9 +142,12 @@ export const TICKET_CONTENT = {
     top: 87, // Positioned below description area (visual inspection from Figma)
   },
   dueDateBadgeTopLeft: {
-    // Second card: top-left position
-    top: 4,
-    left: 7,
+    // Badge positioned below description
+    // Description starts at top: 47px, has 2 lines with lineHeight: 15px
+    // Description ends approximately at: 47 + (15 * 2) = 77px
+    // Add spacing: 77 + 10 = 87px from card top
+    top: 87, // Below description area
+    left: 18, // Aligned with description (x=34, card x=16, so 34-16=18px, but badge starts at x=34 which is 18px from card left)
   },
   category: {
     iconSize: 21,
@@ -226,10 +229,11 @@ export const TICKET_STATUS = {
     backgroundColor: '#41d541', // Green
     width: 122,
     textColor: '#ffffff',
-    textLeft: 304, // From Figma: text x=320, card x=16, so 320-16=304px absolute (for second card)
-    textTop: 166, // From Figma: text y=611, card y=445, so 611-445=166px absolute (for second card)
-    iconLeft: 275, // From Figma: icon Group x=291, card x=16, so 291-16=275px absolute (for second card)
-    iconTop: 165, // From Figma: icon Group y=610, card y=445, so 610-445=165px absolute (for second card)
+    textLeft: 304, // From Figma: text x=320, card x=16, so 320-16=304px absolute
+    textTop: 166, // From Figma: text y=611, card y=445, so 611-445=166px absolute
+    // Icon position: need to find exact icon position from Figma
+    iconLeft: 275, // Calculated: text at 304, spacing ~8px, icon width 20.9, so 304-8-20.9=275.1
+    iconTop: 165, // Aligned slightly above text for visual balance
     iconWidth: 20.9,
     iconHeight: 18.5,
   },
@@ -240,12 +244,19 @@ export const TICKET_STATUS = {
     width: 137,
     textColor: '#f92424', // Red text
     textLeft: 288, // From Figma: text x=304, card x=16, so 304-16=288px absolute
-    textTop: 165, // From Figma: text y=378, card y=213, so 378-213=165px absolute
-    iconLeft: 282.9, // From Figma: icon Group x=298.9, card x=16, so 298.9-16=282.9px absolute
-    iconTop: 185.5, // From Figma: icon Group y=398.5, card y=213, so 398.5-213=185.5px absolute
+    // Vertically center text in button: button top 157, height 37, center = 157 + 18.5 = 175.5px
+    // Text height ~18px (fontSize 16), so text top = 175.5 - 9 = 166.5px
+    textTop: 166.5, // Vertically centered in button
+    // Calculate icon position based on text position and spacing (similar to Done button)
+    // Done button: text at 304, icon at 275, spacing = 304 - 275 - 20.9 = 8.1px
+    // For Unsolved: text at 288, desired spacing ~8px, so icon left = 288 - 8 - 20.9 = 259.1px
+    iconLeft: 259, // Calculated: text at 288, spacing ~8px, icon width 20.9, so 288-8-20.9=259.1
+    // Vertically center icon with text: text top is 166.5, text height ~18px, so text center ≈ 175.5px
+    // Icon height is 18.5px, so icon center at 175.5px means icon top = 175.5 - 9.25 = 166.25px
+    iconTop: 166.25, // Vertically centered with text
     iconWidth: 20.9,
     iconHeight: 18.5,
-    iconRotate: 180, // Rotated 180 degrees
+    iconRotate: 180, // Rotate 180 degrees to make thumb point downward
   },
   text: {
     fontSize: 16,
