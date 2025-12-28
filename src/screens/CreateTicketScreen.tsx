@@ -50,17 +50,17 @@ const DEPARTMENTS: Department[] = [
   {
     id: 'engineering',
     name: 'Engineering',
-    icon: require('../../assets/icons/engineering-icon.png'),
+    icon: require('../../assets/icons/engineering.png'),
   },
   {
     id: 'hskPortier',
     name: 'HSK Portier',
-    icon: require('../../assets/icons/hsk-portier-icon.png'),
+    icon: require('../../assets/icons/hsk-portier.png'),
   },
   {
     id: 'inRoomDining',
     name: 'In Room Dining',
-    icon: require('../../assets/icons/in-room-dining-icon.png'),
+    icon: require('../../assets/icons/in-room-dining.png'),
   },
   {
     id: 'laundry',
@@ -70,17 +70,17 @@ const DEPARTMENTS: Department[] = [
   {
     id: 'concierge',
     name: 'Concierge',
-    icon: require('../../assets/icons/concierge-icon.png'),
+    icon: require('../../assets/icons/concierge.png'),
   },
   {
     id: 'reception',
     name: 'Reception',
-    icon: require('../../assets/icons/reception-icon.png'),
+    icon: require('../../assets/icons/reception.png'),
   },
   {
     id: 'it',
     name: 'IT',
-    icon: require('../../assets/icons/it-icon.png'),
+    icon: require('../../assets/icons/it.png'),
   },
 ];
 
@@ -174,7 +174,11 @@ export default function CreateTicketScreen() {
                   source={department.icon}
                   style={[
                     styles.departmentIconImage,
-                    { tintColor: '#F92424' }, // Red color from Figma design
+                    // Apply tintColor for icons that need it, but some icons are already colored
+                    // Remove tintColor for icons that are not visible with it
+                    (department.id === 'hskPortier' || department.id === 'inRoomDining')
+                      ? {} // No tintColor - icons are already colored
+                      : { tintColor: '#F92424' }, // Red color from Figma design
                   ]}
                   resizeMode="contain"
                 />
