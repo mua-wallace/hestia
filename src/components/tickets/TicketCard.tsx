@@ -7,6 +7,7 @@ import {
   TICKET_LOCATION,
   TICKET_CREATOR,
   TICKET_STATUS,
+  TICKET_DIVIDER,
   TICKETS_COLORS,
   TICKETS_TYPOGRAPHY,
   scaleX,
@@ -32,7 +33,11 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
     >
       {/* Due Date Badge */}
       {ticket.dueTime && (
-        <View style={styles.dueDateBadge}>
+        <View style={[
+          styles.dueDateBadge,
+          // First ticket (TV not working) has centered badge, second (Deliver Laundry) has top-left
+          ticket.id === 'ticket-1' ? styles.dueDateBadgeCentered : styles.dueDateBadgeTopLeft
+        ]}>
           <Text style={styles.dueDateText}>Due in: {ticket.dueTime}</Text>
         </View>
       )}
@@ -94,6 +99,9 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
 
       {/* Creator Name */}
       <Text style={styles.creatorName}>{ticket.createdBy.name}</Text>
+
+      {/* Horizontal Divider */}
+      <View style={styles.divider} />
 
       {/* Status Button */}
       <TouchableOpacity
@@ -169,12 +177,20 @@ const styles = StyleSheet.create({
   },
   dueDateBadge: {
     position: 'absolute',
-    top: TICKET_CONTENT.dueDateBadge.top * scaleX,
-    left: TICKET_CONTENT.dueDateBadge.left * scaleX,
     backgroundColor: TICKET_CONTENT.dueDateBadge.backgroundColor,
     borderRadius: TICKET_CONTENT.dueDateBadge.borderRadius * scaleX,
     paddingHorizontal: TICKET_CONTENT.dueDateBadge.paddingHorizontal * scaleX,
     paddingVertical: TICKET_CONTENT.dueDateBadge.paddingVertical * scaleX,
+  },
+  dueDateBadgeCentered: {
+    // First card: centered position from constants
+    left: TICKET_CONTENT.dueDateBadgeCentered.left * scaleX,
+    top: TICKET_CONTENT.dueDateBadgeCentered.top * scaleX,
+  },
+  dueDateBadgeTopLeft: {
+    // Second card: top-left position from constants
+    left: TICKET_CONTENT.dueDateBadgeTopLeft.left * scaleX,
+    top: TICKET_CONTENT.dueDateBadgeTopLeft.top * scaleX,
   },
   dueDateText: {
     fontSize: TICKETS_TYPOGRAPHY.dueDate.fontSize * scaleX,
@@ -297,6 +313,14 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: TICKETS_TYPOGRAPHY.creatorName.fontWeight as any,
     color: TICKETS_TYPOGRAPHY.creatorName.color,
+  },
+  divider: {
+    position: 'absolute',
+    left: TICKET_DIVIDER.left * scaleX,
+    top: TICKET_DIVIDER.top * scaleX,
+    width: TICKET_DIVIDER.width * scaleX,
+    height: TICKET_DIVIDER.height,
+    backgroundColor: TICKET_DIVIDER.color,
   },
   statusButton: {
     position: 'absolute',

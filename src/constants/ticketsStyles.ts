@@ -129,10 +129,22 @@ export const TICKET_CONTENT = {
     fontWeight: 'light' as const,
     color: '#000000',
     position: 'absolute',
-    top: 87, // From Figma: Frame y=300, card y=213, so 300-213=87px (same for both cards)
-    left: 18, // From Figma: Frame x=34, card x=16, so 34-16=18px
-    width: 91, // From Figma: Frame width
-    height: 21, // From Figma: Frame height
+    // Note: Positioning differs between cards:
+    // First card (TV not working): centered - left-[calc(50%-140.5px)], top-[calc(50%-167.5px)]
+    // Second card (Deliver Laundry): top-left - left-[7px], top-[4px]
+  },
+  dueDateBadgeCentered: {
+    // First card: centered position
+    // Card width: 409px, center: 204.5px, offset: -140.5px = 64px from left
+    // Card height: 216px, center: 108px, offset: -167.5px = -59.5px (this seems wrong, using visual position instead)
+    // Actually, from visual inspection, it appears around 87px from top (below description)
+    left: ((409 / 2) - 140.5), // = 64px
+    top: 87, // Positioned below description area (visual inspection from Figma)
+  },
+  dueDateBadgeTopLeft: {
+    // Second card: top-left position
+    top: 4,
+    left: 7,
   },
   category: {
     iconSize: 21,
@@ -293,8 +305,8 @@ export const TICKETS_TYPOGRAPHY = {
     fontSize: 16,
     fontWeight: 'light' as const,
     activeFontWeight: 'bold' as const,
-    color: '#a0a0a0', // Inactive tab color (grey)
-    activeColor: '#5a759d', // Active tab color (blue)
+    color: '#5a759d', // All tabs use same color, weight differs
+    activeColor: '#5a759d', // Active tab color (same, but bold weight)
   },
   ticketTitle: {
     fontSize: 16,

@@ -6,7 +6,7 @@ export const mockTicketsData: TicketsScreenData = {
     {
       id: 'ticket-1',
       title: 'TV not working',
-      description: 'Guess could not connect the TV with chrome cast, kindly assist',
+      description: 'Guest could not connect the TV\nwith chrome cast, kindly assist',
       roomNumber: '201',
       dueTime: '10 mins',
       createdBy: {

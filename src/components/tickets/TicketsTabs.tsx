@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
 import { scaleX } from '../../constants/ticketsStyles';
@@ -29,26 +29,34 @@ export default function TicketsTabs({ selectedTab, onTabPress }: TicketsTabsProp
     closed: 0,
   });
 
-  // Calculate indicator position to center it under the selected tab text
+  const [tabPositions, setTabPositions] = useState<Record<TicketTab, { x: number; width: number }>>({
+    myTickets: { x: 0, width: 0 },
+    all: { x: 0, width: 0 },
+    open: { x: 0, width: 0 },
+    closed: { x: 0, width: 0 },
+  });
+
+  const tabsWrapperRef = useRef<View>(null);
+
+  // Calculate indicator position based on measured tab positions
   const getIndicatorPosition = () => {
     const selectedTabConfig = TICKETS_TABS.tabs[selectedTab];
-    const myTicketsLeft = TICKETS_TABS.tabs.myTickets.left;
+    const selectedTabPos = tabPositions[selectedTab];
     
-    // Tab position relative to container (after padding): selectedTabConfig.left - myTicketsLeft
-    const tabLeftRelativeToContainer = (selectedTabConfig.left - myTicketsLeft) * scaleX;
-    
-    // Use measured text width if available, otherwise use Figma width
-    const textWidth = textWidths[selectedTab] || (selectedTabConfig.width * scaleX);
-    
-    // Calculate text center relative to container
-    const textCenter = tabLeftRelativeToContainer + (textWidth / 2);
+    if (selectedTabPos.width === 0) {
+      // Fallback to calculated width if not measured yet
+      const textWidth = textWidths[selectedTab] || (selectedTabConfig.width * scaleX);
+      return { left: 0, width: (selectedTabConfig.indicatorWidth || selectedTabConfig.width) * scaleX };
+    }
     
     // Indicator width from Figma (may be wider than text for "My Tickets")
     const indicatorWidth = (selectedTabConfig.indicatorWidth || selectedTabConfig.width) * scaleX;
     
-    // Center the indicator: indicator center = text center
-    // So: indicator left = text center - (indicator width / 2)
-    const indicatorLeft = textCenter - (indicatorWidth / 2);
+    // Calculate center of selected tab text
+    const selectedTabCenter = selectedTabPos.x + (selectedTabPos.width / 2);
+    
+    // Position indicator centered under the selected tab text
+    const indicatorLeft = selectedTabCenter - (indicatorWidth / 2);
     
     return { left: indicatorLeft, width: indicatorWidth };
   };
@@ -57,29 +65,38 @@ export default function TicketsTabs({ selectedTab, onTabPress }: TicketsTabsProp
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabsWrapper}>
-        {tabs.map((tab) => {
+      <View 
+        ref={tabsWrapperRef}
+        style={styles.tabsWrapper}
+      >
+        {tabs.map((tab, index) => {
           const tabConfig = TICKETS_TABS.tabs[tab.id];
-          const myTicketsLeft = TICKETS_TABS.tabs.myTickets.left;
+          const isLast = index === tabs.length - 1;
           
           return (
             <TouchableOpacity
               key={tab.id}
               style={[
                 styles.tab,
-                {
-                  position: 'absolute',
-                  left: (tabConfig.left - myTicketsLeft) * scaleX,
-                  top: 0,
-                },
+                !isLast && { marginRight: TICKETS_TABS.tab.spacing * scaleX },
               ]}
               onPress={() => onTabPress(tab.id)}
               activeOpacity={0.7}
+              onLayout={(event) => {
+                const { x, width } = event.nativeEvent.layout;
+                // x is already relative to the parent (tabsWrapper)
+                setTabPositions((prev) => ({
+                  ...prev,
+                  [tab.id]: { x, width },
+                }));
+              }}
             >
               <Text
                 style={[
                   styles.tabText,
-                  selectedTab === tab.id && styles.tabTextActive,
+                  tab.id === 'myTickets' 
+                    ? styles.tabTextMyTickets 
+                    : (selectedTab === tab.id ? styles.tabTextActive : styles.tabTextInactive),
                 ]}
                 onLayout={(event) => {
                   const { width } = event.nativeEvent.layout;
@@ -119,29 +136,48 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: TICKETS_TABS.container.height * scaleX,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
   },
   tabsWrapper: {
     position: 'relative',
     width: '100%',
     height: '100%',
-    paddingHorizontal: TICKETS_TABS.tabs.myTickets.left * scaleX,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
   },
   tab: {
+    height: '100%',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
     paddingTop: 0,
+    paddingBottom: 0,
+    marginTop: 0,
+    marginBottom: 0,
   },
   tabText: {
-    fontSize: TICKETS_TYPOGRAPHY.tab.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: TICKETS_TYPOGRAPHY.tab.fontWeight as any,
-    color: TICKETS_TYPOGRAPHY.tab.color,
+    fontSize: 16 * scaleX, // font-size: 16px
+    fontFamily: typography.fontFamily.primary, // font-family: Helvetica
+    color: '#5A759D', // color: #5A759D
+    lineHeight: 16 * scaleX, // line-height: normal (same as font-size)
+    includeFontPadding: false, // Remove extra padding on Android
+    textAlignVertical: 'top', // Align to top for consistent baseline
+  },
+  tabTextMyTickets: {
+    fontWeight: '700' as any, // font-weight: 700 for "My Tickets"
   },
   tabTextActive: {
-    fontWeight: TICKETS_TYPOGRAPHY.tab.activeFontWeight as any,
-    color: TICKETS_TYPOGRAPHY.tab.activeColor,
+    fontWeight: '700' as any, // font-weight: 700 for selected tabs (other than My Tickets)
+    color: '#5A759D',
+  },
+  tabTextInactive: {
+    fontWeight: '300' as any, // font-weight: 300 for inactive tabs (other than My Tickets)
+    color: '#5A759D',
   },
   indicator: {
     position: 'absolute',
-    top: (TICKETS_TABS.indicator.top - TICKETS_TABS.container.top) * scaleX, // Relative to container top: 189 - 158 = 31px
+    top: (TICKETS_TABS.indicator.top - TICKETS_TABS.container.top - 10) * scaleX, // Spacing: 31px - 10px = 21px from container top
     height: TICKETS_TABS.indicator.height * scaleX,
     backgroundColor: TICKETS_TABS.indicator.backgroundColor,
     borderRadius: TICKETS_TABS.indicator.borderRadius * scaleX,
