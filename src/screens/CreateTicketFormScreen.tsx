@@ -94,56 +94,69 @@ export default function CreateTicketFormScreen() {
   };
 
   const handleAddPicture = async () => {
-    // Request permissions
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'We need camera roll permissions to add pictures.');
-      return;
+    try {
+      // Show action sheet to choose camera or gallery
+      Alert.alert(
+        'Add Picture',
+        'Choose an option',
+        [
+          {
+            text: 'Camera',
+            onPress: async () => {
+              try {
+                const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
+                if (cameraStatus.status !== 'granted') {
+                  Alert.alert('Permission needed', 'We need camera permissions to take photos.');
+                  return;
+                }
+                const result = await ImagePicker.launchCameraAsync({
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  allowsEditing: false, // No cropping - use full picture
+                  quality: 0.8,
+                });
+                if (!result.canceled && result.assets && result.assets[0]) {
+                  setPictures([...pictures, result.assets[0].uri]);
+                }
+              } catch (error) {
+                console.error('Camera error:', error);
+                Alert.alert('Error', 'Failed to open camera. Please try again.');
+              }
+            },
+          },
+          {
+            text: 'Gallery',
+            onPress: async () => {
+              try {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (status !== 'granted') {
+                  Alert.alert('Permission needed', 'We need camera roll permissions to add pictures.');
+                  return;
+                }
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  allowsEditing: false, // No cropping - use full picture
+                  quality: 0.8,
+                });
+                if (!result.canceled && result.assets && result.assets[0]) {
+                  setPictures([...pictures, result.assets[0].uri]);
+                }
+              } catch (error) {
+                console.error('Gallery error:', error);
+                Alert.alert('Error', 'Failed to open gallery. Please try again.');
+              }
+            },
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ],
+        { cancelable: true }
+      );
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert('Error', 'Failed to open image picker. Please try again.');
     }
-
-    // Show action sheet to choose camera or gallery
-    Alert.alert(
-      'Add Picture',
-      'Choose an option',
-      [
-        {
-          text: 'Camera',
-          onPress: async () => {
-            const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
-            if (cameraStatus.status !== 'granted') {
-              Alert.alert('Permission needed', 'We need camera permissions to take photos.');
-              return;
-            }
-            const result = await ImagePicker.launchCameraAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: false, // No cropping - use full picture
-              quality: 0.8,
-            });
-            if (!result.canceled && result.assets[0]) {
-              setPictures([...pictures, result.assets[0].uri]);
-            }
-          },
-        },
-        {
-          text: 'Gallery',
-          onPress: async () => {
-            const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: false, // No cropping - use full picture
-              quality: 0.8,
-            });
-            if (!result.canceled && result.assets[0]) {
-              setPictures([...pictures, result.assets[0].uri]);
-            }
-          },
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ],
-      { cancelable: true }
-    );
   };
 
   const handleRemovePicture = (index: number) => {
@@ -171,14 +184,18 @@ export default function CreateTicketFormScreen() {
     let descriptionTop: number;
     
     if (pictures.length === 0) {
-      // No pictures: description starts at 796 (after add-photo card at 620 + 156 + 20 margin)
-      descriptionTop = 796;
+      // No pictures: description starts at 656 (after add-photo card at 480 + 156 + 20 margin)
+      descriptionTop = 656;
     } else {
       // With pictures: calculate based on pictures section
-      const picturesBottom = pictures.length === 1
-        ? 620 + 156 + 30 + 80 // Below add-photo button (30px margin + 80px for button height)
-        : 620 + Math.ceil(pictures.length / 2) * (156 + 14) + 30 + 80;
-      descriptionTop = Math.max(796, picturesBottom + 20);
+      // For single picture: picture at 480, height 156, add-photo button at 480+156+30, button height ~40, then 20px margin
+      // For multiple: grid ends at 480 + rows*(156+14), add-photo at that + 30, button height ~40, then 20px margin
+      const addPhotoButtonTop = pictures.length === 1
+        ? 480 + 156 + 30 // Single picture: 480 + 156 + 30
+        : 480 + Math.ceil(pictures.length / 2) * (156 + 14) + 30; // Grid: rows * (height + gap) + margin
+      const addPhotoButtonHeight = 40; // Approximate height of add-photo button with text
+      const picturesBottom = addPhotoButtonTop + addPhotoButtonHeight;
+      descriptionTop = Math.max(656, picturesBottom + 40); // Increased margin from 20px to 40px after add-photo button
     }
     
     // Description label is at descriptionTop, text container is at descriptionTop + 26
@@ -197,32 +214,33 @@ export default function CreateTicketFormScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header Background */}
+      {/* Fixed Header Background */}
       <View style={styles.headerBackground} />
+
+      {/* Fixed Header */}
+      <View style={styles.header}>
+        {/* Back Button */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={handleBackPress}
+          activeOpacity={0.7}
+        >
+          <Image
+            source={require('../../assets/icons/back-arrow.png')}
+            style={styles.backArrow}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+
+        {/* Title */}
+        <Text style={styles.headerTitle}>Back</Text>
+      </View>
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          {/* Back Button */}
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBackPress}
-            activeOpacity={0.7}
-          >
-            <Image
-              source={require('../../assets/icons/back-arrow.png')}
-              style={styles.backArrow}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-
-          {/* Title */}
-          <Text style={styles.headerTitle}>Back</Text>
-        </View>
 
         {/* Department Title */}
         <Text style={styles.departmentTitle}>{selectedDepartmentName}</Text>
@@ -231,24 +249,40 @@ export default function CreateTicketFormScreen() {
         <View style={styles.selectedIconContainer}>
           <Image
             source={selectedDepartmentIcon}
-            style={styles.selectedIcon}
+            style={[
+              styles.selectedIcon,
+              // Some icons don't need tint (like hskPortier, inRoomDining) - they're already colored
+              (departmentId === 'hskPortier' || departmentId === 'inRoomDining')
+                ? { tintColor: undefined }
+                : { tintColor: '#F92424' },
+            ]}
             resizeMode="contain"
           />
         </View>
 
         {/* Other Department Icons (Inactive) */}
         <View style={styles.otherIconsContainer}>
-          {ALL_DEPARTMENTS.filter(id => id !== departmentId).slice(0, 4).map((id, index) => (
-            <View key={id} style={[styles.otherIconContainer, { left: 130 + index * 80 }]}>
-              <View style={styles.otherIconBackground}>
-                <Image
-                  source={DEPARTMENT_ICONS[id]}
-                  style={styles.otherIcon}
-                  resizeMode="contain"
-                />
+          {ALL_DEPARTMENTS.filter(id => id !== departmentId).slice(0, 4).map((id, index) => {
+            // Calculate left position: selected icon at 50px, width 55.482px, gap, then other icons
+            const leftPosition = 50 + 55.482 + 25 + (index * 80); // 25px gap after selected icon
+            return (
+              <View key={id} style={[styles.otherIconContainer, { left: leftPosition * scaleX }]}>
+                <View style={styles.otherIconBackground}>
+                  <Image
+                    source={DEPARTMENT_ICONS[id]}
+                    style={[
+                      styles.otherIcon,
+                      // Some icons don't need tint (like hskPortier, inRoomDining)
+                      (id === 'hskPortier' || id === 'inRoomDining')
+                        ? { tintColor: undefined, opacity: 0.29 }
+                        : { tintColor: '#F92424', opacity: 0.29 },
+                    ]}
+                    resizeMode="contain"
+                  />
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         {/* Curved Background Shape - From Figma: Union at left=12, top=280.08, width=416, height=900.918 */}
@@ -286,12 +320,15 @@ export default function CreateTicketFormScreen() {
             {
               top: (() => {
                 if (pictures.length === 0) {
-                  return 796 * scaleX; // After add-photo card
+                  return 656 * scaleX; // After add-photo card (480 + 156 + 20)
                 }
-                const picturesBottom = pictures.length === 1
-                  ? 620 + 156 + 30 + 80
-                  : 620 + Math.ceil(pictures.length / 2) * (156 + 14) + 30 + 80;
-                return Math.max(796, picturesBottom + 20) * scaleX;
+                // Calculate based on add-photo button position
+                const addPhotoButtonTop = pictures.length === 1
+                  ? 480 + 156 + 30 // Single picture: 480 + 156 + 30
+                  : 480 + Math.ceil(pictures.length / 2) * (156 + 14) + 30; // Grid: rows * (height + gap) + margin
+                const addPhotoButtonHeight = 40; // Approximate height of add-photo button with text
+                const picturesBottom = addPhotoButtonTop + addPhotoButtonHeight;
+                return Math.max(656, picturesBottom + 40) * scaleX; // Increased margin from 20px to 40px after add-photo button
               })(),
             },
           ]}
@@ -304,12 +341,15 @@ export default function CreateTicketFormScreen() {
             {
               top: (() => {
                 if (pictures.length === 0) {
-                  return 822 * scaleX; // 796 + 26
+                  return 682 * scaleX; // 656 + 26
                 }
-                const picturesBottom = pictures.length === 1
-                  ? 620 + 156 + 30 + 80
-                  : 620 + Math.ceil(pictures.length / 2) * (156 + 14) + 30 + 80;
-                return (Math.max(796, picturesBottom + 20) + 26) * scaleX;
+                // Calculate based on add-photo button position
+                const addPhotoButtonTop = pictures.length === 1
+                  ? 480 + 156 + 30 // Single picture: 480 + 156 + 30
+                  : 480 + Math.ceil(pictures.length / 2) * (156 + 14) + 30; // Grid: rows * (height + gap) + margin
+                const addPhotoButtonHeight = 40; // Approximate height of add-photo button with text
+                const picturesBottom = addPhotoButtonTop + addPhotoButtonHeight;
+                return (Math.max(656, picturesBottom + 40) + 26) * scaleX; // Increased margin from 20px to 40px + 26px for label spacing
               })(),
             },
           ]}
@@ -361,7 +401,7 @@ export default function CreateTicketFormScreen() {
             {pictures.map((picture, index) => {
               const row = Math.floor(index / 2);
               const col = index % 2;
-              const top = 620 * scaleX + row * (156 + 14) * scaleX; // 156px height + 14px gap
+              const top = 480 * scaleX + row * (156 + 14) * scaleX; // Reduced from 620 (140px reduction)
               const left = 26 * scaleX + col * (183 + 14) * scaleX; // 183px width + 14px gap
               return (
                 <View key={index} style={[styles.pictureGridContainer, { top, left }]}>
@@ -387,8 +427,8 @@ export default function CreateTicketFormScreen() {
                 top: (() => {
                   // Calculate position below pictures with 30px margin
                   return (pictures.length === 1
-                    ? 620 + 156 + 30 // Below single full-width picture with margin (30px)
-                    : 620 + Math.ceil(pictures.length / 2) * (156 + 14) + 30) * scaleX; // Below grid with margin (30px)
+                    ? 480 + 156 + 30 // Below single full-width picture with margin (30px) - using 480 not 620
+                    : 480 + Math.ceil(pictures.length / 2) * (156 + 14) + 30) * scaleX;
                 })(),
               },
             ]}
@@ -516,18 +556,24 @@ const styles = StyleSheet.create({
     right: 0,
     height: 133 * scaleX,
     backgroundColor: '#e4eefe',
+    zIndex: 10,
+  },
+  header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 133 * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 11,
   },
   scrollView: {
     flex: 1,
+    marginTop: 127 * scaleX, // Reduced margin - account for fixed header height (133 - 6 for background offset)
   },
   scrollContent: {
     paddingBottom: 1500 * scaleX, // Increased to accommodate dynamic picture layouts
-  },
-  header: {
-    height: 133 * scaleX,
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   backButton: {
     position: 'absolute',
@@ -540,8 +586,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   backArrow: {
-    width: 14 * scaleX,
-    height: 14 * scaleX,
+    width: 32 * scaleX, // Match Create Ticket screen: 32px × 32px
+    height: 32 * scaleX, // Match Create Ticket screen: 32px × 32px
     transform: [{ rotate: '270deg' }],
   },
   headerTitle: {
@@ -556,7 +602,7 @@ const styles = StyleSheet.create({
   departmentTitle: {
     position: 'absolute',
     left: (SCREEN_WIDTH / 2) - (196 * scaleX),
-    top: 160 * scaleX,
+    top: 20 * scaleX, // Reduced from 160 to bring closer to header
     fontSize: 17 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '400' as any,
@@ -565,7 +611,7 @@ const styles = StyleSheet.create({
   selectedIconContainer: {
     position: 'absolute',
     left: 50 * scaleX,
-    top: 208 * scaleX,
+    top: 68 * scaleX, // Reduced from 208 to bring closer to title (20 + 17 + 31 spacing)
     width: 55.482 * scaleX,
     height: 55.482 * scaleX,
     borderRadius: 37 * scaleX,
@@ -580,7 +626,7 @@ const styles = StyleSheet.create({
   },
   otherIconsContainer: {
     position: 'absolute',
-    top: 208 * scaleX,
+    top: 68 * scaleX, // Match selected icon top position
   },
   otherIconContainer: {
     position: 'absolute',
@@ -600,12 +646,13 @@ const styles = StyleSheet.create({
     width: (55.482 * 0.65) * scaleX,
     height: (55.482 * 0.65) * scaleX,
     opacity: 0.29,
+    tintColor: '#F92424', // Red tint to match Figma
   },
-  // Curved Background Shape - From Figma: Union at left=12, top=280.08, width=416, height=900.918
+  // Curved Background Shape - Adjusted to account for reduced header spacing
   curvedBackground: {
     position: 'absolute',
     left: 12 * scaleX,
-    top: 280.08 * scaleX,
+    top: 140.08 * scaleX, // Reduced from 280.08 to bring closer to icons (140px reduction)
     width: 416 * scaleX,
     height: 900.918 * scaleX,
     backgroundColor: '#ffffff',
@@ -614,11 +661,11 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 40 * scaleX, // More curved top-right
     transform: [{ rotate: '180deg' }, { scaleY: -1 }], // Rotate 180deg and flip vertically
   },
-  // Issue Field - From Figma: label at x=26, y=325; input at x=26, y=355, width=388, height=68
+  // Issue Field - Adjusted to account for reduced header spacing
   issueLabel: {
     position: 'absolute',
     left: 26 * scaleX,
-    top: 325 * scaleX,
+    top: 185 * scaleX, // Reduced from 325 to bring closer (140px reduction)
     fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.secondary,
     fontWeight: '300' as any,
@@ -627,7 +674,7 @@ const styles = StyleSheet.create({
   issueInputContainer: {
     position: 'absolute',
     left: (SCREEN_WIDTH / 2) - (194 * scaleX), // Centered: 388/2 = 194
-    top: 355 * scaleX,
+    top: 215 * scaleX, // Reduced from 355 to bring closer (140px reduction)
     width: 388 * scaleX,
     height: 68 * scaleX,
     borderWidth: 1,
@@ -645,11 +692,11 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
-  // Location Field - From Figma: label at x=26, y=457; input at x=26, y=492, width=388, height=68
+  // Location Field - Adjusted to account for reduced header spacing
   locationLabel: {
     position: 'absolute',
     left: 26 * scaleX,
-    top: 457 * scaleX,
+    top: 317 * scaleX, // Reduced from 457 to bring closer (140px reduction)
     fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.secondary,
     fontWeight: '300' as any,
@@ -658,7 +705,7 @@ const styles = StyleSheet.create({
   locationInputContainer: {
     position: 'absolute',
     left: (SCREEN_WIDTH / 2) - (194 * scaleX), // Centered: 388/2 = 194
-    top: 492 * scaleX,
+    top: 352 * scaleX, // Reduced from 492 to bring closer (140px reduction)
     width: 388 * scaleX,
     height: 68 * scaleX,
     borderWidth: 1,
@@ -676,12 +723,12 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
   },
-  // Description Field - From Figma: label at x=26, y=862; text at x=26, y=888, width=332
-  // When no pictures, position closer to pictures section (620 + 156 + 20 = 796)
+  // Description Field - Adjusted to account for reduced header spacing
+  // When no pictures, position closer to pictures section (480 + 156 + 20 = 656)
   descriptionLabel: {
     position: 'absolute',
     left: 26 * scaleX,
-    top: 796 * scaleX, // Reduced from 862 when no pictures (620 + 156 + 20 margin)
+    top: 656 * scaleX, // Reduced from 796 when no pictures (480 + 156 + 20 margin)
     fontSize: 12 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700' as any,
@@ -690,7 +737,7 @@ const styles = StyleSheet.create({
   descriptionTextContainer: {
     position: 'absolute',
     left: 26 * scaleX,
-    top: 822 * scaleX, // Reduced from 888 when no pictures (796 + 26 for label spacing)
+    top: 682 * scaleX, // Reduced from 822 when no pictures (656 + 26 for label spacing)
     width: 332 * scaleX,
     minHeight: 32 * scaleX,
   },
@@ -701,11 +748,11 @@ const styles = StyleSheet.create({
     color: '#494747',
     textAlignVertical: 'top',
   },
-  // Pictures Section - From Figma: label at x=26, y=591; images at x=26, y=620 and x=223, y=620, width=183, height=156
+  // Pictures Section - Adjusted to account for reduced header spacing
   picturesLabel: {
     position: 'absolute',
     left: 26 * scaleX,
-    top: 591 * scaleX,
+    top: 451 * scaleX, // Reduced from 591 to bring closer (140px reduction)
     fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.secondary,
     fontWeight: '300' as any,
@@ -715,7 +762,7 @@ const styles = StyleSheet.create({
   addPhotoCardEmpty: {
     position: 'absolute',
     left: (SCREEN_WIDTH / 2) - (194 * scaleX), // Centered: 388/2 = 194
-    top: 620 * scaleX,
+    top: 480 * scaleX, // Reduced from 620 to bring closer (140px reduction)
     width: 388 * scaleX,
     minHeight: 156 * scaleX,
     borderRadius: 11 * scaleX,
@@ -736,7 +783,7 @@ const styles = StyleSheet.create({
   pictureSingleContainer: {
     position: 'absolute',
     left: (SCREEN_WIDTH / 2) - (194 * scaleX), // Centered: 388/2 = 194
-    top: 620 * scaleX,
+    top: 480 * scaleX, // Reduced from 620 to bring closer (140px reduction)
     width: 388 * scaleX,
     height: 156 * scaleX,
     borderRadius: 11 * scaleX,
