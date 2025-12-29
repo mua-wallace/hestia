@@ -11,6 +11,7 @@ import StaffScreen from '../screens/StaffScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import AllRoomsScreen from '../screens/AllRoomsScreen';
 import CreateTicketScreen from '../screens/CreateTicketScreen';
+import CreateTicketFormScreen from '../screens/CreateTicketFormScreen';
 import type { RootStackParamList, MainTabsParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -83,6 +84,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen name="AllRooms" component={AllRoomsScreen} />
       <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
+      <Stack.Screen name="CreateTicketForm" component={CreateTicketFormScreen} />
     </Stack.Navigator>
   );
 }

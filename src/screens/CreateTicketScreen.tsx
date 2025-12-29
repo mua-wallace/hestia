@@ -94,8 +94,8 @@ export default function CreateTicketScreen() {
 
   const handleDepartmentPress = (departmentId: DepartmentId) => {
     setSelectedDepartment(departmentId);
-    // TODO: Navigate to ticket creation form or handle department selection
-    console.log('Selected department:', departmentId);
+    // Navigate to ticket creation form
+    navigation.navigate('CreateTicketForm', { departmentId });
   };
 
   const handleAICreatePress = () => {

@@ -12,6 +12,7 @@ export type RootStackParamList = {
   ChatDetail: { chatId: string };
   TicketDetail: { ticketId: string };
   CreateTicket: undefined;
+  CreateTicketForm: { departmentId: string };
 };
 
 export type MainTabsParamList = {
