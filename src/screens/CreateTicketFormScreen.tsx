@@ -166,18 +166,34 @@ export default function CreateTicketFormScreen() {
   const selectedDepartmentName = DEPARTMENT_NAMES[departmentId];
   const selectedDepartmentIcon = DEPARTMENT_ICONS[departmentId];
 
-  // Calculate offset for fields below description when pictures are present
-  const getFieldsOffset = () => {
-    if (pictures.length === 0) return 0;
-    // Calculate how much the description moved down
-    const picturesBottom = pictures.length === 1
-      ? 620 + 156 + 30 + 80 // Below add-photo button (30px margin + 80px for button height)
-      : 620 + Math.ceil(pictures.length / 2) * (156 + 14) + 30 + 80;
-    const descriptionNewTop = Math.max(862, picturesBottom + 20);
-    return descriptionNewTop - 862; // Offset from original position
+  // Calculate the bottom position of description field dynamically
+  const getDescriptionBottom = () => {
+    let descriptionTop: number;
+    
+    if (pictures.length === 0) {
+      // No pictures: description starts at 796 (after add-photo card at 620 + 156 + 20 margin)
+      descriptionTop = 796;
+    } else {
+      // With pictures: calculate based on pictures section
+      const picturesBottom = pictures.length === 1
+        ? 620 + 156 + 30 + 80 // Below add-photo button (30px margin + 80px for button height)
+        : 620 + Math.ceil(pictures.length / 2) * (156 + 14) + 30 + 80;
+      descriptionTop = Math.max(796, picturesBottom + 20);
+    }
+    
+    // Description label is at descriptionTop, text container is at descriptionTop + 26
+    // Estimate description height (min 32px, but can be more with multiline)
+    // Use a reasonable estimate: 32px minimum + some padding
+    const descriptionHeight = 32 + 20; // minHeight + padding
+    return descriptionTop + 26 + descriptionHeight; // label top + label-to-text gap + text height
   };
 
-  const fieldsOffset = getFieldsOffset();
+  const descriptionBottom = getDescriptionBottom();
+  const assignToTop = descriptionBottom + 20; // 20px margin after description
+  const assignButtonTop = assignToTop + 45.084; // Button center aligned (1012.084 - 967 = 45.084)
+  const assignHintTop = assignToTop + 53; // Hint text (1020 - 967 = 53)
+  const priorityTop = assignToTop + 110; // 110px after Assign to label (1077 - 967 = 110)
+  const priorityOptionsTop = priorityTop + 41; // Options below label (1118 - 1077 = 41)
 
   return (
     <View style={styles.container}>
@@ -244,7 +260,7 @@ export default function CreateTicketFormScreen() {
         <View style={styles.issueInputContainer}>
           <TextInput
             style={styles.issueInput}
-            placeholder="Enter the issue or problem description (e.g., Broken Shower, No Hot Water)"
+            placeholder="What's the issue? (e.g., Broken Shower)"
             placeholderTextColor="#5a759d"
             value={issue}
             onChangeText={setIssue}
@@ -256,7 +272,7 @@ export default function CreateTicketFormScreen() {
         <View style={styles.locationInputContainer}>
           <TextInput
             style={styles.locationInput}
-            placeholder="Enter room number or location (e.g., Room 201, Lobby, Restaurant)"
+            placeholder="Where is it located? (e.g., Room 201)"
             placeholderTextColor="#5a759d"
             value={location}
             onChangeText={setLocation}
@@ -267,13 +283,15 @@ export default function CreateTicketFormScreen() {
         <Text
           style={[
             styles.descriptionLabel,
-            pictures.length > 0 && {
+            {
               top: (() => {
-                // Move description down when pictures are present
+                if (pictures.length === 0) {
+                  return 796 * scaleX; // After add-photo card
+                }
                 const picturesBottom = pictures.length === 1
-                  ? 620 + 156 + 30 + 80 // Below add-photo button (30px margin + 80px for button height)
+                  ? 620 + 156 + 30 + 80
                   : 620 + Math.ceil(pictures.length / 2) * (156 + 14) + 30 + 80;
-                return Math.max(862, picturesBottom + 20) * scaleX; // At least 862px or below pictures
+                return Math.max(796, picturesBottom + 20) * scaleX;
               })(),
             },
           ]}
@@ -283,20 +301,22 @@ export default function CreateTicketFormScreen() {
         <View
           style={[
             styles.descriptionTextContainer,
-            pictures.length > 0 && {
+            {
               top: (() => {
-                // Move description text down when pictures are present
+                if (pictures.length === 0) {
+                  return 822 * scaleX; // 796 + 26
+                }
                 const picturesBottom = pictures.length === 1
                   ? 620 + 156 + 30 + 80
                   : 620 + Math.ceil(pictures.length / 2) * (156 + 14) + 30 + 80;
-                return Math.max(888, picturesBottom + 20 + 26) * scaleX; // 26px below label
+                return (Math.max(796, picturesBottom + 20) + 26) * scaleX;
               })(),
             },
           ]}
         >
           <TextInput
             style={styles.descriptionText}
-            placeholder="Provide detailed information about the issue. Include what happened, when it occurred, and any relevant details that will help resolve the problem."
+            placeholder="Add more details about the issue... (e.g., Guest unable to use shower normally)"
             placeholderTextColor="#494747"
             value={description}
             onChangeText={setDescription}
@@ -384,11 +404,11 @@ export default function CreateTicketFormScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Assign To Section */}
+        {/* Assign To Section - Dynamically positioned after description */}
         <Text
           style={[
             styles.assignToLabel,
-            pictures.length > 0 && { top: (967 + fieldsOffset) * scaleX },
+            { top: assignToTop * scaleX },
           ]}
         >
           Assign to (Optional)
@@ -396,7 +416,7 @@ export default function CreateTicketFormScreen() {
         <TouchableOpacity
           style={[
             styles.assignButton,
-            pictures.length > 0 && { top: (1011 + fieldsOffset) * scaleX },
+            { top: assignButtonTop * scaleX },
           ]}
           onPress={handleAssignPress}
           activeOpacity={0.7}
@@ -405,24 +425,22 @@ export default function CreateTicketFormScreen() {
             source={require('../../assets/icons/plus.png')}
             style={styles.assignButtonIcon}
             resizeMode="contain"
-            tintColor="#000000"
           />
         </TouchableOpacity>
         <Text
           style={[
             styles.assignHint,
-            pictures.length > 0 && { top: (1020 + fieldsOffset) * scaleX },
+            { top: assignHintTop * scaleX },
           ]}
         >
           Tag people to the ticket
         </Text>
-        {/* Avatar placeholders - removed to avoid duplicate bullet points */}
 
-        {/* Priority Section */}
+        {/* Priority Section - Dynamically positioned after Assign to */}
         <Text
           style={[
             styles.priorityLabel,
-            pictures.length > 0 && { top: (1077 + fieldsOffset) * scaleX },
+            { top: priorityTop * scaleX },
           ]}
         >
           Priority
@@ -430,17 +448,12 @@ export default function CreateTicketFormScreen() {
         <TouchableOpacity
           style={[
             styles.priorityUrgent,
-            pictures.length > 0 && { top: (1118 + fieldsOffset) * scaleX },
+            { top: priorityOptionsTop * scaleX },
           ]}
           onPress={() => handlePriorityPress('urgent')}
           activeOpacity={0.7}
         >
-          <View
-            style={[
-              styles.priorityIndicator,
-              styles.priorityIndicatorUrgent, // Always red for Urgent
-            ]}
-          />
+          <View style={[styles.priorityIndicator, styles.priorityIndicatorUrgent]} />
           <Text
             style={[
               styles.priorityText,
@@ -453,17 +466,12 @@ export default function CreateTicketFormScreen() {
         <TouchableOpacity
           style={[
             styles.priorityMedium,
-            pictures.length > 0 && { top: (1118 + fieldsOffset) * scaleX },
+            { top: priorityOptionsTop * scaleX },
           ]}
           onPress={() => handlePriorityPress('medium')}
           activeOpacity={0.7}
         >
-          <View
-            style={[
-              styles.priorityIndicator,
-              styles.priorityIndicatorMedium, // Always yellow for Medium
-            ]}
-          />
+          <View style={[styles.priorityIndicator, styles.priorityIndicatorMedium]} />
           <Text
             style={[
               styles.priorityText,
@@ -476,17 +484,12 @@ export default function CreateTicketFormScreen() {
         <TouchableOpacity
           style={[
             styles.priorityNotUrgent,
-            pictures.length > 0 && { top: (1118 + fieldsOffset) * scaleX },
+            { top: priorityOptionsTop * scaleX },
           ]}
           onPress={() => handlePriorityPress('notUrgent')}
           activeOpacity={0.7}
         >
-          <View
-            style={[
-              styles.priorityIndicator,
-              styles.priorityIndicatorNotUrgent, // Always grey for Not Urgent
-            ]}
-          />
+          <View style={[styles.priorityIndicator, styles.priorityIndicatorNotUrgent]} />
           <Text
             style={[
               styles.priorityText,
@@ -638,6 +641,9 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: '400' as any,
     color: '#5a759d',
+    textAlign: 'left',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   // Location Field - From Figma: label at x=26, y=457; input at x=26, y=492, width=388, height=68
   locationLabel: {
@@ -666,12 +672,16 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: '400' as any,
     color: '#5a759d',
+    textAlign: 'left',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   // Description Field - From Figma: label at x=26, y=862; text at x=26, y=888, width=332
+  // When no pictures, position closer to pictures section (620 + 156 + 20 = 796)
   descriptionLabel: {
     position: 'absolute',
     left: 26 * scaleX,
-    top: 862 * scaleX,
+    top: 796 * scaleX, // Reduced from 862 when no pictures (620 + 156 + 20 margin)
     fontSize: 12 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700' as any,
@@ -680,7 +690,7 @@ const styles = StyleSheet.create({
   descriptionTextContainer: {
     position: 'absolute',
     left: 26 * scaleX,
-    top: 888 * scaleX,
+    top: 822 * scaleX, // Reduced from 888 when no pictures (796 + 26 for label spacing)
     width: 332 * scaleX,
     minHeight: 32 * scaleX,
   },
@@ -794,68 +804,45 @@ const styles = StyleSheet.create({
     fontWeight: '700' as any,
     color: '#1e1e1e',
   },
+  // Assign To Section - From Figma: label at x=26, y=967; button Group 328 at x=33, y=799.61, w=33, h=32.832; + text at x=33, y=1011, fontSize=25, color=white; hint at x=68, y=1020
+  assignToLabel: {
+    position: 'absolute',
+    left: 26 * scaleX,
+    top: 967 * scaleX,
+    fontSize: 17 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700' as any,
+    color: '#1e1e1e',
+  },
   assignButton: {
     position: 'absolute',
     left: 33 * scaleX,
-    top: 1011 * scaleX,
-    width: 33 * scaleX,
-    height: 33 * scaleX,
+    top: 1012.084 * scaleX, // Centered to align with "Tag people" text center (1020 + 17/2 - 32.832/2)
+    width: 32.999549865722656 * scaleX,
+    height: 32.832305908203125 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#e3e3e3', // Light grey background from Figma
     borderRadius: 16.5 * scaleX,
   },
   assignButtonIcon: {
-    width: 25 * scaleX, // Icon size - larger to be more visible
-    height: 25 * scaleX, // Icon size - larger to be more visible
+    width: 15 * scaleX, // From Figma + text width
+    height: 29 * scaleX, // From Figma + text height
+    tintColor: '#ffffff', // White icon as per Figma
   },
   assignHint: {
     position: 'absolute',
-    left: 68 * scaleX,
+    left: 80 * scaleX, // Increased from 68 to add more spacing between icon and text
     top: 1020 * scaleX,
     fontSize: 15 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '300' as any,
     color: '#494747',
+    lineHeight: 17 * scaleX, // Match text height from Figma
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  // Avatar placeholders - From Figma metadata: Ellipse 29 at x=26, y=1013 (30x30); Ellipses 30,33,32 at y=1115 (23x23)
-  avatar1Container: {
-    position: 'absolute',
-    left: 26 * scaleX,
-    top: 1013 * scaleX,
-    width: 30 * scaleX,
-    height: 30 * scaleX,
-    borderRadius: 15 * scaleX,
-    backgroundColor: '#e3e3e3',
-  },
-  avatar2Container: {
-    position: 'absolute',
-    left: 25 * scaleX,
-    top: 1115 * scaleX,
-    width: 23 * scaleX,
-    height: 23 * scaleX,
-    borderRadius: 11.5 * scaleX,
-    backgroundColor: '#e3e3e3',
-  },
-  avatar3Container: {
-    position: 'absolute',
-    left: 135 * scaleX,
-    top: 1115 * scaleX,
-    width: 23 * scaleX,
-    height: 23 * scaleX,
-    borderRadius: 11.5 * scaleX,
-    backgroundColor: '#e3e3e3',
-  },
-  avatar4Container: {
-    position: 'absolute',
-    left: 253 * scaleX,
-    top: 1115 * scaleX,
-    width: 23 * scaleX,
-    height: 23 * scaleX,
-    borderRadius: 11.5 * scaleX,
-    backgroundColor: '#e3e3e3',
-  },
-  // Priority Section - From Figma: label at x=26, y=1077; options at y=1118, x=55, 167, 285
+  // Priority Section - From Figma: label at x=26, y=1077, fontSize=17, fontWeight=700; options at y=1118, x=55, 167, 285, fontSize=15, fontWeight=300
   priorityLabel: {
     position: 'absolute',
     left: 26 * scaleX,
@@ -867,42 +854,39 @@ const styles = StyleSheet.create({
   },
   priorityUrgent: {
     position: 'absolute',
-    left: 55 * scaleX,
+    left: 23 * scaleX, // Text at x=55, circle (24px) + margin (8px) = 32px, so container at 55-32=23
     top: 1118 * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
   },
   priorityMedium: {
     position: 'absolute',
-    left: 167 * scaleX,
+    left: 135 * scaleX, // Text at x=167, so 167 - 32 (circle + margin) = 135
     top: 1118 * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
   },
   priorityNotUrgent: {
     position: 'absolute',
-    left: 285 * scaleX,
+    left: 253 * scaleX, // Text at x=285, so 285 - 32 (circle + margin) = 253
     top: 1118 * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
   },
   priorityIndicator: {
-    width: 10 * scaleX,
-    height: 10 * scaleX,
-    borderRadius: 5 * scaleX,
-    marginRight: 6 * scaleX,
+    width: 24 * scaleX, // Doubled from 12px
+    height: 24 * scaleX, // Doubled from 12px
+    borderRadius: 12 * scaleX, // Doubled from 6px
+    marginRight: 8 * scaleX,
   },
   priorityIndicatorUrgent: {
     backgroundColor: '#f92424', // Red - matches Figma
   },
   priorityIndicatorMedium: {
-    backgroundColor: '#ffc107', // Yellow/Amber - matches Figma screenshot
+    backgroundColor: '#ffc107', // Yellow/Amber - matches Figma
   },
   priorityIndicatorNotUrgent: {
     backgroundColor: '#d3d3d3', // Light grey - matches Figma
-  },
-  priorityIndicatorInactive: {
-    backgroundColor: '#d3d3d3', // Light grey when not selected
   },
   priorityText: {
     fontSize: 15 * scaleX,
