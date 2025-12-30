@@ -50,17 +50,17 @@ const DEPARTMENTS: Department[] = [
   {
     id: 'engineering',
     name: 'Engineering',
-    icon: require('../../assets/icons/engineering-icon.png'),
+    icon: require('../../assets/icons/engineering.png'),
   },
   {
     id: 'hskPortier',
     name: 'HSK Portier',
-    icon: require('../../assets/icons/hsk-portier-icon.png'),
+    icon: require('../../assets/icons/hsk-portier.png'),
   },
   {
     id: 'inRoomDining',
     name: 'In Room Dining',
-    icon: require('../../assets/icons/in-room-dining-icon.png'),
+    icon: require('../../assets/icons/in-room-dining.png'),
   },
   {
     id: 'laundry',
@@ -70,17 +70,17 @@ const DEPARTMENTS: Department[] = [
   {
     id: 'concierge',
     name: 'Concierge',
-    icon: require('../../assets/icons/concierge-icon.png'),
+    icon: require('../../assets/icons/concierge.png'),
   },
   {
     id: 'reception',
     name: 'Reception',
-    icon: require('../../assets/icons/reception-icon.png'),
+    icon: require('../../assets/icons/reception.png'),
   },
   {
     id: 'it',
     name: 'IT',
-    icon: require('../../assets/icons/it-icon.png'),
+    icon: require('../../assets/icons/it.png'),
   },
 ];
 
@@ -94,8 +94,8 @@ export default function CreateTicketScreen() {
 
   const handleDepartmentPress = (departmentId: DepartmentId) => {
     setSelectedDepartment(departmentId);
-    // TODO: Navigate to ticket creation form or handle department selection
-    console.log('Selected department:', departmentId);
+    // Navigate to ticket creation form
+    navigation.navigate('CreateTicketForm', { departmentId });
   };
 
   const handleAICreatePress = () => {
@@ -174,7 +174,11 @@ export default function CreateTicketScreen() {
                   source={department.icon}
                   style={[
                     styles.departmentIconImage,
-                    { tintColor: '#F92424' }, // Red color from Figma design
+                    // Apply tintColor for icons that need it, but some icons are already colored
+                    // Remove tintColor for icons that are not visible with it
+                    (department.id === 'hskPortier' || department.id === 'inRoomDining')
+                      ? {} // No tintColor - icons are already colored
+                      : { tintColor: '#F92424' }, // Red color from Figma design
                   ]}
                   resizeMode="contain"
                 />
@@ -216,7 +220,7 @@ export default function CreateTicketScreen() {
             style={[
               styles.aiButtonContainer,
               {
-                left: (SCREEN_WIDTH / 2) - (CREATE_TICKET_AI_BUTTON.container.width * scaleX / 2),
+                left: (SCREEN_WIDTH / 2),
                 top: CREATE_TICKET_AI_BUTTON.container.top * scaleX,
               },
             ]}
@@ -344,17 +348,18 @@ const styles = StyleSheet.create({
   },
   departmentIcon: {
     position: 'absolute',
-    width: DEPARTMENT_GRID.item.size * scaleX,
-    height: DEPARTMENT_GRID.item.size * scaleX,
+    width: 55.482 * scaleX, // Background circle size
+    height: 55.482 * scaleX,
     borderRadius: DEPARTMENT_GRID.item.borderRadius * scaleX,
+    aspectRatio: 55.48 / 55.48,
     justifyContent: 'center',
     alignItems: 'center',
   },
   departmentIconImage: {
-    // Icons should fill most of the circular container, leaving some padding
-    // From Figma: icons are positioned with inset values that center them
-    width: (DEPARTMENT_GRID.item.size * 0.65) * scaleX, // Slightly larger for better visibility
-    height: (DEPARTMENT_GRID.item.size * 0.65) * scaleX,
+    // Icons should be smaller than the background circle to fit inside
+    width: (55.482 * 0.65) * scaleX, // 65% of background circle size
+    height: (55.482 * 0.65) * scaleX,
+    aspectRatio: 55.48 / 55.48,
   },
   departmentLabel: {
     position: 'absolute',
@@ -377,7 +382,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: CREATE_TICKET_AI_BUTTON.container.width * scaleX,
     height: CREATE_TICKET_AI_BUTTON.container.height * scaleX,
-    transform: [{ translateX: -CREATE_TICKET_AI_BUTTON.container.width * scaleX / 2 }],
+    transform: [{ translateX: -(CREATE_TICKET_AI_BUTTON.container.width * scaleX / 2) }],
   },
   aiButton: {
     position: 'absolute',
@@ -430,7 +435,8 @@ const styles = StyleSheet.create({
     color: CREATE_TICKET_TYPOGRAPHY.betaLabel.color,
     width: CREATE_TICKET_AI_BUTTON.betaLabel.width * scaleX,
     textAlign: 'center',
-    transform: [{ translateX: -CREATE_TICKET_AI_BUTTON.betaLabel.width * scaleX / 2 }],
+    // Center the label: left is already set to SCREEN_WIDTH/2 + leftOffset, so we need to adjust by half the width
+    transform: [{ translateX: -(CREATE_TICKET_AI_BUTTON.betaLabel.width * scaleX / 2) }],
   },
   description: {
     position: 'absolute',

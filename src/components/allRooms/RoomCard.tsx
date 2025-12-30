@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
 import { scaleX } from '../../constants/allRoomsStyles';
@@ -22,9 +22,10 @@ interface RoomCardProps {
   room: RoomCardData;
   onPress: () => void;
   onStatusPress: () => void;
+  onLayout?: (event: any) => void; // Optional layout handler for position tracking
 }
 
-export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps) {
+const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, onStatusPress, onLayout }, ref) => {
   const isArrivalDeparture = room.category === 'Arrival/Departure';
   // Calculate height based on card type and notes - matching Figma exactly
   let cardHeight: number;
@@ -39,15 +40,29 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
       : CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 185px
   }
 
+  // Determine card background color - exact match to Figma design
+  const getCardBackgroundColor = (): string => {
+    // Priority cards use light pink/reddish background (rgba(249,36,36,0.08))
+    if (room.isPriority) {
+      return CARD_COLORS.priorityBackground;
+    }
+    // All other cards use default white/light gray background (#f9fafc)
+    return CARD_COLORS.background;
+  };
+
   return (
     <TouchableOpacity
+      ref={ref}
       style={[
         styles.container,
-        { height: cardHeight },
+        { 
+          height: cardHeight,
+          backgroundColor: getCardBackgroundColor(),
+        },
         room.isPriority && styles.priorityBorder,
-        room.isPriority && styles.priorityBackground,
       ]}
       onPress={onPress}
+      onLayout={onLayout}
       activeOpacity={0.7}
     >
       {/* Room Header */}
@@ -134,7 +149,7 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
       ]} />
 
       {/* Staff Section - positioned absolutely */}
-      <StaffSection staff={room.staff} isPriority={room.isPriority} />
+      <StaffSection staff={room.staff} isPriority={room.isPriority} category={room.category} />
 
       {/* Status Button - positioned absolutely */}
       <StatusButton 
@@ -151,11 +166,13 @@ export default function RoomCard({ room, onPress, onStatusPress }: RoomCardProps
       )}
     </TouchableOpacity>
   );
-}
+});
+
+export default RoomCard;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: CARD_COLORS.background,
+    // backgroundColor is set dynamically based on status
     borderRadius: CARD_DIMENSIONS.borderRadius * scaleX,
     borderWidth: 1,
     borderColor: CARD_COLORS.border,
@@ -167,9 +184,6 @@ const styles = StyleSheet.create({
   priorityBorder: {
     borderColor: CARD_COLORS.priorityBorder,
     borderWidth: 1,
-  },
-  priorityBackground: {
-    backgroundColor: CARD_COLORS.priorityBackground,
   },
   roomHeader: {
     flexDirection: 'row',
@@ -281,6 +295,7 @@ const styles = StyleSheet.create({
   },
   dividerVerticalStandard: {
     left: STAFF_SECTION.dividerStandard.left * scaleX,
+    top: (STAFF_SECTION.dividerStandard.top ?? STAFF_SECTION.divider.top) * scaleX,
   },
   guestDividerLine: {
     position: 'absolute',

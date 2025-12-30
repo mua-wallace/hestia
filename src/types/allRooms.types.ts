@@ -2,6 +2,8 @@ export type RoomCategory = 'Arrival' | 'Departure' | 'Stayover' | 'Turndown' | '
 
 export type RoomStatus = 'Dirty' | 'InProgress' | 'Cleaned' | 'Inspected';
 
+export type StatusChangeOption = 'Priority' | 'Dirty' | 'Cleaned' | 'Inspected' | 'Pause' | 'ReturnLater' | 'RefuseService' | 'PromisedTime';
+
 export interface GuestInfo {
   name: string;
   dateRange: string;
@@ -67,7 +69,7 @@ export const STATUS_CONFIGS: Record<RoomStatus, StatusConfig> = {
   },
   Inspected: {
     color: '#41d541',
-    icon: require('../../assets/icons/inspected-status-icon.png'),
+    icon: require('../../assets/icons/inspected-state-icon.png'),
     label: 'Inspected',
   },
 };
@@ -79,4 +81,53 @@ export const CATEGORY_ICONS: Record<RoomCategory, any> = {
   'Turndown': require('../../assets/icons/turndown-icon.png'),
   'Arrival/Departure': require('../../assets/icons/arrival-departure-icon.png'),
 };
+
+export interface StatusOptionConfig {
+  id: StatusChangeOption;
+  label: string;
+  icon: any;
+}
+
+export const STATUS_OPTIONS: StatusOptionConfig[] = [
+  {
+    id: 'Priority',
+    label: 'Priority',
+    icon: require('../../assets/icons/priority-status.png'),
+  },
+  {
+    id: 'Dirty',
+    label: 'Dirty',
+    icon: require('../../assets/icons/dirty-status.png'),
+  },
+  {
+    id: 'Cleaned',
+    label: 'Cleaned',
+    icon: require('../../assets/icons/cleaned-status.png'),
+  },
+  {
+    id: 'Inspected',
+    label: 'Inspected',
+    icon: require('../../assets/icons/inspected-status.png'),
+  },
+  {
+    id: 'Pause',
+    label: 'Pause',
+    icon: require('../../assets/icons/pause-status.png'),
+  },
+  {
+    id: 'ReturnLater',
+    label: 'Return Later',
+    icon: require('../../assets/icons/return-later-status.png'),
+  },
+  {
+    id: 'RefuseService',
+    label: 'Refuse Service',
+    icon: require('../../assets/icons/refuse-service-status.png'),
+  },
+  {
+    id: 'PromisedTime',
+    label: 'Promised Time',
+    icon: require('../../assets/icons/promised-time-status.png'),
+  },
+];
 

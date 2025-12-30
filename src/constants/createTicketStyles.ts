@@ -147,8 +147,9 @@ export const DEPARTMENT_GRID = {
 export const CREATE_TICKET_AI_BUTTON = {
   container: {
     // From Figma: left-1/2 top-[618px] translate-x-[-50%] - centered
+    // Moved even closer to divider (divider at 586px, button at 588px for 2px gap)
     left: '50%', // Centered
-    top: 618, // From Figma: y=618
+    top: 588, // Moved further up, closer to divider (was 590, now 588)
     width: 152,
     height: 74,
   },
@@ -165,7 +166,7 @@ export const CREATE_TICKET_AI_BUTTON = {
   text: {
     left: 24, // From Figma: text x=24 relative to button
     top: 22, // From Figma: text y=22 relative to button
-    fontSize: 16,
+    fontSize: 16, // From Figma: text-[16px]
     fontWeight: 'bold' as const,
     fontFamily: 'Helvetica', // Helvetica:Bold
     color: '#5a759d',
@@ -197,7 +198,7 @@ export const CREATE_TICKET_AI_BUTTON = {
     // From Figma: left-[calc(50%-14px)] - centered
     left: '50%', // Centered
     leftOffset: -14, // Offset for centering
-    top: 686, // From Figma: y=686
+    top: 656, // Adjusted: button moved from 590 to 588, so beta moved from 658 to 656 (maintains same relative spacing of 68px)
     fontSize: 9,
     fontWeight: 'bold' as const,
     fontFamily: 'Helvetica', // Helvetica:Bold
@@ -208,7 +209,7 @@ export const CREATE_TICKET_AI_BUTTON = {
   description: {
     // From Figma: left-[220px] translate-x-[-50%] - centered
     left: 220, // From Figma: x=220
-    top: 722, // From Figma: y=722
+    top: 692, // Adjusted: button moved from 590 to 588, so description moved from 694 to 692 (maintains same relative spacing of 104px)
     width: 318, // From Figma: width=318
     fontSize: 14,
     fontWeight: '300' as const, // Helvetica:Light (300)
@@ -281,7 +282,7 @@ export const CREATE_TICKET_TYPOGRAPHY = {
     color: '#000000',
   },
   aiButtonText: {
-    fontSize: 16,
+    fontSize: 16, // From Figma: text-[16px]
     fontWeight: 'bold' as const,
     fontFamily: 'Helvetica', // Helvetica:Bold
     color: '#5a759d',

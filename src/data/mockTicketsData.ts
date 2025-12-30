@@ -6,7 +6,7 @@ export const mockTicketsData: TicketsScreenData = {
     {
       id: 'ticket-1',
       title: 'TV not working',
-      description: 'Guess could not connect the TV with chrome cast, kindly assist',
+      description: 'Guest could not connect the TV\nwith chrome cast, kindly assist',
       roomNumber: '201',
       dueTime: '10 mins',
       createdBy: {
@@ -22,7 +22,7 @@ export const mockTicketsData: TicketsScreenData = {
       description: 'Guest wants his laundry back',
       roomNumber: '301',
       category: 'Laundry',
-      categoryIcon: require('../../assets/icons/laundry-icon.png'),
+      categoryIcon: require('../../assets/icons/laundary.png'),
       createdBy: {
         name: 'Stella Kitou',
         avatar: require('../../assets/icons/profile-avatar.png'),
