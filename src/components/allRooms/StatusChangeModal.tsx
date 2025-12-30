@@ -14,6 +14,7 @@ interface StatusChangeModalProps {
   onStatusSelect: (status: StatusChangeOption) => void;
   currentStatus: RoomStatus;
   room?: RoomCardData; // Room data to calculate position
+  cardTop?: number; // Card top position for modal placement
 }
 
 export default function StatusChangeModal({

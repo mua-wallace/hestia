@@ -101,45 +101,40 @@ export default function AllRoomsScreen() {
   };
 
   const handleStatusPress = (room: RoomCardData) => {
-    // Only show modal if status is InProgress
-    if (room.status === 'InProgress') {
-      // Calculate card height based on card type
-      const isArrivalDeparture = room.category === 'Arrival/Departure';
-      let cardHeight: number;
-      if (isArrivalDeparture) {
-        cardHeight = 292; // CARD_DIMENSIONS.heights.arrivalDeparture
-      } else if (room.notes) {
-        cardHeight = 222; // CARD_DIMENSIONS.heights.withNotes
-      } else if (room.category === 'Departure') {
-        cardHeight = 177; // CARD_DIMENSIONS.heights.standard
-      } else {
-        cardHeight = 185; // CARD_DIMENSIONS.heights.withGuestInfo
-      }
+    // Show modal for all status buttons (Dirty, InProgress, Cleaned, Inspected)
+    // Calculate card height based on card type
+    const isArrivalDeparture = room.category === 'Arrival/Departure';
+    let cardHeight: number;
+    if (isArrivalDeparture) {
+      cardHeight = 292; // CARD_DIMENSIONS.heights.arrivalDeparture
+    } else if (room.notes) {
+      cardHeight = 222; // CARD_DIMENSIONS.heights.withNotes
+    } else if (room.category === 'Departure') {
+      cardHeight = 177; // CARD_DIMENSIONS.heights.standard
+    } else {
+      cardHeight = 185; // CARD_DIMENSIONS.heights.withGuestInfo
+    }
 
-      // Measure card position
-      const cardRef = cardRefs.current[room.id];
-      if (cardRef) {
-        cardRef.measureInWindow((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
-          setSelectedCardTop(pageY);
-          setSelectedCardHeight(cardHeight * scaleX);
-          setSelectedRoomForStatusChange(room);
-          setShowStatusModal(true);
-        });
-      } else {
-        // Fallback: estimate position based on room index
-        const roomIndex = filteredRooms.findIndex(r => r.id === room.id);
-        const HEADER_HEIGHT = 217;
-        const CARD_SPACING = 16;
-        const CARD_HEIGHT_AVG = 200; // Average card height
-        const estimatedTop = HEADER_HEIGHT + (roomIndex * (CARD_HEIGHT_AVG + CARD_SPACING));
-        setSelectedCardTop(estimatedTop * scaleX);
+    // Measure card position
+    const cardRef = cardRefs.current[room.id];
+    if (cardRef) {
+      cardRef.measureInWindow((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
+        setSelectedCardTop(pageY);
         setSelectedCardHeight(cardHeight * scaleX);
         setSelectedRoomForStatusChange(room);
         setShowStatusModal(true);
-      }
+      });
     } else {
-      // For other statuses, handle differently or do nothing
-      console.log('Status pressed for room:', room.roomNumber, 'status:', room.status);
+      // Fallback: estimate position based on room index
+      const roomIndex = filteredRooms.findIndex(r => r.id === room.id);
+      const HEADER_HEIGHT = 217;
+      const CARD_SPACING = 16;
+      const CARD_HEIGHT_AVG = 200; // Average card height
+      const estimatedTop = HEADER_HEIGHT + (roomIndex * (CARD_HEIGHT_AVG + CARD_SPACING));
+      setSelectedCardTop(estimatedTop * scaleX);
+      setSelectedCardHeight(cardHeight * scaleX);
+      setSelectedRoomForStatusChange(room);
+      setShowStatusModal(true);
     }
   };
 
