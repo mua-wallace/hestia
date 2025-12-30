@@ -51,7 +51,7 @@ export const mockHomeData: HomeScreenData = {
     },
   ],
   notifications: {
-    chat: 3,
+    chat: 12, // Total: 11 (group) + 1 (direct) = 12 unread messages
   },
 };
 

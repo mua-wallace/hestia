@@ -38,7 +38,11 @@ export default function GuestInfoSection({
     guestIconSource = guest.timeLabel === 'ETA' 
       ? require('../../../assets/icons/guest-arrival-icon.png')
       : require('../../../assets/icons/guest-departure-icon.png');
-  } else if (isArrival || isStayover || isTurndown) {
+  } else if (isStayover) {
+    guestIconSource = require('../../../assets/icons/stayover-guest-icon.png');
+  } else if (isTurndown) {
+    guestIconSource = require('../../../assets/icons/turndown-guest-icon.png');
+  } else if (isArrival) {
     guestIconSource = require('../../../assets/icons/guest-arrival-icon.png');
   } else if (isDeparture) {
     guestIconSource = require('../../../assets/icons/guest-departure-icon.png');

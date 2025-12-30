@@ -6,6 +6,7 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme';
 import { ShiftType } from '../types/home.types';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
+import { mockHomeData } from '../data/mockHomeData';
 import { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import AllRoomsHeader from '../components/allRooms/AllRoomsHeader';
 import RoomCard from '../components/allRooms/RoomCard';
@@ -301,7 +302,7 @@ export default function AllRoomsScreen() {
         activeTab={activeTab}
         onTabPress={handleTabPress}
         onMorePress={handleMorePress}
-        chatBadgeCount={0}
+        chatBadgeCount={mockHomeData.notifications.chat}
       />
 
       {/* More Popup */}
