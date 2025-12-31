@@ -40,12 +40,9 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
       : CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 185px
   }
 
-  // Determine card background color - exact match to Figma design
+  // Determine card background color - based ONLY on status, not isPriority
+  // Red border and background should only appear when status is InProgress
   const getCardBackgroundColor = (): string => {
-    // Priority cards use light pink/reddish background (rgba(249,36,36,0.08))
-    if (room.isPriority) {
-      return CARD_COLORS.priorityBackground;
-    }
     // In Progress cards use light pink/reddish background (rgba(249,36,36,0.08))
     if (room.status === 'InProgress') {
       return CARD_COLORS.priorityBackground;
@@ -54,19 +51,24 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
     return CARD_COLORS.background;
   };
 
-  // Determine if card should have red border
-  const hasRedBorder = room.status === 'InProgress' || room.isPriority;
+  // Determine if card should have red border - based ONLY on status being InProgress
+  const hasRedBorder = room.status === 'InProgress';
+  
+  // Create border style object - this ensures React Native detects changes
+  const borderStyle = hasRedBorder 
+    ? { borderColor: CARD_COLORS.priorityBorder, borderWidth: 1 }
+    : { borderColor: CARD_COLORS.border, borderWidth: 1 };
 
   return (
     <TouchableOpacity
       ref={ref}
       style={[
         styles.container,
-        { 
+        {
           height: cardHeight,
           backgroundColor: getCardBackgroundColor(),
         },
-        hasRedBorder && styles.priorityBorder,
+        borderStyle, // Apply border styles - must be after container to override
       ]}
       onPress={onPress}
       onLayout={onLayout}
@@ -181,8 +183,7 @@ const styles = StyleSheet.create({
   container: {
     // backgroundColor is set dynamically based on status
     borderRadius: CARD_DIMENSIONS.borderRadius * scaleX,
-    borderWidth: 1,
-    borderColor: CARD_COLORS.border,
+    // borderWidth and borderColor are set dynamically based on status
     marginHorizontal: CARD_DIMENSIONS.marginHorizontal * scaleX,
     marginBottom: CARD_DIMENSIONS.marginBottom * scaleX,
     position: 'relative',
