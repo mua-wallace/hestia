@@ -11,6 +11,7 @@ interface RoomDetailHeaderProps {
   status: RoomStatus;
   onBackPress: () => void;
   onStatusPress?: () => void;
+  statusButtonRef?: React.RefObject<TouchableOpacity>;
 }
 
 export default function RoomDetailHeader({
@@ -19,6 +20,7 @@ export default function RoomDetailHeader({
   status,
   onBackPress,
   onStatusPress,
+  statusButtonRef,
 }: RoomDetailHeaderProps) {
   const statusConfig = STATUS_CONFIGS[status];
 
@@ -45,6 +47,7 @@ export default function RoomDetailHeader({
 
       {/* Status Indicator */}
       <TouchableOpacity
+        ref={statusButtonRef}
         style={styles.statusIndicator}
         onPress={onStatusPress}
         activeOpacity={0.8}

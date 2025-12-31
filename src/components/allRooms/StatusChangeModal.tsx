@@ -5,7 +5,7 @@ import { STATUS_BUTTON, CARD_DIMENSIONS, scaleX } from '../../constants/allRooms
 import { typography } from '../../theme';
 import StatusOptionItem from './StatusOptionItem';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 
 interface StatusChangeModalProps {
@@ -15,6 +15,7 @@ interface StatusChangeModalProps {
   currentStatus: RoomStatus;
   room?: RoomCardData; // Room data
   buttonPosition?: { x: number; y: number; width: number; height: number } | null; // Status button position on screen
+  showTriangle?: boolean; // Whether to show the triangle pointer (default: true)
 }
 
 export default function StatusChangeModal({
@@ -24,6 +25,7 @@ export default function StatusChangeModal({
   currentStatus,
   room,
   buttonPosition,
+  showTriangle = true,
 }: StatusChangeModalProps) {
   const handleStatusSelect = (option: StatusChangeOption) => {
     onStatusSelect(option);
@@ -32,54 +34,60 @@ export default function StatusChangeModal({
 
   if (!room || !buttonPosition) return null;
 
-  // Calculate modal position: below the status button with margin
-  // buttonPosition.y is the top of the button, buttonPosition.height is the button height
-  // So buttonPosition.y + buttonPosition.height gives us the bottom of the button
-  const spacing = 20 * scaleX; // Margin between button and modal (increased for better triangle visibility)
-  const modalTopPosition = buttonPosition.y + buttonPosition.height + spacing;
-  
-  // Debug: log positions to verify
-  console.log('Button position:', buttonPosition);
-  console.log('Modal top position:', modalTopPosition);
-  console.log('Button center X:', buttonPosition.x + buttonPosition.width / 2);
-
-  // Status button center X position on screen (already in screen pixels, scaled)
-  const buttonCenterX = buttonPosition.x + buttonPosition.width / 2;
-  
   // Modal width (scaled) - full card width
   const modalWidth = CARD_DIMENSIONS.width * scaleX; // 426px scaled (full card width)
   
-  // Triangle base width (12px on each side = 24px total)
-  const triangleBaseWidth = 24 * scaleX;
-  const triangleHalfWidth = 12 * scaleX; // Half of triangle base
-  
-  // Calculate modal left position to align triangle center with button center
-  // We want: modalLeft + triangleLeft + triangleHalfWidth = buttonCenterX
-  // So: modalLeft = buttonCenterX - triangleLeft - triangleHalfWidth
-  // For optimal centering, we want triangleLeft to be at a reasonable position
-  // Let's try to center the modal's triangle on the button center
-  // Start with modal centered on button, then adjust
-  let modalLeft = buttonCenterX - (modalWidth / 2);
-  
-  // Ensure modal doesn't go off screen and add margin
-  const screenMargin = 7 * scaleX; // Match card margin
-  const modalMargin = 7 * scaleX; // Margin for modal (same as card margin)
-  
-  // Ensure modal doesn't go off screen (accounting for margin)
-  if (modalLeft < screenMargin + modalMargin) {
-    modalLeft = screenMargin + modalMargin;
-  } else if (modalLeft + modalWidth > SCREEN_WIDTH - screenMargin - modalMargin) {
-    modalLeft = SCREEN_WIDTH - modalWidth - screenMargin - modalMargin;
-  }
-  
-  // Triangle position relative to modal container
-  // Triangle should be centered on the button center
-  // triangleLeft (in design pixels, will be scaled in style) = (buttonCenterX - modalLeft - triangleHalfWidth) / scaleX
-  const triangleLeft = (buttonCenterX - modalLeft - triangleHalfWidth) / scaleX;
-  
-  // Triangle points upward (from modal to button), positioned at top of modal
-  // Position it at the very top of the modal container (0) so it's visible
+  let modalTopPosition: number;
+  let modalLeft: number;
+  let triangleLeft: number;
   const triangleTopOffset = -10 * scaleX; // Position triangle above modal top to point upward to button
+
+  if (showTriangle) {
+    // Calculate modal position: below the status button with margin
+    // buttonPosition.y is the top of the button, buttonPosition.height is the button height
+    // So buttonPosition.y + buttonPosition.height gives us the bottom of the button
+    const spacing = 20 * scaleX; // Margin between button and modal (increased for better triangle visibility)
+    modalTopPosition = buttonPosition.y + buttonPosition.height + spacing;
+    
+    // Status button center X position on screen (already in screen pixels, scaled)
+    const buttonCenterX = buttonPosition.x + buttonPosition.width / 2;
+    
+    // Triangle base width (12px on each side = 24px total)
+    const triangleBaseWidth = 24 * scaleX;
+    const triangleHalfWidth = 12 * scaleX; // Half of triangle base
+    
+    // Calculate modal left position to align triangle center with button center
+    // We want: modalLeft + triangleLeft + triangleHalfWidth = buttonCenterX
+    // So: modalLeft = buttonCenterX - triangleLeft - triangleHalfWidth
+    // For optimal centering, we want triangleLeft to be at a reasonable position
+    // Let's try to center the modal's triangle on the button center
+    // Start with modal centered on button, then adjust
+    modalLeft = buttonCenterX - (modalWidth / 2);
+    
+    // Ensure modal doesn't go off screen and add margin
+    const screenMargin = 7 * scaleX; // Match card margin
+    const modalMargin = 7 * scaleX; // Margin for modal (same as card margin)
+    
+    // Ensure modal doesn't go off screen (accounting for margin)
+    if (modalLeft < screenMargin + modalMargin) {
+      modalLeft = screenMargin + modalMargin;
+    } else if (modalLeft + modalWidth > SCREEN_WIDTH - screenMargin - modalMargin) {
+      modalLeft = SCREEN_WIDTH - modalWidth - screenMargin - modalMargin;
+    }
+    
+    // Triangle position relative to modal container
+    // Triangle should be centered on the button center
+    // triangleLeft (in design pixels, will be scaled in style) = (buttonCenterX - modalLeft - triangleHalfWidth) / scaleX
+    triangleLeft = (buttonCenterX - modalLeft - 12 * scaleX) / scaleX;
+  } else {
+    // Position modal directly below header with no margin
+    // Header height is 232px from roomDetailStyles
+    const HEADER_HEIGHT = 232 * scaleX;
+    const screenMargin = 7 * scaleX; // Same margin as used in AllRooms screen
+    modalLeft = screenMargin; // Equal left and right margins
+    modalTopPosition = HEADER_HEIGHT; // Start right after header, no margin
+    triangleLeft = 0; // Not used when triangle is hidden
+  }
 
   return (
     <Modal
@@ -94,19 +102,29 @@ export default function StatusChangeModal({
         activeOpacity={1}
         onPress={onClose}
       >
-        {/* Modal Container - positioned below the status button */}
-        <View style={[styles.modalWrapper, { top: modalTopPosition, left: modalLeft }]} pointerEvents="box-none">
+        {/* Modal Container - positioned below the status button or centered */}
+        <View 
+          style={[
+            styles.modalWrapper, 
+            showTriangle 
+              ? { top: modalTopPosition, left: modalLeft }
+              : { top: modalTopPosition, left: modalLeft }
+          ]} 
+          pointerEvents="box-none"
+        >
           {/* Triangle Pointer - pointing up to status button */}
-          <View
-            style={[
-              styles.trianglePointer,
-              { 
-                left: triangleLeft * scaleX, // triangleLeft is in design pixels, scale it
-                top: triangleTopOffset,
-              },
-            ]}
-            pointerEvents="none"
-          />
+          {showTriangle && (
+            <View
+              style={[
+                styles.trianglePointer,
+                { 
+                  left: triangleLeft * scaleX, // triangleLeft is in design pixels, scale it
+                  top: triangleTopOffset,
+                },
+              ]}
+              pointerEvents="none"
+            />
+          )}
           
           <TouchableOpacity
             style={styles.modalContainer}
@@ -143,10 +161,17 @@ const styles = StyleSheet.create({
   modalWrapper: {
     position: 'absolute',
     width: CARD_DIMENSIONS.width * scaleX, // Full card width (426px) - matches card width
-    marginHorizontal: 7 * scaleX, // Margin on left and right (same as card margin)
-    // Top and left positions are set dynamically based on button position
+    // Left position is set dynamically (with equal margins when centered)
+    // Top position is set dynamically based on button position or header
     zIndex: 1000,
     overflow: 'visible', // Allow triangle to be visible outside container bounds
+  },
+  centeredModal: {
+    top: '50%',
+    left: '50%',
+    marginLeft: -(CARD_DIMENSIONS.width * scaleX) / 2,
+    marginTop: -200 * scaleX, // Approximate half of modal height
+    marginHorizontal: 0,
   },
   trianglePointer: {
     width: 0,

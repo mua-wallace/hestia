@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, ScrollView, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme';
@@ -10,7 +10,9 @@ import GuestInfoCard from '../components/roomDetail/GuestInfoCard';
 import NotesSection from '../components/roomDetail/NotesSection';
 import LostAndFoundSection from '../components/roomDetail/LostAndFoundSection';
 import AssignedToSection from '../components/roomDetail/AssignedToSection';
-import type { RoomCardData } from '../types/allRooms.types';
+import StatusChangeModal from '../components/allRooms/StatusChangeModal';
+import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
+import type { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import type { RoomDetailData, DetailTab, Note } from '../types/roomDetail.types';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -27,6 +29,10 @@ export default function ArrivalDepartureDetailScreen() {
   const room = (route.params as any)?.room as RoomCardData;
 
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
+  const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const statusButtonRef = useRef<TouchableOpacity>(null);
 
   // Transform room data to detail data format
   // In a real app, this would come from an API or be passed directly
@@ -70,8 +76,77 @@ export default function ArrivalDepartureDetailScreen() {
   };
 
   const handleStatusPress = () => {
-    // TODO: Show status change modal
-    console.log('Status pressed');
+    // Measure the status button position
+    if (statusButtonRef.current) {
+      statusButtonRef.current.measure((x, y, width, height, pageX, pageY) => {
+        setStatusButtonPosition({
+          x: pageX,
+          y: pageY,
+          width,
+          height,
+        });
+        setShowStatusModal(true);
+      });
+    } else {
+      // Fallback: use header position constants
+      setStatusButtonPosition({
+        x: ROOM_DETAIL_HEADER.statusIndicator.left * scaleX,
+        y: ROOM_DETAIL_HEADER.statusIndicator.top * scaleX,
+        width: ROOM_DETAIL_HEADER.statusIndicator.width * scaleX,
+        height: ROOM_DETAIL_HEADER.statusIndicator.height * scaleX,
+      });
+      setShowStatusModal(true);
+    }
+  };
+
+  const handleStatusSelect = (statusOption: StatusChangeOption) => {
+    // If Return Later is selected, show the Return Later modal
+    if (statusOption === 'ReturnLater') {
+      setShowStatusModal(false);
+      setShowReturnLaterModal(true);
+      return;
+    }
+
+    // Map status option to RoomStatus
+    const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['status'] => {
+      switch (option) {
+        case 'Dirty':
+          return 'Dirty';
+        case 'Cleaned':
+          return 'Cleaned';
+        case 'Inspected':
+          return 'Inspected';
+        case 'Priority':
+        case 'Pause':
+        case 'ReturnLater':
+        case 'RefuseService':
+        case 'PromisedTime':
+          // These might be actions/metadata, not status changes
+          // For now, keep InProgress status
+          return 'InProgress';
+        default:
+          return 'InProgress';
+      }
+    };
+
+    const newStatus = mapStatusOptionToRoomStatus(statusOption);
+
+    // TODO: Update room status in backend/API
+    console.log('Status changed for room:', room.roomNumber, 'to:', newStatus);
+
+    // Close modal
+    setShowStatusModal(false);
+    setStatusButtonPosition(null);
+  };
+
+  const handleReturnLaterConfirm = (returnTime: string, period: 'AM' | 'PM') => {
+    // TODO: Save return time to backend/API
+    console.log('Return Later confirmed for room:', room.roomNumber, 'at:', returnTime, period);
+    
+    // Close modal
+    setShowReturnLaterModal(false);
+    
+    // TODO: Update room status or show success message
   };
 
   const handleTabPress = (tab: DetailTab) => {
@@ -113,6 +188,7 @@ export default function ArrivalDepartureDetailScreen() {
         status={room.status}
         onBackPress={handleBackPress}
         onStatusPress={handleStatusPress}
+        statusButtonRef={statusButtonRef}
       />
 
       {/* Tab Navigation - Below header (252px) */}
@@ -203,6 +279,28 @@ export default function ArrivalDepartureDetailScreen() {
           <Text style={styles.urgentBadgeText}>Urgent</Text>
         </View>
       )}
+
+      {/* Status Change Modal */}
+      <StatusChangeModal
+        visible={showStatusModal}
+        onClose={() => {
+          setShowStatusModal(false);
+          setStatusButtonPosition(null);
+        }}
+        onStatusSelect={handleStatusSelect}
+        currentStatus={room.status}
+        room={room}
+        buttonPosition={statusButtonPosition}
+        showTriangle={false}
+      />
+
+      {/* Return Later Modal */}
+      <ReturnLaterModal
+        visible={showReturnLaterModal}
+        onClose={() => setShowReturnLaterModal(false)}
+        onConfirm={handleReturnLaterConfirm}
+        roomNumber={room.roomNumber}
+      />
     </View>
   );
 }
