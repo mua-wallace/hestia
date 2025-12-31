@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, ScrollView, StyleSheet, Dimensions, RefreshControl } from 'react-native';
+import { View, ScrollView, StyleSheet, Dimensions, RefreshControl, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -21,6 +21,12 @@ import { BlurView } from 'expo-blur';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+
+// Modal dimensions for positioning calculations
+const MODAL_HEIGHT_ESTIMATE = 200 * scaleX; // Approximate modal height
+const MODAL_SPACING = 20 * scaleX; // Spacing between button and modal (increased for better visibility)
+const BOTTOM_NAV_HEIGHT = 152 * scaleX; // Bottom navigation height
+const HEADER_HEIGHT = 217 * scaleX; // Header height
 
 type MainTabsParamList = {
   Home: undefined;
@@ -62,7 +68,11 @@ export default function AllRoomsScreen() {
   const [selectedRoomForStatusChange, setSelectedRoomForStatusChange] = useState<RoomCardData | null>(null);
   const [selectedCardTop, setSelectedCardTop] = useState<number>(0);
   const [selectedCardHeight, setSelectedCardHeight] = useState<number>(0);
+  const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const cardRefs = useRef<{ [key: string]: any }>({});
+  const statusButtonRefs = useRef<{ [key: string]: any }>({});
+  const scrollViewRef = useRef<ScrollView>(null);
+  const { height: SCREEN_HEIGHT } = useWindowDimensions();
   
   // Check if we came from a stack navigation (show back button) or tab navigation (don't show)
   const showBackButton = route.params?.showBackButton ?? false;
@@ -119,40 +129,124 @@ export default function AllRoomsScreen() {
   };
 
   const handleStatusPress = (room: RoomCardData) => {
-    // Show modal for all status buttons (Dirty, InProgress, Cleaned, Inspected)
-    // Calculate card height based on card type
-    const isArrivalDeparture = room.category === 'Arrival/Departure';
-    let cardHeight: number;
-    if (isArrivalDeparture) {
-      cardHeight = 292; // CARD_DIMENSIONS.heights.arrivalDeparture
-    } else if (room.notes) {
-      cardHeight = 222; // CARD_DIMENSIONS.heights.withNotes
-    } else if (room.category === 'Departure') {
-      cardHeight = 177; // CARD_DIMENSIONS.heights.standard
-    } else {
-      cardHeight = 185; // CARD_DIMENSIONS.heights.withGuestInfo
-    }
-
-    // Measure card position
-    const cardRef = cardRefs.current[room.id];
-    if (cardRef) {
-      cardRef.measureInWindow((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
-        setSelectedCardTop(pageY);
-        setSelectedCardHeight(cardHeight * scaleX);
-        setSelectedRoomForStatusChange(room);
-        setShowStatusModal(true);
+    // Measure status button position
+    const statusButtonRef = statusButtonRefs.current[room.id];
+    if (statusButtonRef) {
+      statusButtonRef.measureInWindow((x: number, y: number, width: number, height: number) => {
+        const buttonBottom = y + height;
+        const modalTop = buttonBottom + MODAL_SPACING;
+        const modalBottom = modalTop + MODAL_HEIGHT_ESTIMATE;
+        const availableBottomSpace = SCREEN_HEIGHT - BOTTOM_NAV_HEIGHT;
+        
+        // Calculate desired position: button should be positioned so modal appears with consistent margin
+        // We want modal bottom to be at: SCREEN_HEIGHT - BOTTOM_NAV_HEIGHT - some margin
+        const desiredModalBottom = SCREEN_HEIGHT - BOTTOM_NAV_HEIGHT - 20 * scaleX; // 20px margin from bottom nav
+        const desiredButtonBottom = desiredModalBottom - MODAL_HEIGHT_ESTIMATE - MODAL_SPACING;
+        const desiredButtonTop = desiredButtonBottom - height;
+        const currentButtonTop = y;
+        
+        // Always scroll to center the card if it's below the desired position
+        // This ensures modal always appears with consistent margins
+        const cardRef = cardRefs.current[room.id];
+        const scrollOffset = currentButtonTop - desiredButtonTop;
+        
+        // Store room and position for fallback
+        const roomData = room;
+        const initialPosition = { x, y, width, height };
+        
+        // Only scroll if button is below desired position (positive scrollOffset means we need to scroll up)
+        if (cardRef && scrollViewRef.current && scrollOffset > 5) { // Only scroll if offset is significant (>5px)
+          cardRef.measureInWindow((cardX: number, cardY: number, cardWidth: number, cardHeight: number) => {
+            // Calculate scroll offset needed
+            // The card's y position relative to scroll view content (accounting for header)
+            const cardTopRelativeToScroll = Math.max(0, cardY - HEADER_HEIGHT);
+            const newScrollY = Math.max(0, cardTopRelativeToScroll - scrollOffset);
+            
+            // Scroll to position card so button is at desired position
+            scrollViewRef.current?.scrollTo({
+              y: newScrollY,
+              animated: true,
+            });
+            
+            // Wait for scroll to complete, then measure again and show modal
+            // Increased timeout to ensure scroll completes, especially for last cards
+            setTimeout(() => {
+              // Try to measure button position after scroll
+              const buttonRefAfterScroll = statusButtonRefs.current[roomData.id];
+              if (buttonRefAfterScroll) {
+                try {
+                  buttonRefAfterScroll.measureInWindow((x2: number, y2: number, width2: number, height2: number) => {
+                    // Verify we got valid coordinates
+                    if (x2 !== undefined && y2 !== undefined && !isNaN(x2) && !isNaN(y2)) {
+                      setStatusButtonPosition({ x: x2, y: y2, width: width2, height: height2 });
+                      setSelectedRoomForStatusChange(roomData);
+                      setShowStatusModal(true);
+                    } else {
+                      // Fallback: use original position if measurement is invalid
+                      setStatusButtonPosition(initialPosition);
+                      setSelectedRoomForStatusChange(roomData);
+                      setShowStatusModal(true);
+                    }
+                  });
+                } catch (error) {
+                  // Fallback: use original position if measurement fails
+                  console.log('Error measuring button after scroll:', error);
+                  setStatusButtonPosition(initialPosition);
+                  setSelectedRoomForStatusChange(roomData);
+                  setShowStatusModal(true);
+                }
+              } else {
+                // Fallback: use original position if ref is not available
+                setStatusButtonPosition(initialPosition);
+                setSelectedRoomForStatusChange(roomData);
+                setShowStatusModal(true);
+              }
+            }, 400); // Increased timeout for last cards
+          });
+        } else {
+          // Button is already in good position or no scroll needed, show modal directly
+          setStatusButtonPosition(initialPosition);
+          setSelectedRoomForStatusChange(roomData);
+          setShowStatusModal(true);
+        }
       });
     } else {
-      // Fallback: estimate position based on room index
-      const roomIndex = filteredRooms.findIndex(r => r.id === room.id);
-      const HEADER_HEIGHT = 217;
-      const CARD_SPACING = 16;
-      const CARD_HEIGHT_AVG = 200; // Average card height
-      const estimatedTop = HEADER_HEIGHT + (roomIndex * (CARD_HEIGHT_AVG + CARD_SPACING));
-      setSelectedCardTop(estimatedTop * scaleX);
-      setSelectedCardHeight(cardHeight * scaleX);
-      setSelectedRoomForStatusChange(room);
-      setShowStatusModal(true);
+      // Fallback: use card position if button ref not available
+      const cardRef = cardRefs.current[room.id];
+      if (cardRef) {
+        cardRef.measureInWindow((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
+          // Estimate button position from card position
+          const isArrivalDeparture = room.category === 'Arrival/Departure';
+          let buttonLeft: number;
+          let buttonTop: number;
+          if (isArrivalDeparture) {
+            buttonLeft = 255;
+            buttonTop = 114;
+          } else if (room.notes) {
+            buttonLeft = 256;
+            buttonTop = 74;
+          } else if (room.category === 'Departure') {
+            buttonLeft = 262;
+            buttonTop = 81;
+          } else {
+            buttonLeft = 270;
+            buttonTop = 87;
+          }
+          const buttonX = pageX + buttonLeft * scaleX;
+          const buttonY = pageY + buttonTop * scaleX;
+          setStatusButtonPosition({ 
+            x: buttonX, 
+            y: buttonY, 
+            width: 134 * scaleX, 
+            height: 70 * scaleX 
+          });
+          setSelectedRoomForStatusChange(room);
+          setShowStatusModal(true);
+        });
+      } else {
+        setSelectedRoomForStatusChange(room);
+        setShowStatusModal(true);
+      }
     }
   };
 
@@ -260,6 +354,7 @@ export default function AllRoomsScreen() {
       {/* Scrollable Content with conditional blur */}
       <View style={styles.scrollContainer}>
         <ScrollView
+          ref={scrollViewRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -279,6 +374,11 @@ export default function AllRoomsScreen() {
               room={room}
               onPress={() => handleRoomPress(room)}
               onStatusPress={() => handleStatusPress(room)}
+              statusButtonRef={(ref) => {
+                if (ref) {
+                  statusButtonRefs.current[room.id] = ref;
+                }
+              }}
             />
           ))}
         </ScrollView>
@@ -335,13 +435,12 @@ export default function AllRoomsScreen() {
         onClose={() => {
           setShowStatusModal(false);
           setSelectedRoomForStatusChange(null);
-          setSelectedCardTop(0);
-          setSelectedCardHeight(0);
+          setStatusButtonPosition(null);
         }}
         onStatusSelect={handleStatusSelect}
         currentStatus={selectedRoomForStatusChange?.status || 'InProgress'}
         room={selectedRoomForStatusChange || undefined}
-        cardTop={selectedCardTop}
+        buttonPosition={statusButtonPosition}
       />
 
       {/* Filter Modal */}

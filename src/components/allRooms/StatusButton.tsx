@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { RoomStatus, STATUS_CONFIGS } from '../../types/allRooms.types';
 import { scaleX, STATUS_BUTTON } from '../../constants/allRoomsStyles';
@@ -11,13 +11,13 @@ interface StatusButtonProps {
   hasNotes?: boolean;
 }
 
-export default function StatusButton({ 
+const StatusButton = forwardRef<TouchableOpacity, StatusButtonProps>(({ 
   status, 
   onPress,
   isPriority = false,
   isArrivalDeparture = false,
   hasNotes = false,
-}: StatusButtonProps) {
+}, ref) => {
   const config = STATUS_CONFIGS[status];
   const isInProgress = status === 'InProgress';
   const isDirty = status === 'Dirty';
@@ -45,6 +45,7 @@ export default function StatusButton({
 
   return (
     <TouchableOpacity
+      ref={ref}
       style={[
         styles.containerIconOnly, 
         { 
@@ -62,7 +63,9 @@ export default function StatusButton({
       />
     </TouchableOpacity>
   );
-}
+});
+
+export default StatusButton;
 
 const styles = StyleSheet.create({
   containerIconOnly: {

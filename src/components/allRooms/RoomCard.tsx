@@ -23,9 +23,10 @@ interface RoomCardProps {
   onPress: () => void;
   onStatusPress: () => void;
   onLayout?: (event: any) => void; // Optional layout handler for position tracking
+  statusButtonRef?: (ref: any) => void; // Ref callback for status button
 }
 
-const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, onStatusPress, onLayout }, ref) => {
+const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, onStatusPress, onLayout, statusButtonRef }, ref) => {
   const isArrivalDeparture = room.category === 'Arrival/Departure';
   // Calculate height based on card type and notes - matching Figma exactly
   let cardHeight: number;
@@ -162,6 +163,7 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
 
       {/* Status Button - positioned absolutely */}
       <StatusButton 
+        ref={statusButtonRef}
         status={room.status} 
         onPress={onStatusPress}
         isPriority={room.isPriority}
