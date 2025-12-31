@@ -9,7 +9,6 @@ interface RoomDetailHeaderProps {
   roomNumber: string;
   roomCode: string;
   status: RoomStatus;
-  profilePicture?: any;
   onBackPress: () => void;
   onStatusPress?: () => void;
 }
@@ -18,7 +17,6 @@ export default function RoomDetailHeader({
   roomNumber,
   roomCode,
   status,
-  profilePicture,
   onBackPress,
   onStatusPress,
 }: RoomDetailHeaderProps) {
@@ -64,14 +62,6 @@ export default function RoomDetailHeader({
         />
       </TouchableOpacity>
 
-      {/* Profile Picture */}
-      {profilePicture && (
-        <Image
-          source={profilePicture}
-          style={styles.profilePicture}
-          resizeMode="cover"
-        />
-      )}
     </View>
   );
 }
@@ -98,7 +88,7 @@ const styles = StyleSheet.create({
   backArrow: {
     width: ROOM_DETAIL_HEADER.backButton.width * scaleX,
     height: ROOM_DETAIL_HEADER.backButton.height * scaleX,
-    transform: [{ rotate: '270deg' }], // Rotate to point left
+    // No transform - use icon directly as is
   },
   roomNumber: {
     position: 'absolute',
@@ -107,8 +97,9 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.bold as any,
     color: ROOM_DETAIL_HEADER.roomNumber.color,
     top: ROOM_DETAIL_HEADER.roomNumber.top * scaleX,
-    left: '50%',
-    transform: [{ translateX: -59 * scaleX }], // Center: calc(50%-59px)
+    left: 0,
+    right: 0,
+    textAlign: 'center',
   },
   roomCode: {
     position: 'absolute',
@@ -117,8 +108,9 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.light as any,
     color: ROOM_DETAIL_HEADER.roomCode.color,
     top: ROOM_DETAIL_HEADER.roomCode.top * scaleX,
-    left: '50%',
-    transform: [{ translateX: -42 * scaleX }], // Center: calc(50%-42px)
+    left: 0,
+    right: 0,
+    textAlign: 'center',
   },
   statusIndicator: {
     position: 'absolute',
@@ -147,14 +139,6 @@ const styles = StyleSheet.create({
     marginLeft: 8 * scaleX,
     tintColor: '#ffffff',
     transform: [{ rotate: '270deg' }], // Point down
-  },
-  profilePicture: {
-    position: 'absolute',
-    left: ROOM_DETAIL_HEADER.profilePicture.left * scaleX,
-    top: ROOM_DETAIL_HEADER.profilePicture.top * scaleX,
-    width: ROOM_DETAIL_HEADER.profilePicture.width * scaleX,
-    height: ROOM_DETAIL_HEADER.profilePicture.height * scaleX,
-    borderRadius: (ROOM_DETAIL_HEADER.profilePicture.width / 2) * scaleX,
   },
 });
 

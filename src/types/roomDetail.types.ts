@@ -23,3 +23,5 @@ export interface RoomDetailData extends RoomCardData {
 
 export type DetailTab = 'Overview' | 'Tickets' | 'Checklist' | 'History';
 
+
+

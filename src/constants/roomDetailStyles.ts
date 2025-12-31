@@ -16,8 +16,8 @@ export const ROOM_DETAIL_HEADER = {
   backButton: {
     left: 26,
     top: 69,
-    width: 28,
-    height: 14,
+    width: 35, // Increased from 28
+    height: 18, // Increased from 14 (maintaining aspect ratio)
   },
   roomNumber: {
     fontSize: 24,
@@ -236,18 +236,18 @@ export const NOTES_SECTION = {
     color: '#000000',
   },
   icon: {
-    left: 52,
-    top: 651,
-    width: 20.455,
-    height: 20.455,
+    left: 25, // Figma position: Group 464 at x=25
+    top: 647, // Figma position: Group 464 at y=647
+    width: 31.974,
+    height: 31.974,
   },
   badge: {
-    left: 58.55,
-    top: 652.45,
+    left: 52, // Figma position: Group 465 at x=52
+    top: 651, // Figma position: Group 465 at y=651
     fontSize: 15,
-    fontWeight: 'light' as const,
+    fontWeight: 'light' as any,
     color: '#ffffff',
-    backgroundColor: '#000000',
+    backgroundColor: '#f92424', // Red badge
     width: 20.455,
     height: 20.455,
     borderRadius: 10.2275,

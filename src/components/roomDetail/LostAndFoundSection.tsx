@@ -68,6 +68,7 @@ const styles = StyleSheet.create({
     top: LOST_AND_FOUND.icon.top * scaleX, // Relative to box (31.02px from box top)
     width: LOST_AND_FOUND.icon.width * scaleX,
     height: LOST_AND_FOUND.icon.height * scaleX,
+    zIndex: 1, // Ensure icon is visible
   },
   plusIcon: {
     position: 'absolute',

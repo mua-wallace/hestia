@@ -11,16 +11,26 @@ interface StatusIndicatorProps {
   icon: any;
   count: number;
   label: string;
+  iconWidth?: number;
+  iconHeight?: number;
+  leftLabelIcon?: any;
+  rightLabelIcon?: any;
 }
 
-export default function StatusIndicator({ color, icon, count, label }: StatusIndicatorProps) {
+export default function StatusIndicator({ color, icon, count, label, iconWidth, iconHeight, leftLabelIcon, rightLabelIcon }: StatusIndicatorProps) {
+  const iconStyle = [
+    styles.icon,
+    iconWidth && { width: iconWidth * scaleX },
+    iconHeight && { height: iconHeight * scaleX },
+  ];
+
   return (
     <View style={styles.container}>
       <View style={styles.iconContainer}>
         <View style={[styles.circle, { backgroundColor: color }]}>
           <Image
             source={icon}
-            style={styles.icon}
+            style={iconStyle}
             resizeMode="contain"
           />
         </View>
@@ -32,7 +42,23 @@ export default function StatusIndicator({ color, icon, count, label }: StatusInd
           </View>
         )}
       </View>
-      <Text style={styles.label}>{label}</Text>
+      <View style={styles.labelContainer}>
+        {leftLabelIcon && (
+          <Image
+            source={leftLabelIcon}
+            style={styles.leftLabelIcon}
+            resizeMode="contain"
+          />
+        )}
+        <Text style={styles.label}>{label}</Text>
+        {rightLabelIcon && (
+          <Image
+            source={rightLabelIcon}
+            style={[styles.rightLabelIcon, { transform: [{ rotate: '90deg' }] }]}
+            resizeMode="contain"
+          />
+        )}
+      </View>
     </View>
   );
 }
@@ -82,11 +108,26 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.bold as any,
     color: '#000000',
   },
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   label: {
     fontSize: 14 * scaleX,
     fontFamily: 'Inter',
     fontWeight: '300' as any,
     color: '#000000',
+  },
+  leftLabelIcon: {
+    width: 18 * scaleX,
+    height: 18 * scaleX,
+    marginRight: 4 * scaleX,
+  },
+  rightLabelIcon: {
+    width: 18 * scaleX,
+    height: 18 * scaleX,
+    marginLeft: 4 * scaleX,
   },
 });
 

@@ -16,7 +16,7 @@ export default function NotesSection({ notes, onAddPress }: NotesSectionProps) {
       {/* Section Header */}
       <View style={styles.header}>
         <Image
-          source={require('../../../assets/icons/notes-icon.png')}
+          source={require('../../../assets/icons/notes.png')}
           style={styles.icon}
           resizeMode="contain"
         />
@@ -68,9 +68,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   icon: {
+    position: 'absolute',
+    left: (NOTES_SECTION.icon.left - NOTES_SECTION.title.left) * scaleX, // Relative to header: 25 - 52 = -27px
+    top: (NOTES_SECTION.icon.top - NOTES_SECTION.title.top) * scaleX, // Relative to header: 647 - 652 = -5px
     width: NOTES_SECTION.icon.width * scaleX,
     height: NOTES_SECTION.icon.height * scaleX,
-    marginRight: 8 * scaleX,
   },
   badge: {
     position: 'absolute',

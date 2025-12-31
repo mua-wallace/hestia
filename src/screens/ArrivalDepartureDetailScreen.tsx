@@ -111,7 +111,6 @@ export default function ArrivalDepartureDetailScreen() {
         roomNumber={room.roomNumber}
         roomCode={room.roomType}
         status={room.status}
-        profilePicture={require('../../assets/icons/profile-avatar.png')}
         onBackPress={handleBackPress}
         onStatusPress={handleStatusPress}
       />
