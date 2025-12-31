@@ -13,6 +13,7 @@ import RoomCard from '../components/allRooms/RoomCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
+import FilterModal from '../components/filter/FilterModal';
 import { MoreMenuItemId } from '../types/more.types';
 import { FilterState } from '../types/filter.types';
 import { BlurView } from 'expo-blur';
@@ -42,6 +43,22 @@ export default function AllRoomsScreen() {
   const [activeTab, setActiveTab] = useState('Rooms');
   const [showMorePopup, setShowMorePopup] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<FilterState>({
+    roomState: {
+      dirty: false,
+      inProgress: false,
+      cleaned: false,
+      inspected: false,
+      priority: false,
+    },
+    guest: {
+      arrivals: false,
+      departures: false,
+      turnDown: false,
+      stayOver: false,
+    },
+  });
   const [selectedRoomForStatusChange, setSelectedRoomForStatusChange] = useState<RoomCardData | null>(null);
   const [selectedCardTop, setSelectedCardTop] = useState<number>(0);
   const [selectedCardHeight, setSelectedCardHeight] = useState<number>(0);
@@ -325,6 +342,17 @@ export default function AllRoomsScreen() {
         currentStatus={selectedRoomForStatusChange?.status || 'InProgress'}
         room={selectedRoomForStatusChange || undefined}
         cardTop={selectedCardTop}
+      />
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={showFilterModal}
+        onClose={handleFilterClose}
+        onApply={handleFilterApply}
+        onGoToResults={handleGoToResults}
+        onAdvanceFilter={handleAdvanceFilter}
+        resultCount={getFilteredRoomCount()}
+        initialFilters={activeFilters}
       />
     </View>
   );

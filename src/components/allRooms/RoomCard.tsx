@@ -46,9 +46,16 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
     if (room.isPriority) {
       return CARD_COLORS.priorityBackground;
     }
+    // In Progress cards use light pink/reddish background (rgba(249,36,36,0.08))
+    if (room.status === 'InProgress') {
+      return CARD_COLORS.priorityBackground;
+    }
     // All other cards use default white/light gray background (#f9fafc)
     return CARD_COLORS.background;
   };
+
+  // Determine if card should have red border
+  const hasRedBorder = room.status === 'InProgress' || room.isPriority;
 
   return (
     <TouchableOpacity
@@ -59,7 +66,7 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
           height: cardHeight,
           backgroundColor: getCardBackgroundColor(),
         },
-        room.isPriority && styles.priorityBorder,
+        hasRedBorder && styles.priorityBorder,
       ]}
       onPress={onPress}
       onLayout={onLayout}
