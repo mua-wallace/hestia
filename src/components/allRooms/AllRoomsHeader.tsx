@@ -10,7 +10,7 @@ interface AllRoomsHeaderProps {
   selectedShift: ShiftType;
   onShiftToggle: (shift: ShiftType) => void;
   onSearch: (text: string) => void;
-  onFilterPress: () => void;
+  onFilterPress?: () => void; // Optional - filter handler
   onBackPress?: () => void; // Optional - navigation handler
   searchPlaceholder?: string | { bold: string; normal: string }; // Optional dynamic placeholder
 }
@@ -81,14 +81,19 @@ export default function AllRoomsHeader({
             />
           </TouchableOpacity>
         </View>
-        
-        <TouchableOpacity style={styles.filterButton} onPress={onFilterPress} activeOpacity={0.7}>
-          <Image
-            source={require('../../../assets/icons/menu-icon.png')}
-            style={styles.filterIcon}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
+        {onFilterPress && (
+          <TouchableOpacity
+            style={styles.filterButton}
+            onPress={onFilterPress}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={require('../../../assets/icons/menu-icon.png')}
+              style={styles.filterIcon}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -198,13 +203,15 @@ const styles = StyleSheet.create({
   },
   filterButton: {
     width: 26 * scaleX,
-    height: 26 * scaleX,
+    height: 12 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 18 * scaleX, // Gap between search bar and filter icon (same as home screen)
   },
   filterIcon: {
     width: 26 * scaleX,
-    height: 26 * scaleX,
+    height: 12 * scaleX,
+    tintColor: colors.primary.main,
   },
 });
 

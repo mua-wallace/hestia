@@ -13,9 +13,7 @@ import RoomCard from '../components/allRooms/RoomCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
-import FilterModal from '../components/filter/FilterModal';
 import { MoreMenuItemId } from '../types/more.types';
-import { FilterState } from '../types/filter.types';
 import { BlurView } from 'expo-blur';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -49,22 +47,6 @@ export default function AllRoomsScreen() {
   const [activeTab, setActiveTab] = useState('Rooms');
   const [showMorePopup, setShowMorePopup] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<FilterState>({
-    roomState: {
-      dirty: false,
-      inProgress: false,
-      cleaned: false,
-      inspected: false,
-      priority: false,
-    },
-    guest: {
-      arrivals: false,
-      departures: false,
-      turnDown: false,
-      stayOver: false,
-    },
-  });
   const [selectedRoomForStatusChange, setSelectedRoomForStatusChange] = useState<RoomCardData | null>(null);
   const [selectedCardTop, setSelectedCardTop] = useState<number>(0);
   const [selectedCardHeight, setSelectedCardHeight] = useState<number>(0);
@@ -75,7 +57,7 @@ export default function AllRoomsScreen() {
   const { height: SCREEN_HEIGHT } = useWindowDimensions();
   
   // Check if we came from a stack navigation (show back button) or tab navigation (don't show)
-  const showBackButton = route.params?.showBackButton ?? false;
+  const showBackButton = (route.params as any)?.showBackButton ?? false;
 
   const handleShiftToggle = (shift: ShiftType) => {
     setAllRoomsData(prev => ({ ...prev, selectedShift: shift }));
@@ -88,34 +70,8 @@ export default function AllRoomsScreen() {
   };
 
   const handleFilterPress = () => {
-    setShowFilterModal(true);
-  };
-
-  const handleFilterClose = () => {
-    setShowFilterModal(false);
-  };
-
-  const handleFilterApply = (filters: FilterState) => {
-    setActiveFilters(filters);
-    // TODO: Apply filters to room list
-    console.log('Filters applied:', filters);
-  };
-
-  const handleGoToResults = () => {
-    // Filters are already applied via handleFilterApply
-    // Close modal and show filtered results
-    console.log('Go to results');
-  };
-
-  const handleAdvanceFilter = () => {
-    // TODO: Navigate to advance filter screen or show additional options
-    console.log('Advance filter');
-  };
-
-  // Calculate filtered room count (for now, just return total)
-  const getFilteredRoomCount = () => {
-    // TODO: Implement actual filtering logic
-    return allRoomsData.rooms.length;
+    // TODO: Implement filter logic
+    console.log('Filter pressed');
   };
 
   const handleBackPress = () => {
@@ -443,16 +399,6 @@ export default function AllRoomsScreen() {
         buttonPosition={statusButtonPosition}
       />
 
-      {/* Filter Modal */}
-      <FilterModal
-        visible={showFilterModal}
-        onClose={handleFilterClose}
-        onApply={handleFilterApply}
-        onGoToResults={handleGoToResults}
-        onAdvanceFilter={handleAdvanceFilter}
-        resultCount={getFilteredRoomCount()}
-        initialFilters={activeFilters}
-      />
     </View>
   );
 }

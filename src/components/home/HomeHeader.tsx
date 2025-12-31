@@ -253,15 +253,15 @@ const styles = StyleSheet.create({
     tintColor: colors.primary.main,
   },
   menuButton: {
-    width: 24.545 * scaleX,
-    height: 15.545 * scaleX,
+    width: 26 * scaleX,
+    height: 12 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 18 * scaleX, // Gap between search bar and menu icon
   },
   menuIcon: {
-    width: 24.545 * scaleX,
-    height: 15.545 * scaleX,
+    width: 26 * scaleX,
+    height: 12 * scaleX,
     tintColor: colors.primary.main,
   },
 });
