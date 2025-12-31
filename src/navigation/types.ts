@@ -9,6 +9,7 @@ export type RootStackParamList = {
   Main: undefined;
   AllRooms: { showBackButton?: boolean };
   RoomDetails: { roomId: string };
+  ArrivalDepartureDetail: { room: any }; // RoomCardData
   ChatDetail: { chatId: string };
   TicketDetail: { ticketId: string };
   CreateTicket: undefined;

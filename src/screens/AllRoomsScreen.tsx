@@ -14,6 +14,7 @@ import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import { MoreMenuItemId } from '../types/more.types';
+import type { RootStackParamList } from '../navigation/types';
 import { BlurView } from 'expo-blur';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -36,7 +37,8 @@ type MainTabsParamList = {
   Settings: undefined;
 };
 
-type AllRoomsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, 'Rooms'>;
+type AllRoomsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, 'Rooms'> & 
+  NativeStackNavigationProp<RootStackParamList>;
 
 export default function AllRoomsScreen() {
   const navigation = useNavigation<AllRoomsScreenNavigationProp>();
@@ -79,9 +81,13 @@ export default function AllRoomsScreen() {
   };
 
   const handleRoomPress = (room: RoomCardData) => {
-    // TODO: Navigate to room detail screen
-    console.log('Room pressed:', room.roomNumber);
-    // navigation.navigate('RoomDetail', { roomId: room.id });
+    // Navigate to detail screen for Arrival/Departure rooms
+    if (room.category === 'Arrival/Departure') {
+      navigation.navigate('ArrivalDepartureDetail', { room } as any);
+    } else {
+      // TODO: Navigate to other room detail screens
+      console.log('Room pressed:', room.roomNumber);
+    }
   };
 
   const handleStatusPress = (room: RoomCardData) => {
