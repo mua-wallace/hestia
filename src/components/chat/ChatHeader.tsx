@@ -12,10 +12,12 @@ import SearchInput from '../SearchInput';
 
 interface ChatHeaderProps {
   onBackPress?: () => void;
-  onSearch: (text: string) => void;
+  onSearch?: (text: string) => void;
   onFilterPress?: () => void;
   onMessagePress?: () => void;
   searchPlaceholder?: string | { bold: string; normal: string }; // Optional dynamic placeholder
+  showSearch?: boolean; // Whether to show search input (default: true if onSearch provided)
+  title?: string; // Custom title (defaults to "Chat")
 }
 
 export default function ChatHeader({
@@ -24,10 +26,14 @@ export default function ChatHeader({
   onFilterPress,
   onMessagePress,
   searchPlaceholder = 'Search',
+  showSearch = true,
+  title = 'Chat',
 }: ChatHeaderProps) {
   const handleSearchChange = (text: string) => {
-    onSearch(text);
+    onSearch?.(text);
   };
+  
+  const shouldShowSearch = showSearch && onSearch !== undefined;
 
   return (
     <View style={styles.container}>
@@ -51,7 +57,7 @@ export default function ChatHeader({
         </TouchableOpacity>
 
         {/* Title */}
-        <Text style={styles.title}>Chat</Text>
+        <Text style={styles.title}>{title}</Text>
 
         {/* Message Button */}
         <TouchableOpacity
@@ -66,42 +72,44 @@ export default function ChatHeader({
       </View>
 
       {/* Search bar section */}
-      <View style={styles.searchSection}>
-        <View style={styles.searchBar}>
-          <SearchInput
-            placeholder={searchPlaceholder}
-            onSearch={handleSearchChange}
-            inputStyle={styles.searchInput}
-            placeholderStyle={styles.placeholderText}
-            inputWrapperStyle={styles.searchInputWrapper}
-          />
-
-          <TouchableOpacity
-            style={styles.searchIconContainer}
-            activeOpacity={0.7}
-          >
-            <Image
-              source={require('../../../assets/icons/search-icon.png')}
-              style={styles.searchIcon}
-              resizeMode="contain"
+      {shouldShowSearch && (
+        <View style={styles.searchSection}>
+          <View style={styles.searchBar}>
+            <SearchInput
+              placeholder={searchPlaceholder}
+              onSearch={handleSearchChange}
+              inputStyle={styles.searchInput}
+              placeholderStyle={styles.placeholderText}
+              inputWrapperStyle={styles.searchInputWrapper}
             />
-          </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.searchIconContainer}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={require('../../../assets/icons/search-icon.png')}
+                style={styles.searchIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {onFilterPress && (
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={onFilterPress}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={require('../../../assets/icons/menu-icon.png')}
+                style={styles.filterIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          )}
         </View>
-
-        {onFilterPress && (
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={onFilterPress}
-            activeOpacity={0.7}
-          >
-            <Image
-              source={require('../../../assets/icons/menu-icon.png')}
-              style={styles.filterIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        )}
-      </View>
+      )}
     </View>
   );
 }

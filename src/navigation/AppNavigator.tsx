@@ -13,6 +13,7 @@ import AllRoomsScreen from '../screens/AllRoomsScreen';
 import ArrivalDepartureDetailScreen from '../screens/ArrivalDepartureDetailScreen';
 import CreateTicketScreen from '../screens/CreateTicketScreen';
 import CreateTicketFormScreen from '../screens/CreateTicketFormScreen';
+import ChatDetailScreen from '../screens/ChatDetailScreen';
 import type { RootStackParamList, MainTabsParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -85,6 +86,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Main" component={MainTabs} />
       <Stack.Screen name="AllRooms" component={AllRoomsScreen} />
       <Stack.Screen name="ArrivalDepartureDetail" component={ArrivalDepartureDetailScreen} />
+      <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
       <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
       <Stack.Screen name="CreateTicketForm" component={CreateTicketFormScreen} />
     </Stack.Navigator>

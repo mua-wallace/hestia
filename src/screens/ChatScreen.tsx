@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { CompositeNavigationProp } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { colors } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
@@ -30,7 +32,12 @@ type MainTabsParamList = {
   Settings: undefined;
 };
 
-type ChatScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, 'Chat'>;
+import type { RootStackParamList } from '../navigation/types';
+
+type ChatScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabsParamList, 'Chat'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 export default function ChatScreen() {
   const navigation = useNavigation<ChatScreenNavigationProp>();
@@ -85,9 +92,7 @@ export default function ChatScreen() {
   };
 
   const handleChatPress = (chat: ChatItemData) => {
-    // TODO: Navigate to chat detail screen
-    console.log('Chat pressed:', chat.id);
-    // navigation.navigate('ChatDetail', { chatId: chat.id });
+    navigation.navigate('ChatDetail', { chatId: chat.id });
   };
 
   const handleBackPress = () => {
