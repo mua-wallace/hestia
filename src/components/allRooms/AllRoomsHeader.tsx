@@ -44,6 +44,7 @@ export default function AllRoomsHeader({
               source={require('../../../assets/icons/back-arrow.png')}
               style={styles.backArrow}
               resizeMode="contain"
+              tintColor="#5A759D"
             />
           </TouchableOpacity>
         
@@ -60,18 +61,9 @@ export default function AllRoomsHeader({
       {/* Search bar section */}
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
-          <SearchInput
-            placeholder={searchPlaceholder}
-            onSearch={handleSearchChange}
-            inputStyle={styles.searchInput}
-            placeholderStyle={styles.placeholderText}
-            placeholderBoldStyle={styles.placeholderBold}
-            placeholderNormalStyle={styles.placeholderText}
-            inputWrapperStyle={styles.searchInputWrapper}
-          />
-          
           <TouchableOpacity
-            style={styles.searchIconContainer}
+            style={styles.searchIconButton}
+            onPress={() => {/* Search action */}}
             activeOpacity={0.7}
           >
             <Image
@@ -80,16 +72,25 @@ export default function AllRoomsHeader({
               resizeMode="contain"
             />
           </TouchableOpacity>
+          <SearchInput
+            placeholder={searchPlaceholder}
+            onSearch={handleSearchChange}
+            inputStyle={styles.searchInput}
+            placeholderStyle={styles.placeholderText}
+            placeholderBoldStyle={styles.placeholderBold}
+            placeholderNormalStyle={styles.placeholderNormal}
+            inputWrapperStyle={styles.searchInputContainer}
+          />
         </View>
         {onFilterPress && (
           <TouchableOpacity
-            style={styles.filterButton}
+            style={styles.menuButton}
             onPress={onFilterPress}
             activeOpacity={0.7}
           >
             <Image
               source={require('../../../assets/icons/menu-icon.png')}
-              style={styles.filterIcon}
+              style={styles.menuIcon}
               resizeMode="contain"
             />
           </TouchableOpacity>
@@ -128,23 +129,25 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 27 * scaleX,
     top: 69 * scaleX,
-    width: 32 * scaleX, // Increased size for better visibility
-    height: 32 * scaleX, // Increased size for better visibility
+    width: 14 * scaleX, // Figma: 14px width
+    height: 28 * scaleX, // Figma: 28px height
     justifyContent: 'center',
     alignItems: 'center',
   },
   backArrow: {
-    width: 32 * scaleX, // Increased icon size to match Figma visual appearance
-    height: 32 * scaleX, // Increased icon size to match Figma visual appearance
-    transform: [{ rotate: '270deg' }], // Rotate to point left (as per Figma)
+    width: 14 * scaleX, // Figma: 14px × 28px
+    height: 28 * scaleX,
+    // No rotation - using back-arrow.png directly as it already points left
   },
   title: {
     fontSize: 24 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold as any,
-    color: '#607aa1',
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    fontStyle: 'normal',
+    color: '#607AA1',
+    lineHeight: undefined, // normal line height
     position: 'absolute',
-    left: 69 * scaleX, // Exact position from Figma: 69px (27px arrow start + 14px arrow width + 28px spacing)
+    left: 69 * scaleX, // Figma: 69px (27px arrow start + 14px arrow width + 28px gap = 69px)
     top: 69 * scaleX,
   },
   toggleContainer: {
@@ -155,62 +158,61 @@ const styles = StyleSheet.create({
   searchSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 26 * scaleX,
+    paddingHorizontal: 15 * scaleX,
     marginTop: 25 * scaleX,
-    gap: 12 * scaleX,
   },
   searchBar: {
-    flex: 1,
     height: 59 * scaleX,
+    width: 347 * scaleX,
     backgroundColor: '#f1f6fc',
     borderRadius: 82 * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 20 * scaleX,
-    paddingRight: 20 * scaleX,
-    position: 'relative',
+    paddingHorizontal: 20 * scaleX,
   },
-  searchInputWrapper: {
-    justifyContent: 'center',
+  searchInputContainer: {
+    height: '100%',
   },
   searchInput: {
-    paddingVertical: 0,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    height: 59 * scaleX,
+    fontFamily: 'Inter',
+    fontWeight: '300' as any,
+    padding: 0,
+    height: '100%',
+    backgroundColor: 'transparent',
   },
   placeholderText: {
-    fontSize: 13 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
-    color: '#b1afaf',
-    opacity: 0.36,
+    fontFamily: 'Inter',
+    color: 'rgba(0,0,0,0.6)',
+    includeFontPadding: false,
   },
   placeholderBold: {
-    fontWeight: typography.fontWeights.semiBold as any,
+    fontWeight: '700' as any, // Bold for "Search"
   },
-  searchIconContainer: {
+  placeholderNormal: {
+    fontWeight: '400' as any, // Regular for rest of text
+  },
+  searchIconButton: {
     width: 26 * scaleX,
     height: 26 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 10 * scaleX,
+    marginRight: 10 * scaleX,
   },
   searchIcon: {
     width: 19 * scaleX,
     height: 19 * scaleX,
     tintColor: colors.primary.main,
   },
-  filterButton: {
+  menuButton: {
     width: 26 * scaleX,
     height: 12 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 18 * scaleX, // Gap between search bar and filter icon (same as home screen)
+    marginLeft: 18 * scaleX, // Gap between search bar and menu icon
   },
-  filterIcon: {
-    width: 26 * scaleX,
-    height: 12 * scaleX,
+  menuIcon: {
+    width: 26,
+    height: 12,
     tintColor: colors.primary.main,
   },
 });

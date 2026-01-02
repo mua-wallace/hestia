@@ -190,6 +190,7 @@ const styles = StyleSheet.create({
     marginBottom: CARD_DIMENSIONS.marginBottom * scaleX,
     position: 'relative',
     width: CARD_DIMENSIONS.width * scaleX,
+    overflow: 'hidden', // Ensure notes section and other absolute elements are clipped to card boundaries
   },
   priorityBorder: {
     borderColor: CARD_COLORS.priorityBorder,

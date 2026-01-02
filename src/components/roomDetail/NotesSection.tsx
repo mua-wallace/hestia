@@ -16,7 +16,7 @@ export default function NotesSection({ notes, onAddPress }: NotesSectionProps) {
       {/* Section Header */}
       <View style={styles.header}>
         <Image
-          source={require('../../../assets/icons/notes.png')}
+          source={require('../../../assets/icons/notes-icon.png')}
           style={styles.icon}
           resizeMode="contain"
         />

@@ -23,22 +23,38 @@ export default function NotesSection({ notes, isArrivalDeparture = false }: Note
     ? NOTES_SECTION.text.positions.arrivalDeparture 
     : NOTES_SECTION.text.positions.withNotes;
 
+  const rushedIconPos = isArrivalDeparture
+    ? NOTES_SECTION.rushedIcon.positions.arrivalDeparture
+    : NOTES_SECTION.rushedIcon.positions.withNotes;
+
+  const containerBackground = isArrivalDeparture 
+    ? NOTES_SECTION.background 
+    : NOTES_SECTION.backgroundWithNotes;
+
   return (
-    <View style={[styles.container, { left: position.left * scaleX, top: position.top * scaleX }]}>
-      {/* Notes Icon */}
+    <View style={[
+      styles.container, 
+      { 
+        left: position.left * scaleX, 
+        top: position.top * scaleX,
+        backgroundColor: containerBackground,
+      }
+    ]}>
+      {/* Rushed Icon (leftmost) */}
+      {notes.hasRushed && (
+        <Image
+          source={require('../../../assets/icons/priority-icon.png')}
+          style={[styles.rushedIcon, { left: rushedIconPos.left * scaleX, top: rushedIconPos.top * scaleX }]}
+          resizeMode="contain"
+        />
+      )}
+      
+      {/* Notes Icon (right of rushed icon) */}
       <Image
         source={require('../../../assets/icons/notes-icon.png')}
         style={[styles.notesIcon, { left: iconPos.left * scaleX, top: iconPos.top * scaleX }]}
         resizeMode="contain"
       />
-      
-      {notes.hasRushed && (
-        <Image
-          source={require('../../../assets/icons/rushed-icon.png')}
-          style={[styles.rushedIcon, { left: NOTES_SECTION.rushedIcon.left * scaleX, top: NOTES_SECTION.rushedIcon.top * scaleX }]}
-          resizeMode="contain"
-        />
-      )}
 
       {/* Count Badge */}
       <View style={[styles.badgeContainer, { left: badgePos.left * scaleX, top: badgePos.top * scaleX }]}>
@@ -62,8 +78,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: NOTES_SECTION.background,
     borderRadius: NOTES_SECTION.borderRadius * scaleX,
-    paddingVertical: 0,
-    paddingHorizontal: 0,
+    paddingVertical: NOTES_SECTION.paddingVertical * scaleX,
+    paddingHorizontal: NOTES_SECTION.paddingHorizontal * scaleX,
     height: NOTES_SECTION.height * scaleX,
     width: NOTES_SECTION.width * scaleX,
   },
@@ -74,8 +90,8 @@ const styles = StyleSheet.create({
   },
   rushedIcon: {
     position: 'absolute',
-    width: NOTES_SECTION.rushedIcon.width * scaleX,
-    height: NOTES_SECTION.rushedIcon.height * scaleX,
+    width: NOTES_SECTION.icon.width * scaleX, // Same size as notes icon
+    height: NOTES_SECTION.icon.height * scaleX, // Same size as notes icon
   },
   badgeContainer: {
     position: 'absolute',
