@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { RoomStatus, StatusChangeOption, STATUS_OPTIONS, RoomCardData } from '../../types/allRooms.types';
 import { STATUS_BUTTON, CARD_DIMENSIONS, scaleX } from '../../constants/allRoomsStyles';
 import { typography } from '../../theme';
@@ -78,12 +79,18 @@ export default function StatusChangeModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      {/* Backdrop - transparent, just for closing modal */}
-      <TouchableOpacity
-        style={styles.backdrop}
-        activeOpacity={1}
-        onPress={onClose}
+      {/* Blurred Background Overlay */}
+      <BlurView
+        intensity={20}
+        tint="light"
+        style={styles.blurOverlay}
       >
+        {/* Backdrop - transparent, just for closing modal */}
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={onClose}
+        />
         {/* Modal Container - positioned below the status button or centered */}
         <View 
           style={[
@@ -128,15 +135,20 @@ export default function StatusChangeModal({
             </View>
           </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </BlurView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  blurOverlay: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   backdrop: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)', // Slight dark overlay for better contrast
     justifyContent: 'center',
     alignItems: 'center',
   },

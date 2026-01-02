@@ -45,6 +45,7 @@ export default function ChatHeader({
           <Image
             source={require('../../../assets/icons/back-arrow.png')}
             style={styles.backArrow}
+            tintColor="#607aa1"
             resizeMode="contain"
           />
         </TouchableOpacity>
@@ -139,15 +140,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backArrow: {
-    width: CHAT_HEADER.backButton.width * scaleX, // Increased icon size to match Figma visual appearance
-    height: CHAT_HEADER.backButton.height * scaleX, // Increased icon size to match Figma visual appearance
-    transform: [{ rotate: '270deg' }], // Rotate to point left (as per Figma)
+    width: CHAT_HEADER.backButton.width * scaleX,
+    height: CHAT_HEADER.backButton.height * scaleX,
+    // No rotation - using back-arrow.png directly as it already points left
   },
   title: {
-    fontSize: CHAT_TYPOGRAPHY.title.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: CHAT_TYPOGRAPHY.title.fontWeight as any,
-    color: CHAT_TYPOGRAPHY.title.color,
+    fontSize: 24 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    fontStyle: 'normal',
+    color: '#607AA1',
+    lineHeight: undefined, // normal line height
     position: 'absolute',
     left: CHAT_HEADER.title.left * scaleX,
     top: CHAT_HEADER.title.top * scaleX,
