@@ -11,7 +11,7 @@ interface RoomDetailHeaderProps {
   status: RoomStatus;
   onBackPress: () => void;
   onStatusPress?: () => void;
-  statusButtonRef?: React.RefObject<TouchableOpacity>;
+  statusButtonRef?: React.RefObject<any>;
 }
 
 export default function RoomDetailHeader({
@@ -37,6 +37,7 @@ export default function RoomDetailHeader({
         <Image
           source={require('../../../assets/icons/back-arrow.png')}
           style={styles.backArrow}
+          tintColor="#FFFFFF"
           resizeMode="contain"
         />
       </TouchableOpacity>
@@ -58,6 +59,12 @@ export default function RoomDetailHeader({
           source={
             status === 'InProgress'
               ? require('../../../assets/icons/in-progress-icon.png')
+              : status === 'Dirty'
+              ? require('../../../assets/icons/dirty-icon.png')
+              : status === 'Cleaned'
+              ? require('../../../assets/icons/cleaned-icon.png')
+              : status === 'Inspected'
+              ? require('../../../assets/icons/inspected-status-icon.png')
               : statusConfig.icon
           }
           style={styles.statusIcon}
@@ -65,7 +72,7 @@ export default function RoomDetailHeader({
         />
         <Text style={styles.statusText}>{statusConfig.label}</Text>
         <Image
-          source={require('../../../assets/icons/down-arrow.png')}
+          source={require('../../../assets/icons/dropdown-arrow.png')}
           style={styles.dropdownArrow}
           resizeMode="contain"
         />

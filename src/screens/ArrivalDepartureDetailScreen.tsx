@@ -38,7 +38,7 @@ export default function ArrivalDepartureDetailScreen() {
   // In a real app, this would come from an API or be passed directly
   const roomDetail: RoomDetailData = {
     ...room,
-    specialInstructions: room.guests[0]?.timeLabel === 'ETA' 
+    specialInstructions: room.guests && room.guests.length > 0
       ? 'Please prepare a high-floor suite with a city view, away from the elevators, set to 21°C, with hypoallergenic pillows and a fresh orchid on the nightstand.'
       : undefined,
     notes: [
@@ -175,6 +175,13 @@ export default function ArrivalDepartureDetailScreen() {
 
   const arrivalGuest = room.guests.find((g) => g.timeLabel === 'ETA');
   const departureGuest = room.guests.find((g) => g.timeLabel === 'EDT');
+  // For single guest rooms without ETA/EDT, use the first guest
+  const singleGuest = room.guests.length === 1 && !arrivalGuest && !departureGuest 
+    ? room.guests[0] 
+    : null;
+  
+  // Ensure we always have at least one guest to display
+  const hasGuestsToDisplay = arrivalGuest || departureGuest || singleGuest || (room.guests && room.guests.length > 0);
 
   return (
     <View style={styles.container}>
@@ -208,38 +215,78 @@ export default function ArrivalDepartureDetailScreen() {
         {activeTab === 'Overview' && (
           <>
             {/* Guest Info Section */}
-            <View style={styles.guestInfoSection}>
-              <Text style={styles.guestInfoTitle}>Guest Info</Text>
+            {hasGuestsToDisplay && (
+              <View style={styles.guestInfoSection}>
+                <Text style={styles.guestInfoTitle}>Guest Info</Text>
 
-              {/* Arrival Guest */}
-              {arrivalGuest && (
-                <GuestInfoCard
-                  guest={arrivalGuest}
-                  isArrival={true}
-                  numberBadge={room.priorityCount?.toString()}
-                  specialInstructions={roomDetail.specialInstructions}
-                  absoluteTop={GUEST_INFO.arrival.name.top}
-                  contentAreaTop={CONTENT_AREA.top}
-                />
-              )}
+                {/* Arrival Guest */}
+                {arrivalGuest && (
+                  <GuestInfoCard
+                    guest={arrivalGuest}
+                    isArrival={true}
+                    numberBadge={room.priorityCount?.toString()}
+                    specialInstructions={roomDetail.specialInstructions}
+                    absoluteTop={GUEST_INFO.arrival.name.top}
+                    contentAreaTop={CONTENT_AREA.top}
+                  />
+                )}
 
-              {/* Divider */}
-              <View style={styles.divider1} />
+                {/* Divider - show after arrival guest if there's a departure guest */}
+                {arrivalGuest && departureGuest && <View style={styles.divider1} />}
 
-              {/* Departure Guest */}
-              {departureGuest && (
-                <GuestInfoCard
-                  guest={departureGuest}
-                  isArrival={false}
-                  numberBadge={room.secondGuestPriorityCount?.toString()}
-                  absoluteTop={GUEST_INFO.departure.name.top}
-                  contentAreaTop={CONTENT_AREA.top}
-                />
-              )}
+                {/* Departure Guest - use arrival position if it's a single guest departure room */}
+                {departureGuest && (
+                  <GuestInfoCard
+                    guest={departureGuest}
+                    isArrival={false}
+                    numberBadge={room.secondGuestPriorityCount?.toString() || room.priorityCount?.toString()}
+                    specialInstructions={roomDetail.specialInstructions}
+                    absoluteTop={
+                      // For single guest departure rooms, use arrival position
+                      (room.guests.length === 1 && !arrivalGuest) 
+                        ? GUEST_INFO.arrival.name.top 
+                        : GUEST_INFO.departure.name.top
+                    }
+                    contentAreaTop={CONTENT_AREA.top}
+                  />
+                )}
 
-              {/* Divider */}
-              <View style={styles.divider2} />
-            </View>
+                {/* Divider - show after departure guest in Arrival/Departure rooms or single departure guest */}
+                {departureGuest && arrivalGuest && <View style={styles.divider2} />}
+                {/* Divider for single departure guest after their info */}
+                {departureGuest && room.guests.length === 1 && !arrivalGuest && <View style={styles.divider1} />}
+
+                {/* For single guest rooms without ETA/EDT labels, show the first guest */}
+                {singleGuest && (
+                  <>
+                    <GuestInfoCard
+                      guest={singleGuest}
+                      isArrival={singleGuest.timeLabel === 'ETA' || room.category === 'Arrival' || room.category === 'Stayover' || room.category === 'Turndown'}
+                      numberBadge={room.priorityCount?.toString()}
+                      specialInstructions={roomDetail.specialInstructions}
+                      absoluteTop={GUEST_INFO.arrival.name.top}
+                      contentAreaTop={CONTENT_AREA.top}
+                    />
+                    <View style={styles.divider1} />
+                  </>
+                )}
+                
+                {/* Fallback: If no guest matched ETA/EDT and no singleGuest, show first guest anyway */}
+                {!arrivalGuest && !departureGuest && !singleGuest && room.guests && room.guests.length > 0 && (
+                  <>
+                    <GuestInfoCard
+                      guest={room.guests[0]}
+                      isArrival={room.category === 'Arrival' || room.category === 'Stayover' || room.category === 'Turndown'}
+                      numberBadge={room.priorityCount?.toString()}
+                      specialInstructions={roomDetail.specialInstructions}
+                      absoluteTop={GUEST_INFO.arrival.name.top}
+                      contentAreaTop={CONTENT_AREA.top}
+                    />
+                    <View style={styles.divider1} />
+                  </>
+                )}
+              </View>
+            )}
 
             {/* Notes Section */}
             <NotesSection
@@ -315,6 +362,7 @@ const styles = StyleSheet.create({
     marginTop: CONTENT_AREA.top * scaleX,
   },
   scrollContent: {
+    paddingTop: 0, // No extra padding at top, content starts immediately
     paddingBottom: 200 * scaleX, // Extra padding at bottom to ensure all sections are visible
   },
   backgroundTop: {
@@ -329,6 +377,7 @@ const styles = StyleSheet.create({
   guestInfoSection: {
     position: 'relative',
     width: '100%',
+    paddingTop: (GUEST_INFO.title.top - CONTENT_AREA.top) * scaleX, // Space from content area start to Guest Info title
     minHeight: (646 - 303) * scaleX, // From Guest Info title (303) to Notes start (646)
   },
   guestInfoTitle: {

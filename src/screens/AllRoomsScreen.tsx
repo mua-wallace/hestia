@@ -81,8 +81,8 @@ export default function AllRoomsScreen() {
   };
 
   const handleRoomPress = (room: RoomCardData) => {
-    // Navigate to detail screen for Arrival/Departure rooms
-    if (room.category === 'Arrival/Departure') {
+    // Navigate to detail screen for Arrival/Departure, Dirty, Cleaned, and Inspected rooms
+    if (room.category === 'Arrival/Departure' || room.status === 'Dirty' || room.status === 'Cleaned' || room.status === 'Inspected') {
       navigation.navigate('ArrivalDepartureDetail', { room } as any);
     } else {
       // TODO: Navigate to other room detail screens

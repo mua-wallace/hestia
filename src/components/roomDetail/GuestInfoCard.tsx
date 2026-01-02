@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
-import { scaleX, GUEST_INFO } from '../../constants/roomDetailStyles';
+import { scaleX, GUEST_INFO, CONTENT_AREA } from '../../constants/roomDetailStyles';
 import type { GuestInfo } from '../../types/allRooms.types';
 
 interface GuestInfoCardProps {
@@ -127,8 +127,8 @@ export default function GuestInfoCard({
         {guest.timeLabel}: {guest.time}
       </Text>
 
-      {/* Special Instructions (only for arrival) */}
-      {isArrival && specialInstructions && (
+      {/* Special Instructions - show for all guests if available */}
+      {specialInstructions && (
         <View style={styles.specialInstructionsContainer}>
           <Text
             style={[
@@ -154,6 +154,18 @@ export default function GuestInfoCard({
             {specialInstructions}
           </Text>
         </View>
+      )}
+      
+      {/* Divider after Special Instructions - only show for arrival guests, not departure */}
+      {specialInstructions && isArrival && (
+        <View
+          style={[
+            styles.dividerAfterSpecial,
+            {
+              top: (GUEST_INFO.divider.top - absoluteTop) * scaleX,
+            },
+          ]}
+        />
       )}
     </View>
   );
@@ -231,6 +243,13 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.light as any,
     color: GUEST_INFO.arrival.specialInstructions.text.color,
     lineHeight: 18 * scaleX,
+  },
+  dividerAfterSpecial: {
+    position: 'absolute',
+    left: GUEST_INFO.divider.left,
+    width: GUEST_INFO.divider.width * scaleX,
+    height: GUEST_INFO.divider.height,
+    backgroundColor: GUEST_INFO.divider.color,
   },
 });
 
