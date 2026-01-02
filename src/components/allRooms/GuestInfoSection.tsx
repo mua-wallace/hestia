@@ -100,10 +100,10 @@ export default function GuestInfoSection({
 
   // Priority badge positioning - consolidated logic
   const priorityBadgeLeft = isPriority 
-    ? (isSecondGuest ? 152 : 182)
+    ? (isSecondGuest ? GUEST_INFO.priorityBadge.positions.secondGuest.left : GUEST_INFO.priorityBadge.positions.firstGuest.left)
     : GUEST_INFO.priorityBadge.positions.standard.left;
   const priorityBadgeTop = isPriority
-    ? (isSecondGuest ? 164 : 89)
+    ? (isSecondGuest ? GUEST_INFO.priorityBadge.positions.secondGuest.top : GUEST_INFO.priorityBadge.positions.firstGuest.top)
     : GUEST_INFO.priorityBadge.positions.standard.top;
 
   // Determine guest icon absolute positioning - consolidated logic
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
   },
   guestName: {
     fontSize: GUEST_INFO.name.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
+    fontFamily: 'Helvetica',
     fontWeight: typography.fontWeights.bold as any,
     color: GUEST_INFO.name.color,
     lineHeight: GUEST_INFO.name.lineHeight * scaleX,
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
   countText: {
     position: 'absolute',
     fontSize: GUEST_INFO.guestCount.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
+    fontFamily: 'Helvetica',
     fontWeight: typography.fontWeights.light as any,
     color: GUEST_INFO.guestCount.color,
     lineHeight: GUEST_INFO.guestCount.lineHeight * scaleX,

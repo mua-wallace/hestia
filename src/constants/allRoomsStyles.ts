@@ -129,14 +129,7 @@ export const GUEST_INFO = {
     left: 14, // Room 203 (with notes): icon at x=21 from screen, card at x=7, so 21-7=14px from card
     top: 89, // Room 203: icon at y=860 from screen, card at y=771, so 860-771=89px from card
   },
-  // Guest name styles
-  name: {
-    fontSize: 14,
-    fontWeight: 'bold' as const,
-    color: '#000000',
-    lineHeight: 10, // Figma shows h-[10px]
-  },
-  // Guest name positions
+  // Guest name styles and positions
   name: {
     fontSize: 14,
     fontWeight: 'bold' as const,
@@ -156,14 +149,7 @@ export const GUEST_INFO = {
   nameWithNotes: {
     top: 80, // Room 203: top-[851px] relative (851-771=80px)
   },
-  // Date range styles
-  dateRange: {
-    fontSize: 14,
-    fontWeight: 'light' as const,
-    color: '#000000',
-    lineHeight: 17,
-  },
-  // Date range positions
+  // Date range styles and positions
   dateRange: {
     fontSize: 14,
     fontWeight: 'light' as const,
@@ -208,10 +194,10 @@ export const GUEST_INFO = {
       height: 12,
     },
     positions: {
-      priorityFirst: { iconLeft: 158, textLeft: 177, top: 110 }, // Room 201 first: icon left-[158px] text left-[177px] top-[110px]
-      prioritySecond: { iconLeft: 158, textLeft: 177, top: 184 }, // Room 201 second: icon left-[158px] text left-[177px] top-[184px]
-      standardDeparture: { iconLeft: 158, textLeft: 177, iconTop: 114, textTop: 114 }, // Room 202 (Departure): icon and text positioned next to date. Date at top-[114px] (y=677 from screen, 677-563=114), so icon/text at same y=114px. Icon at x=158, text at x=177
-      standardArrival: { iconLeft: 165, textLeft: 184, top: 131 }, // Room 204 (Arrival): icon left-[165px] text left-[184px] top-[1155px] relative (1155-1024=131px), Room 205: top-[1371px] relative (1371-1240=131px)
+      priorityFirst: { iconLeft: 151, textLeft: 170, iconTop: 110, textTop: 110 }, // Room 201 first: icon at left-[158px] absolute, card at left-[7px], so iconLeft=151px relative to card. Text at left-[177px] absolute, so textLeft=170px relative to card. Top: 110px relative to card
+      prioritySecond: { iconLeft: 151, textLeft: 170, iconTop: 184, textTop: 184 }, // Room 201 second: icon at left-[158px] absolute, card at left-[7px], so iconLeft=151px relative to card. Text at left-[177px] absolute, so textLeft=170px relative to card. Top: 184px relative to card
+      standardDeparture: { iconLeft: 151, textLeft: 177, iconTop: 116, textTop: 116 }, // Room 202 (Departure): count at left-[184px] absolute, card at left-[7px], so textLeft=177px relative to card. Icon at left-[158px] absolute, so iconLeft=151px relative to card. Top: 679-563=116px relative to card
+      standardArrival: { iconLeft: 73, textLeft: 92, iconTop: 132, textTop: 131 }, // Room 204 (Arrival): icon at left-[80px] absolute, card at left-[7px], so iconLeft=73px relative to card. Text at left-[99px] absolute, so textLeft=92px relative to card. Icon top: 1156-1024=132px, text top: 1155-1024=131px. Room 205: same positions
       withNotes: { iconLeft: 70, textLeft: 89, iconTop: 125, textTop: 124 }, // Room 203: icon at x=77, y=896 (screen) = x=70, y=125 (card). Text at x=96, y=895 (screen) = x=89, y=124 (card). Container at x=70, so icon at 70-70=0, text at 89-70=19 relative to container
     },
   },
@@ -221,9 +207,9 @@ export const GUEST_INFO = {
     color: '#334866',
     lineHeight: 11, // Figma shows h-[11px]
     positions: {
-      firstGuest: { left: 182, top: 89 }, // Room 201 first guest badge "11"
-      secondGuest: { left: 152, top: 164 }, // Room 201 second guest badge "22"
-      standard: { left: 178, top: 82 }, // Room 203 badge "11": x=185 from screen, card at x=7, so 185-7=178px relative to card. y=853-771=82px
+      firstGuest: { left: 165, top: 89 }, // Room 201 first guest badge "11" - moved closer to name (was 182)
+      secondGuest: { left: 135, top: 164 }, // Room 201 second guest badge "22" - moved closer to name (was 152)
+      standard: { left: 161, top: 82 }, // Room 203 badge "11" - moved closer to name (was 178)
     },
   },
 } as const;

@@ -52,33 +52,15 @@ export default function StatusChangeModal({
     // Status button center X position on screen (already in screen pixels, scaled)
     const buttonCenterX = buttonPosition.x + buttonPosition.width / 2;
     
-    // Triangle base width (12px on each side = 24px total)
-    const triangleBaseWidth = 24 * scaleX;
-    const triangleHalfWidth = 12 * scaleX; // Half of triangle base
-    
-    // Calculate modal left position to align triangle center with button center
-    // We want: modalLeft + triangleLeft + triangleHalfWidth = buttonCenterX
-    // So: modalLeft = buttonCenterX - triangleLeft - triangleHalfWidth
-    // For optimal centering, we want triangleLeft to be at a reasonable position
-    // Let's try to center the modal's triangle on the button center
-    // Start with modal centered on button, then adjust
-    modalLeft = buttonCenterX - (modalWidth / 2);
-    
-    // Ensure modal doesn't go off screen and add margin
-    const screenMargin = 7 * scaleX; // Match card margin
-    const modalMargin = 7 * scaleX; // Margin for modal (same as card margin)
-    
-    // Ensure modal doesn't go off screen (accounting for margin)
-    if (modalLeft < screenMargin + modalMargin) {
-      modalLeft = screenMargin + modalMargin;
-    } else if (modalLeft + modalWidth > SCREEN_WIDTH - screenMargin - modalMargin) {
-      modalLeft = SCREEN_WIDTH - modalWidth - screenMargin - modalMargin;
-    }
+    // Center modal with card - card has margin of 7px from screen edge
+    const screenMargin = CARD_DIMENSIONS.marginHorizontal * scaleX; // 7px scaled (matches card margin)
+    modalLeft = screenMargin; // Center modal with card by using same left margin as card
     
     // Triangle position relative to modal container
     // Triangle should be centered on the button center
     // triangleLeft (in design pixels, will be scaled in style) = (buttonCenterX - modalLeft - triangleHalfWidth) / scaleX
-    triangleLeft = (buttonCenterX - modalLeft - 12 * scaleX) / scaleX;
+    const triangleHalfWidth = 12 * scaleX; // Half of triangle base
+    triangleLeft = (buttonCenterX - modalLeft - triangleHalfWidth) / scaleX;
   } else {
     // Position modal directly below header with no margin
     // Header height is 232px from roomDetailStyles
