@@ -17,14 +17,17 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hestia.app",
+      "icon": "./assets/app/icon.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "icon": "./assets/app/icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/app/adaptive-icon.png",
-        "backgroundColor": "#5a759d"
+        "backgroundColor": "#5a759d",
+        "monochromeImage": "./assets/app/adaptive-icon.png"
       },
       "package": "com.hestia.app",
       "splash": {

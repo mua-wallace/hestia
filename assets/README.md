@@ -44,6 +44,25 @@ These are primarily referenced in `app.json` configuration:
 "icon": "./assets/app/icon.png"
 ```
 
+### App Icon Requirements
+
+**iOS Icon (`icon.png`):**
+- **Size**: Must be exactly 1024x1024 pixels
+- **Format**: PNG with transparency support
+- **Padding**: The icon content should be centered with approximately 10-15% padding on all sides (safe zone: ~820x820px in the center)
+- **Content**: Should not extend to the edges to prevent distortion and cropping
+
+**Android Adaptive Icon (`adaptive-icon.png`):**
+- **Size**: Must be exactly 1024x1024 pixels
+- **Format**: PNG with transparency support
+- **Padding**: The icon content should be in the safe zone (center 66% = ~675x675px), leaving 17% padding on each side
+- **Background**: Configured in `app.json` as `#5a759d`
+- **Content**: Should not extend beyond the safe zone to prevent clipping on different device shapes
+
+**Current Status:**
+- ⚠️ `icon.png` is currently 53x50px - needs to be resized to 1024x1024px with proper padding
+- ✅ `adaptive-icon.png` is correctly sized at 1024x1024px
+
 ## Adding New Assets
 
 1. **Icons**: Place small UI icons in `assets/icons/`
