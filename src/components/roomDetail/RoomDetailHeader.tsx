@@ -23,9 +23,11 @@ export default function RoomDetailHeader({
   statusButtonRef,
 }: RoomDetailHeaderProps) {
   const statusConfig = STATUS_CONFIGS[status];
+  // Use the status color for the header background
+  const headerBackgroundColor = statusConfig.color;
 
   return (
-    <View style={styles.headerContainer}>
+    <View style={[styles.headerContainer, { backgroundColor: headerBackgroundColor }]}>
       {/* Back Button */}
       <TouchableOpacity
         style={styles.backButton}
@@ -53,7 +55,11 @@ export default function RoomDetailHeader({
         activeOpacity={0.8}
       >
         <Image
-          source={statusConfig.icon}
+          source={
+            status === 'InProgress'
+              ? require('../../../assets/icons/in-progress-icon.png')
+              : statusConfig.icon
+          }
           style={styles.statusIcon}
           resizeMode="contain"
         />
@@ -76,7 +82,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: ROOM_DETAIL_HEADER.height * scaleX,
-    backgroundColor: ROOM_DETAIL_HEADER.backgroundColor,
+    // backgroundColor is set dynamically based on status
     zIndex: 10, // Above background
   },
   backButton: {
@@ -126,22 +132,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statusIcon: {
-    width: 20 * scaleX,
-    height: 20 * scaleX,
+    width: 24.367 * scaleX,
+    height: 25.434 * scaleX,
     marginRight: 8 * scaleX,
   },
   statusText: {
-    fontSize: ROOM_DETAIL_HEADER.statusIndicator.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold as any,
-    color: ROOM_DETAIL_HEADER.statusIndicator.color,
+    fontSize: 19 * scaleX,
+    fontFamily: 'Helvetica',
+    fontStyle: 'normal',
+    fontWeight: '300' as any,
+    lineHeight: undefined,
+    color: '#FFF',
   },
   dropdownArrow: {
-    width: 11 * scaleX,
-    height: 22 * scaleX,
+    width: 24.367 * scaleX,
+    height: 25.434 * scaleX,
     marginLeft: 8 * scaleX,
     tintColor: '#ffffff',
-    transform: [{ rotate: '270deg' }], // Point down
+    // No rotation - use icon directly as is
   },
 });
 

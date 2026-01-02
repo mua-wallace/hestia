@@ -38,7 +38,7 @@ export const ROOM_DETAIL_HEADER = {
     top: 176,
     width: 168,
     height: 30.769,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold' as const,
     color: '#ffffff',
   },
