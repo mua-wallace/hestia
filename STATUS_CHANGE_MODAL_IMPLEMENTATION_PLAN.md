@@ -419,3 +419,6 @@ export interface RoomCardData {
 6. Icon sizes and label typography?
 7. Animation style (fade, slide-up, etc.)?
 
+
+
+

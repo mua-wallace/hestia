@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -7,6 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
 import { Dimensions } from 'react-native';
 import { colors } from '../theme';
+import SearchInput from '../components/SearchInput';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -138,10 +139,45 @@ export default function HomeScreen() {
         selectedShift={homeData.selectedShift}
         date={homeData.date}
         onShiftToggle={handleShiftToggle}
-        onSearch={handleSearch}
-        onMenuPress={handleMenuPress}
         onBellPress={handleBellPress}
       />
+
+      {/* Search Bar and Filter - Fixed below header */}
+      <View style={styles.searchSection}>
+        <View style={styles.searchBar}>
+          <TouchableOpacity
+            style={styles.searchIconButton}
+            onPress={() => {/* Search action */}}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={require('../../assets/icons/search-icon.png')}
+              style={styles.searchIcon}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+          <SearchInput
+            placeholder={{ bold: 'Search ', normal: 'Rooms, Guests, Floors etc' }}
+            onSearch={handleSearch}
+            inputStyle={styles.searchInput}
+            placeholderStyle={styles.placeholderText}
+            placeholderBoldStyle={styles.placeholderBold}
+            placeholderNormalStyle={styles.placeholderNormal}
+            inputWrapperStyle={styles.searchInputContainer}
+          />
+        </View>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={handleMenuPress}
+          activeOpacity={0.7}
+        >
+          <Image
+            source={require('../../assets/icons/menu-icon.png')}
+            style={styles.menuIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      </View>
 
       {/* Bottom Navigation (no blur) */}
       <BottomTabBar
@@ -173,16 +209,78 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: 334 * scaleX, // Header height (includes search bar)
+    paddingTop: (153 + 14 + 59) * scaleX, // Header height (153) + margin (14) + search bar height (59)
     paddingBottom: 152 * scaleX + 20 * scaleX, // Bottom nav height + extra padding
   },
   contentBlurOverlay: {
     position: 'absolute',
-    top: 334 * scaleX, // Start below header
+    top: (153 + 14 + 59) * scaleX, // Start below header + search bar
     left: 0,
     right: 0,
     bottom: 152 * scaleX, // Stop above bottom nav
     zIndex: 1,
+  },
+  searchSection: {
+    position: 'absolute',
+    left: 15 * scaleX,
+    top: (153 + 14) * scaleX, // Header height (153) + margin (14)
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 99,
+  },
+  searchBar: {
+    height: 59 * scaleX,
+    width: 347 * scaleX,
+    backgroundColor: '#f1f6fc',
+    borderRadius: 82 * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20 * scaleX,
+  },
+  searchInputContainer: {
+    height: '100%',
+  },
+  searchInput: {
+    fontFamily: 'Inter',
+    fontWeight: '300' as any,
+    padding: 0,
+    height: '100%',
+    backgroundColor: 'transparent',
+  },
+  placeholderText: {
+    fontFamily: 'Inter',
+    color: 'rgba(0,0,0,0.6)',
+    includeFontPadding: false,
+  },
+  placeholderBold: {
+    fontWeight: '700' as any, // Bold for "Search"
+  },
+  placeholderNormal: {
+    fontWeight: '400' as any, // Regular for rest of text
+  },
+  searchIconButton: {
+    width: 26 * scaleX,
+    height: 26 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10 * scaleX,
+  },
+  searchIcon: {
+    width: 19 * scaleX,
+    height: 19 * scaleX,
+    tintColor: colors.primary.main,
+  },
+  menuButton: {
+    width: 26 * scaleX,
+    height: 12 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 18 * scaleX, // Gap between search bar and menu icon
+  },
+  menuIcon: {
+    width: 26,
+    height: 12,
+    tintColor: colors.primary.main,
   },
   blurOverlayDarkener: {
     ...StyleSheet.absoluteFillObject,

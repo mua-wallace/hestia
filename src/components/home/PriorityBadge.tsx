@@ -13,44 +13,58 @@ interface PriorityBadgeProps {
 export default function PriorityBadge({ count }: PriorityBadgeProps) {
   return (
     <View style={styles.container}>
-      <Image
-        source={require('../../../assets/icons/priority-icon.png')}
-        style={styles.icon}
-        resizeMode="contain"
-      />
-      <Text style={styles.label}>Priority</Text>
-      <Text style={styles.count}>{count}</Text>
+      <View style={styles.iconContainer}>
+        <Image
+          source={require('../../../assets/icons/prioirty-icon.png')}
+          style={styles.icon}
+          resizeMode="contain"
+        />
+      </View>
+      {count > 0 && (
+        <View style={styles.badgeContainer}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{count}</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    position: 'relative',
+    width: 58 * scaleX,
+    height: 47 * scaleX,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#ffebeb',
-    height: 33 * scaleX,
-    paddingHorizontal: 16 * scaleX,
-    borderRadius: 31 * scaleX,
+  },
+  iconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   icon: {
-    width: 22 * scaleX,
-    height: 22 * scaleX,
-    tintColor: '#f92424',
-    marginRight: 8 * scaleX,
+    width: 58 * scaleX,
+    height: 47 * scaleX,
   },
-  label: {
-    fontSize: 13 * scaleX,
-    fontFamily: 'Inter',
-    fontWeight: '600' as any,
-    color: '#f92424',
-    marginRight: 8 * scaleX,
+  badgeContainer: {
+    position: 'absolute',
+    top: -2 * scaleX,
+    right: -5 * scaleX,
   },
-  count: {
-    fontSize: 20 * scaleX,
+  badge: {
+    backgroundColor: '#f92424',
+    borderRadius: 12 * scaleX,
+    width: 24 * scaleX,
+    height: 24 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: {
+    fontSize: 15 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
-    color: '#f92424',
+    color: '#ffffff',
   },
 });
 

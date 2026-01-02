@@ -48,8 +48,8 @@ export default function CategoryCard({ category, onPress }: CategoryCardProps) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
+          <Text style={styles.totalCount}>{category.total} </Text>
           <Text style={styles.categoryName}>{category.name}</Text>
-          <Text style={styles.totalCount}>{category.total}</Text>
         </View>
         {category.priority !== undefined && category.priority > 0 && (
           <PriorityBadge count={category.priority} />
@@ -125,8 +125,7 @@ const styles = StyleSheet.create({
     fontSize: 20 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
-    color: '#1e1e1e',
-    marginRight: 10 * scaleX,
+    color: 'rgba(30, 30, 30, 0.7)',
   },
   totalCount: {
     fontSize: 24 * scaleX,

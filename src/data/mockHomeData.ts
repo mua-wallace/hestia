@@ -40,13 +40,13 @@ export const mockHomeData: HomeScreenData = {
       id: 'stayovers',
       name: 'StayOvers',
       total: 28,
-      priority: 0, // StayOvers doesn't have priority badge in design
+      priority: 3,
       borderColor: '#8d908d',
       status: {
         dirty: 15,
         inProgress: 5,
         cleaned: 8,
-        inspected: 0,
+        inspected: 3,
       },
     },
   ],
