@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Fragment } from 'react';
 import {
   View,
   ScrollView,
@@ -48,6 +48,12 @@ export default function ChatDetailScreen() {
   // Bottom navigation bar height
   const BOTTOM_NAV_HEIGHT = 152 * scaleX;
 
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  };
+
   useEffect(() => {
     // Scroll to bottom when messages load
     setTimeout(() => {
@@ -78,6 +84,39 @@ export default function ChatDetailScreen() {
     }
   };
 
+  const shouldShowDateSeparator = (currentMessage: ChatMessage, prevMessage: ChatMessage | null): boolean => {
+    if (!prevMessage) return true;
+    
+    const currentDate = new Date(currentMessage.timestamp);
+    const prevDate = new Date(prevMessage.timestamp);
+    
+    return (
+      currentDate.getDate() !== prevDate.getDate() ||
+      currentDate.getMonth() !== prevDate.getMonth() ||
+      currentDate.getFullYear() !== prevDate.getFullYear()
+    );
+  };
+
+  const formatDateSeparator = (timestamp: string): string => {
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'long',
+        month: 'long', 
+        day: 'numeric',
+        year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+      });
+    }
+  };
+
   const handleBackPress = () => {
     navigation.goBack();
   };
@@ -102,6 +141,10 @@ export default function ChatDetailScreen() {
           onBackPress={handleBackPress}
           showSearch={false}
           title={chat.name}
+          isGroup={isGroup}
+          avatar={chat.avatar}
+          showAvatar={true}
+          showMessageButton={false}
         />
 
         {/* Messages List */}
@@ -114,22 +157,35 @@ export default function ChatDetailScreen() {
             scrollViewRef.current?.scrollToEnd({ animated: false });
           }}
         >
-          {messages.map((message) => {
-            const isCurrentUser = message.senderId === CURRENT_USER_ID;
-            return (
+        {messages.map((message, index) => {
+          const isCurrentUser = message.senderId === CURRENT_USER_ID;
+          const prevMessage = index > 0 ? messages[index - 1] : null;
+          const showDateSeparator = shouldShowDateSeparator(message, prevMessage);
+          
+          return (
+            <Fragment key={message.id}>
+              {showDateSeparator && (
+                <View style={styles.dateSeparator}>
+                  <View style={styles.dateSeparatorLine} />
+                  <Text style={styles.dateSeparatorText}>
+                    {formatDateSeparator(message.timestamp)}
+                  </Text>
+                  <View style={styles.dateSeparatorLine} />
+                </View>
+              )}
               <MessageBubble
-                key={message.id}
                 message={message}
                 isCurrentUser={isCurrentUser}
                 isGroup={isGroup}
               />
-            );
-          })}
+            </Fragment>
+          );
+        })}
         </ScrollView>
 
         {/* Input Area */}
         <SafeAreaView style={styles.inputSafeArea} edges={['bottom']}>
-          <View style={[styles.inputContainer, { paddingBottom: Platform.OS === 'android' ? 12 * scaleX + 152 * scaleX : 12 * scaleX }]}>
+          <View style={styles.inputContainer}>
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.input}
@@ -138,6 +194,7 @@ export default function ChatDetailScreen() {
                 value={inputText}
                 onChangeText={setInputText}
                 onSubmitEditing={handleSend}
+                onFocus={scrollToBottom}
                 multiline
                 maxLength={500}
                 returnKeyType="send"
@@ -181,7 +238,6 @@ const styles = StyleSheet.create({
     paddingBottom: 10 * scaleX, // Add padding at bottom to prevent overlap with input
   },
   messagesContent: {
-    paddingHorizontal: 16 * scaleX,
     paddingVertical: 16 * scaleX,
     paddingBottom: 20 * scaleX,
   },
@@ -191,7 +247,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E5E5',
     paddingHorizontal: 16 * scaleX,
     paddingTop: 0,
-    paddingBottom: Platform.OS === 'android' ? 16 * scaleX : 12 * scaleX,
+    paddingBottom: Platform.OS === 'android' ? 8 * scaleX : 8 * scaleX,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -235,6 +291,24 @@ const styles = StyleSheet.create({
     fontSize: 14 * scaleX,
     fontWeight: '600' as any,
     color: '#FFFFFF',
+  },
+  dateSeparator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16 * scaleX,
+    paddingHorizontal: 16 * scaleX,
+  },
+  dateSeparatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E5E5',
+  },
+  dateSeparatorText: {
+    fontSize: 12 * scaleX,
+    fontFamily: 'Helvetica',
+    color: '#999999',
+    marginHorizontal: 12 * scaleX,
+    fontWeight: '400' as any,
   },
 });
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { ChatMessage } from '../../types';
 import { scaleX } from '../../constants/chatStyles';
 import { typography } from '../../theme';
@@ -54,20 +54,42 @@ function formatTime(timestamp: string): string {
   const diff = now.getTime() - date.getTime();
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
   
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  // Format as HH:MM (24-hour format)
+  const hours24 = date.getHours();
+  const mins = date.getMinutes();
+  const formattedHours = hours24.toString().padStart(2, '0');
+  const formattedMins = mins.toString().padStart(2, '0');
+  
+  // If message is from today, show time only
+  const isToday = date.toDateString() === now.toDateString();
+  if (isToday) {
+    return `${formattedHours}:${formattedMins}`;
+  }
+  
+  // If message is from yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return `Yesterday ${formattedHours}:${formattedMins}`;
+  }
+  
+  // If message is from this week, show day name
+  const daysDiff = Math.floor(diff / 86400000);
+  if (daysDiff < 7) {
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return `${dayNames[date.getDay()]} ${formattedHours}:${formattedMins}`;
+  }
+  
+  // Otherwise show date
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 4 * scaleX,
-    maxWidth: '75%',
+    marginVertical: 2 * scaleX,
+    maxWidth: '80%',
+    paddingHorizontal: 16 * scaleX,
   },
   currentUserContainer: {
     alignSelf: 'flex-end',
@@ -78,17 +100,29 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   senderName: {
-    fontSize: 12 * scaleX,
-    fontFamily: typography.fontFamily.primary,
+    fontSize: 13 * scaleX,
+    fontFamily: 'Helvetica',
     fontWeight: '600' as any,
     color: '#607AA1',
     marginBottom: 4 * scaleX,
-    marginLeft: 12 * scaleX,
+    marginLeft: 0,
+    paddingHorizontal: 4 * scaleX,
   },
   bubble: {
-    paddingHorizontal: 16 * scaleX,
+    paddingHorizontal: 14 * scaleX,
     paddingVertical: 10 * scaleX,
     borderRadius: 18 * scaleX,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   currentUserBubble: {
     backgroundColor: '#5A759D',
@@ -99,22 +133,26 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4 * scaleX,
   },
   messageText: {
-    fontSize: 14 * scaleX,
-    fontFamily: typography.fontFamily.primary,
+    fontSize: 15 * scaleX,
+    fontFamily: 'Helvetica',
     lineHeight: 20 * scaleX,
+    letterSpacing: 0.2,
   },
   currentUserText: {
     color: '#FFFFFF',
+    fontWeight: '400' as any,
   },
   otherUserText: {
     color: '#1E1E1E',
+    fontWeight: '400' as any,
   },
   timestamp: {
     fontSize: 11 * scaleX,
-    fontFamily: typography.fontFamily.primary,
+    fontFamily: 'Helvetica',
     color: '#999999',
     marginTop: 4 * scaleX,
     marginHorizontal: 4 * scaleX,
+    fontWeight: '300' as any,
   },
 });
 

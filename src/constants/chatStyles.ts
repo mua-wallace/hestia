@@ -30,13 +30,13 @@ export const CHAT_HEADER = {
     color: '#607aa1',
   },
   messageButton: {
-    right: 38, // 440 - 316 - 86 = 38px from right
+    right: 38, // 440 - 316 - 54 = 38px from right (adjusted for circular button)
     top: 57,
-    width: 86,
+    width: 54,
     height: 54,
-    borderRadius: 17,
+    borderRadius: 27, // Half of width/height to make it fully circular
     backgroundColor: 'rgba(90, 117, 157, 0.59)', // Semi-transparent blue
-    borderRadiusInner: 81, // Inner circle border radius
+    borderRadiusInner: 27, // Inner circle border radius (same as outer for circular)
   },
 } as const;
 

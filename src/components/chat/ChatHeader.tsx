@@ -6,6 +6,7 @@ import {
   SEARCH_BAR,
   CHAT_COLORS,
   CHAT_TYPOGRAPHY,
+  CHAT_ITEM,
   scaleX,
 } from '../../constants/chatStyles';
 import SearchInput from '../SearchInput';
@@ -18,6 +19,10 @@ interface ChatHeaderProps {
   searchPlaceholder?: string | { bold: string; normal: string }; // Optional dynamic placeholder
   showSearch?: boolean; // Whether to show search input (default: true if onSearch provided)
   title?: string; // Custom title (defaults to "Chat")
+  isGroup?: boolean; // Whether this is a group chat
+  avatar?: any; // Avatar image source (same as in chat list)
+  showAvatar?: boolean; // Whether to show avatar instead of back arrow (default: false)
+  showMessageButton?: boolean; // Whether to show the create chat/message button (default: true)
 }
 
 export default function ChatHeader({
@@ -28,6 +33,10 @@ export default function ChatHeader({
   searchPlaceholder = 'Search',
   showSearch = true,
   title = 'Chat',
+  isGroup = false,
+  avatar,
+  showAvatar = false,
+  showMessageButton = true,
 }: ChatHeaderProps) {
   const handleSearchChange = (text: string) => {
     onSearch?.(text);
@@ -42,33 +51,51 @@ export default function ChatHeader({
 
       {/* Top section with back button and title */}
       <View style={styles.topSection}>
-        {/* Back arrow */}
+        {/* Avatar or Back arrow */}
         <TouchableOpacity
-          style={styles.backButton}
+          style={showAvatar ? styles.avatarButton : styles.backButton}
           onPress={onBackPress || (() => {})}
           activeOpacity={0.7}
         >
-          <Image
-            source={require('../../../assets/icons/back-arrow.png')}
-            style={styles.backArrow}
-            tintColor="#607aa1"
-            resizeMode="contain"
-          />
+          {showAvatar ? (
+            avatar ? (
+              <Image
+                source={avatar}
+                style={styles.avatar}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarInitial}>
+                  {title.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )
+          ) : (
+            <Image
+              source={require('../../../assets/icons/back-arrow.png')}
+              style={styles.backArrow}
+              tintColor="#607aa1"
+              resizeMode="contain"
+            />
+          )}
         </TouchableOpacity>
 
         {/* Title */}
         <Text style={styles.title}>{title}</Text>
 
         {/* Message Button */}
-        <TouchableOpacity
-          style={styles.messageButton}
-          onPress={onMessagePress || (() => {})}
-          activeOpacity={0.7}
-        >
-          <View style={styles.messageButtonInner}>
-            <Text style={styles.messageIconText}>+</Text>
-          </View>
-        </TouchableOpacity>
+        {showMessageButton && (
+          <TouchableOpacity
+            style={styles.messageButton}
+            onPress={onMessagePress || (() => {})}
+            activeOpacity={0.7}
+          >
+            <View style={styles.messageButtonInner}>
+              <Text style={styles.messageIconText}>+</Text>
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Search bar section */}
@@ -139,18 +166,38 @@ const styles = StyleSheet.create({
     height: CHAT_HEADER.background.height * scaleX,
   },
   backButton: {
-    position: 'absolute',
-    left: CHAT_HEADER.backButton.left * scaleX,
-    top: CHAT_HEADER.backButton.top * scaleX,
     width: CHAT_HEADER.backButton.width * scaleX,
     height: CHAT_HEADER.backButton.height * scaleX,
+    marginRight: 17 * scaleX, // Spacing between back button and title
     justifyContent: 'center',
     alignItems: 'center',
   },
   backArrow: {
     width: CHAT_HEADER.backButton.width * scaleX,
     height: CHAT_HEADER.backButton.height * scaleX,
-    // No rotation - using back-arrow.png directly as it already points left
+  },
+  avatarButton: {
+    width: CHAT_ITEM.avatar.size * scaleX,
+    height: CHAT_ITEM.avatar.size * scaleX,
+    marginRight: 17 * scaleX, // Same spacing as in ChatItem
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+    borderRadius: CHAT_ITEM.avatar.borderRadius * scaleX,
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    borderRadius: CHAT_ITEM.avatar.borderRadius * scaleX,
+    backgroundColor: CHAT_COLORS.searchBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitial: {
+    fontSize: 18 * scaleX,
+    fontWeight: 'bold' as any,
+    color: CHAT_COLORS.textSecondary,
   },
   title: {
     fontSize: 24 * scaleX,
@@ -158,10 +205,10 @@ const styles = StyleSheet.create({
     fontWeight: '700' as any,
     fontStyle: 'normal',
     color: '#607AA1',
-    lineHeight: undefined, // normal line height
-    position: 'absolute',
-    left: CHAT_HEADER.title.left * scaleX,
-    top: CHAT_HEADER.title.top * scaleX,
+    lineHeight: 24 * scaleX, // Match font size for proper vertical alignment
+    flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   messageButton: {
     position: 'absolute',
@@ -175,8 +222,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   messageButtonInner: {
-    width: 54 * scaleX,
-    height: 54 * scaleX,
+    width: '100%',
+    height: '100%',
     borderRadius: CHAT_HEADER.messageButton.borderRadiusInner * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
