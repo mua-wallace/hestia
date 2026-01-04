@@ -54,17 +54,52 @@ export default function DetailTabNavigation({
         );
       })}
 
-      {/* Active Tab Underline - Only show for Overview tab for now */}
-      {activeTab === 'Overview' && (
-        <View
-          style={[
-            styles.underline,
-            {
-              left: DETAIL_TABS.underline.left * scaleX,
-            },
-          ]}
-        />
-      )}
+      {/* Active Tab Underline - Show for all active tabs */}
+      {(() => {
+        // Calculate underline position for each tab
+        // Underline width is 92px, we need to center it under each tab text
+        const getUnderlineLeft = (tab: DetailTab): number => {
+          const underlineWidth = DETAIL_TABS.underline.width; // 92px
+          let tabLeft: number;
+          let estimatedTabWidth = 80; // Approximate tab text width
+          
+          switch (tab) {
+            case 'Overview':
+              tabLeft = DETAIL_TABS.overview.left; // 21px
+              estimatedTabWidth = 80;
+              break;
+            case 'Tickets':
+              tabLeft = DETAIL_TABS.tickets.left; // 143px
+              estimatedTabWidth = 70;
+              break;
+            case 'Checklist':
+              tabLeft = DETAIL_TABS.checklist.left; // 235px
+              estimatedTabWidth = 85;
+              break;
+            case 'History':
+              tabLeft = DETAIL_TABS.history.left; // 362px
+              estimatedTabWidth = 70;
+              break;
+            default:
+              return DETAIL_TABS.underline.left;
+          }
+          
+          // Center underline: tabLeft + (tabWidth / 2) - (underlineWidth / 2)
+          return tabLeft + (estimatedTabWidth / 2) - (underlineWidth / 2);
+        };
+        
+        return (
+          <View
+            style={[
+              styles.underline,
+              {
+                left: getUnderlineLeft(activeTab) * scaleX,
+                width: DETAIL_TABS.underline.width * scaleX,
+              },
+            ]}
+          />
+        );
+      })()}
     </View>
   );
 }

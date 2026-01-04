@@ -81,8 +81,8 @@ export default function AllRoomsScreen() {
   };
 
   const handleRoomPress = (room: RoomCardData) => {
-    // Navigate to detail screen for Arrival/Departure, Dirty, Cleaned, and Inspected rooms
-    if (room.category === 'Arrival/Departure' || room.status === 'Dirty' || room.status === 'Cleaned' || room.status === 'Inspected') {
+    // Navigate to detail screen for all room statuses including In Progress
+    if (room.category === 'Arrival/Departure' || room.status === 'Dirty' || room.status === 'Cleaned' || room.status === 'Inspected' || room.status === 'InProgress') {
       navigation.navigate('ArrivalDepartureDetail', { room } as any);
     } else {
       // TODO: Navigate to other room detail screens

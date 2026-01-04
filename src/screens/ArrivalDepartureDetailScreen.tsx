@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, Dimensions, TouchableOpacity } from
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme';
-import { scaleX, ROOM_DETAIL_HEADER, DETAIL_TABS, CONTENT_AREA, GUEST_INFO, NOTES_SECTION, LOST_AND_FOUND, ASSIGNED_TO, URGENT_BADGE } from '../constants/roomDetailStyles';
+import { scaleX, ROOM_DETAIL_HEADER, DETAIL_TABS, CONTENT_AREA, GUEST_INFO, NOTES_SECTION, LOST_AND_FOUND, ASSIGNED_TO } from '../constants/roomDetailStyles';
 import RoomDetailHeader from '../components/roomDetail/RoomDetailHeader';
 import DetailTabNavigation from '../components/roomDetail/DetailTabNavigation';
 import GuestInfoCard from '../components/roomDetail/GuestInfoCard';
@@ -41,12 +41,14 @@ export default function ArrivalDepartureDetailScreen() {
     specialInstructions: room.guests && room.guests.length > 0
       ? 'Please prepare a high-floor suite with a city view, away from the elevators, set to 21°C, with hypoallergenic pillows and a fresh orchid on the nightstand.'
       : undefined,
+    // Provide default notes for display (in real app, these would come from API)
+    // For In Progress rooms, show relevant notes
     notes: [
       {
         id: '1',
         text: "Guest wants 2 extra bath towels + 1 hand towel. Don't move items on desk. Refill water bottles daily. Check minibar usage. Leave AC on medium-cool.",
         staff: {
-          name: 'Stella Kitou',
+          name: room.staff?.name || 'Stella Kitou',
           avatar: require('../../assets/icons/profile-avatar.png'),
         },
         createdAt: new Date().toISOString(),
@@ -55,7 +57,7 @@ export default function ArrivalDepartureDetailScreen() {
         id: '2',
         text: 'Deep clean bathroom (heavy bath use). Change all linens + pillow protectors. Vacuum under bed. Restock all amenities. Light at entrance flickering report to maintenance.',
         staff: {
-          name: 'Stella Kitou',
+          name: room.staff?.name || 'Stella Kitou',
           avatar: require('../../assets/icons/profile-avatar.png'),
         },
         createdAt: new Date().toISOString(),
@@ -65,7 +67,7 @@ export default function ArrivalDepartureDetailScreen() {
       ? {
           id: '1',
           name: room.staff.name,
-          avatar: require('../../assets/icons/profile-avatar.png'),
+          avatar: room.staff.avatar || require('../../assets/icons/profile-avatar.png'),
         }
       : undefined,
     isUrgent: room.isPriority,
@@ -247,6 +249,7 @@ export default function ArrivalDepartureDetailScreen() {
                     isArrival={false}
                     numberBadge={room.secondGuestPriorityCount?.toString() || room.priorityCount?.toString()}
                     specialInstructions={roomDetail.specialInstructions}
+                    isSecondGuest={!!arrivalGuest} // Second guest if there's an arrival guest
                     absoluteTop={
                       // For single guest departure rooms, use arrival position
                       (room.guests.length === 1 && !arrivalGuest) 
@@ -325,13 +328,6 @@ export default function ArrivalDepartureDetailScreen() {
           </View>
         )}
       </ScrollView>
-
-      {/* Urgent Badge */}
-      {roomDetail.isUrgent && (
-        <View style={styles.urgentBadge}>
-          <Text style={styles.urgentBadgeText}>Urgent</Text>
-        </View>
-      )}
 
       {/* Status Change Modal */}
       <StatusChangeModal
@@ -429,21 +425,6 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 16 * scaleX,
     color: '#999',
-  },
-  urgentBadge: {
-    position: 'absolute',
-    left: URGENT_BADGE.left * scaleX,
-    top: URGENT_BADGE.top * scaleX,
-    backgroundColor: URGENT_BADGE.backgroundColor,
-    paddingHorizontal: 12 * scaleX,
-    paddingVertical: 4 * scaleX,
-    borderRadius: 4 * scaleX,
-  },
-  urgentBadgeText: {
-    fontSize: URGENT_BADGE.fontSize * scaleX,
-    fontFamily: 'Helvetica',
-    fontWeight: URGENT_BADGE.fontWeight as any,
-    color: URGENT_BADGE.color,
   },
 });
 

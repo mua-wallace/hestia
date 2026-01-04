@@ -65,10 +65,12 @@ export default function StatusChangeModal({
   } else {
     // Position modal directly below header with no gap - modal starts exactly where header ends
     // Header height is 232px from roomDetailStyles
+    // Moving modal up to align with status indicator at bottom of header (176px + status height)
     const HEADER_HEIGHT = 232 * scaleX;
+    const STATUS_INDICATOR_BOTTOM = (176 + 30.769) * scaleX; // Status indicator top (176) + height (30.769)
     const screenMargin = CARD_DIMENSIONS.marginHorizontal * scaleX; // 7px scaled (matches card margin)
     modalLeft = screenMargin; // Align with card margin
-    modalTopPosition = HEADER_HEIGHT; // Start exactly at header bottom (232px), no gap
+    modalTopPosition = STATUS_INDICATOR_BOTTOM; // Position modal at status indicator bottom, moved up from header bottom
     triangleLeft = 0; // Not used when triangle is hidden
   }
 

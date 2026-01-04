@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
-import { typography } from '../../theme';
-import { scaleX, GUEST_INFO, CONTENT_AREA } from '../../constants/roomDetailStyles';
+import { View, Text, StyleSheet } from 'react-native';
+import { GUEST_INFO as ROOM_DETAIL_GUEST_INFO, CONTENT_AREA } from '../../constants/roomDetailStyles';
+import { normalizedScaleX } from '../../utils/responsive';
+import GuestInfoDisplay from '../shared/GuestInfoDisplay';
 import type { GuestInfo } from '../../types/allRooms.types';
 
 interface GuestInfoCardProps {
@@ -11,6 +12,7 @@ interface GuestInfoCardProps {
   specialInstructions?: string;
   absoluteTop: number; // Absolute position from top of screen
   contentAreaTop: number; // Content area start position
+  isSecondGuest?: boolean; // Whether this is the second guest (for smaller badge size)
 }
 
 export default function GuestInfoCard({
@@ -20,112 +22,87 @@ export default function GuestInfoCard({
   specialInstructions,
   absoluteTop,
   contentAreaTop,
+  isSecondGuest = false,
 }: GuestInfoCardProps) {
-  const config = isArrival ? GUEST_INFO.arrival : GUEST_INFO.departure;
-
   // Calculate relative position from content area start
   const containerTop = absoluteTop - contentAreaTop;
 
-  // Calculate positions relative to container
-  const iconTop = config.icon.top - absoluteTop;
-  const nameTop = config.name.top - absoluteTop;
-  const badgeTop = config.numberBadge.top - absoluteTop;
-  const datesTop = config.dates.top - absoluteTop;
-  const occupancyTop = config.occupancy.top - absoluteTop;
-  const timeTop = (isArrival ? config.eta.top : config.edt.top) - absoluteTop;
-  const specialTitleTop = GUEST_INFO.arrival.specialInstructions.title.top - absoluteTop;
-  const specialTextTop = GUEST_INFO.arrival.specialInstructions.text.top - absoluteTop;
+  // Determine category for proper styling
+  const category = isArrival ? 'Arrival' : 'Departure';
+  
+  // Use room detail positions, but convert to relative positions within container
+  // Container is positioned at containerTop relative to contentArea
+  // All positions in room detail are absolute from screen top
+  // To convert to relative: absolutePosition - (contentAreaTop + containerTop)
+  // Since containerTop = absoluteTop - contentAreaTop:
+  // relative = absolutePosition - (contentAreaTop + absoluteTop - contentAreaTop) = absolutePosition - absoluteTop
+  
+  const config = isArrival ? ROOM_DETAIL_GUEST_INFO.arrival : ROOM_DETAIL_GUEST_INFO.departure;
+  
+  // Convert room detail absolute positions to relative positions within container
+  // Container is at containerTop relative to contentArea, which equals absoluteTop absolute
+  // So relative positions = absolute - absoluteTop
+  
+  const nameTopRelative = 0; // Name at absoluteTop, container at absoluteTop, so relative = 0
+  // Date should be positioned with same spacing as All Rooms cards
+  // In All Rooms: name at top 87, date at top 109, so spacing = 22px below name
+  // For room detail: name at top 0, so date at top 22px (relative to container)
+  const dateTopRelative = 22; // Same spacing as All Rooms (22px below name)
+  // Time (ETA/EDT) should be positioned with same spacing as All Rooms
+  // In All Rooms: name at top 87, time at top 110, so spacing = 23px below name
+  // For room detail: name at top 0, so time at top 23px (relative to container)
+  const timeTopRelative = 23; // Same spacing as All Rooms (23px below name)
+  // Count (person icon) should be below date and aligned with ETA/EDT
+  // Position it at the same top as ETA/EDT (23px) to be vertically aligned
+  const countTopRelative = 23; // Same top as ETA/EDT, below the date
+  
+  // All left positions are absolute from screen, container is at left: 0
+  // So relative positions = absolute positions
+  const containerLeft = 0;
+  const iconLeftRelative = config.icon.left; // 21
+  const iconTopRelative = 0; // Icon at same top as name (absoluteTop), so relative = 0
+  const nameLeftRelative = config.name.left; // 77
+  // Badge should be positioned with dynamic spacing after the name, matching All Rooms cards
+  // In All Rooms: container at 73, name at 0 relative to container, badge at 165 relative to card = 92 relative to container
+  // So spacing is approximately 92px from container start (or name start when name is at 0)
+  // For room detail: name at 77, so badge at 77 + 92 = 169px (dynamic spacing matching All Rooms)
+  const badgeSpacing = 92; // Same spacing as All Rooms Arrival/Departure cards
+  const badgeLeftRelative = nameLeftRelative + badgeSpacing; // Dynamic position: name left + spacing
+  const badgeTopRelative = config.numberBadge.top - absoluteTop; // Position relative to name (350 - 349 = 1px for arrival)
+  const dateLeftRelative = config.dates.left; // 79 or 78
+  const timeLeftRelative = isArrival ? config.eta.left : config.edt.left; // 215 or 222
+  // Person icon should be horizontally and vertically aligned with ETA/EDT
+  // Use original horizontal positions from roomDetailStyles to avoid overlapping with date
+  // Keep icon at original left (164) but align top with ETA/EDT (23px)
+  const countIconLeftRelative = config.occupancy.iconLeft; // 164 - original position to avoid date overlap
+  const countTextLeftRelative = config.occupancy.textLeft; // 183 - original position
 
   return (
-    <View style={[styles.container, { top: containerTop * scaleX }]}>
-      {/* Guest Icon */}
-      <Image
-        source={
-          isArrival
-            ? require('../../../assets/icons/guest-arrival-icon.png')
-            : require('../../../assets/icons/guest-departure-icon.png')
-        }
-        style={[
-          styles.icon,
-          {
-            left: config.icon.left * scaleX,
-            top: iconTop * scaleX,
-          },
-        ]}
-        resizeMode="contain"
+    <View style={[styles.container, { top: containerTop * normalizedScaleX }]}>
+      {/* Use reusable GuestInfoDisplay component with All Rooms styling */}
+      {/* Position using room detail layout positions */}
+      <GuestInfoDisplay
+        guest={guest}
+        numberBadge={numberBadge}
+        category={category}
+        isArrivalDeparture={false}
+        isSecondGuest={isSecondGuest}
+        containerLeft={containerLeft}
+        nameTop={nameTopRelative}
+        dateTop={dateTopRelative}
+        iconLeft={iconLeftRelative}
+        iconTop={iconTopRelative}
+        nameLeft={nameLeftRelative}
+        badgeLeft={badgeLeftRelative}
+        badgeTop={badgeTopRelative}
+        dateLeft={dateLeftRelative}
+        timeLeft={timeLeftRelative}
+        timeTop={timeTopRelative}
+        countIconLeft={countIconLeftRelative}
+        countTextLeft={countTextLeftRelative}
+        countTop={countTopRelative}
+        absolutePositioning={false}
       />
-
-      {/* Guest Name */}
-      <Text
-        style={[
-          styles.name,
-          {
-            left: config.name.left * scaleX,
-            top: nameTop * scaleX,
-          },
-        ]}
-      >
-        {guest.name}
-      </Text>
-
-      {/* Number Badge */}
-      {numberBadge && (
-        <Text
-          style={[
-            styles.numberBadge,
-            {
-              left: config.numberBadge.left * scaleX,
-              top: badgeTop * scaleX,
-            },
-          ]}
-        >
-          {numberBadge}
-        </Text>
-      )}
-
-      {/* Dates */}
-      <Text
-        style={[
-          styles.dates,
-          {
-            left: config.dates.left * scaleX,
-            top: datesTop * scaleX,
-          },
-        ]}
-      >
-        {guest.dateRange}
-      </Text>
-
-      {/* Occupancy */}
-      <View
-        style={[
-          styles.occupancyContainer,
-          {
-            left: config.occupancy.iconLeft * scaleX,
-            top: occupancyTop * scaleX,
-          },
-        ]}
-      >
-        <Image
-          source={require('../../../assets/icons/people-icon.png')}
-          style={styles.occupancyIcon}
-          resizeMode="contain"
-        />
-        <Text style={styles.occupancyText}>{guest.guestCount}</Text>
-      </View>
-
-      {/* ETA/EDT */}
-      <Text
-        style={[
-          styles.time,
-          {
-            left: (isArrival ? config.eta.left : config.edt.left) * scaleX,
-            top: timeTop * scaleX,
-          },
-        ]}
-      >
-        {guest.timeLabel}: {guest.time}
-      </Text>
 
       {/* Special Instructions - show for all guests if available */}
       {specialInstructions && (
@@ -134,8 +111,8 @@ export default function GuestInfoCard({
             style={[
               styles.specialInstructionsTitle,
               {
-                left: GUEST_INFO.arrival.specialInstructions.title.left * scaleX,
-                top: specialTitleTop * scaleX,
+                left: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.title.left * normalizedScaleX,
+                top: (ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.title.top - absoluteTop) * normalizedScaleX,
               },
             ]}
           >
@@ -145,9 +122,9 @@ export default function GuestInfoCard({
             style={[
               styles.specialInstructionsText,
               {
-                left: GUEST_INFO.arrival.specialInstructions.text.left * scaleX,
-                top: specialTextTop * scaleX,
-                width: GUEST_INFO.arrival.specialInstructions.text.width * scaleX,
+                left: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.text.left * normalizedScaleX,
+                top: (ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.text.top - absoluteTop) * normalizedScaleX,
+                width: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.text.width * normalizedScaleX,
               },
             ]}
           >
@@ -162,7 +139,7 @@ export default function GuestInfoCard({
           style={[
             styles.dividerAfterSpecial,
             {
-              top: (GUEST_INFO.divider.top - absoluteTop) * scaleX,
+              top: (ROOM_DETAIL_GUEST_INFO.divider.top - absoluteTop) * normalizedScaleX,
             },
           ]}
         />
@@ -177,79 +154,30 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  icon: {
-    position: 'absolute',
-    width: 21 * scaleX,
-    height: 21 * scaleX,
-  },
-  name: {
-    position: 'absolute',
-    fontSize: GUEST_INFO.arrival.name.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold as any,
-    color: GUEST_INFO.arrival.name.color,
-  },
-  numberBadge: {
-    position: 'absolute',
-    fontSize: GUEST_INFO.arrival.numberBadge.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
-    color: GUEST_INFO.arrival.numberBadge.color,
-  },
-  dates: {
-    position: 'absolute',
-    fontSize: GUEST_INFO.arrival.dates.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
-    color: GUEST_INFO.arrival.dates.color,
-  },
-  occupancyContainer: {
-    position: 'absolute',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  occupancyIcon: {
-    width: 14 * scaleX,
-    height: 14 * scaleX,
-    marginRight: 5 * scaleX,
-  },
-  occupancyText: {
-    fontSize: GUEST_INFO.arrival.occupancy.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
-    color: GUEST_INFO.arrival.occupancy.color,
-  },
-  time: {
-    position: 'absolute',
-    fontSize: GUEST_INFO.arrival.eta.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular as any,
-    color: GUEST_INFO.arrival.eta.color,
-  },
   specialInstructionsContainer: {
     position: 'relative',
   },
   specialInstructionsTitle: {
     position: 'absolute',
-    fontSize: GUEST_INFO.arrival.specialInstructions.title.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold as any,
-    color: GUEST_INFO.arrival.specialInstructions.title.color,
+    fontSize: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.title.fontSize * normalizedScaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: 'bold' as any,
+    color: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.title.color,
   },
   specialInstructionsText: {
     position: 'absolute',
-    fontSize: GUEST_INFO.arrival.specialInstructions.text.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
-    color: GUEST_INFO.arrival.specialInstructions.text.color,
-    lineHeight: 18 * scaleX,
+    fontSize: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.text.fontSize * normalizedScaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: 'light' as any,
+    color: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.text.color,
+    lineHeight: 18 * normalizedScaleX,
   },
   dividerAfterSpecial: {
     position: 'absolute',
-    left: GUEST_INFO.divider.left,
-    width: GUEST_INFO.divider.width * scaleX,
-    height: GUEST_INFO.divider.height,
-    backgroundColor: GUEST_INFO.divider.color,
+    left: ROOM_DETAIL_GUEST_INFO.divider.left,
+    width: ROOM_DETAIL_GUEST_INFO.divider.width * normalizedScaleX,
+    height: ROOM_DETAIL_GUEST_INFO.divider.height,
+    backgroundColor: ROOM_DETAIL_GUEST_INFO.divider.color,
   },
 });
 

@@ -13,7 +13,7 @@ export const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
 // Normalized scale - prevents extreme scaling (clamped between 0.8 and 1.2)
 // This ensures elements don't become too small on small screens or too large on big screens
-export const normalizedScaleX = Math.max(0.8, Math.min(1.2, scaleX));
+export const normalizedScaleX: number = Math.max(0.8, Math.min(1.2, scaleX));
 
 /**
  * Scale a value using normalized scaling
