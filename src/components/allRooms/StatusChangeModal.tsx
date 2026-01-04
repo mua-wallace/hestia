@@ -33,7 +33,7 @@ export default function StatusChangeModal({
     onClose();
   };
 
-  if (!room || !buttonPosition) return null;
+  if (!room) return null;
 
   // Modal width (scaled) - full card width
   const modalWidth = CARD_DIMENSIONS.width * scaleX; // 426px scaled (full card width)
@@ -43,7 +43,7 @@ export default function StatusChangeModal({
   let triangleLeft: number;
   const triangleTopOffset = -10 * scaleX; // Position triangle above modal top to point upward to button
 
-  if (showTriangle) {
+  if (showTriangle && buttonPosition) {
     // Calculate modal position: below the status button with margin
     // buttonPosition.y is the top of the button, buttonPosition.height is the button height
     // So buttonPosition.y + buttonPosition.height gives us the bottom of the button
@@ -63,12 +63,12 @@ export default function StatusChangeModal({
     const triangleHalfWidth = 12 * scaleX; // Half of triangle base
     triangleLeft = (buttonCenterX - modalLeft - triangleHalfWidth) / scaleX;
   } else {
-    // Position modal directly below header with no margin
+    // Position modal directly below header with no gap - modal starts exactly where header ends
     // Header height is 232px from roomDetailStyles
     const HEADER_HEIGHT = 232 * scaleX;
-    const screenMargin = 7 * scaleX; // Same margin as used in AllRooms screen
-    modalLeft = screenMargin; // Equal left and right margins
-    modalTopPosition = HEADER_HEIGHT; // Start right after header, no margin
+    const screenMargin = CARD_DIMENSIONS.marginHorizontal * scaleX; // 7px scaled (matches card margin)
+    modalLeft = screenMargin; // Align with card margin
+    modalTopPosition = HEADER_HEIGHT; // Start exactly at header bottom (232px), no gap
     triangleLeft = 0; // Not used when triangle is hidden
   }
 
@@ -116,7 +116,10 @@ export default function StatusChangeModal({
           )}
           
           <TouchableOpacity
-            style={styles.modalContainer}
+            style={[
+              styles.modalContainer,
+              !showTriangle && styles.modalContainerNoGap
+            ]}
             activeOpacity={1}
             onPress={(e) => e.stopPropagation()}
           >
@@ -200,6 +203,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 35 * scaleX,
     elevation: 10,
+  },
+  modalContainerNoGap: {
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    marginTop: 0,
+    paddingTop: 20 * scaleX,
   },
   headerText: {
     fontSize: 16 * scaleX,

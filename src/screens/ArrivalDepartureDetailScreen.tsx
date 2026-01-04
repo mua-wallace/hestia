@@ -72,7 +72,13 @@ export default function ArrivalDepartureDetailScreen() {
   };
 
   const handleBackPress = () => {
-    navigation.goBack();
+    // Navigate back to previous screen (All Rooms)
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      // Fallback: navigate to AllRooms if can't go back
+      navigation.navigate('AllRooms');
+    }
   };
 
   const handleStatusPress = () => {

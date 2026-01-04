@@ -54,8 +54,8 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     position: 'relative',
-    width: 50 * scaleX, // Accommodate largest icon (Rooms: 50x36)
-    height: 36 * scaleX, // Accommodate tallest icon (Home/Rooms/Chat: 36x36)
+    width: (50 + 12) * scaleX, // Accommodate largest icon (50) + badge space (12)
+    height: (36 + 12) * scaleX, // Accommodate tallest icon (36) + badge space (12)
     marginBottom: 8 * scaleX, // Increased spacing for better visual balance
     justifyContent: 'center',
     alignItems: 'center',
@@ -67,17 +67,20 @@ const styles = StyleSheet.create({
   },
   badgeContainer: {
     position: 'absolute',
-    top: -5 * scaleX,
-    right: -10 * scaleX,
+    top: 0 * scaleX, // Position at very top of container
+    right: 0 * scaleX, // Position at very right of container
+    zIndex: 10,
   },
   badge: {
     backgroundColor: '#f92424',
-    borderRadius: 20 * scaleX,
+    borderRadius: 10.2275 * scaleX,
     minWidth: 20.455 * scaleX,
     height: 20.455 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4 * scaleX,
+    borderWidth: 2 * scaleX,
+    borderColor: colors.background.primary,
   },
   badgeText: {
     color: colors.text.white,

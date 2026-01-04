@@ -33,6 +33,7 @@ export default function RoomDetailHeader({
         style={styles.backButton}
         onPress={onBackPress}
         activeOpacity={0.7}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <Image
           source={require('../../../assets/icons/back-arrow.png')}
@@ -90,7 +91,8 @@ const styles = StyleSheet.create({
     right: 0,
     height: ROOM_DETAIL_HEADER.height * scaleX,
     // backgroundColor is set dynamically based on status
-    zIndex: 10, // Above background
+    zIndex: 100, // Above all other content
+    elevation: 100, // For Android
   },
   backButton: {
     position: 'absolute',
@@ -100,6 +102,7 @@ const styles = StyleSheet.create({
     height: ROOM_DETAIL_HEADER.backButton.height * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 20, // Ensure it's above other elements
   },
   backArrow: {
     width: ROOM_DETAIL_HEADER.backButton.width * scaleX,

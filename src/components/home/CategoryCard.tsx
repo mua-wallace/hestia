@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   },
   statusGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20 * scaleX,
     marginTop: 30 * scaleX, // Increased from 20 to 30 for more space

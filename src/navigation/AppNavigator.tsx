@@ -79,13 +79,32 @@ export default function AppNavigator() {
       initialRouteName="Splash"
       screenOptions={{
         headerShown: false,
+        animation: 'slide_from_right',
+        animationDuration: 250,
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        fullScreenGestureEnabled: true,
       }}
     >
       <Stack.Screen name="Splash" component={SplashScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Main" component={MainTabs} />
-      <Stack.Screen name="AllRooms" component={AllRoomsScreen} />
-      <Stack.Screen name="ArrivalDepartureDetail" component={ArrivalDepartureDetailScreen} />
+      <Stack.Screen 
+        name="AllRooms" 
+        component={AllRoomsScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="ArrivalDepartureDetail" 
+        component={ArrivalDepartureDetailScreen}
+        options={{
+          animation: 'slide_from_right',
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
+        }}
+      />
       <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
       <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
       <Stack.Screen name="CreateTicketForm" component={CreateTicketFormScreen} />

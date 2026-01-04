@@ -66,11 +66,16 @@ export default function StatusIndicator({ color, icon, count, label, iconWidth, 
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    marginHorizontal: 8 * scaleX,
+    flex: 1, // Equal spacing between icons
+    minWidth: 0, // Allow flex to work properly
   },
   iconContainer: {
     position: 'relative',
     marginBottom: 8 * scaleX,
+    width: (50.017 + 16) * scaleX, // Circle width + space for badge moved further right
+    height: (50.017 + 4) * scaleX, // Circle height + small space for badge
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   circle: {
     width: 50.017 * scaleX,
@@ -86,8 +91,10 @@ const styles = StyleSheet.create({
   },
   badgeContainer: {
     position: 'absolute',
-    bottom: -5 * scaleX,
-    right: -5 * scaleX,
+    // Position badge at bottom-right corner, moved further right to avoid covering icon
+    bottom: -4 * scaleX,
+    right: -16 * scaleX, // Moved further right to reduce icon coverage
+    zIndex: 10,
   },
   badge: {
     backgroundColor: '#ffffff',
