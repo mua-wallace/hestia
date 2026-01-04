@@ -135,8 +135,8 @@ const styles = StyleSheet.create({
   },
   statusGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    justifyContent: 'space-around', // Use space-around for even distribution
+    alignItems: 'flex-start', // Align all items at the top for consistent vertical alignment
     paddingHorizontal: 20 * normalizedScaleX,
     marginTop: 30 * normalizedScaleX,
     flexWrap: 'nowrap', // Prevent wrapping on small screens

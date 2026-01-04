@@ -74,6 +74,8 @@ const styles = StyleSheet.create({
     flex: 1, // Equal spacing between icons
     minWidth: 0, // Allow flex to work properly
     maxWidth: '100%', // Prevent overflow on small screens
+    // Ensure consistent alignment
+    justifyContent: 'flex-start',
   },
   iconContainer: {
     position: 'relative',
@@ -82,6 +84,8 @@ const styles = StyleSheet.create({
     height: iconContainerHeight,
     justifyContent: 'center',
     alignItems: 'center',
+    // Ensure consistent horizontal alignment - center the container
+    alignSelf: 'center',
   },
   circle: {
     width: 50.017 * normalizedScaleX,
@@ -127,6 +131,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexWrap: 'wrap', // Allow wrapping on very small screens
+    width: '100%', // Ensure full width for proper centering
+    // Ensure consistent horizontal alignment with icon above
+    alignSelf: 'center',
   },
   label: {
     fontSize: 14 * normalizedScaleX,
