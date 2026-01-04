@@ -1,7 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, Dimensions } from 'react-native';
 import { colors, borderRadius, getStatusColor, getStatusBackgroundColor } from '../theme';
 import type { RoomStatus } from '../types';
+import { normalizedScaleX } from '../utils/responsive';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const DESIGN_WIDTH = 440;
+const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
 interface StatusBadgeProps {
   status: RoomStatus;
@@ -59,26 +64,26 @@ const styles = StyleSheet.create({
   },
   countContainer: {
     position: 'absolute',
-    bottom: -15,
-    right: -15,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    bottom: -15 * normalizedScaleX,
+    right: -15 * normalizedScaleX,
+    width: 34 * normalizedScaleX,
+    height: 34 * normalizedScaleX,
+    borderRadius: 17 * normalizedScaleX,
     backgroundColor: colors.background.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1 * normalizedScaleX,
     borderColor: colors.border.medium,
   },
   count: {
-    fontSize: 20,
+    fontSize: 20 * normalizedScaleX,
     fontWeight: '700',
     color: colors.text.primary,
     fontFamily: 'Helvetica',
   },
   label: {
-    marginTop: 8,
-    fontSize: 14,
+    marginTop: 8 * normalizedScaleX,
+    fontSize: 14 * normalizedScaleX,
     color: colors.text.primary,
     fontFamily: 'Inter',
     fontWeight: '300',

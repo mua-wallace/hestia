@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
 import { typography } from '../../theme';
+import { normalizedScaleX } from '../../utils/responsive';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -34,8 +35,8 @@ export default function PriorityBadge({ count }: PriorityBadgeProps) {
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    width: 58 * scaleX,
-    height: 47 * scaleX,
+    width: 58 * normalizedScaleX,
+    height: 47 * normalizedScaleX,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -44,24 +45,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   icon: {
-    width: 58 * scaleX,
-    height: 47 * scaleX,
+    width: 58 * normalizedScaleX,
+    height: 47 * normalizedScaleX,
   },
   badgeContainer: {
     position: 'absolute',
-    top: -2 * scaleX,
-    right: -5 * scaleX,
+    top: -2 * normalizedScaleX,
+    right: -5 * normalizedScaleX,
   },
   badge: {
     backgroundColor: '#f92424',
-    borderRadius: 12 * scaleX,
-    width: 24 * scaleX,
-    height: 24 * scaleX,
+    borderRadius: 12 * normalizedScaleX,
+    width: 24 * normalizedScaleX,
+    height: 24 * normalizedScaleX,
     justifyContent: 'center',
     alignItems: 'center',
   },
   badgeText: {
-    fontSize: 15 * scaleX,
+    fontSize: 15 * normalizedScaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: '#ffffff',

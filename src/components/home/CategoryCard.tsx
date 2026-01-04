@@ -3,10 +3,10 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { CategorySection } from '../../types/home.types';
 import { colors, typography } from '../../theme';
 import { Dimensions } from 'react-native';
+import { normalizedScaleX, scaleX } from '../../utils/responsive';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 import StatusIndicator from './StatusIndicator';
 import PriorityBadge from './PriorityBadge';
 
@@ -137,8 +137,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20 * scaleX,
-    marginTop: 30 * scaleX, // Increased from 20 to 30 for more space
+    paddingHorizontal: 20 * normalizedScaleX,
+    marginTop: 30 * normalizedScaleX,
+    flexWrap: 'nowrap', // Prevent wrapping on small screens
   },
 });
 

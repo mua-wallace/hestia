@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native';
 import { colors, typography } from '../../theme';
+import { normalizedScaleX } from '../../utils/responsive';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -18,7 +19,7 @@ interface TabBarItemProps {
 
 export default function TabBarItem({ icon, label, active = false, badge, onPress, iconWidth, iconHeight }: TabBarItemProps) {
   const iconStyle = iconWidth && iconHeight 
-    ? { width: iconWidth * scaleX, height: iconHeight * scaleX }
+    ? { width: iconWidth * normalizedScaleX, height: iconHeight * normalizedScaleX }
     : styles.icon;
     
   return (
@@ -50,13 +51,13 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 40 * scaleX,
+    minWidth: 40 * normalizedScaleX,
   },
   iconContainer: {
     position: 'relative',
-    width: (50 + 12) * scaleX, // Accommodate largest icon (50) + badge space (12)
-    height: (36 + 12) * scaleX, // Accommodate tallest icon (36) + badge space (12)
-    marginBottom: 8 * scaleX, // Increased spacing for better visual balance
+    width: (50 + 12) * normalizedScaleX, // Accommodate largest icon (50) + badge space (12)
+    height: (36 + 12) * normalizedScaleX, // Accommodate tallest icon (36) + badge space (12)
+    marginBottom: 8 * normalizedScaleX, // Increased spacing for better visual balance
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -67,29 +68,29 @@ const styles = StyleSheet.create({
   },
   badgeContainer: {
     position: 'absolute',
-    top: 0 * scaleX, // Position at very top of container
-    right: 0 * scaleX, // Position at very right of container
+    top: 0 * normalizedScaleX, // Position at very top of container
+    right: 0 * normalizedScaleX, // Position at very right of container
     zIndex: 10,
   },
   badge: {
     backgroundColor: '#f92424',
-    borderRadius: 10.2275 * scaleX,
-    minWidth: 20.455 * scaleX,
-    height: 20.455 * scaleX,
+    borderRadius: 10.2275 * normalizedScaleX,
+    minWidth: 20.455 * normalizedScaleX,
+    height: 20.455 * normalizedScaleX,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4 * scaleX,
-    borderWidth: 2 * scaleX,
+    paddingHorizontal: 4 * normalizedScaleX,
+    borderWidth: 2 * normalizedScaleX,
     borderColor: colors.background.primary,
   },
   badgeText: {
     color: colors.text.white,
-    fontSize: 13 * scaleX,
+    fontSize: 13 * normalizedScaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.light as any,
   },
   label: {
-    fontSize: 15 * scaleX,
+    fontSize: 15 * normalizedScaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.regular as any,
     color: colors.primary.main,

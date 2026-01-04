@@ -1,10 +1,15 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
 import { typography } from '../../theme';
+import { normalizedScaleX } from '../../utils/responsive';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+
+// Calculate responsive dimensions - ensure minimum sizes for badge space
+const iconContainerWidth = (50.017 + 16) * normalizedScaleX;
+const iconContainerHeight = (50.017 + 4) * normalizedScaleX;
 
 interface StatusIndicatorProps {
   color: string;
@@ -20,8 +25,8 @@ interface StatusIndicatorProps {
 export default function StatusIndicator({ color, icon, count, label, iconWidth, iconHeight, leftLabelIcon, rightLabelIcon }: StatusIndicatorProps) {
   const iconStyle = [
     styles.icon,
-    iconWidth && { width: iconWidth * scaleX },
-    iconHeight && { height: iconHeight * scaleX },
+    iconWidth && { width: iconWidth * normalizedScaleX },
+    iconHeight && { height: iconHeight * normalizedScaleX },
   ];
 
   return (
@@ -68,49 +73,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1, // Equal spacing between icons
     minWidth: 0, // Allow flex to work properly
+    maxWidth: '100%', // Prevent overflow on small screens
   },
   iconContainer: {
     position: 'relative',
-    marginBottom: 8 * scaleX,
-    width: (50.017 + 16) * scaleX, // Circle width + space for badge moved further right
-    height: (50.017 + 4) * scaleX, // Circle height + small space for badge
+    marginBottom: 8 * normalizedScaleX,
+    width: iconContainerWidth,
+    height: iconContainerHeight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   circle: {
-    width: 50.017 * scaleX,
-    height: 50.017 * scaleX,
-    borderRadius: 37 * scaleX,
+    width: 50.017 * normalizedScaleX,
+    height: 50.017 * normalizedScaleX,
+    borderRadius: 37 * normalizedScaleX,
     justifyContent: 'center',
     alignItems: 'center',
   },
   icon: {
-    width: 18 * scaleX,
-    height: 18 * scaleX,
+    width: 18 * normalizedScaleX,
+    height: 18 * normalizedScaleX,
     tintColor: '#ffffff',
   },
   badgeContainer: {
     position: 'absolute',
     // Position badge at bottom-right corner, moved further right to avoid covering icon
-    bottom: -4 * scaleX,
-    right: -16 * scaleX, // Moved further right to reduce icon coverage
+    // Use percentage-based positioning relative to container for better responsiveness
+    bottom: -4 * normalizedScaleX,
+    right: -16 * normalizedScaleX, // Moved further right to reduce icon coverage
     zIndex: 10,
   },
   badge: {
     backgroundColor: '#ffffff',
-    borderRadius: 17 * scaleX,
-    width: 34 * scaleX,
-    height: 34 * scaleX,
+    borderRadius: 17 * normalizedScaleX,
+    width: 34 * normalizedScaleX,
+    height: 34 * normalizedScaleX,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 2 * normalizedScaleX },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 4 * normalizedScaleX,
     elevation: 3,
   },
   badgeText: {
-    fontSize: 20 * scaleX,
+    fontSize: 20 * normalizedScaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: '#000000',
@@ -119,22 +126,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    flexWrap: 'wrap', // Allow wrapping on very small screens
   },
   label: {
-    fontSize: 14 * scaleX,
+    fontSize: 14 * normalizedScaleX,
     fontFamily: 'Inter',
     fontWeight: '300' as any,
     color: '#000000',
   },
   leftLabelIcon: {
-    width: 18 * scaleX,
-    height: 18 * scaleX,
-    marginRight: 4 * scaleX,
+    width: 18 * normalizedScaleX,
+    height: 18 * normalizedScaleX,
+    marginRight: 4 * normalizedScaleX,
   },
   rightLabelIcon: {
-    width: 18 * scaleX,
-    height: 18 * scaleX,
-    marginLeft: 4 * scaleX,
+    width: 18 * normalizedScaleX,
+    height: 18 * normalizedScaleX,
+    marginLeft: 4 * normalizedScaleX,
   },
 });
 
