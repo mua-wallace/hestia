@@ -63,7 +63,7 @@ export const STATUS_CONFIGS: Record<RoomStatus, StatusConfig> = {
     label: 'In Progress',
   },
   Cleaned: {
-    color: '#5a759d',
+    color: '#4a91fc',
     icon: require('../../assets/icons/cleaned-state-icon.png'),
     label: 'Cleaned',
   },
