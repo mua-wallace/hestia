@@ -33,6 +33,8 @@ export default function ArrivalDepartureDetailScreen() {
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
   const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const statusButtonRef = useRef<TouchableOpacity>(null);
+  // Track current status to update header background color
+  const [currentStatus, setCurrentStatus] = useState<RoomCardData['status']>(room.status);
 
   // Transform room data to detail data format
   // In a real app, this would come from an API or be passed directly
@@ -139,6 +141,9 @@ export default function ArrivalDepartureDetailScreen() {
 
     const newStatus = mapStatusOptionToRoomStatus(statusOption);
 
+    // Update local status state to change header background color
+    setCurrentStatus(newStatus);
+
     // TODO: Update room status in backend/API
     console.log('Status changed for room:', room.roomNumber, 'to:', newStatus);
 
@@ -200,7 +205,7 @@ export default function ArrivalDepartureDetailScreen() {
       <RoomDetailHeader
         roomNumber={room.roomNumber}
         roomCode={room.roomType}
-        status={room.status}
+        status={currentStatus}
         onBackPress={handleBackPress}
         onStatusPress={handleStatusPress}
         statusButtonRef={statusButtonRef}
@@ -337,7 +342,7 @@ export default function ArrivalDepartureDetailScreen() {
           setStatusButtonPosition(null);
         }}
         onStatusSelect={handleStatusSelect}
-        currentStatus={room.status}
+        currentStatus={currentStatus}
         room={room}
         buttonPosition={statusButtonPosition}
         showTriangle={false}
