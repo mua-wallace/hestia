@@ -13,6 +13,7 @@ import AssignedToSection from '../components/roomDetail/AssignedToSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
 import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
+import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal';
 import ReassignModal from '../components/roomDetail/ReassignModal';
 import type { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import type { RoomDetailData, DetailTab, Note } from '../types/roomDetail.types';
@@ -34,6 +35,7 @@ export default function ArrivalDepartureDetailScreen() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
   const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
+  const [showRefuseServiceModal, setShowRefuseServiceModal] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const statusButtonRef = useRef<TouchableOpacity>(null);
@@ -129,6 +131,14 @@ export default function ArrivalDepartureDetailScreen() {
       return;
     }
 
+    // If RefuseService is selected, show the Refuse Service modal
+    if (statusOption === 'RefuseService') {
+      console.log('RefuseService selected, opening RefuseServiceModal');
+      setShowStatusModal(false);
+      setShowRefuseServiceModal(true);
+      return;
+    }
+
     // Map status option to RoomStatus
     const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['status'] => {
       switch (option) {
@@ -180,6 +190,16 @@ export default function ArrivalDepartureDetailScreen() {
     
     // Close modal
     setShowPromiseTimeModal(false);
+    
+    // TODO: Update room status or show success message
+  };
+
+  const handleRefuseServiceConfirm = (selectedReasons: string[], customReason?: string) => {
+    // TODO: Save refuse service reasons to backend/API
+    console.log('Refuse Service confirmed for room:', room.roomNumber, 'reasons:', selectedReasons, 'custom:', customReason);
+    
+    // Close modal
+    setShowRefuseServiceModal(false);
     
     // TODO: Update room status or show success message
   };
@@ -403,6 +423,16 @@ export default function ArrivalDepartureDetailScreen() {
         visible={showPromiseTimeModal}
         onClose={() => setShowPromiseTimeModal(false)}
         onConfirm={handlePromiseTimeConfirm}
+        roomNumber={room.roomNumber}
+        assignedTo={roomDetail.assignedTo}
+        onReassignPress={handleReassign}
+      />
+
+      {/* Refuse Service Modal */}
+      <RefuseServiceModal
+        visible={showRefuseServiceModal}
+        onClose={() => setShowRefuseServiceModal(false)}
+        onConfirm={handleRefuseServiceConfirm}
         roomNumber={room.roomNumber}
         assignedTo={roomDetail.assignedTo}
         onReassignPress={handleReassign}
