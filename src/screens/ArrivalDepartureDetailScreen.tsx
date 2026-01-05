@@ -12,6 +12,7 @@ import LostAndFoundSection from '../components/roomDetail/LostAndFoundSection';
 import AssignedToSection from '../components/roomDetail/AssignedToSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
+import ReassignModal from '../components/roomDetail/ReassignModal';
 import type { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import type { RoomDetailData, DetailTab, Note } from '../types/roomDetail.types';
 import type { RootStackParamList } from '../navigation/types';
@@ -31,6 +32,7 @@ export default function ArrivalDepartureDetailScreen() {
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
+  const [showReassignModal, setShowReassignModal] = useState(false);
   const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const statusButtonRef = useRef<TouchableOpacity>(null);
   // Track current status to update header background color
@@ -178,8 +180,26 @@ export default function ArrivalDepartureDetailScreen() {
   };
 
   const handleReassign = () => {
-    // TODO: Show reassign modal
-    console.log('Reassign');
+    console.log('handleReassign called, opening ReassignModal');
+    setShowReassignModal(true);
+  };
+
+  const handleStaffSelect = (staffId: string) => {
+    console.log('Staff selected:', staffId);
+    // TODO: Update room assignment in backend
+    // Update local state
+    if (roomDetail.assignedTo) {
+      roomDetail.assignedTo.id = staffId;
+      // In a real app, you'd fetch the staff member details
+    }
+    setShowReassignModal(false);
+  };
+
+  const handleAutoAssign = () => {
+    console.log('Auto assign requested');
+    // TODO: Implement auto assign logic
+    // For now, just close the modal
+    setShowReassignModal(false);
   };
 
   if (!room) {
@@ -353,6 +373,18 @@ export default function ArrivalDepartureDetailScreen() {
         visible={showReturnLaterModal}
         onClose={() => setShowReturnLaterModal(false)}
         onConfirm={handleReturnLaterConfirm}
+        roomNumber={room.roomNumber}
+        assignedTo={roomDetail.assignedTo}
+        onReassignPress={handleReassign}
+      />
+
+      {/* Reassign Modal */}
+      <ReassignModal
+        visible={showReassignModal}
+        onClose={() => setShowReassignModal(false)}
+        onStaffSelect={handleStaffSelect}
+        onAutoAssign={handleAutoAssign}
+        currentAssignedStaffId={roomDetail.assignedTo?.id}
         roomNumber={room.roomNumber}
       />
     </View>
