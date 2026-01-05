@@ -12,6 +12,7 @@ import LostAndFoundSection from '../components/roomDetail/LostAndFoundSection';
 import AssignedToSection from '../components/roomDetail/AssignedToSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
+import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
 import ReassignModal from '../components/roomDetail/ReassignModal';
 import type { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import type { RoomDetailData, DetailTab, Note } from '../types/roomDetail.types';
@@ -32,6 +33,7 @@ export default function ArrivalDepartureDetailScreen() {
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
+  const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const statusButtonRef = useRef<TouchableOpacity>(null);
@@ -119,6 +121,14 @@ export default function ArrivalDepartureDetailScreen() {
       return;
     }
 
+    // If PromisedTime is selected, show the Promise Time modal
+    if (statusOption === 'PromisedTime') {
+      console.log('PromisedTime selected, opening PromiseTimeModal');
+      setShowStatusModal(false);
+      setShowPromiseTimeModal(true);
+      return;
+    }
+
     // Map status option to RoomStatus
     const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['status'] => {
       switch (option) {
@@ -160,6 +170,16 @@ export default function ArrivalDepartureDetailScreen() {
     
     // Close modal
     setShowReturnLaterModal(false);
+    
+    // TODO: Update room status or show success message
+  };
+
+  const handlePromiseTimeConfirm = (date: Date, time: string, period: 'AM' | 'PM') => {
+    // TODO: Save promise time to backend/API
+    console.log('Promise Time confirmed for room:', room.roomNumber, 'on:', date.toDateString(), 'at:', time, period);
+    
+    // Close modal
+    setShowPromiseTimeModal(false);
     
     // TODO: Update room status or show success message
   };
@@ -373,6 +393,16 @@ export default function ArrivalDepartureDetailScreen() {
         visible={showReturnLaterModal}
         onClose={() => setShowReturnLaterModal(false)}
         onConfirm={handleReturnLaterConfirm}
+        roomNumber={room.roomNumber}
+        assignedTo={roomDetail.assignedTo}
+        onReassignPress={handleReassign}
+      />
+
+      {/* Promise Time Modal */}
+      <PromiseTimeModal
+        visible={showPromiseTimeModal}
+        onClose={() => setShowPromiseTimeModal(false)}
+        onConfirm={handlePromiseTimeConfirm}
         roomNumber={room.roomNumber}
         assignedTo={roomDetail.assignedTo}
         onReassignPress={handleReassign}
