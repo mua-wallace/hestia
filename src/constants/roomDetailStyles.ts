@@ -228,22 +228,19 @@ export const GUEST_INFO = {
 
 // Notes Section
 export const NOTES_SECTION = {
-  title: {
-    left: 52,
-    top: 652,
-    fontSize: 18,
-    fontWeight: 'bold' as const,
-    color: '#000000',
-  },
   icon: {
-    left: 25, // Figma position: Group 464 at x=25
-    top: 647, // Figma position: Group 464 at y=647
+    // Center-align icon with badge vertically
+    // Badge center: 646 + 20.455/2 = 646 + 10.2275 = 656.2275
+    // Icon center should be: 656.2275
+    // Icon top: 656.2275 - 31.974/2 = 656.2275 - 15.987 = 640.24
+    left: 25, // From Figma visual inspection
+    top: 640.24, // Center-aligned with badge
     width: 31.974,
     height: 31.974,
   },
   badge: {
-    left: 52, // Figma position: Group 465 at x=52
-    top: 651, // Figma position: Group 465 at y=651
+    left: 52, // Figma: left-[52px]
+    top: 646, // Figma: top-[646px] - exact match
     fontSize: 15,
     fontWeight: 'light' as any,
     color: '#ffffff',
@@ -251,6 +248,17 @@ export const NOTES_SECTION = {
     width: 20.455,
     height: 20.455,
     borderRadius: 10.2275,
+  },
+  badgeText: {
+    left: 58.55, // Figma: left-[58.55px]
+    top: 647.45, // Figma: top-[647.45px] - exact match
+  },
+  title: {
+    left: 83, // Figma: calc(50%-137px) = 220-137 = 83px (title starts after badge)
+    top: 647, // Updated from 652 to match Figma
+    fontSize: 18,
+    fontWeight: 'bold' as const,
+    color: '#000000',
   },
   addButton: {
     left: 331,
@@ -273,8 +281,8 @@ export const NOTES_SECTION = {
   },
   note: {
     text: {
-      left: 29,
-      top: 711, // First note
+      left: 29, // calc(50%-192px) = 220-192 = 28px, rounded to 29px
+      top: 706, // First note text from Figma
       fontSize: 13,
       fontWeight: 'light' as const,
       color: '#000000',
@@ -282,21 +290,21 @@ export const NOTES_SECTION = {
     },
     profilePicture: {
       left: 29,
-      top: 772,
+      top: 767, // First profile picture from Figma
       width: 25,
       height: 25,
     },
     staffName: {
       left: 63,
-      top: 777,
+      top: 772, // First staff name from Figma
       fontSize: 11,
       fontWeight: 'regular' as const,
       color: '#000000',
     },
     note2: {
-      textTop: 813,
-      profileTop: 874,
-      staffNameTop: 879,
+      textTop: 808, // Second note text from Figma
+      profileTop: 869, // Second profile picture from Figma
+      staffNameTop: 874, // Second staff name from Figma
     },
   },
 } as const;

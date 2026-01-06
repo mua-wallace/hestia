@@ -321,6 +321,8 @@ export default function AllRoomsScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           scrollEnabled={!showMorePopup && !showStatusModal}
+          clipsToBounds={false}
+          contentInsetAdjustmentBehavior="automatic"
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -417,13 +419,16 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
     position: 'relative',
+    overflow: 'visible', // Allow content to overflow on iOS
   },
   scrollView: {
     flex: 1,
+    overflow: 'visible', // Allow content to overflow on iOS
   },
   scrollContent: {
     paddingTop: (217 + 23) * scaleX, // Header height (217px) + spacing from search input (23px)
     paddingBottom: 152 * scaleX + 20 * scaleX, // Bottom nav height + extra padding
+    overflow: 'visible', // Allow content to overflow on iOS
   },
   contentBlurOverlay: {
     position: 'absolute',

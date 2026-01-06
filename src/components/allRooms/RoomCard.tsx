@@ -157,6 +157,11 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
         <View style={[styles.guestContainerBg, guestContainerBgStyle]} />
       )}
 
+      {/* Horizontal divider between guests for Arrival/Departure cards - render FIRST so it's below guest names */}
+      {isArrivalDeparture && (
+        <View style={styles.guestDividerLine} />
+      )}
+
       {/* Guest Information Sections */}
       {room.guests.map((guest, index) => {
         const isFirstGuest = index === 0;
@@ -168,22 +173,17 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
           : (isFirstGuest ? room.priorityCount : undefined);
         
         return (
-          <React.Fragment key={`guest-${index}`}>
-            <GuestInfoSection 
-              guest={guest} 
-              priorityCount={guestPriorityCount}
-              isPriority={room.isPriority}
-              isFirstGuest={isFirstGuest}
-              isSecondGuest={isSecondGuest}
-              hasNotes={hasNotes}
-              category={room.category}
-              isArrivalDeparture={isArrivalDeparture}
-            />
-            {/* Horizontal divider between guests for Arrival/Departure cards */}
-            {isArrivalDeparture && isFirstGuest && (
-              <View style={styles.guestDividerLine} />
-            )}
-          </React.Fragment>
+          <GuestInfoSection 
+            key={`guest-${index}`}
+            guest={guest} 
+            priorityCount={guestPriorityCount}
+            isPriority={room.isPriority}
+            isFirstGuest={isFirstGuest}
+            isSecondGuest={isSecondGuest}
+            hasNotes={hasNotes}
+            category={room.category}
+            isArrivalDeparture={isArrivalDeparture}
+          />
         );
       })}
 
@@ -357,6 +357,8 @@ const styles = StyleSheet.create({
     top: 75 * scaleX, // Room 201: divider between two guests at top-[75px]
     height: DIVIDERS.horizontal.height,
     backgroundColor: DIVIDERS.horizontal.color,
+    zIndex: 1, // Lowest z-index - below all guest info elements
+    elevation: 1, // Android elevation - lowest
   },
 });
 

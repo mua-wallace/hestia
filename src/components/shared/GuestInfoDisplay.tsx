@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
-import { GUEST_INFO } from '../../constants/allRoomsStyles';
+import { GUEST_INFO, CARD_DIMENSIONS } from '../../constants/allRoomsStyles';
 import { normalizedScaleX } from '../../utils/responsive';
 import type { GuestInfo } from '../../types/allRooms.types';
 
@@ -238,8 +238,20 @@ export default function GuestInfoDisplay({
         : ((GUEST_INFO.guestCount.positions.standardArrival.textLeft) - calculatedContainerLeft) * normalizedScaleX)
     : 0;
 
+  // Calculate container width: card width minus container left position to ensure content is visible
+  const containerWidth = (CARD_DIMENSIONS.width - calculatedContainerLeft) * normalizedScaleX;
+
   return (
-    <View style={[styles.container, { left: calculatedContainerLeft * normalizedScaleX }, containerStyle]}>
+    <View 
+      style={[
+        styles.container, 
+        { 
+          left: calculatedContainerLeft * normalizedScaleX,
+          width: containerWidth, // Set explicit width to ensure content is visible
+        }, 
+        containerStyle
+      ]}
+    >
       {/* Guest Icon - positioned absolutely when needed */}
       {guestIconPos !== null ? (
         <Image
@@ -282,19 +294,16 @@ export default function GuestInfoDisplay({
           >
             {guest.name}
           </Text>
+          {/* Priority/Number Badge - positioned immediately after name text with consistent spacing */}
+          {displayBadge && (
+            <Text 
+              style={styles.priorityCountInline}
+              numberOfLines={1}
+            >
+              {displayBadge}
+            </Text>
+          )}
         </View>
-        {/* Priority/Number Badge - positioned in the same row for proper spacing */}
-        {/* For Arrival/Departure cards, show inline with name using flexbox for proper spacing */}
-        {displayBadge && (
-          <Text 
-            style={[
-              styles.priorityCountInline,
-            ]}
-            numberOfLines={1}
-          >
-            {displayBadge}
-          </Text>
-        )}
       </View>
 
       {/* Date Range Row */}
@@ -306,6 +315,7 @@ export default function GuestInfoDisplay({
           { 
             top: calculatedDateTop * normalizedScaleX,
             left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+            zIndex: 10, // Lower z-index so time can appear above
           }
         ]}>
           <Text style={styles.dateRange}>{guest.dateRange}</Text>
@@ -329,6 +339,7 @@ export default function GuestInfoDisplay({
           { 
             top: calculatedDateTop * normalizedScaleX,
             left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+            zIndex: 10, // Lower z-index so time can appear above
           }
         ]}>
           <Text style={styles.dateRange}>{guest.dateRange}</Text>
@@ -342,6 +353,7 @@ export default function GuestInfoDisplay({
           { 
             top: calculatedDateTop * normalizedScaleX,
             left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+            zIndex: 10, // Lower z-index so time can appear above
           }
         ]}>
           <Text style={styles.dateRange}>{guest.dateRange}</Text>
@@ -375,7 +387,7 @@ export default function GuestInfoDisplay({
         </>
       )}
 
-      {/* Time (ETA/EDT) - only for cards that don't show it inline (Arrival/Departure priority) */}
+      {/* Time (ETA/EDT) - only for cards that don't show it inline (Arrival/Departure priority) - render LAST to ensure it's on top */}
       {guest.timeLabel && guest.time && timePos && !(isArrival || isStayover || isTurndown) && (
         <Text style={[
           styles.time, 
@@ -387,8 +399,6 @@ export default function GuestInfoDisplay({
           {guest.timeLabel}: {guest.time}
         </Text>
       )}
-
-      {/* Guest Count - now shown inline with date range above, so this section is no longer needed */}
     </View>
   );
 }
@@ -398,14 +408,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     overflow: 'visible', // Ensure content is not clipped
+    zIndex: 10, // Ensure container and its children are above dividers
+    pointerEvents: 'box-none', // Allow pointer events to pass through to children on iOS
+    // Width is set dynamically in component to ensure content is visible
   },
   guestRow: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center', // Vertically center all items including badge
+    alignContent: 'center',
     left: 0,
-    width: 280 * normalizedScaleX, // Fixed width that scales - ensures visibility
+    width: 300 * normalizedScaleX, // Fixed width - card is 426px, container starts at 73px, so 426-73=353px available, use 300px to leave space
     overflow: 'visible', // Ensure text is not clipped
+    zIndex: 30, // Highest z-index to ensure guest name is above divider and all other elements on iOS
+    elevation: 30, // Android elevation for proper layering
   },
   guestIcon: {
     width: GUEST_INFO.icon.width * normalizedScaleX,
@@ -423,8 +439,11 @@ const styles = StyleSheet.create({
     tintColor: undefined,
   },
   guestNameContainer: {
-    justifyContent: 'center',
-    minWidth: 0, // Allow text to shrink if needed
+    flexDirection: 'row', // Horizontal layout for name and badge
+    alignItems: 'center', // Vertically center name and badge
+    flexShrink: 1, // Allow shrinking but prefer to show full name
+    flexGrow: 0, // Don't grow - let badge follow immediately after
+    minWidth: 120 * normalizedScaleX, // Minimum width to ensure name starts showing
     overflow: 'visible', // Ensure text is not clipped
   },
   guestNameContainerNoIcon: {
@@ -439,7 +458,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.bold as any,
     color: GUEST_INFO.name.color,
     lineHeight: GUEST_INFO.name.lineHeight * normalizedScaleX,
-    flexShrink: 0, // Prevent text from shrinking - show full name
+    backgroundColor: 'transparent', // Ensure no background covers text
   },
   priorityCount: {
     position: 'absolute',
@@ -455,7 +474,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.light as any,
     color: GUEST_INFO.priorityBadge.color,
     lineHeight: GUEST_INFO.priorityBadge.lineHeight * normalizedScaleX,
-    marginLeft: 5 * normalizedScaleX, // Small spacing after name - matches Figma (approximately 4px)
+    marginLeft: 4 * normalizedScaleX, // Consistent spacing after name text - matches Figma (4px)
     flexShrink: 0, // Prevent badge from shrinking
   },
   priorityCountSmall: {
@@ -467,21 +486,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     left: 0,
-    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Set explicit height for alignment
+    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Set explicit height for alignment - don't extend beyond
+    zIndex: 5, // Very low z-index so time appears above
+    overflow: 'visible', // Ensure content is not clipped
+    maxHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Prevent container from extending
   },
   detailsRowWithCount: {
     position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
     left: 0,
-    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX,
+    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Don't extend beyond this height
+    zIndex: 5, // Very low z-index so time appears above
+    overflow: 'visible', // Ensure content is not clipped
+    maxHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Prevent container from extending
   },
   detailsRowWithTime: {
     position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
     left: 0,
-    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX,
+    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Don't extend beyond this height
+    zIndex: 5, // Very low z-index so time appears above
+    overflow: 'visible', // Ensure content is not clipped
+    maxHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Prevent container from extending
   },
   guestCountRow: {
     position: 'absolute',
@@ -498,6 +526,7 @@ const styles = StyleSheet.create({
     lineHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX,
     includeFontPadding: false, // Remove extra padding for better alignment
     textAlignVertical: 'center', // Center text vertically
+    backgroundColor: 'transparent', // Ensure no background covers time
   },
   countIconInline: {
     width: GUEST_INFO.guestCount.icon.width * normalizedScaleX,
@@ -524,6 +553,9 @@ const styles = StyleSheet.create({
     lineHeight: GUEST_INFO.time.lineHeight * normalizedScaleX,
     includeFontPadding: false, // Remove extra padding for better alignment
     textAlignVertical: 'center', // Center text vertically
+    zIndex: 30, // Highest z-index to ensure ETA/EDT are always visible above date
+    elevation: 30, // Android elevation for proper layering
+    backgroundColor: 'transparent', // Ensure no background
   },
   timeInline: {
     fontSize: GUEST_INFO.time.fontSize * normalizedScaleX,
@@ -534,16 +566,8 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
     marginLeft: 8 * normalizedScaleX, // Spacing after date (matches Figma spacing)
-  },
-  timeInline: {
-    fontSize: GUEST_INFO.time.fontSize * normalizedScaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular as any,
-    color: GUEST_INFO.time.color,
-    lineHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Match date range line height for alignment
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    marginLeft: 8 * normalizedScaleX, // Spacing after date
+    zIndex: 25, // Highest z-index to ensure ETA/EDT are always visible above date
+    elevation: 25, // Android elevation for proper layering
   },
   countIcon: {
     position: 'absolute',

@@ -62,12 +62,8 @@ export default function GuestInfoCard({
   const iconLeftRelative = config.icon.left; // 21
   const iconTopRelative = 0; // Icon at same top as name (absoluteTop), so relative = 0
   const nameLeftRelative = config.name.left; // 77
-  // Badge should be positioned with dynamic spacing after the name, matching All Rooms cards
-  // In All Rooms: container at 73, name at 0 relative to container, badge at 165 relative to card = 92 relative to container
-  // So spacing is approximately 92px from container start (or name start when name is at 0)
-  // For room detail: name at 77, so badge at 77 + 92 = 169px (dynamic spacing matching All Rooms)
-  const badgeSpacing = 92; // Same spacing as All Rooms Arrival/Departure cards
-  const badgeLeftRelative = nameLeftRelative + badgeSpacing; // Dynamic position: name left + spacing
+  // Badge position from Figma: exact left position (189 for arrival, 157 for departure)
+  const badgeLeftRelative = config.numberBadge.left; // Exact Figma position
   const badgeTopRelative = config.numberBadge.top - absoluteTop; // Position relative to name (350 - 349 = 1px for arrival)
   const dateLeftRelative = config.dates.left; // 79 or 78
   const timeLeftRelative = isArrival ? config.eta.left : config.edt.left; // 215 or 222

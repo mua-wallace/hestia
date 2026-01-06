@@ -13,18 +13,20 @@ interface NotesSectionProps {
 export default function NotesSection({ notes, onAddPress }: NotesSectionProps) {
   return (
     <View style={styles.container}>
-      {/* Section Header */}
-      <View style={styles.header}>
-        <Image
-          source={require('../../../assets/icons/notes-icon.png')}
-          style={styles.icon}
-          resizeMode="contain"
-        />
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{notes.length}</Text>
-        </View>
-        <Text style={[styles.title, { marginLeft: 30 * scaleX }]}>Notes</Text>
+      {/* Section Header - Icon */}
+      <Image
+        source={require('../../../assets/icons/notes-icon.png')}
+        style={styles.icon}
+        resizeMode="contain"
+      />
+      
+      {/* Section Header - Badge */}
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>{notes.length}</Text>
       </View>
+      
+      {/* Section Header - Title */}
+      <Text style={styles.title}>Notes</Text>
 
       {/* Add Button */}
       <TouchableOpacity
@@ -60,38 +62,37 @@ const styles = StyleSheet.create({
     minHeight: (879 - 646 + 50) * scaleX, // From Notes start (646) to last staff name (879) + padding = 233px + 50px
     marginTop: (646 - 625) * scaleX, // Space from previous divider (625) to Notes section (646) = 21px
   },
-  header: {
-    position: 'absolute',
-    left: NOTES_SECTION.title.left * scaleX,
-    top: (NOTES_SECTION.title.top - 646) * scaleX, // Relative to container start (646px)
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   icon: {
     position: 'absolute',
-    left: (NOTES_SECTION.icon.left - NOTES_SECTION.title.left) * scaleX, // Relative to header: 25 - 52 = -27px
-    top: (NOTES_SECTION.icon.top - NOTES_SECTION.title.top) * scaleX, // Relative to header: 647 - 652 = -5px
+    left: NOTES_SECTION.icon.left * scaleX,
+    top: (NOTES_SECTION.icon.top - 646) * scaleX, // Relative to container start (646px): 640.24 - 646 = -5.76px (center-aligned with badge)
     width: NOTES_SECTION.icon.width * scaleX,
     height: NOTES_SECTION.icon.height * scaleX,
   },
   badge: {
     position: 'absolute',
-    left: (NOTES_SECTION.badge.left - NOTES_SECTION.title.left) * scaleX, // Relative to header
-    top: (NOTES_SECTION.badge.top - NOTES_SECTION.title.top) * scaleX, // Relative to header
+    left: NOTES_SECTION.badge.left * scaleX,
+    top: (NOTES_SECTION.badge.top - 646) * scaleX, // Relative to container start (646px): 646 - 646 = 0px
     width: NOTES_SECTION.badge.width * scaleX,
     height: NOTES_SECTION.badge.height * scaleX,
     borderRadius: NOTES_SECTION.badge.borderRadius * scaleX,
     backgroundColor: NOTES_SECTION.badge.backgroundColor,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', // Center content vertically
+    alignItems: 'center', // Center content horizontally
   },
   badgeText: {
     fontSize: NOTES_SECTION.badge.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.light as any,
     color: NOTES_SECTION.badge.color,
+    textAlign: 'center', // Center text horizontally
+    includeFontPadding: false, // Remove extra padding for precise alignment
+    textAlignVertical: 'center', // Center text vertically (Android)
   },
   title: {
+    position: 'absolute',
+    left: NOTES_SECTION.title.left * scaleX,
+    top: (NOTES_SECTION.title.top - 646) * scaleX, // Relative to container start (646px): 647 - 646 = 1px
     fontSize: NOTES_SECTION.title.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
