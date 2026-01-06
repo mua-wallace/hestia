@@ -1,6 +1,7 @@
-import React from 'react';
-import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text, Animated, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoomStatus, StatusChangeOption, STATUS_OPTIONS, RoomCardData } from '../../types/allRooms.types';
 import { STATUS_BUTTON, CARD_DIMENSIONS, scaleX } from '../../constants/allRoomsStyles';
 import { typography } from '../../theme';
@@ -28,9 +29,67 @@ export default function StatusChangeModal({
   buttonPosition,
   showTriangle = true,
 }: StatusChangeModalProps) {
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (visible) {
+      // Slide up animation
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Reset animations when modal closes
+      slideAnim.setValue(0);
+      opacityAnim.setValue(0);
+    }
+  }, [visible, slideAnim, opacityAnim]);
+
   const handleStatusSelect = (option: StatusChangeOption) => {
-    onStatusSelect(option);
-    onClose();
+    // Animate out before closing
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onStatusSelect(option);
+      onClose();
+    });
+  };
+
+  const handleClose = () => {
+    // Animate out before closing
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+    });
   };
 
   if (!room) return null;
@@ -47,8 +106,10 @@ export default function StatusChangeModal({
     // Calculate modal position: below the status button with margin
     // buttonPosition.y is the top of the button, buttonPosition.height is the button height
     // So buttonPosition.y + buttonPosition.height gives us the bottom of the button
+    // On Android, account for status bar if statusBarTranslucent is true
+    const statusBarOffset = Platform.OS === 'android' ? insets.top : 0;
     const spacing = 20 * scaleX; // Margin between button and modal (increased for better triangle visibility)
-    modalTopPosition = buttonPosition.y + buttonPosition.height + spacing;
+    modalTopPosition = buttonPosition.y + buttonPosition.height + spacing + statusBarOffset;
     
     // Status button center X position on screen (already in screen pixels, scaled)
     const buttonCenterX = buttonPosition.x + buttonPosition.width / 2;
@@ -68,41 +129,55 @@ export default function StatusChangeModal({
     // Moving modal up to align with status indicator at bottom of header (176px + status height)
     const HEADER_HEIGHT = 232 * scaleX;
     const STATUS_INDICATOR_BOTTOM = (176 + 30.769) * scaleX; // Status indicator top (176) + height (30.769)
+    const statusBarOffset = Platform.OS === 'android' ? insets.top : 0;
     const screenMargin = CARD_DIMENSIONS.marginHorizontal * scaleX; // 7px scaled (matches card margin)
     modalLeft = screenMargin; // Align with card margin
-    modalTopPosition = STATUS_INDICATOR_BOTTOM; // Position modal at status indicator bottom, moved up from header bottom
+    modalTopPosition = STATUS_INDICATOR_BOTTOM + statusBarOffset; // Position modal at status indicator bottom, moved up from header bottom
     triangleLeft = 0; // Not used when triangle is hidden
   }
+
+  // Calculate translateY for slide animation
+  // Start from below screen (translateY = modal height + some extra) and slide to 0
+  const modalHeight = 324.185 * scaleX; // Approximate modal height from Figma
+  const translateY = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [modalHeight + 50, 0], // Start below screen, end at position
+  });
 
   return (
     <Modal
       transparent
       visible={visible}
-      animationType="fade"
-      onRequestClose={onClose}
+      animationType="none"
+      onRequestClose={handleClose}
+      statusBarTranslucent={Platform.OS === 'android'}
     >
       {/* Blurred Background Overlay */}
-      <BlurView
-        intensity={20}
-        tint="light"
-        style={styles.blurOverlay}
-      >
-        {/* Backdrop - transparent, just for closing modal */}
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
-        {/* Modal Container - positioned below the status button or centered */}
-        <View 
-          style={[
-            styles.modalWrapper, 
-            showTriangle 
-              ? { top: modalTopPosition, left: modalLeft }
-              : { top: modalTopPosition, left: modalLeft }
-          ]} 
-          pointerEvents="box-none"
+      <Animated.View style={{ opacity: opacityAnim }}>
+        <BlurView
+          intensity={20}
+          tint="light"
+          style={styles.blurOverlay}
         >
+          {/* Backdrop - transparent, just for closing modal */}
+          <TouchableOpacity
+            style={styles.backdrop}
+            activeOpacity={1}
+            onPress={handleClose}
+          />
+          {/* Modal Container - positioned below the status button or centered */}
+          <Animated.View 
+            style={[
+              styles.modalWrapper, 
+              showTriangle 
+                ? { top: modalTopPosition, left: modalLeft }
+                : { top: modalTopPosition, left: modalLeft },
+              {
+                transform: [{ translateY }],
+              }
+            ]} 
+            pointerEvents="box-none"
+          >
           {/* Triangle Pointer - pointing up to status button */}
           {showTriangle && (
             <View
@@ -139,8 +214,9 @@ export default function StatusChangeModal({
               ))}
             </View>
           </TouchableOpacity>
-        </View>
-      </BlurView>
+          </Animated.View>
+        </BlurView>
+      </Animated.View>
     </Modal>
   );
 }

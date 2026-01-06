@@ -61,16 +61,20 @@ export default function StaffSection({ staff, isPriority = false, category = '' 
       </Text>
 
       {/* Status Text */}
-      <Text style={[
-        styles.statusText,
-        !isPriority && styles.statusTextStandard,
-        isDeparture && hasPromiseTime && styles.statusTextDeparture,
-        { 
-          color: staff.statusColor,
-          left: statusLeft * scaleX,
-          top: statusTop * scaleX,
-        }
-      ]}>
+      <Text 
+        style={[
+          styles.statusText,
+          !isPriority && styles.statusTextStandard,
+          isDeparture && hasPromiseTime && styles.statusTextDeparture,
+          { 
+            color: staff.statusColor,
+            left: statusLeft * scaleX,
+            top: statusTop * scaleX,
+          }
+        ]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
         {staff.statusText}
       </Text>
 
@@ -153,9 +157,11 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.light as any,
     lineHeight: STAFF_SECTION.status.lineHeight * scaleX,
     width: STAFF_SECTION.status.width * scaleX,
+    flexShrink: 0, // Prevent text from shrinking
   },
   statusTextStandard: {
     width: STAFF_SECTION.statusStandard.width * scaleX,
+    flexShrink: 0, // Prevent text from shrinking
   },
   statusTextDeparture: {
     width: (STAFF_SECTION.statusStandardDeparture?.width ?? STAFF_SECTION.statusStandard.width) * scaleX,

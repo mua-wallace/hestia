@@ -18,6 +18,20 @@ import StaffSection from './StaffSection';
 import StatusButton from './StatusButton';
 import NotesSection from './NotesSection';
 
+/**
+ * RoomCard Component
+ * 
+ * A reusable card component for displaying room information in the All Rooms screen.
+ * Supports all room categories:
+ * - Arrival/Departure: Shows two guests with divider (292px height)
+ * - Departure: Single guest, no ETA (177px height)
+ * - Arrival: Single guest with ETA (185px height)
+ * - Stayover: Single guest with ETA (185px height)
+ * - Turndown: Single guest with ETA (185px height)
+ * 
+ * Cards with notes have a height of 222px.
+ * All positioning and styling matches Figma design specifications.
+ */
 interface RoomCardProps {
   room: RoomCardData;
   onPress: () => void;
@@ -27,38 +41,59 @@ interface RoomCardProps {
 }
 
 const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, onStatusPress, onLayout, statusButtonRef }, ref) => {
+  // Card type detection
   const isArrivalDeparture = room.category === 'Arrival/Departure';
-  // Calculate height based on card type and notes - matching Figma exactly
-  let cardHeight: number;
-  if (isArrivalDeparture) {
-    cardHeight = CARD_DIMENSIONS.heights.arrivalDeparture * scaleX; // 292px
-  } else if (room.notes) {
-    cardHeight = CARD_DIMENSIONS.heights.withNotes * scaleX; // 222px
-  } else {
-    // Standard cards: Arrival, Stayover, Turndown use 185px, Departure uses 177px
-    cardHeight = room.category === 'Departure' 
-      ? CARD_DIMENSIONS.heights.standard * scaleX // 177px
-      : CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 185px
-  }
+  const isDeparture = room.category === 'Departure';
+  const isArrival = room.category === 'Arrival';
+  const isStayover = room.category === 'Stayover';
+  const isTurndown = room.category === 'Turndown';
+  const hasNotes = !!room.notes;
 
-  // Determine card background color - based ONLY on status, not isPriority
-  // Red border and background should only appear when status is InProgress
-  const getCardBackgroundColor = (): string => {
-    // In Progress cards use light pink/reddish background (rgba(249,36,36,0.08))
-    if (room.status === 'InProgress') {
-      return CARD_COLORS.priorityBackground;
+  // Calculate card height based on type - matching Figma exactly
+  const getCardHeight = (): number => {
+    if (isArrivalDeparture) {
+      return CARD_DIMENSIONS.heights.arrivalDeparture * scaleX; // 292px
     }
-    // All other cards use default white/light gray background (#f9fafc)
-    return CARD_COLORS.background;
+    if (hasNotes) {
+      return CARD_DIMENSIONS.heights.withNotes * scaleX; // 222px
+    }
+    if (isDeparture) {
+      return CARD_DIMENSIONS.heights.standard * scaleX; // 177px
+    }
+    // Arrival, Stayover, Turndown use 185px
+    return CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 185px
   };
 
-  // Determine if card should have red border - based ONLY on status being InProgress
-  const hasRedBorder = room.status === 'InProgress';
-  
-  // Create border style object - this ensures React Native detects changes
-  const borderStyle = hasRedBorder 
-    ? { borderColor: CARD_COLORS.priorityBorder, borderWidth: 1 }
-    : { borderColor: CARD_COLORS.border, borderWidth: 1 };
+  // Determine card background and border - based on status
+  const getCardStyles = () => {
+    const isInProgress = room.status === 'InProgress';
+    return {
+      backgroundColor: isInProgress 
+        ? CARD_COLORS.priorityBackground 
+        : CARD_COLORS.background,
+      borderColor: isInProgress 
+        ? CARD_COLORS.priorityBorder 
+        : CARD_COLORS.border,
+      borderWidth: 1,
+    };
+  };
+
+  // Determine guest container background style
+  // Note: Arrival, Stayover, and Turndown all use the same positioning (height: 100, top: 74)
+  // Departure uses different positioning (height: 101, top: 70)
+  const getGuestContainerBgStyle = () => {
+    if (isArrivalDeparture || hasNotes) {
+      return null; // No background for Arrival/Departure or cards with notes
+    }
+    if (isDeparture) {
+      return styles.guestContainerBgDeparture;
+    }
+    // Arrival, Stayover, Turndown all use the same positioning from constants
+    return styles.guestContainerBgArrival;
+  };
+
+  const cardStyles = getCardStyles();
+  const guestContainerBgStyle = getGuestContainerBgStyle();
 
   return (
     <TouchableOpacity
@@ -66,18 +101,17 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
       style={[
         styles.container,
         {
-          height: cardHeight,
-          backgroundColor: getCardBackgroundColor(),
+          height: getCardHeight(),
+          ...cardStyles,
         },
-        borderStyle, // Apply border styles - must be after container to override
       ]}
       onPress={onPress}
       onLayout={onLayout}
       activeOpacity={0.7}
     >
-      {/* Room Header */}
+      {/* Room Header Section */}
       <View style={styles.roomHeader}>
-        {/* Room number badge with icon */}
+        {/* Category Icon Badge */}
         <View style={[
           styles.roomBadge,
           !room.isPriority && styles.roomBadgeStandard,
@@ -93,87 +127,95 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
           />
         </View>
         
+        {/* Room Number */}
         <View style={[
           styles.roomInfo,
           !room.isPriority && styles.roomInfoStandard
         ]}>
-          <View style={styles.roomNumberRow}>
-            <Text style={styles.roomNumber}>{room.roomNumber}</Text>
-          </View>
+          <Text style={styles.roomNumber}>{room.roomNumber}</Text>
         </View>
         
-        {/* Room Type - positioned absolutely */}
+        {/* Room Type (e.g., "ST2K - 1.4") */}
         <Text style={[
           styles.roomType,
           !room.isPriority && styles.roomTypeStandard
-        ]}>{room.roomType}</Text>
+        ]}>
+          {room.roomType}
+        </Text>
         
+        {/* Category Label (e.g., "Arrival", "Departure", etc.) */}
         <Text style={[
           styles.categoryLabel,
           !room.isPriority && styles.categoryLabelStandard
-        ]}>{room.category}</Text>
+        ]}>
+          {room.category}
+        </Text>
       </View>
 
-      {/* Guest Container Background - only for standard cards without notes, not Arrival/Departure */}
-      {!isArrivalDeparture && !room.notes && (
-        <View style={[
-          styles.guestContainerBg,
-          room.category === 'Departure' ? styles.guestContainerBgDeparture : styles.guestContainerBgArrival,
-        ]} />
+      {/* Guest Container Background - for standard cards without notes */}
+      {guestContainerBgStyle && (
+        <View style={[styles.guestContainerBg, guestContainerBgStyle]} />
       )}
 
-      {/* Guest Information Sections - positioned absolutely */}
+      {/* Guest Information Sections */}
       {room.guests.map((guest, index) => {
-        // Determine which priority count to show for each guest
-        let guestPriorityCount: number | undefined;
-        if (isArrivalDeparture) {
-          guestPriorityCount = index === 0 ? room.priorityCount : room.secondGuestPriorityCount;
-        } else if (index === 0) {
-          guestPriorityCount = room.priorityCount;
-        }
+        const isFirstGuest = index === 0;
+        const isSecondGuest = index === 1;
+        
+        // Determine priority count for each guest
+        const guestPriorityCount = isArrivalDeparture
+          ? (isFirstGuest ? room.priorityCount : room.secondGuestPriorityCount)
+          : (isFirstGuest ? room.priorityCount : undefined);
         
         return (
-          <React.Fragment key={index}>
+          <React.Fragment key={`guest-${index}`}>
             <GuestInfoSection 
               guest={guest} 
               priorityCount={guestPriorityCount}
               isPriority={room.isPriority}
-              isFirstGuest={index === 0}
-              isSecondGuest={index === 1}
-              hasNotes={!!room.notes}
+              isFirstGuest={isFirstGuest}
+              isSecondGuest={isSecondGuest}
+              hasNotes={hasNotes}
               category={room.category}
               isArrivalDeparture={isArrivalDeparture}
             />
-            {/* Horizontal divider for Arrival/Departure between guests */}
-            {isArrivalDeparture && index === 0 && (
+            {/* Horizontal divider between guests for Arrival/Departure cards */}
+            {isArrivalDeparture && isFirstGuest && (
               <View style={styles.guestDividerLine} />
             )}
           </React.Fragment>
         );
       })}
 
-      {/* Vertical Divider */}
+      {/* Vertical Divider - separates room info from staff section */}
       <View style={[
         styles.dividerVertical,
         !room.isPriority && styles.dividerVerticalStandard
       ]} />
 
-      {/* Staff Section - positioned absolutely */}
-      <StaffSection staff={room.staff} isPriority={room.isPriority} category={room.category} />
+      {/* Staff Section */}
+      <StaffSection 
+        staff={room.staff} 
+        isPriority={room.isPriority} 
+        category={room.category} 
+      />
 
-      {/* Status Button - positioned absolutely */}
+      {/* Status Button */}
       <StatusButton 
         ref={statusButtonRef}
         status={room.status} 
         onPress={onStatusPress}
         isPriority={room.isPriority}
         isArrivalDeparture={isArrivalDeparture}
-        hasNotes={!!room.notes}
+        hasNotes={hasNotes}
       />
 
-      {/* Notes Section (if applicable) - positioned absolutely */}
-      {room.notes && (
-        <NotesSection notes={room.notes} isArrivalDeparture={isArrivalDeparture} />
+      {/* Notes Section - shown for cards with notes */}
+      {hasNotes && (
+        <NotesSection 
+          notes={room.notes} 
+          isArrivalDeparture={isArrivalDeparture} 
+        />
       )}
     </TouchableOpacity>
   );
@@ -190,7 +232,7 @@ const styles = StyleSheet.create({
     marginBottom: CARD_DIMENSIONS.marginBottom * scaleX,
     position: 'relative',
     width: CARD_DIMENSIONS.width * scaleX,
-    overflow: 'hidden', // Ensure notes section and other absolute elements are clipped to card boundaries
+    overflow: 'visible', // Changed to visible to prevent clipping guest names
   },
   priorityBorder: {
     borderColor: CARD_COLORS.priorityBorder,

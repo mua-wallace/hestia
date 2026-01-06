@@ -124,17 +124,23 @@ export default function GuestInfoDisplay({
           : GUEST_INFO.dateRangeStandard.top;
 
   // Determine time (ETA/EDT) position - use override if provided
+  // For Arrival/Stayover/Turndown cards, align time with date range row
   const timePos: { left: number; top: number } | null = timeLeft !== undefined && timeTop !== undefined
     ? { left: timeLeft, top: timeTop }
     : isPriority
       ? (isSecondGuest ? GUEST_INFO.time.positions.prioritySecond : GUEST_INFO.time.positions.priorityFirst)
       : hasNotes || isTurndown || isStayover
         ? GUEST_INFO.time.positions.withNotes
-        : isArrival
-          ? GUEST_INFO.time.positions.standardArrival
+        : isArrival || isStayover || isTurndown
+          ? {
+              // Align time with date range row (top 109px) for proper alignment
+              left: GUEST_INFO.time.positions.standardArrival.left,
+              top: calculatedDateTop, // Use same top as date range for alignment
+            }
           : null; // Departure cards don't show time
 
   // Determine guest count position - use override if provided
+  // Note: For Arrival/Departure cards, guest count should align with date range (same top position)
   const countPos: { iconLeft: number; textLeft: number; top?: number; iconTop?: number; textTop?: number } | null = 
     countIconLeft !== undefined && countTextLeft !== undefined
       ? { 
@@ -144,15 +150,24 @@ export default function GuestInfoDisplay({
           iconTop: countTop,
           textTop: countTop 
         }
-      : isPriority
-        ? (isSecondGuest ? GUEST_INFO.guestCount.positions.prioritySecond : GUEST_INFO.guestCount.positions.priorityFirst)
-        : hasNotes || isTurndown || isStayover
-          ? GUEST_INFO.guestCount.positions.withNotes
-          : isArrival
-            ? GUEST_INFO.guestCount.positions.standardArrival
-            : GUEST_INFO.guestCount.positions.standardDeparture;
+      : isPriority && isArrivalDeparture
+        ? {
+            // For Arrival/Departure cards, align guest count with date range row
+            iconLeft: isSecondGuest ? GUEST_INFO.guestCount.positions.prioritySecond.iconLeft : GUEST_INFO.guestCount.positions.priorityFirst.iconLeft,
+            textLeft: isSecondGuest ? GUEST_INFO.guestCount.positions.prioritySecond.textLeft : GUEST_INFO.guestCount.positions.priorityFirst.textLeft,
+            iconTop: calculatedDateTop, // Align with date range
+            textTop: calculatedDateTop, // Align with date range
+          }
+        : isPriority
+          ? (isSecondGuest ? GUEST_INFO.guestCount.positions.prioritySecond : GUEST_INFO.guestCount.positions.priorityFirst)
+          : hasNotes || isTurndown || isStayover
+            ? GUEST_INFO.guestCount.positions.withNotes
+            : isArrival || isStayover || isTurndown
+              ? GUEST_INFO.guestCount.positions.standardArrival // Use constants directly - already positioned correctly at top 109px
+              : GUEST_INFO.guestCount.positions.standardDeparture;
 
   // Priority badge positioning - use override if provided
+  // Note: For Arrival/Departure cards, badge is now inline with name using flexbox, so absolute positioning is not used
   const priorityBadgeLeft = badgeLeft !== undefined
     ? badgeLeft
     : isPriority 
@@ -202,6 +217,27 @@ export default function GuestInfoDisplay({
     ? { top: absoluteTop * normalizedScaleX }
     : {};
 
+  // Calculate guest count positions for Arrival, Stayover, Turndown (separate row below date)
+  const shouldShowGuestCountBelow = countPos && (isArrival || isStayover || isTurndown) && !(isArrivalDeparture && isPriority);
+  const guestCountTop = shouldShowGuestCountBelow
+    ? (hasNotes
+        ? ((GUEST_INFO.guestCount.positions.withNotes.iconTop ?? 0)) * normalizedScaleX
+        : (calculatedDateTop + GUEST_INFO.dateRange.lineHeight + 2) * normalizedScaleX)
+    : 0;
+  const iconVerticalOffset = shouldShowGuestCountBelow
+    ? (GUEST_INFO.guestCount.lineHeight * normalizedScaleX - GUEST_INFO.guestCount.icon.height * normalizedScaleX) / 2
+    : 0;
+  const guestCountIconLeft = shouldShowGuestCountBelow
+    ? (hasNotes 
+        ? ((GUEST_INFO.guestCount.positions.withNotes.iconLeft) - calculatedContainerLeft) * normalizedScaleX
+        : ((GUEST_INFO.guestCount.positions.standardArrival.iconLeft) - calculatedContainerLeft) * normalizedScaleX)
+    : 0;
+  const guestCountTextLeft = shouldShowGuestCountBelow
+    ? (hasNotes
+        ? ((GUEST_INFO.guestCount.positions.withNotes.textLeft) - calculatedContainerLeft) * normalizedScaleX
+        : ((GUEST_INFO.guestCount.positions.standardArrival.textLeft) - calculatedContainerLeft) * normalizedScaleX)
+    : 0;
+
   return (
     <View style={[styles.container, { left: calculatedContainerLeft * normalizedScaleX }, containerStyle]}>
       {/* Guest Icon - positioned absolutely when needed */}
@@ -243,56 +279,104 @@ export default function GuestInfoDisplay({
             style={styles.guestName} 
             numberOfLines={1} 
             ellipsizeMode="tail"
-            onLayout={(event) => {
-              // Store name width for dynamic badge positioning if needed
-              // This can be used for truly dynamic positioning
-            }}
           >
             {guest.name}
           </Text>
         </View>
-        {/* Priority/Number Badge - positioned in the same row for dynamic spacing */}
-        {displayBadge && guestIconPos === null && (
-          <Text style={[
-            styles.priorityCountInline,
-            isSecondGuest && styles.priorityCountSmall, // Smaller size for second guest
-            { 
-              marginLeft: 8 * normalizedScaleX, // Dynamic spacing after name
-            }
-          ]}>
+        {/* Priority/Number Badge - positioned in the same row for proper spacing */}
+        {/* For Arrival/Departure cards, show inline with name using flexbox for proper spacing */}
+        {displayBadge && (
+          <Text 
+            style={[
+              styles.priorityCountInline,
+            ]}
+            numberOfLines={1}
+          >
             {displayBadge}
           </Text>
         )}
       </View>
-      
-      {/* Priority/Number Badge - absolute positioning when icon is positioned separately */}
-      {displayBadge && guestIconPos !== null && (
-        <Text style={[
-          styles.priorityCount, 
-          isSecondGuest && styles.priorityCountSmall, // Smaller size for second guest
+
+      {/* Date Range Row */}
+      {/* For Arrival/Departure and Departure: date, icon, text on same row */}
+      {/* For Arrival, Stayover, Turndown: date and ETA on same row, icon+text on separate row below */}
+      {(isArrivalDeparture && isPriority) || (isDeparture && !hasNotes) ? (
+        <View style={[
+          styles.detailsRowWithCount, 
           { 
-            left: (priorityBadgeLeft - calculatedContainerLeft) * normalizedScaleX,
-            top: priorityBadgeTop * normalizedScaleX,
-            zIndex: 10, // Ensure badge is visible above other elements
+            top: calculatedDateTop * normalizedScaleX,
+            left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
           }
         ]}>
-          {displayBadge}
-        </Text>
+          <Text style={styles.dateRange}>{guest.dateRange}</Text>
+          {countPos && (
+            <>
+              <Image
+                source={require('../../../assets/icons/people-icon.png')}
+                style={styles.countIconInline}
+                resizeMode="contain"
+              />
+              <Text style={styles.countTextInline}>
+                {guest.guestCount || ''}
+              </Text>
+            </>
+          )}
+        </View>
+      ) : (isArrival || isStayover || isTurndown) && guest.timeLabel && guest.time ? (
+        // For Arrival, Stayover, Turndown: date and ETA on same row
+        <View style={[
+          styles.detailsRowWithTime, 
+          { 
+            top: calculatedDateTop * normalizedScaleX,
+            left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+          }
+        ]}>
+          <Text style={styles.dateRange}>{guest.dateRange}</Text>
+          <Text style={styles.timeInline}>
+            {guest.timeLabel}: {guest.time}
+          </Text>
+        </View>
+      ) : (
+        <View style={[
+          styles.detailsRow, 
+          { 
+            top: calculatedDateTop * normalizedScaleX,
+            left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+          }
+        ]}>
+          <Text style={styles.dateRange}>{guest.dateRange}</Text>
+        </View>
       )}
 
-      {/* Date Range */}
-      <View style={[
-        styles.detailsRow, 
-        { 
-          top: calculatedDateTop * normalizedScaleX,
-          left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
-        }
-      ]}>
-        <Text style={styles.dateRange}>{guest.dateRange}</Text>
-      </View>
+      {/* Guest Count - separate row below date for Arrival, Stayover, Turndown */}
+      {/* Use exact positions from constants, positioned below date range with proper vertical alignment */}
+      {shouldShowGuestCountBelow && (
+        <>
+          <Image
+            source={require('../../../assets/icons/people-icon.png')}
+            style={[
+              styles.countIcon,
+              {
+                left: guestCountIconLeft,
+                top: guestCountTop + iconVerticalOffset, // Center icon vertically with text
+              }
+            ]}
+            resizeMode="contain"
+          />
+          <Text style={[
+            styles.countText,
+            {
+              left: guestCountTextLeft,
+              top: guestCountTop, // Text top position
+            }
+          ]}>
+            {guest.guestCount || ''}
+          </Text>
+        </>
+      )}
 
-      {/* Time (ETA/EDT) */}
-      {guest.timeLabel && guest.time && timePos && (
+      {/* Time (ETA/EDT) - only for cards that don't show it inline (Arrival/Departure priority) */}
+      {guest.timeLabel && guest.time && timePos && !(isArrival || isStayover || isTurndown) && (
         <Text style={[
           styles.time, 
           { 
@@ -304,31 +388,7 @@ export default function GuestInfoDisplay({
         </Text>
       )}
 
-      {/* Guest Count */}
-      {countPos && (
-        <>
-          <Image
-            source={require('../../../assets/icons/people-icon.png')}
-            style={[
-              styles.countIcon, 
-              { 
-                left: ((countPos.iconLeft ?? 0) - calculatedContainerLeft) * normalizedScaleX,
-                top: ((countPos.iconTop ?? countPos.top ?? 0)) * normalizedScaleX,
-              }
-            ]}
-            resizeMode="contain"
-          />
-          <Text style={[
-            styles.countText, 
-            { 
-              left: ((countPos.textLeft ?? 0) - calculatedContainerLeft) * normalizedScaleX,
-              top: ((countPos.textTop ?? countPos.top ?? 0)) * normalizedScaleX,
-            }
-          ]}>
-            {guest.guestCount || ''}
-          </Text>
-        </>
-      )}
+      {/* Guest Count - now shown inline with date range above, so this section is no longer needed */}
     </View>
   );
 }
@@ -337,13 +397,15 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     top: 0,
+    overflow: 'visible', // Ensure content is not clipped
   },
   guestRow: {
     position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
     left: 0,
-    width: 200 * normalizedScaleX,
+    width: 280 * normalizedScaleX, // Fixed width that scales - ensures visibility
+    overflow: 'visible', // Ensure text is not clipped
   },
   guestIcon: {
     width: GUEST_INFO.icon.width * normalizedScaleX,
@@ -361,11 +423,15 @@ const styles = StyleSheet.create({
     tintColor: undefined,
   },
   guestNameContainer: {
-    flex: 1,
     justifyContent: 'center',
+    minWidth: 0, // Allow text to shrink if needed
+    overflow: 'visible', // Ensure text is not clipped
   },
   guestNameContainerNoIcon: {
     marginLeft: 0,
+  },
+  guestNameContainerWithSpacing: {
+    marginRight: 8 * normalizedScaleX, // Add spacing after name for Arrival/Departure cards (matches Figma)
   },
   guestName: {
     fontSize: GUEST_INFO.name.fontSize * normalizedScaleX,
@@ -373,7 +439,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.bold as any,
     color: GUEST_INFO.name.color,
     lineHeight: GUEST_INFO.name.lineHeight * normalizedScaleX,
-    flex: 1,
+    flexShrink: 0, // Prevent text from shrinking - show full name
   },
   priorityCount: {
     position: 'absolute',
@@ -389,6 +455,8 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.light as any,
     color: GUEST_INFO.priorityBadge.color,
     lineHeight: GUEST_INFO.priorityBadge.lineHeight * normalizedScaleX,
+    marginLeft: 5 * normalizedScaleX, // Small spacing after name - matches Figma (approximately 4px)
+    flexShrink: 0, // Prevent badge from shrinking
   },
   priorityCountSmall: {
     fontSize: (GUEST_INFO.priorityBadge.fontSize * 0.85) * normalizedScaleX, // 85% of original size (12 * 0.85 = 10.2px)
@@ -399,6 +467,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     left: 0,
+    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Set explicit height for alignment
+  },
+  detailsRowWithCount: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    left: 0,
+    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX,
+  },
+  detailsRowWithTime: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    left: 0,
+    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX,
+  },
+  guestCountRow: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    left: 0,
+    height: GUEST_INFO.guestCount.lineHeight * normalizedScaleX,
   },
   dateRange: {
     fontSize: GUEST_INFO.dateRange.fontSize * normalizedScaleX,
@@ -406,6 +496,24 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.light as any,
     color: GUEST_INFO.dateRange.color,
     lineHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX,
+    includeFontPadding: false, // Remove extra padding for better alignment
+    textAlignVertical: 'center', // Center text vertically
+  },
+  countIconInline: {
+    width: GUEST_INFO.guestCount.icon.width * normalizedScaleX,
+    height: GUEST_INFO.guestCount.icon.height * normalizedScaleX,
+    tintColor: '#334866',
+    marginLeft: 8 * normalizedScaleX, // Spacing after date
+  },
+  countTextInline: {
+    fontSize: GUEST_INFO.guestCount.fontSize * normalizedScaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: typography.fontWeights.light as any,
+    color: GUEST_INFO.guestCount.color,
+    lineHeight: GUEST_INFO.guestCount.lineHeight * normalizedScaleX,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    marginLeft: 4 * normalizedScaleX, // Spacing after icon
   },
   time: {
     position: 'absolute',
@@ -414,6 +522,28 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.regular as any,
     color: GUEST_INFO.time.color,
     lineHeight: GUEST_INFO.time.lineHeight * normalizedScaleX,
+    includeFontPadding: false, // Remove extra padding for better alignment
+    textAlignVertical: 'center', // Center text vertically
+  },
+  timeInline: {
+    fontSize: GUEST_INFO.time.fontSize * normalizedScaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.regular as any,
+    color: GUEST_INFO.time.color,
+    lineHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Match date range line height for vertical alignment
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    marginLeft: 8 * normalizedScaleX, // Spacing after date (matches Figma spacing)
+  },
+  timeInline: {
+    fontSize: GUEST_INFO.time.fontSize * normalizedScaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.regular as any,
+    color: GUEST_INFO.time.color,
+    lineHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Match date range line height for alignment
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    marginLeft: 8 * normalizedScaleX, // Spacing after date
   },
   countIcon: {
     position: 'absolute',
@@ -428,6 +558,8 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.light as any,
     color: GUEST_INFO.guestCount.color,
     lineHeight: GUEST_INFO.guestCount.lineHeight * normalizedScaleX,
+    includeFontPadding: false, // Remove extra padding for better alignment
+    textAlignVertical: 'center', // Center text vertically
   },
 });
 
