@@ -637,5 +637,427 @@ export const REGISTER_FORM = {
       color: '#ffffff',
     },
   },
+  // Step 2 Styles
+  step2: {
+    foundedBy: {
+      label: {
+        fontSize: 14,
+        fontWeight: 'light' as const,
+        color: '#000000',
+      },
+      field: {
+        width: 388,
+        height: 68,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#afa9ad',
+        paddingHorizontal: 20,
+      },
+      avatar: {
+        size: 32,
+      },
+      name: {
+        fontSize: 16,
+        fontWeight: 'regular' as const,
+        color: '#5a759d',
+      },
+      searchIcon: {
+        width: 19,
+        height: 19,
+      },
+    },
+    registeredBy: {
+      label: {
+        fontSize: 14,
+        fontWeight: 'light' as const,
+        color: '#000000',
+      },
+      field: {
+        width: 388,
+        height: 68,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#afa9ad',
+        paddingHorizontal: 20,
+      },
+      avatar: {
+        size: 32,
+      },
+      name: {
+        fontSize: 16,
+        fontWeight: 'regular' as const,
+        color: '#5a759d',
+      },
+      searchIcon: {
+        width: 19,
+        height: 19,
+      },
+    },
+    status: {
+      label: {
+        fontSize: 14,
+        fontWeight: 'light' as const,
+        color: '#000000',
+      },
+      field: {
+        width: 387,
+        height: 68,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#afa9ad',
+        paddingHorizontal: 20,
+      },
+      icon: {
+        size: 27,
+      },
+      text: {
+        fontSize: 16,
+        fontWeight: 'regular' as const,
+        color: '#5a759d',
+      },
+      chevron: {
+        width: 14,
+        height: 7,
+      },
+    },
+    storedLocation: {
+      label: {
+        fontSize: 14,
+        fontWeight: 'light' as const,
+        color: '#000000',
+      },
+      field: {
+        width: 387,
+        height: 68,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#afa9ad',
+        paddingHorizontal: 20,
+      },
+      text: {
+        fontSize: 16,
+        fontWeight: 'regular' as const,
+        color: '#5a759d',
+      },
+      chevron: {
+        width: 14,
+        height: 7,
+      },
+    },
+    staffSelector: {
+      modal: {
+        width: 394,
+        maxHeight: 337,
+        borderRadius: 8,
+        backgroundColor: '#ffffff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+      },
+      header: {
+        height: 50,
+        paddingHorizontal: 18,
+        title: {
+          fontSize: 17,
+          fontWeight: 'bold' as const,
+          color: '#607aa1',
+        },
+        selectedCount: {
+          fontSize: 14,
+          fontWeight: 'light' as const,
+          color: '#000000',
+        },
+        closeIcon: {
+          width: 18,
+          height: 18,
+        },
+      },
+      divider: {
+        height: 1,
+        backgroundColor: '#e3e3e3',
+      },
+      listItem: {
+        height: 60,
+        paddingHorizontal: 18,
+        paddingVertical: 14,
+        avatar: {
+          size: 32,
+        },
+        name: {
+          fontSize: 16,
+          fontWeight: 'bold' as const,
+          color: '#1e1e1e',
+        },
+        department: {
+          fontSize: 14,
+          fontWeight: 'light' as const,
+          color: '#000000',
+        },
+        meLabel: {
+          fontSize: 11,
+          fontWeight: 'regular' as const,
+          color: '#5a759d',
+        },
+        checkmark: {
+          fontSize: 18,
+          color: '#5a759d',
+        },
+      },
+      footer: {
+        paddingVertical: 12,
+        seeAll: {
+          fontSize: 14,
+          fontWeight: 'regular' as const,
+          color: '#5a759d',
+        },
+      },
+    },
+    statusDropdown: {
+      modal: {
+        width: 387,
+        maxHeight: 200,
+        borderRadius: 8,
+        backgroundColor: '#ffffff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+      },
+      item: {
+        height: 60,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        icon: {
+          size: 27,
+        },
+        text: {
+          fontSize: 16,
+          fontWeight: 'regular' as const,
+          color: '#5a759d',
+        },
+        checkmark: {
+          fontSize: 18,
+          color: '#5a759d',
+        },
+      },
+    },
+    locationDropdown: {
+      modal: {
+        width: 387,
+        maxHeight: 200,
+        borderRadius: 8,
+        backgroundColor: '#ffffff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 5,
+      },
+      item: {
+        height: 60,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        text: {
+          fontSize: 16,
+          fontWeight: 'regular' as const,
+          color: '#5a759d',
+        },
+        checkmark: {
+          fontSize: 18,
+          color: '#5a759d',
+        },
+      },
+    },
+  },
+  step3: {
+    itemImage: {
+      width: 214,
+      height: 140,
+      borderRadius: 5,
+      left: 29,
+      top: 243,
+    },
+    itemDescription: {
+      left: 36,
+      top: 406,
+      fontSize: 16,
+      fontWeight: 'light' as const,
+      color: '#000000',
+      width: 262,
+    },
+    editIcon: {
+      size: 28,
+    },
+    foundIn: {
+      label: {
+        left: 36,
+        top: 466,
+        fontSize: 16,
+        fontWeight: 'bold' as const,
+        color: '#000000',
+      },
+      checkbox: {
+        left: 37,
+        top: 507,
+        size: 28,
+      },
+      guestInfo: {
+        left: 40,
+        top: 573,
+      },
+      guestName: {
+        left: 84,
+        top: 573,
+        fontSize: 16,
+        fontWeight: 'bold' as const,
+        color: '#1e1e1e',
+      },
+      roomNumber: {
+        left: 83,
+        top: 593,
+        fontSize: 14,
+        fontWeight: 'light' as const,
+        color: '#000000',
+      },
+    },
+    emailCheckbox: {
+      left: 84,
+      top: 659,
+      fontSize: 16,
+      color: '#5a759d',
+    },
+    dateTime: {
+      label: {
+        left: 45,
+        top: 731,
+        fontSize: 16,
+        fontWeight: 'regular' as const,
+        color: '#000000',
+      },
+      date: {
+        left: 45,
+        top: 763,
+        fontSize: 16,
+        color: '#5a759d',
+      },
+      time: {
+        left: 202,
+        top: 763,
+        fontSize: 16,
+        color: '#5a759d',
+      },
+    },
+    foundedBy: {
+      label: {
+        left: 45,
+        top: 821,
+        fontSize: 16,
+        fontWeight: 'bold' as const,
+        color: '#000000',
+      },
+      avatar: {
+        left: 46,
+        top: 857,
+        size: 32,
+      },
+      name: {
+        left: 92,
+        top: 857,
+        fontSize: 16,
+        fontWeight: 'regular' as const,
+        color: '#1e1e1e',
+      },
+      department: {
+        left: 93,
+        top: 876,
+        fontSize: 14,
+        fontWeight: 'light' as const,
+        color: '#000000',
+      },
+    },
+    registeredBy: {
+      label: {
+        left: 47,
+        top: 927,
+        fontSize: 16,
+        fontWeight: 'bold' as const,
+        color: '#000000',
+      },
+      avatar: {
+        left: 45,
+        top: 961,
+        size: 32,
+      },
+      name: {
+        left: 91,
+        top: 961,
+        fontSize: 16,
+        fontWeight: 'regular' as const,
+        color: '#1e1e1e',
+      },
+      department: {
+        left: 92,
+        top: 980,
+        fontSize: 14,
+        fontWeight: 'light' as const,
+        color: '#000000',
+      },
+    },
+    status: {
+      label: {
+        left: 47,
+        top: 1042,
+        fontSize: 16,
+        fontWeight: 'bold' as const,
+        color: '#000000',
+      },
+      value: {
+        left: 78,
+        top: 1078,
+        fontSize: 16,
+        fontWeight: 'regular' as const,
+        color: '#5a759d',
+      },
+      icon: {
+        left: 51,
+        top: 1078,
+        size: 18,
+      },
+    },
+    storedLocation: {
+      label: {
+        left: 55,
+        top: 1137,
+        fontSize: 16,
+        fontWeight: 'regular' as const,
+        color: '#000000',
+      },
+      value: {
+        left: 56,
+        top: 1161,
+        fontSize: 16,
+        fontWeight: 'bold' as const,
+        color: '#1e1e1e',
+      },
+    },
+    doneButton: {
+      left: 44.5, // Centered: (440 - 351) / 2
+      top: 1223,
+      width: 351,
+      height: 70,
+      backgroundColor: '#5a759d',
+      borderRadius: 0,
+      fontSize: 18,
+      fontWeight: 'regular' as const,
+      color: '#ffffff',
+    },
+    divider: {
+      height: 1,
+      backgroundColor: '#c6c5c5',
+    },
+  },
 } as const;
 
