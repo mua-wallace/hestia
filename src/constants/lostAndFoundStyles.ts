@@ -385,3 +385,257 @@ export const LOST_AND_FOUND_TYPOGRAPHY = {
   },
 } as const;
 
+// Registration Form Styles
+export const REGISTER_FORM = {
+  header: {
+    height: 133,
+    backgroundColor: '#e4eefe',
+    backButton: {
+      left: 27,
+      top: 69,
+      width: 14,
+      height: 28,
+    },
+    title: {
+      left: 68.99999809265137, // From Figma
+      top: 69,
+      fontSize: 24,
+      fontWeight: 'bold' as const,
+      color: '#607aa1',
+    },
+  },
+  title: {
+    left: 31, // From Figma: x=31
+    top: 150,
+    fontSize: 20,
+    fontWeight: 'light' as const,
+    color: '#607aa1',
+  },
+  stepIndicator: {
+    left: 32, // From Figma: x=32
+    top: 179,
+    fontSize: 16,
+    fontWeight: 'bold' as const,
+    color: '#000000',
+  },
+  progressBar: {
+    left: 27, // From Figma: x=27
+    top: 216,
+    height: 6,
+    width: 385, // Total width of all 3 bars
+    activeColor: '#5a759d',
+    inactiveColor: 'rgba(90,117,157,0.24)',
+    bars: [
+      { width: 122 }, // Step 1
+      { width: 123 }, // Step 2
+      { width: 122 }, // Step 3
+    ],
+  },
+  dateTime: {
+    label: {
+      left: 27, // From Figma: x=27
+      top: 248,
+      fontSize: 16,
+      fontWeight: 'regular' as const,
+      color: '#000000',
+    },
+    dateInput: {
+      left: 27, // From Figma: x=27
+      top: 288,
+      width: 196,
+      height: 68,
+      borderRadius: 8,
+      borderColor: '#afa9ad',
+      borderWidth: 1,
+    },
+    timeInput: {
+      left: 237, // From Figma: x=237
+      top: 288,
+      width: 99,
+      height: 68,
+      borderRadius: 8,
+      borderColor: '#afa9ad',
+      borderWidth: 1,
+    },
+    dateText: {
+      left: 42, // From Figma: x=42
+      top: 313,
+      fontSize: 16,
+      fontWeight: 'regular' as const,
+      color: '#5a759d',
+    },
+    timeText: {
+      left: 267, // From Figma: x=267
+      top: 313,
+      fontSize: 16,
+      fontWeight: 'regular' as const,
+      color: '#5a759d',
+    },
+  },
+  location: {
+    label: {
+      left: 26, // From Figma: x=26
+      top: 382,
+      fontSize: 16,
+      fontWeight: 'regular' as const,
+      color: '#000000',
+    },
+    roomOption: {
+      left: 28, // From Figma: x=28
+      top: 425,
+      checkboxSize: 28,
+      checkboxBorderColor: '#5a759d',
+      checkboxBorderWidth: 2,
+      textLeft: 66, // From Figma: x=66
+      textTop: 430,
+      fontSize: 16,
+      fontWeight: 'regular' as const,
+      color: '#5a759d',
+    },
+    publicAreaOption: {
+      left: 130, // From Figma: x=130
+      top: 425,
+      checkboxSize: 28,
+      checkboxBorderColor: '#5a759d',
+      checkboxBorderWidth: 2,
+      textLeft: 173, // From Figma: x=173
+      textTop: 430,
+      fontSize: 16,
+      fontWeight: 'regular' as const,
+      color: '#5a759d',
+    },
+  },
+  roomNumber: {
+    label: {
+      left: 25, // From Figma: x=25
+      top: 490,
+      fontSize: 16,
+      fontWeight: 'light' as const,
+      color: '#000000',
+    },
+    selector: {
+      left: 23, // From Figma: x=23
+      top: 520,
+      width: 394,
+      height: 98,
+      borderRadius: 8,
+      borderColor: '#afa9ad',
+      borderWidth: 1,
+    },
+    roomText: {
+      left: 64, // From Figma: x=64
+      top: 563,
+      fontSize: 16,
+      fontWeight: 'regular' as const,
+      color: '#5a759d',
+    },
+    guestText: {
+      left: 204, // From Figma: x=204
+      top: 564,
+      fontSize: 16,
+      fontWeight: 'regular' as const,
+      color: '#5a759d',
+    },
+    avatar: {
+      left: 357, // From Figma: x=357
+      top: 563,
+      size: 26,
+    },
+    divider: {
+      left: 188, // From Figma: x=188
+      top: 546,
+      width: 0,
+      height: 54,
+      color: '#5a759d',
+    },
+    badge: {
+      left: 502, // From Figma: x=502
+      top: 568.96,
+      size: 20,
+      backgroundColor: '#5a759d',
+      textColor: '#f9fafc',
+      fontSize: 12,
+      fontWeight: 'bold' as const,
+    },
+  },
+  pictures: {
+    label: {
+      left: 26, // From Figma: x=26
+      top: 643.96,
+      fontSize: 16,
+      fontWeight: 'regular' as const,
+      color: '#000000',
+    },
+    image1: {
+      left: 26, // From Figma: x=26
+      top: 680,
+      width: 185,
+      height: 158,
+      borderRadius: 16,
+    },
+    image2: {
+      left: 223, // From Figma: x=223
+      top: 679.96,
+      width: 183,
+      height: 156,
+      borderRadius: 11,
+      backgroundColor: '#f2f2f2',
+    },
+    addIcon: {
+      left: 295, // From Figma: x=295
+      top: 726,
+      width: 33,
+      height: 32.832,
+    },
+  },
+  notes: {
+    labelContainer: {
+      left: 28, // From Figma: x=28
+      top: 875,
+    },
+    label: {
+      left: 68.99999809265137, // From Figma: centered
+      top: 883,
+      fontSize: 18,
+      fontWeight: 'bold' as const,
+      color: '#000000',
+    },
+    icon: {
+      left: 28, // From Figma: x=28
+      top: 875,
+      width: 31.9743595123291,
+      height: 31.9743595123291,
+    },
+    text: {
+      left: 30, // From Figma: x=30
+      top: 957,
+      fontSize: 14,
+      fontWeight: 'light' as const,
+      color: '#000000',
+      width: 374,
+    },
+    divider: {
+      left: 28, // From Figma: x=28
+      top: 996,
+      width: 378,
+      height: 0,
+      color: '#000000',
+    },
+  },
+  nextButton: {
+    left: 36, // From Figma: x=36
+    top: 1122,
+    width: 351,
+    height: 70,
+    borderRadius: 8,
+    backgroundColor: '#5a759d',
+    text: {
+      left: 193, // From Figma: x=193 (centered)
+      top: 1146,
+      fontSize: 18,
+      fontWeight: 'regular' as const,
+      color: '#ffffff',
+    },
+  },
+} as const;
+

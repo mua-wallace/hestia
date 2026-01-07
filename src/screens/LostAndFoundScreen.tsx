@@ -8,6 +8,7 @@ import MorePopup from '../components/more/MorePopup';
 import LostAndFoundHeader from '../components/lostAndFound/LostAndFoundHeader';
 import LostAndFoundTabs from '../components/lostAndFound/LostAndFoundTabs';
 import LostAndFoundItemCard from '../components/lostAndFound/LostAndFoundItemCard';
+import RegisterLostAndFoundModal from '../components/lostAndFound/RegisterLostAndFoundModal';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockLostAndFoundData } from '../data/mockLostAndFoundData';
 import { MoreMenuItemId } from '../types/more.types';
@@ -38,6 +39,7 @@ export default function LostAndFoundScreen() {
   const [selectedTab, setSelectedTab] = useState<LostAndFoundTab>('created');
   const [items] = useState<LostAndFoundItem[]>(mockLostAndFoundData);
   const [refreshing, setRefreshing] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
@@ -83,8 +85,16 @@ export default function LostAndFoundScreen() {
   };
 
   const handleRegisterPress = () => {
-    // TODO: Navigate to register screen when implemented
-    console.log('Register new item');
+    setShowRegisterModal(true);
+  };
+
+  const handleCloseRegisterModal = () => {
+    setShowRegisterModal(false);
+  };
+
+  const handleRegisterNext = () => {
+    // TODO: Navigate to step 2 when implemented
+    console.log('Move to step 2');
   };
 
   const handleTabChange = (tab: LostAndFoundTab) => {
@@ -183,6 +193,13 @@ export default function LostAndFoundScreen() {
         visible={showMorePopup}
         onClose={handleClosePopup}
         onMenuItemPress={handleMenuItemPress}
+      />
+
+      {/* Register Modal */}
+      <RegisterLostAndFoundModal
+        visible={showRegisterModal}
+        onClose={handleCloseRegisterModal}
+        onNext={handleRegisterNext}
       />
     </View>
   );
