@@ -8,25 +8,25 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		1B0ECD1D642A55ED6008A952 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43603981F35C68BEEC4E0AA1 /* ExpoModulesProvider.swift */; };
-		3D7DAE098614B5989B2339BC /* libPods-Hestia.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 584ED4A249A3CF702B06AD46 /* libPods-Hestia.a */; };
+		2A2B177CFA41DEECD9A14A79 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 657FF2BC09282FA8BABB975F /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		AB720898BE163D3BD859114A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8BFB69AC58CBB5AE1E84B9A9 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		CE3F6C6B6056AFEC5D64FC5E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D3DBF556F302722FBD135689 /* PrivacyInfo.xcprivacy */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		FC2F18A7AB0F5151E9A8CC53 /* libPods-Hestia.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9361847D5F1495FA55AD85B1 /* libPods-Hestia.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* Hestia.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hestia.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Hestia/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Hestia/Info.plist; sourceTree = "<group>"; };
-		43603981F35C68BEEC4E0AA1 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Hestia/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		584ED4A249A3CF702B06AD46 /* libPods-Hestia.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Hestia.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		8BFB69AC58CBB5AE1E84B9A9 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Hestia/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		9D66E08DF78B0C6397D25AE6 /* Pods-Hestia.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Hestia.debug.xcconfig"; path = "Target Support Files/Pods-Hestia/Pods-Hestia.debug.xcconfig"; sourceTree = "<group>"; };
+		5C4569B4A4FD4E016BE452A5 /* Pods-Hestia.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Hestia.release.xcconfig"; path = "Target Support Files/Pods-Hestia/Pods-Hestia.release.xcconfig"; sourceTree = "<group>"; };
+		657FF2BC09282FA8BABB975F /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Hestia/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		9361847D5F1495FA55AD85B1 /* libPods-Hestia.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Hestia.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Hestia/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		C1FD8CAA161D2DB3E059C1D8 /* Pods-Hestia.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Hestia.release.xcconfig"; path = "Target Support Files/Pods-Hestia/Pods-Hestia.release.xcconfig"; sourceTree = "<group>"; };
+		D3DBF556F302722FBD135689 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Hestia/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		E409335C33443550B6399902 /* Pods-Hestia.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Hestia.debug.xcconfig"; path = "Target Support Files/Pods-Hestia/Pods-Hestia.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Hestia/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Hestia-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Hestia-Bridging-Header.h"; path = "Hestia/Hestia-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -37,13 +37,21 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3D7DAE098614B5989B2339BC /* libPods-Hestia.a in Frameworks */,
+				FC2F18A7AB0F5151E9A8CC53 /* libPods-Hestia.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0A66C185414FF0AC9A08B091 /* Hestia */ = {
+			isa = PBXGroup;
+			children = (
+				657FF2BC09282FA8BABB975F /* ExpoModulesProvider.swift */,
+			);
+			name = Hestia;
+			sourceTree = "<group>";
+		};
 		13B07FAE1A68108700A75B9A /* Hestia */ = {
 			isa = PBXGroup;
 			children = (
@@ -53,24 +61,16 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				8BFB69AC58CBB5AE1E84B9A9 /* PrivacyInfo.xcprivacy */,
+				D3DBF556F302722FBD135689 /* PrivacyInfo.xcprivacy */,
 			);
 			name = Hestia;
-			sourceTree = "<group>";
-		};
-		15D29E362423D692B2D7BEEC /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				FDEB55000F683E2FDFBF6916 /* Hestia */,
-			);
-			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				584ED4A249A3CF702B06AD46 /* libPods-Hestia.a */,
+				9361847D5F1495FA55AD85B1 /* libPods-Hestia.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -89,8 +89,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				BA7396DD59F3BF5C15EEF465 /* Pods */,
-				15D29E362423D692B2D7BEEC /* ExpoModulesProviders */,
+				C43778F0A92AB60D9FAC36D1 /* Pods */,
+				F18003DA0E87BAF7EEBB0CE5 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -105,16 +105,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		BA7396DD59F3BF5C15EEF465 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				9D66E08DF78B0C6397D25AE6 /* Pods-Hestia.debug.xcconfig */,
-				C1FD8CAA161D2DB3E059C1D8 /* Pods-Hestia.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
-			sourceTree = "<group>";
-		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
 			isa = PBXGroup;
 			children = (
@@ -124,12 +114,22 @@
 			path = Hestia/Supporting;
 			sourceTree = "<group>";
 		};
-		FDEB55000F683E2FDFBF6916 /* Hestia */ = {
+		C43778F0A92AB60D9FAC36D1 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				43603981F35C68BEEC4E0AA1 /* ExpoModulesProvider.swift */,
+				E409335C33443550B6399902 /* Pods-Hestia.debug.xcconfig */,
+				5C4569B4A4FD4E016BE452A5 /* Pods-Hestia.release.xcconfig */,
 			);
-			name = Hestia;
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		F18003DA0E87BAF7EEBB0CE5 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				0A66C185414FF0AC9A08B091 /* Hestia */,
+			);
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -140,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Hestia" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				A810FF11DE5F1EBC5E388AC7 /* [Expo] Configure project */,
+				2A40F7CCC61ACDC2D8C7830E /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				24F44B55A64E7B8130C3C329 /* [CP] Embed Pods Frameworks */,
+				861ACC5AE3046FE8DB0BC206 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				AB720898BE163D3BD859114A /* PrivacyInfo.xcprivacy in Resources */,
+				CE3F6C6B6056AFEC5D64FC5E /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,27 +242,29 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		24F44B55A64E7B8130C3C329 /* [CP] Embed Pods Frameworks */ = {
+		2A40F7CCC61ACDC2D8C7830E /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-Hestia/Pods-Hestia-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			inputFileListPaths = (
 			);
-			name = "[CP] Embed Pods Frameworks";
+			inputPaths = (
+				"$(SRCROOT)/.xcode.env",
+				"$(SRCROOT)/.xcode.env.local",
+				"$(SRCROOT)/Hestia/Hestia.entitlements",
+				"$(SRCROOT)/Pods/Target Support Files/Pods-Hestia/expo-configure-project.sh",
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
 			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+				"$(SRCROOT)/Pods/Target Support Files/Pods-Hestia/ExpoModulesProvider.swift",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Hestia/Pods-Hestia-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Hestia/expo-configure-project.sh\"\n";
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -294,29 +296,27 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Hestia/Pods-Hestia-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		A810FF11DE5F1EBC5E388AC7 /* [Expo] Configure project */ = {
+		861ACC5AE3046FE8DB0BC206 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
-			inputFileListPaths = (
-			);
 			inputPaths = (
-				"$(SRCROOT)/.xcode.env",
-				"$(SRCROOT)/.xcode.env.local",
-				"$(SRCROOT)/Hestia/Hestia.entitlements",
-				"$(SRCROOT)/Pods/Target Support Files/Pods-Hestia/expo-configure-project.sh",
+				"${PODS_ROOT}/Target Support Files/Pods-Hestia/Pods-Hestia-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
 			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
+			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
-				"$(SRCROOT)/Pods/Target Support Files/Pods-Hestia/ExpoModulesProvider.swift",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Hestia/expo-configure-project.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Hestia/Pods-Hestia-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -326,7 +326,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				1B0ECD1D642A55ED6008A952 /* ExpoModulesProvider.swift in Sources */,
+				2A2B177CFA41DEECD9A14A79 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -335,7 +335,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 9D66E08DF78B0C6397D25AE6 /* Pods-Hestia.debug.xcconfig */;
+			baseConfigurationReference = E409335C33443550B6399902 /* Pods-Hestia.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -371,7 +371,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C1FD8CAA161D2DB3E059C1D8 /* Pods-Hestia.release.xcconfig */;
+			baseConfigurationReference = 5C4569B4A4FD4E016BE452A5 /* Pods-Hestia.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

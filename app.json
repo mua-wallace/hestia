@@ -33,7 +33,7 @@
       "splash": {
         "image": "./assets/app/splash.png",
         "resizeMode": "contain",
-        "backgroundColor": "#5a759d"
+        "backgroundColor": "#000000"
       }
     },
     "web": {
