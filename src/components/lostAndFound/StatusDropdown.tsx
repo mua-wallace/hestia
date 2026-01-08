@@ -98,6 +98,12 @@ const getStyles = (inputFieldPosition?: { x: number; y: number; width: number; h
     height: REGISTER_FORM.step2.statusDropdown.item.icon.size * scaleX,
     marginRight: 12 * scaleX,
   },
+  statusCircle: {
+    width: REGISTER_FORM.step2.statusDropdown.item.icon.size * scaleX,
+    height: REGISTER_FORM.step2.statusDropdown.item.icon.size * scaleX,
+    borderRadius: (REGISTER_FORM.step2.statusDropdown.item.icon.size / 2) * scaleX,
+    marginRight: 12 * scaleX,
+  },
   text: {
     flex: 1,
     fontSize: REGISTER_FORM.step2.statusDropdown.item.text.fontSize * scaleX,
@@ -157,11 +163,18 @@ export default function StatusDropdown({
               onPress={() => handleSelect(option.value)}
               activeOpacity={0.7}
             >
-              <Image
-                source={option.icon}
-                style={dynamicStyles.icon}
-                resizeMode="contain"
-                tintColor={option.value === 'stored' ? '#f0be1b' : undefined}
+              <View
+                style={[
+                  dynamicStyles.statusCircle,
+                  {
+                    backgroundColor:
+                      option.value === 'stored'
+                        ? '#f0be1b'
+                        : option.value === 'shipped'
+                        ? '#41d541'
+                        : '#f0be1b',
+                  },
+                ]}
               />
               <Text style={dynamicStyles.text}>{option.label}</Text>
               {selectedStatus === option.value && (

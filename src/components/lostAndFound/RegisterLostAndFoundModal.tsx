@@ -9,7 +9,9 @@ import {
   TextInput,
   StyleSheet,
   Dimensions,
+  Alert,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { typography } from '../../theme';
 import { REGISTER_FORM, scaleX, LOST_AND_FOUND_COLORS } from '../../constants/lostAndFoundStyles';
 import DatePickerModal from './DatePickerModal';
@@ -55,7 +57,7 @@ export default function RegisterLostAndFoundModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showRoomDropdown, setShowRoomDropdown] = useState(false);
-  const [notes, setNotes] = useState('Wrist watch found in guest bathroom whole cleaning');
+  const [notes, setNotes] = useState('');
   
   // Mock room data with guest names
   const mockRooms = [
@@ -86,16 +88,112 @@ export default function RegisterLostAndFoundModal({
   const [status, setStatus] = useState<StatusOption>('stored');
   const [storedLocation, setStoredLocation] = useState<StoredLocationOption>('hskOffice');
   
+  // Pictures state
+  const [pictures, setPictures] = useState<string[]>([]);
+  
   // Step 3 state
   const [sendEmailToGuest, setSendEmailToGuest] = useState(true);
+  
+  // Validation state
+  const [showPictureError, setShowPictureError] = useState(false);
   
   // Reset to step 1 when modal opens
   useEffect(() => {
     if (visible) {
       setCurrentStep(1);
       setSendEmailToGuest(true); // Reset email checkbox
+      setPictures([]); // Reset pictures
+      setShowPictureError(false); // Reset error state
     }
   }, [visible]);
+
+  // Handle adding pictures
+  const handleAddPicture = async () => {
+    setShowPictureError(false); // Clear error when user tries to add picture
+    try {
+      // Show action sheet to choose camera or gallery
+      Alert.alert(
+        'Add Picture',
+        'Choose an option',
+        [
+          {
+            text: 'Camera',
+            onPress: async () => {
+              try {
+                const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
+                if (cameraStatus.status !== 'granted') {
+                  Alert.alert('Permission needed', 'We need camera permissions to take photos.');
+                  return;
+                }
+                const result = await ImagePicker.launchCameraAsync({
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  allowsEditing: false, // No cropping - use full picture
+                  quality: 0.8,
+                });
+                if (!result.canceled && result.assets && result.assets[0]) {
+                  setPictures([...pictures, result.assets[0].uri]);
+                }
+              } catch (error) {
+                console.error('Camera error:', error);
+                Alert.alert('Error', 'Failed to open camera. Please try again.');
+              }
+            },
+          },
+          {
+            text: 'Gallery',
+            onPress: async () => {
+              try {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (status !== 'granted') {
+                  Alert.alert('Permission needed', 'We need camera roll permissions to add pictures.');
+                  return;
+                }
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                  allowsEditing: false, // No cropping - use full picture
+                  quality: 0.8,
+                });
+                if (!result.canceled && result.assets && result.assets[0]) {
+                  setPictures([...pictures, result.assets[0].uri]);
+                }
+              } catch (error) {
+                console.error('Gallery error:', error);
+                Alert.alert('Error', 'Failed to open gallery. Please try again.');
+              }
+            },
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+        ],
+        { cancelable: true }
+      );
+    } catch (error) {
+      console.error('Error showing picture options:', error);
+    }
+  };
+
+  // Handle removing a picture
+  const handleRemovePicture = (index: number) => {
+    Alert.alert(
+      'Remove Picture',
+      'Are you sure you want to remove this picture?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            setPictures(pictures.filter((_, i) => i !== index));
+          },
+        },
+      ]
+    );
+  };
   
   // Refs for measuring input field positions
   const scrollViewRef = useRef<ScrollView>(null);
@@ -204,6 +302,7 @@ export default function RegisterLostAndFoundModal({
 
   const handleNext = () => {
     if (currentStep === 1) {
+      // Validation is handled by disabled state - button won't be clickable if invalid
       setCurrentStep(2);
     } else if (currentStep === 2) {
       setCurrentStep(3);
@@ -487,19 +586,107 @@ export default function RegisterLostAndFoundModal({
           {currentStep === 1 && (
             <>
               <Text style={[styles.sectionLabel, styles.picturesLabel]}>Pictures</Text>
-              <View style={styles.picturesContainer}>
-                <Image
-                  source={require('../../../assets/images/wrist-watch.png')}
-                  style={styles.picture1}
-                  resizeMode="cover"
-                />
-                <TouchableOpacity style={styles.picture2} activeOpacity={0.7}>
-                  <Image
-                    source={require('../../../assets/icons/clip-board.png')}
-                    style={styles.addIcon}
-                    resizeMode="contain"
-                  />
-                </TouchableOpacity>
+              <View
+                style={[
+                  styles.picturesContainer,
+                  {
+                    minHeight:
+                      pictures.length === 0
+                        ? REGISTER_FORM.pictures.image2.height * scaleX
+                        : pictures.length === 1
+                        ? REGISTER_FORM.pictures.image1.height * scaleX +
+                          12 * scaleX +
+                          REGISTER_FORM.pictures.image2.height * scaleX
+                        : Math.ceil((pictures.length + 1) / 2) *
+                            (REGISTER_FORM.pictures.image1.height * scaleX + 12 * scaleX),
+                  },
+                ]}
+              >
+                {pictures.length === 0 ? (
+                  <TouchableOpacity
+                    style={[
+                      styles.picture2FullWidth,
+                      showPictureError && styles.picture2Error,
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={handleAddPicture}
+                  >
+                    <Image
+                      source={require('../../../assets/icons/add-photos.png')}
+                      style={styles.addIcon}
+                      resizeMode="contain"
+                    />
+                  </TouchableOpacity>
+                ) : pictures.length === 1 ? (
+                  <TouchableOpacity
+                    style={styles.picture1FullWidth}
+                    activeOpacity={0.7}
+                    onPress={() => handleRemovePicture(0)}
+                  >
+                    <Image
+                      source={{ uri: pictures[0] }}
+                      style={styles.picture1FullWidth}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.pictureRemoveOverlay}>
+                      <Text style={styles.pictureRemoveText}>×</Text>
+                    </View>
+                  </TouchableOpacity>
+                ) : (
+                  <>
+                    {pictures.map((uri, index) => {
+                      const row = Math.floor(index / 2);
+                      const col = index % 2;
+                      const pictureWidth = ((Dimensions.get('window').width - (27 * 2 * scaleX) - (12 * scaleX)) / 2);
+                      const left = 27 * scaleX + col * (pictureWidth + 12 * scaleX);
+                      const top = row * (REGISTER_FORM.pictures.image1.height * scaleX + 12 * scaleX);
+                      return (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.picture1Grid,
+                            {
+                              left,
+                              top,
+                            },
+                          ]}
+                          activeOpacity={0.7}
+                          onPress={() => handleRemovePicture(index)}
+                        >
+                          <Image
+                            source={{ uri }}
+                            style={styles.picture1Grid}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.pictureRemoveOverlay}>
+                            <Text style={styles.pictureRemoveText}>×</Text>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </>
+                )}
+                {pictures.length > 0 && (
+                  <TouchableOpacity
+                    style={[
+                      styles.picture2,
+                      pictures.length === 1
+                        ? styles.picture2BelowSingle
+                        : {
+                            left: 27 * scaleX + (pictures.length % 2) * (((Dimensions.get('window').width - (27 * 2 * scaleX) - (12 * scaleX)) / 2) + 12 * scaleX),
+                            top: Math.floor(pictures.length / 2) * (REGISTER_FORM.pictures.image1.height * scaleX + 12 * scaleX),
+                          },
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={handleAddPicture}
+                  >
+                    <Image
+                      source={require('../../../assets/icons/add-photos.png')}
+                      style={styles.addIcon}
+                      resizeMode="contain"
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
             </>
           )}
@@ -522,7 +709,7 @@ export default function RegisterLostAndFoundModal({
                   value={notes}
                   onChangeText={setNotes}
                   multiline
-                  placeholder="Enter notes..."
+                  placeholder="Wrist watch found in guest bathroom whole cleaning"
                   placeholderTextColor="#999999"
                 />
                 <View style={styles.notesDivider} />
@@ -626,10 +813,18 @@ export default function RegisterLostAndFoundModal({
                 }}
               >
                 <View style={styles.step2FieldContent}>
-                  <Image
-                    source={require('../../../assets/icons/down-arrow.png')}
-                    style={[styles.step2StatusIcon, { tintColor: '#f0be1b' }]}
-                    resizeMode="contain"
+                  <View
+                    style={[
+                      styles.step2StatusCircle,
+                      {
+                        backgroundColor:
+                          status === 'stored'
+                            ? '#f0be1b'
+                            : status === 'shipped'
+                            ? '#41d541'
+                            : '#f0be1b',
+                      },
+                    ]}
                   />
                   <Text style={styles.step2FieldText}>{getStatusLabel(status)}</Text>
                 </View>
@@ -665,17 +860,70 @@ export default function RegisterLostAndFoundModal({
           {/* Step 3 Content */}
           {currentStep === 3 && (
             <>
-              {/* Item Image */}
-              <View style={styles.step3ItemImageContainer}>
-                <Image
-                  source={require('../../../assets/images/wrist-watch.png')}
-                  style={styles.step3ItemImage}
-                  resizeMode="cover"
-                />
-              </View>
+              {/* Item Images */}
+              {pictures.length > 0 ? (
+                <View style={styles.step3PicturesContainer}>
+                  {pictures.length === 1 ? (
+                    <View style={styles.step3PictureSingleContainer}>
+                      <Image
+                        source={{ uri: pictures[0] }}
+                        style={styles.step3PictureImage}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  ) : (
+                    pictures.map((uri, index) => {
+                      const row = Math.floor(index / 2);
+                      const col = index % 2;
+                      const pictureWidth = ((Dimensions.get('window').width - (27 * 2 * scaleX) - (12 * scaleX)) / 2);
+                      const left = 27 * scaleX + col * (pictureWidth + 12 * scaleX);
+                      const top = row * (REGISTER_FORM.pictures.image1.height * scaleX + 12 * scaleX);
+                      return (
+                        <View
+                          key={index}
+                          style={[
+                            styles.step3PictureGridContainer,
+                            {
+                              left,
+                              top,
+                            },
+                          ]}
+                        >
+                          <Image
+                            source={{ uri }}
+                            style={styles.step3PictureImage}
+                            resizeMode="cover"
+                          />
+                        </View>
+                      );
+                    })
+                  )}
+                </View>
+              ) : (
+                <View style={styles.step3ItemImageContainer}>
+                  <Image
+                    source={require('../../../assets/images/wrist-watch.png')}
+                    style={styles.step3ItemImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              )}
 
               {/* Item Description */}
-              <View style={styles.step3ItemDescriptionContainer}>
+              <View
+                style={[
+                  styles.step3ItemDescriptionContainer,
+                  {
+                    marginTop:
+                      pictures.length > 0
+                        ? pictures.length === 1
+                          ? (REGISTER_FORM.step3.itemDescription.top - REGISTER_FORM.step3.itemImage.top - REGISTER_FORM.step3.itemImage.height) * scaleX * 0.7
+                          : (REGISTER_FORM.step3.itemDescription.top - REGISTER_FORM.step3.itemImage.top - REGISTER_FORM.step3.itemImage.height) * scaleX * 0.7 +
+                            (Math.ceil(pictures.length / 2) - 1) * (REGISTER_FORM.pictures.image1.height * scaleX + 12 * scaleX - REGISTER_FORM.step3.itemImage.height * scaleX)
+                        : (REGISTER_FORM.step3.itemDescription.top - REGISTER_FORM.step3.itemImage.top - REGISTER_FORM.step3.itemImage.height) * scaleX * 0.7,
+                  },
+                ]}
+              >
                 <Text style={styles.step3ItemDescription}>{notes}</Text>
                 <TouchableOpacity
                   style={styles.step3EditIcon}
@@ -856,11 +1104,20 @@ export default function RegisterLostAndFoundModal({
 
           {/* Next/Done Button */}
           <TouchableOpacity
-            style={styles.nextButton}
+            style={[
+              styles.nextButton,
+              (currentStep === 1 && (pictures.length === 0 || notes.trim() === '')) && styles.nextButtonDisabled,
+            ]}
             onPress={handleNext}
             activeOpacity={0.7}
+            disabled={currentStep === 1 && (pictures.length === 0 || notes.trim() === '')}
           >
-            <Text style={styles.nextButtonText}>
+            <Text
+              style={[
+                styles.nextButtonText,
+                (currentStep === 1 && (pictures.length === 0 || notes.trim() === '')) && styles.nextButtonTextDisabled,
+              ]}
+            >
               {currentStep === 3 ? 'Done' : 'Next'}
             </Text>
           </TouchableOpacity>
@@ -1244,26 +1501,70 @@ const styles = StyleSheet.create({
     marginBottom: 16 * scaleX, // Relative spacing from label to images
   },
   picturesContainer: {
-    flexDirection: 'row',
+    position: 'relative',
     marginBottom: 24 * scaleX, // Relative spacing to next section
   },
-  picture1: {
-    width: REGISTER_FORM.pictures.image1.width * scaleX,
+  picture1Grid: {
+    position: 'absolute',
+    width: ((Dimensions.get('window').width - (27 * 2 * scaleX) - (12 * scaleX)) / 2), // Two columns: (container width - padding - margin) / 2
     height: REGISTER_FORM.pictures.image1.height * scaleX,
     borderRadius: REGISTER_FORM.pictures.image1.borderRadius * scaleX,
-    marginRight: 12 * scaleX,
+    overflow: 'hidden',
+  },
+  picture1FullWidth: {
+    width: Dimensions.get('window').width - (27 * 2 * scaleX), // Full width when only one picture
+    height: REGISTER_FORM.pictures.image1.height * scaleX,
+    borderRadius: REGISTER_FORM.pictures.image1.borderRadius * scaleX,
+    position: 'relative',
+    overflow: 'hidden',
   },
   picture2: {
-    width: REGISTER_FORM.pictures.image2.width * scaleX,
+    position: 'absolute',
+    width: ((Dimensions.get('window').width - (27 * 2 * scaleX) - (12 * scaleX)) / 2), // Same width as picture1 for two-column layout
     height: REGISTER_FORM.pictures.image2.height * scaleX,
     borderRadius: REGISTER_FORM.pictures.image2.borderRadius * scaleX,
     backgroundColor: REGISTER_FORM.pictures.image2.backgroundColor,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  picture2FullWidth: {
+    width: Dimensions.get('window').width - (27 * 2 * scaleX), // Full width when no pictures
+    height: REGISTER_FORM.pictures.image2.height * scaleX,
+    borderRadius: REGISTER_FORM.pictures.image2.borderRadius * scaleX,
+    backgroundColor: REGISTER_FORM.pictures.image2.backgroundColor,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  picture2Error: {
+    borderWidth: 2,
+    borderColor: '#ff0000', // Red border for error
+  },
+  picture2BelowSingle: {
+    position: 'absolute',
+    left: 27 * scaleX,
+    top: REGISTER_FORM.pictures.image1.height * scaleX + 12 * scaleX,
+  },
   addIcon: {
     width: REGISTER_FORM.pictures.addIcon.width * scaleX,
     height: REGISTER_FORM.pictures.addIcon.height * scaleX,
+  },
+  pictureRemoveOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 24 * scaleX,
+    height: 24 * scaleX,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 12 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: 4 * scaleX,
+  },
+  pictureRemoveText: {
+    color: '#ffffff',
+    fontSize: 18 * scaleX,
+    fontWeight: 'bold' as any,
+    lineHeight: 18 * scaleX,
   },
   notesContainer: {
     marginTop: 0, // Already accounted in picturesContainer marginBottom
@@ -1311,11 +1612,18 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: 40 * scaleX, // Increased margin top for Done button
   },
+  nextButtonDisabled: {
+    backgroundColor: '#d3d3d3', // Gray background when disabled
+    opacity: 0.5, // Blur effect
+  },
   nextButtonText: {
     fontSize: REGISTER_FORM.nextButton.text.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: REGISTER_FORM.nextButton.text.fontWeight as any,
     color: REGISTER_FORM.nextButton.text.color,
+  },
+  nextButtonTextDisabled: {
+    color: '#999999', // Gray text when disabled
   },
   // Step 2 Styles
   step2Field: {
@@ -1373,6 +1681,12 @@ const styles = StyleSheet.create({
     height: REGISTER_FORM.step2.status.icon.size * scaleX,
     marginRight: 12 * scaleX,
   },
+  step2StatusCircle: {
+    width: REGISTER_FORM.step2.status.icon.size * scaleX,
+    height: REGISTER_FORM.step2.status.icon.size * scaleX,
+    borderRadius: (REGISTER_FORM.step2.status.icon.size / 2) * scaleX,
+    marginRight: 12 * scaleX,
+  },
   step2Chevron: {
     width: REGISTER_FORM.step2.status.chevron.width * scaleX,
     height: REGISTER_FORM.step2.status.chevron.height * scaleX,
@@ -1389,6 +1703,30 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   step3ItemImage: {
+    width: '100%',
+    height: '100%',
+  },
+  step3PicturesContainer: {
+    position: 'relative',
+    marginTop: (REGISTER_FORM.step3.itemImage.top - REGISTER_FORM.progressBar.top - REGISTER_FORM.progressBar.height - 10) * scaleX,
+    marginLeft: 0, // No left margin, container padding handles it
+    minHeight: REGISTER_FORM.pictures.image1.height * scaleX,
+    marginBottom: 24 * scaleX,
+  },
+  step3PictureSingleContainer: {
+    width: Dimensions.get('window').width - (27 * 2 * scaleX), // Full width minus container padding
+    height: REGISTER_FORM.step3.itemImage.height * scaleX,
+    borderRadius: REGISTER_FORM.step3.itemImage.borderRadius * scaleX,
+    overflow: 'hidden',
+  },
+  step3PictureGridContainer: {
+    position: 'absolute',
+    width: ((Dimensions.get('window').width - (27 * 2 * scaleX) - (12 * scaleX)) / 2),
+    height: REGISTER_FORM.pictures.image1.height * scaleX,
+    borderRadius: REGISTER_FORM.pictures.image1.borderRadius * scaleX,
+    overflow: 'hidden',
+  },
+  step3PictureImage: {
     width: '100%',
     height: '100%',
   },
