@@ -6,13 +6,13 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
-  Dimensions,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { typography } from '../../theme';
-import { scaleX, ITEM_REGISTERED_SUCCESS } from '../../constants/lostAndFoundStyles';
+import { ITEM_REGISTERED_SUCCESS } from '../../constants/lostAndFoundStyles';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const DESIGN_WIDTH = 440;
 
 interface ItemRegisteredSuccessModalProps {
   visible: boolean;
@@ -29,6 +29,9 @@ export default function ItemRegisteredSuccessModal({
   itemImage,
   onPrint,
 }: ItemRegisteredSuccessModalProps) {
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
+  const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+
   const handlePrint = () => {
     if (onPrint) {
       onPrint();
@@ -37,6 +40,115 @@ export default function ItemRegisteredSuccessModal({
       console.log('Print tracking number:', trackingNumber);
     }
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#ffffff',
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      alignItems: 'center',
+      paddingBottom: 20 * scaleX,
+      flexGrow: 1,
+    },
+    successIconsContainer: {
+      position: 'relative',
+      marginTop: ITEM_REGISTERED_SUCCESS.checkmarkIcon.top * scaleX * 0.7,
+      width: ITEM_REGISTERED_SUCCESS.successIcon.width * scaleX,
+      height: (ITEM_REGISTERED_SUCCESS.successIcon.top + ITEM_REGISTERED_SUCCESS.successIcon.height - ITEM_REGISTERED_SUCCESS.checkmarkIcon.top) * scaleX,
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+    },
+    checkmarkIcon: {
+      position: 'absolute',
+      top: 0,
+      left: (ITEM_REGISTERED_SUCCESS.checkmarkIcon.left - ITEM_REGISTERED_SUCCESS.successIcon.left) * scaleX,
+      width: ITEM_REGISTERED_SUCCESS.checkmarkIcon.width * scaleX,
+      height: ITEM_REGISTERED_SUCCESS.checkmarkIcon.height * scaleX,
+    },
+    boxIcon: {
+      position: 'absolute',
+      top: (ITEM_REGISTERED_SUCCESS.successIcon.top - ITEM_REGISTERED_SUCCESS.checkmarkIcon.top) * scaleX,
+      left: 0,
+      width: ITEM_REGISTERED_SUCCESS.successIcon.width * scaleX,
+      height: ITEM_REGISTERED_SUCCESS.successIcon.height * scaleX,
+    },
+    itemRegisteredText: {
+      marginTop: (ITEM_REGISTERED_SUCCESS.itemRegisteredText.top - (ITEM_REGISTERED_SUCCESS.successIcon.top + ITEM_REGISTERED_SUCCESS.successIcon.height)) * scaleX * 0.5,
+      fontSize: ITEM_REGISTERED_SUCCESS.itemRegisteredText.fontSize * scaleX,
+      fontFamily: typography.fontFamily.primary,
+      fontWeight: ITEM_REGISTERED_SUCCESS.itemRegisteredText.fontWeight as any,
+      color: ITEM_REGISTERED_SUCCESS.itemRegisteredText.color,
+      textAlign: 'center',
+    },
+    trackingNumberLabel: {
+      marginTop: (ITEM_REGISTERED_SUCCESS.trackingNumberLabel.top - ITEM_REGISTERED_SUCCESS.itemRegisteredText.top) * scaleX * 0.5,
+      fontSize: ITEM_REGISTERED_SUCCESS.trackingNumberLabel.fontSize * scaleX,
+      fontFamily: typography.fontFamily.primary,
+      fontWeight: ITEM_REGISTERED_SUCCESS.trackingNumberLabel.fontWeight as any,
+      color: ITEM_REGISTERED_SUCCESS.trackingNumberLabel.color,
+      textAlign: 'center',
+    },
+    trackingNumberValue: {
+      marginTop: (ITEM_REGISTERED_SUCCESS.trackingNumberValue.top - ITEM_REGISTERED_SUCCESS.trackingNumberLabel.top) * scaleX * 0.5,
+      fontSize: ITEM_REGISTERED_SUCCESS.trackingNumberValue.fontSize * scaleX,
+      fontFamily: typography.fontFamily.primary,
+      fontWeight: ITEM_REGISTERED_SUCCESS.trackingNumberValue.fontWeight as any,
+      color: ITEM_REGISTERED_SUCCESS.trackingNumberValue.color,
+      textAlign: 'center',
+      width: '100%',
+      paddingHorizontal: ITEM_REGISTERED_SUCCESS.trackingNumberValue.left * scaleX,
+    },
+    instructionsText: {
+      marginTop: (ITEM_REGISTERED_SUCCESS.instructionsText.top - ITEM_REGISTERED_SUCCESS.trackingNumberValue.top) * scaleX * 0.6,
+      width: Math.min(ITEM_REGISTERED_SUCCESS.instructionsText.width * scaleX, SCREEN_WIDTH - 40 * scaleX),
+      fontSize: ITEM_REGISTERED_SUCCESS.instructionsText.fontSize * scaleX,
+      fontFamily: typography.fontFamily.primary,
+      fontWeight: ITEM_REGISTERED_SUCCESS.instructionsText.fontWeight as any,
+      color: ITEM_REGISTERED_SUCCESS.instructionsText.color,
+      textAlign: 'center',
+      lineHeight: 20 * scaleX,
+      paddingHorizontal: 20 * scaleX,
+    },
+    printButton: {
+      marginTop: (ITEM_REGISTERED_SUCCESS.printButton.top - ITEM_REGISTERED_SUCCESS.instructionsText.top) * scaleX * 0.5,
+      width: ITEM_REGISTERED_SUCCESS.printButton.width * scaleX,
+      height: ITEM_REGISTERED_SUCCESS.printButton.height * scaleX,
+      borderRadius: ITEM_REGISTERED_SUCCESS.printButton.borderRadius * scaleX,
+      backgroundColor: ITEM_REGISTERED_SUCCESS.printButton.backgroundColor,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 20 * scaleX,
+    },
+    printerIcon: {
+      width: 24 * scaleX,
+      height: 24 * scaleX,
+      marginRight: 8 * scaleX,
+      tintColor: '#ffffff',
+    },
+    printButtonText: {
+      fontSize: ITEM_REGISTERED_SUCCESS.printButtonText.fontSize * scaleX,
+      fontFamily: typography.fontFamily.primary,
+      fontWeight: ITEM_REGISTERED_SUCCESS.printButtonText.fontWeight as any,
+      color: ITEM_REGISTERED_SUCCESS.printButtonText.color,
+    },
+    closeLink: {
+      marginTop: (ITEM_REGISTERED_SUCCESS.closeLink.top - ITEM_REGISTERED_SUCCESS.printButton.top - ITEM_REGISTERED_SUCCESS.printButton.height) * scaleX * 0.3,
+      paddingVertical: 10 * scaleX,
+      paddingHorizontal: 20 * scaleX,
+    },
+    closeLinkText: {
+      fontSize: ITEM_REGISTERED_SUCCESS.closeLink.fontSize * scaleX,
+      fontFamily: typography.fontFamily.primary,
+      fontWeight: ITEM_REGISTERED_SUCCESS.closeLink.fontWeight as any,
+      color: ITEM_REGISTERED_SUCCESS.closeLink.color,
+      textAlign: 'center',
+    },
+  });
 
   return (
     <Modal
@@ -74,7 +186,9 @@ export default function ItemRegisteredSuccessModal({
           <Text style={styles.trackingNumberLabel}>Tracking Number</Text>
 
           {/* Tracking Number Value */}
-          <Text style={styles.trackingNumberValue}>{trackingNumber}</Text>
+          <Text style={styles.trackingNumberValue} numberOfLines={1} adjustsFontSizeToFit>
+            {trackingNumber}
+          </Text>
 
           {/* Instructions Text */}
           <Text style={styles.instructionsText}>
@@ -108,110 +222,3 @@ export default function ItemRegisteredSuccessModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    alignItems: 'center',
-    paddingBottom: 50 * scaleX,
-  },
-  successIconsContainer: {
-    position: 'relative',
-    marginTop: ITEM_REGISTERED_SUCCESS.checkmarkIcon.top * scaleX, // Start from checkmark top
-    width: ITEM_REGISTERED_SUCCESS.successIcon.width * scaleX,
-    height: (ITEM_REGISTERED_SUCCESS.successIcon.top + ITEM_REGISTERED_SUCCESS.successIcon.height - ITEM_REGISTERED_SUCCESS.checkmarkIcon.top) * scaleX,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  checkmarkIcon: {
-    position: 'absolute',
-    top: 0, // At the top of container
-    left: (ITEM_REGISTERED_SUCCESS.checkmarkIcon.left - ITEM_REGISTERED_SUCCESS.successIcon.left) * scaleX,
-    width: ITEM_REGISTERED_SUCCESS.checkmarkIcon.width * scaleX,
-    height: ITEM_REGISTERED_SUCCESS.checkmarkIcon.height * scaleX,
-  },
-  boxIcon: {
-    position: 'absolute',
-    top: (ITEM_REGISTERED_SUCCESS.successIcon.top - ITEM_REGISTERED_SUCCESS.checkmarkIcon.top) * scaleX,
-    left: 0,
-    width: ITEM_REGISTERED_SUCCESS.successIcon.width * scaleX,
-    height: ITEM_REGISTERED_SUCCESS.successIcon.height * scaleX,
-  },
-  itemRegisteredText: {
-    marginTop: (ITEM_REGISTERED_SUCCESS.itemRegisteredText.top - (ITEM_REGISTERED_SUCCESS.successIcon.top + ITEM_REGISTERED_SUCCESS.successIcon.height)) * scaleX * 0.7,
-    fontSize: ITEM_REGISTERED_SUCCESS.itemRegisteredText.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: ITEM_REGISTERED_SUCCESS.itemRegisteredText.fontWeight as any,
-    color: ITEM_REGISTERED_SUCCESS.itemRegisteredText.color,
-    textAlign: 'center',
-  },
-  trackingNumberLabel: {
-    marginTop: (ITEM_REGISTERED_SUCCESS.trackingNumberLabel.top - ITEM_REGISTERED_SUCCESS.itemRegisteredText.top) * scaleX * 0.7,
-    fontSize: ITEM_REGISTERED_SUCCESS.trackingNumberLabel.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: ITEM_REGISTERED_SUCCESS.trackingNumberLabel.fontWeight as any,
-    color: ITEM_REGISTERED_SUCCESS.trackingNumberLabel.color,
-    textAlign: 'center',
-  },
-  trackingNumberValue: {
-    marginTop: (ITEM_REGISTERED_SUCCESS.trackingNumberValue.top - ITEM_REGISTERED_SUCCESS.trackingNumberLabel.top) * scaleX * 0.7,
-    marginLeft: ITEM_REGISTERED_SUCCESS.trackingNumberValue.left * scaleX,
-    fontSize: ITEM_REGISTERED_SUCCESS.trackingNumberValue.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: ITEM_REGISTERED_SUCCESS.trackingNumberValue.fontWeight as any,
-    color: ITEM_REGISTERED_SUCCESS.trackingNumberValue.color,
-    alignSelf: 'flex-start',
-  },
-  instructionsText: {
-    marginTop: (ITEM_REGISTERED_SUCCESS.instructionsText.top - ITEM_REGISTERED_SUCCESS.trackingNumberValue.top) * scaleX,
-    width: ITEM_REGISTERED_SUCCESS.instructionsText.width * scaleX,
-    fontSize: ITEM_REGISTERED_SUCCESS.instructionsText.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: ITEM_REGISTERED_SUCCESS.instructionsText.fontWeight as any,
-    color: ITEM_REGISTERED_SUCCESS.instructionsText.color,
-    textAlign: 'center',
-    lineHeight: 20 * scaleX,
-  },
-  printButton: {
-    marginTop: (ITEM_REGISTERED_SUCCESS.printButton.top - ITEM_REGISTERED_SUCCESS.instructionsText.top) * scaleX * 0.7,
-    width: ITEM_REGISTERED_SUCCESS.printButton.width * scaleX,
-    height: ITEM_REGISTERED_SUCCESS.printButton.height * scaleX,
-    borderRadius: ITEM_REGISTERED_SUCCESS.printButton.borderRadius * scaleX,
-    backgroundColor: ITEM_REGISTERED_SUCCESS.printButton.backgroundColor,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20 * scaleX,
-  },
-  printerIcon: {
-    width: 24 * scaleX,
-    height: 24 * scaleX,
-    marginRight: 8 * scaleX,
-    tintColor: '#ffffff',
-  },
-  printButtonText: {
-    fontSize: ITEM_REGISTERED_SUCCESS.printButtonText.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: ITEM_REGISTERED_SUCCESS.printButtonText.fontWeight as any,
-    color: ITEM_REGISTERED_SUCCESS.printButtonText.color,
-  },
-  closeLink: {
-    marginTop: (ITEM_REGISTERED_SUCCESS.closeLink.top - ITEM_REGISTERED_SUCCESS.printButton.top - ITEM_REGISTERED_SUCCESS.printButton.height) * scaleX * 0.5,
-    paddingVertical: 10 * scaleX,
-    paddingHorizontal: 20 * scaleX,
-  },
-  closeLinkText: {
-    fontSize: ITEM_REGISTERED_SUCCESS.closeLink.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: ITEM_REGISTERED_SUCCESS.closeLink.fontWeight as any,
-    color: ITEM_REGISTERED_SUCCESS.closeLink.color,
-    textAlign: 'center',
-  },
-});
-
