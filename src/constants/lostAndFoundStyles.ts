@@ -924,8 +924,11 @@ export const REGISTER_FORM = {
       },
     },
     emailCheckbox: {
-      left: 84,
-      top: 659,
+      left: 45,
+      top: 653,
+      size: 28,
+      textLeft: 84,
+      textTop: 659,
       fontSize: 16,
       color: '#5a759d',
     },

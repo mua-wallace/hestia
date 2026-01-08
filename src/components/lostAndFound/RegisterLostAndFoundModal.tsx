@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -88,6 +88,14 @@ export default function RegisterLostAndFoundModal({
   
   // Step 3 state
   const [sendEmailToGuest, setSendEmailToGuest] = useState(true);
+  
+  // Reset to step 1 when modal opens
+  useEffect(() => {
+    if (visible) {
+      setCurrentStep(1);
+      setSendEmailToGuest(true); // Reset email checkbox
+    }
+  }, [visible]);
   
   // Refs for measuring input field positions
   const scrollViewRef = useRef<ScrollView>(null);
@@ -697,7 +705,7 @@ export default function RegisterLostAndFoundModal({
                   <View style={styles.step3GuestInfo}>
                     <Image
                       source={require('../../../assets/icons/guest-departure-icon.png')}
-                      style={styles.step3GuestArrow}
+                      style={styles.step3GuestIcon}
                       resizeMode="contain"
                     />
                     <View style={styles.step3GuestDetails}>
@@ -734,7 +742,7 @@ export default function RegisterLostAndFoundModal({
               </TouchableOpacity>
 
               {/* Divider */}
-              <View style={[styles.step3Divider, { marginTop: (716 - REGISTER_FORM.step3.emailCheckbox.top) * scaleX, marginBottom: 0 }]} />
+              <View style={[styles.step3Divider, { marginTop: (716 - REGISTER_FORM.step3.emailCheckbox.top) * scaleX * 0.5, marginBottom: 0 }]} />
 
               {/* Date and Time Section */}
               <Text style={styles.step3DateTimeLabel}>Date and time</Text>
@@ -760,7 +768,7 @@ export default function RegisterLostAndFoundModal({
               </View>
 
               {/* Divider */}
-              <View style={[styles.step3Divider, { marginTop: (804 - REGISTER_FORM.step3.dateTime.date.top) * scaleX, marginBottom: 0 }]} />
+              <View style={[styles.step3Divider, { marginTop: (804 - REGISTER_FORM.step3.dateTime.date.top) * scaleX * 0.7, marginBottom: 0 }]} />
 
               {/* Founded By Section */}
               <Text style={styles.step3FoundedByLabel}>Founded by</Text>
@@ -819,15 +827,23 @@ export default function RegisterLostAndFoundModal({
               </View>
 
               {/* Divider */}
-              <View style={[styles.step3Divider, { marginTop: (1021 - REGISTER_FORM.step3.registeredBy.department.top) * scaleX, marginBottom: 0 }]} />
+              <View style={[styles.step3Divider, { marginTop: (1021 - REGISTER_FORM.step3.registeredBy.department.top) * scaleX * 0.5, marginBottom: 0 }]} />
 
               {/* Status Section */}
               <Text style={styles.step3StatusLabel}>Status</Text>
               <View style={styles.step3StatusContainer}>
-                <Image
-                  source={require('../../../assets/icons/down-arrow.png')}
-                  style={[styles.step3StatusIcon, { tintColor: '#f0be1b' }]}
-                  resizeMode="contain"
+                <View
+                  style={[
+                    styles.step3StatusCircle,
+                    {
+                      backgroundColor:
+                        status === 'stored'
+                          ? '#f0be1b'
+                          : status === 'shipped'
+                          ? '#41d541'
+                          : '#f0be1b',
+                    },
+                  ]}
                 />
                 <Text style={styles.step3StatusValue}>{getStatusLabel(status)}</Text>
               </View>
@@ -1293,6 +1309,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
+    marginTop: 40 * scaleX, // Increased margin top for Done button
   },
   nextButtonText: {
     fontSize: REGISTER_FORM.nextButton.text.fontSize * scaleX,
@@ -1376,7 +1393,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   step3ItemDescriptionContainer: {
-    marginTop: (REGISTER_FORM.step3.itemDescription.top - REGISTER_FORM.step3.itemImage.top - REGISTER_FORM.step3.itemImage.height) * scaleX,
+    marginTop: (REGISTER_FORM.step3.itemDescription.top - REGISTER_FORM.step3.itemImage.top - REGISTER_FORM.step3.itemImage.height) * scaleX * 0.7,
     marginLeft: REGISTER_FORM.step3.itemDescription.left * scaleX,
     width: '100%',
     paddingRight: 20 * scaleX,
@@ -1404,7 +1421,7 @@ const styles = StyleSheet.create({
     height: REGISTER_FORM.step3.editIcon.size * scaleX,
   },
   step3FoundInLabel: {
-    marginTop: (REGISTER_FORM.step3.foundIn.label.top - REGISTER_FORM.step3.itemDescription.top) * scaleX,
+    marginTop: (REGISTER_FORM.step3.foundIn.label.top - REGISTER_FORM.step3.itemDescription.top) * scaleX * 0.7,
     marginLeft: REGISTER_FORM.step3.foundIn.label.left * scaleX,
     fontSize: REGISTER_FORM.step3.foundIn.label.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
@@ -1413,7 +1430,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   step3FoundInContent: {
-    marginTop: (REGISTER_FORM.step3.foundIn.checkbox.top - REGISTER_FORM.step3.foundIn.label.top) * scaleX,
+    marginTop: (REGISTER_FORM.step3.foundIn.checkbox.top - REGISTER_FORM.step3.foundIn.label.top) * scaleX * 0.5,
     marginLeft: REGISTER_FORM.step3.foundIn.checkbox.left * scaleX,
     width: '100%',
     paddingRight: 20 * scaleX,
@@ -1449,18 +1466,18 @@ const styles = StyleSheet.create({
   },
   step3GuestInfo: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: (REGISTER_FORM.step3.foundIn.guestInfo.top - REGISTER_FORM.step3.foundIn.checkbox.top) * scaleX,
+    alignItems: 'flex-start',
+    marginTop: (REGISTER_FORM.step3.foundIn.guestInfo.top - REGISTER_FORM.step3.foundIn.checkbox.top) * scaleX * 0.5,
     marginLeft: (REGISTER_FORM.step3.foundIn.guestInfo.left - REGISTER_FORM.step3.foundIn.checkbox.left) * scaleX,
     width: '100%',
     paddingRight: 20 * scaleX,
     marginBottom: 0,
   },
-  step3GuestArrow: {
-    width: 21 * scaleX,
-    height: 21 * scaleX,
+  step3GuestIcon: {
+    width: 28.371 * scaleX,
+    height: 29.919 * scaleX,
     marginRight: 8 * scaleX,
-    tintColor: '#5a759d',
+    marginTop: 0, // Align icon with name baseline
   },
   step3GuestDetails: {
     flex: 1,
@@ -1476,10 +1493,10 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: REGISTER_FORM.step3.foundIn.roomNumber.fontWeight as any,
     color: REGISTER_FORM.step3.foundIn.roomNumber.color,
-    marginTop: (REGISTER_FORM.step3.foundIn.roomNumber.top - REGISTER_FORM.step3.foundIn.guestName.top) * scaleX,
+    marginTop: 4 * scaleX, // Reduced gap between name and room
   },
   step3EmailContainer: {
-    marginTop: (REGISTER_FORM.step3.emailCheckbox.top - REGISTER_FORM.step3.foundIn.roomNumber.top) * scaleX,
+    marginTop: (REGISTER_FORM.step3.emailCheckbox.top - REGISTER_FORM.step3.foundIn.roomNumber.top) * scaleX * 0.7,
     marginLeft: REGISTER_FORM.step3.emailCheckbox.left * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1499,7 +1516,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   step3DateTimeLabel: {
-    marginTop: (REGISTER_FORM.step3.dateTime.label.top - 716) * scaleX, // Divider is at 716px
+    marginTop: (REGISTER_FORM.step3.dateTime.label.top - 716) * scaleX * 0.7, // Divider is at 716px
     marginLeft: REGISTER_FORM.step3.dateTime.label.left * scaleX,
     fontSize: REGISTER_FORM.step3.dateTime.label.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
@@ -1508,7 +1525,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   step3DateTimeContainer: {
-    marginTop: (REGISTER_FORM.step3.dateTime.date.top - REGISTER_FORM.step3.dateTime.label.top) * scaleX,
+    marginTop: (REGISTER_FORM.step3.dateTime.date.top - REGISTER_FORM.step3.dateTime.label.top) * scaleX * 0.5,
     marginLeft: REGISTER_FORM.step3.dateTime.date.left * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1531,7 +1548,7 @@ const styles = StyleSheet.create({
     marginRight: 16 * scaleX,
   },
   step3FoundedByLabel: {
-    marginTop: (REGISTER_FORM.step3.foundedBy.label.top - 804) * scaleX, // Divider is at 804px
+    marginTop: (REGISTER_FORM.step3.foundedBy.label.top - 804) * scaleX * 0.7, // Divider is at 804px
     marginLeft: REGISTER_FORM.step3.foundedBy.label.left * scaleX,
     fontSize: REGISTER_FORM.step3.foundedBy.label.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
@@ -1540,7 +1557,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   step3RegisteredByLabel: {
-    marginTop: (REGISTER_FORM.step3.registeredBy.label.top - REGISTER_FORM.step3.foundedBy.department.top) * scaleX,
+    marginTop: (REGISTER_FORM.step3.registeredBy.label.top - REGISTER_FORM.step3.foundedBy.department.top) * scaleX * 0.7,
     marginLeft: REGISTER_FORM.step3.registeredBy.label.left * scaleX,
     fontSize: REGISTER_FORM.step3.registeredBy.label.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
@@ -1549,18 +1566,18 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   step3StaffInfo: {
-    marginTop: (REGISTER_FORM.step3.foundedBy.avatar.top - REGISTER_FORM.step3.foundedBy.label.top) * scaleX,
+    marginTop: (REGISTER_FORM.step3.foundedBy.avatar.top - REGISTER_FORM.step3.foundedBy.label.top) * scaleX * 0.5,
     marginLeft: REGISTER_FORM.step3.foundedBy.avatar.left * scaleX,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     width: '100%',
     marginBottom: 0,
   },
   step3RegisteredByStaffInfo: {
-    marginTop: (REGISTER_FORM.step3.registeredBy.avatar.top - REGISTER_FORM.step3.registeredBy.label.top) * scaleX,
+    marginTop: (REGISTER_FORM.step3.registeredBy.avatar.top - REGISTER_FORM.step3.registeredBy.label.top) * scaleX * 0.5,
     marginLeft: REGISTER_FORM.step3.registeredBy.avatar.left * scaleX,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     width: '100%',
     marginBottom: 0,
   },
@@ -1569,6 +1586,7 @@ const styles = StyleSheet.create({
     height: REGISTER_FORM.step3.foundedBy.avatar.size * scaleX,
     borderRadius: (REGISTER_FORM.step3.foundedBy.avatar.size / 2) * scaleX,
     marginRight: 12 * scaleX,
+    marginTop: 0, // Align avatar with name baseline
   },
   step3InitialsCircle: {
     justifyContent: 'center',
@@ -1594,10 +1612,10 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: REGISTER_FORM.step3.foundedBy.department.fontWeight as any,
     color: REGISTER_FORM.step3.foundedBy.department.color,
-    marginTop: (REGISTER_FORM.step3.foundedBy.department.top - REGISTER_FORM.step3.foundedBy.name.top) * scaleX,
+    marginTop: 4 * scaleX, // Reduced gap between name and department
   },
   step3StatusLabel: {
-    marginTop: (REGISTER_FORM.step3.status.label.top - 1021) * scaleX, // Divider is at 1021px
+    marginTop: (REGISTER_FORM.step3.status.label.top - 1021) * scaleX * 0.7, // Divider is at 1021px
     marginLeft: REGISTER_FORM.step3.status.label.left * scaleX,
     fontSize: REGISTER_FORM.step3.status.label.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
@@ -1606,16 +1624,17 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   step3StatusContainer: {
-    marginTop: (REGISTER_FORM.step3.status.icon.top - REGISTER_FORM.step3.status.label.top) * scaleX,
+    marginTop: (REGISTER_FORM.step3.status.icon.top - REGISTER_FORM.step3.status.label.top) * scaleX * 0.5,
     marginLeft: REGISTER_FORM.step3.status.icon.left * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
     marginBottom: 0,
   },
-  step3StatusIcon: {
+  step3StatusCircle: {
     width: REGISTER_FORM.step3.status.icon.size * scaleX,
     height: REGISTER_FORM.step3.status.icon.size * scaleX,
+    borderRadius: (REGISTER_FORM.step3.status.icon.size / 2) * scaleX,
     marginRight: 8 * scaleX,
   },
   step3StatusValue: {
@@ -1625,7 +1644,7 @@ const styles = StyleSheet.create({
     color: REGISTER_FORM.step3.status.value.color,
   },
   step3StoredLocationLabel: {
-    marginTop: (REGISTER_FORM.step3.storedLocation.label.top - REGISTER_FORM.step3.status.value.top) * scaleX,
+    marginTop: (REGISTER_FORM.step3.storedLocation.label.top - REGISTER_FORM.step3.status.value.top) * scaleX * 0.5,
     marginLeft: REGISTER_FORM.step3.storedLocation.label.left * scaleX,
     fontSize: REGISTER_FORM.step3.storedLocation.label.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
@@ -1634,7 +1653,7 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   step3StoredLocationValue: {
-    marginTop: (REGISTER_FORM.step3.storedLocation.value.top - REGISTER_FORM.step3.storedLocation.label.top) * scaleX,
+    marginTop: (REGISTER_FORM.step3.storedLocation.value.top - REGISTER_FORM.step3.storedLocation.label.top) * scaleX * 0.5,
     marginLeft: REGISTER_FORM.step3.storedLocation.value.left * scaleX,
     fontSize: REGISTER_FORM.step3.storedLocation.value.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
