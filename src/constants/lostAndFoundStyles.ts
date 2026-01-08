@@ -1064,3 +1064,68 @@ export const REGISTER_FORM = {
   },
 } as const;
 
+// Item Registered Success Screen
+export const ITEM_REGISTERED_SUCCESS = {
+      container: {
+        width: 440,
+        height: 956,
+        backgroundColor: '#ffffff',
+      },
+      successIcon: {
+        top: 242,
+        left: 144,
+        width: 151.24,
+        height: 164.983,
+      },
+      checkmarkIcon: {
+        top: 212,
+        left: 194,
+        width: 51.194,
+        height: 39.818,
+      },
+      itemRegisteredText: {
+        top: 435,
+        fontSize: 19,
+        fontWeight: 'regular' as const,
+        color: '#5a759d',
+      },
+      trackingNumberLabel: {
+        top: 514,
+        fontSize: 24,
+        fontWeight: 'bold' as const,
+        color: '#607aa1',
+      },
+      trackingNumberValue: {
+        top: 558,
+        left: 144,
+        fontSize: 37,
+        fontWeight: 'light' as const,
+        color: '#000000',
+      },
+      instructionsText: {
+        top: 622,
+        fontSize: 16,
+        fontWeight: 'light' as const,
+        color: '#000000',
+        width: 280,
+      },
+      printButton: {
+        top: 723,
+        width: 141,
+        height: 55,
+        borderRadius: 50,
+        backgroundColor: 'rgba(100,131,176,0.4)',
+      },
+      printButtonText: {
+        fontSize: 19,
+        fontWeight: 'regular' as const,
+        color: '#ffffff',
+      },
+      closeLink: {
+        top: 856,
+        fontSize: 18,
+        fontWeight: 'regular' as const,
+        color: '#5a759d',
+      },
+} as const;
+

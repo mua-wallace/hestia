@@ -9,6 +9,7 @@ import LostAndFoundHeader from '../components/lostAndFound/LostAndFoundHeader';
 import LostAndFoundTabs from '../components/lostAndFound/LostAndFoundTabs';
 import LostAndFoundItemCard from '../components/lostAndFound/LostAndFoundItemCard';
 import RegisterLostAndFoundModal from '../components/lostAndFound/RegisterLostAndFoundModal';
+import ItemRegisteredSuccessModal from '../components/lostAndFound/ItemRegisteredSuccessModal';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockLostAndFoundData } from '../data/mockLostAndFoundData';
 import { MoreMenuItemId } from '../types/more.types';
@@ -40,6 +41,12 @@ export default function LostAndFoundScreen() {
   const [items] = useState<LostAndFoundItem[]>(mockLostAndFoundData);
   const [refreshing, setRefreshing] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successData, setSuccessData] = useState<{
+    trackingNumber: string;
+    itemImage?: string;
+    itemData: any;
+  } | null>(null);
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);
@@ -92,9 +99,19 @@ export default function LostAndFoundScreen() {
     setShowRegisterModal(false);
   };
 
-  const handleRegisterNext = () => {
-    // TODO: Navigate to step 2 when implemented
-    console.log('Move to step 2');
+  const handleRegisterNext = (data: {
+    trackingNumber: string;
+    itemImage?: string;
+    itemData: any;
+  }) => {
+    setSuccessData(data);
+    setShowRegisterModal(false);
+    setShowSuccessModal(true);
+  };
+
+  const handleCloseSuccessModal = () => {
+    setShowSuccessModal(false);
+    setSuccessData(null);
   };
 
   const handleTabChange = (tab: LostAndFoundTab) => {
@@ -200,6 +217,14 @@ export default function LostAndFoundScreen() {
         visible={showRegisterModal}
         onClose={handleCloseRegisterModal}
         onNext={handleRegisterNext}
+      />
+
+      {/* Success Modal */}
+      <ItemRegisteredSuccessModal
+        visible={showSuccessModal}
+        onClose={handleCloseSuccessModal}
+        trackingNumber={successData?.trackingNumber || ''}
+        itemImage={successData?.itemImage}
       />
     </View>
   );

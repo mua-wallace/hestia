@@ -23,7 +23,23 @@ import StoredLocationDropdown, { StoredLocationOption } from './StoredLocationDr
 interface RegisterLostAndFoundModalProps {
   visible: boolean;
   onClose: () => void;
-  onNext?: () => void;
+  onNext?: (data: {
+    trackingNumber: string;
+    itemImage?: string;
+    itemData: {
+      notes: string;
+      selectedLocation: 'room' | 'publicArea';
+      selectedRoom?: any;
+      foundedBy: string;
+      registeredBy: string;
+      status: StatusOption;
+      storedLocation: StoredLocationOption;
+      selectedDate: Date;
+      selectedHour: number;
+      selectedMinute: number;
+      pictures: string[];
+    };
+  }) => void;
 }
 
 export default function RegisterLostAndFoundModal({
@@ -300,6 +316,13 @@ export default function RegisterLostAndFoundModal({
     setSelectedMinute(minute);
   };
 
+  // Generate tracking number
+  const generateTrackingNumber = (): string => {
+    const prefix = 'FH';
+    const randomNumber = Math.floor(10000 + Math.random() * 90000); // 5-digit number
+    return `${prefix}${randomNumber}`;
+  };
+
   const handleNext = () => {
     if (currentStep === 1) {
       // Validation is handled by disabled state - button won't be clickable if invalid
@@ -307,9 +330,26 @@ export default function RegisterLostAndFoundModal({
     } else if (currentStep === 2) {
       setCurrentStep(3);
     } else if (currentStep === 3) {
-      // Validate and submit
+      // Generate tracking number and submit
+      const trackingNumber = generateTrackingNumber();
       if (onNext) {
-        onNext();
+        onNext({
+          trackingNumber,
+          itemImage: pictures.length > 0 ? pictures[0] : undefined,
+          itemData: {
+            notes,
+            selectedLocation,
+            selectedRoom: selectedLocation === 'room' ? selectedRoom : undefined,
+            foundedBy,
+            registeredBy,
+            status,
+            storedLocation,
+            selectedDate,
+            selectedHour,
+            selectedMinute,
+            pictures,
+          },
+        });
       }
       onClose();
     }
