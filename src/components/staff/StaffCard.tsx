@@ -38,7 +38,13 @@ export default function StaffCard({ staff }: StaffCardProps) {
       </View>
 
       {/* Name */}
-      <Text style={styles.name}>{staff.name}</Text>
+      <Text 
+        style={styles.name}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
+        {staff.name}
+      </Text>
 
       {/* Progress Ratio */}
       <Text style={styles.progressRatio}>
@@ -144,6 +150,8 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: STAFF_CARD.name.color,
+    maxWidth: (STAFF_CARD.width - STAFF_CARD.name.left - STAFF_CARD.progressRatio.right - 20) * scaleX, // Ensure name doesn't overlap with progress ratio
+    zIndex: 1,
   },
   progressRatio: {
     position: 'absolute',
