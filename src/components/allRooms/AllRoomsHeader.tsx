@@ -84,13 +84,13 @@ export default function AllRoomsHeader({
         </View>
         {onFilterPress && (
           <TouchableOpacity
-            style={styles.menuButton}
+            style={styles.filterButton}
             onPress={onFilterPress}
             activeOpacity={0.7}
           >
             <Image
               source={require('../../../assets/icons/menu-icon.png')}
-              style={styles.menuIcon}
+              style={styles.filterIcon}
               resizeMode="contain"
             />
           </TouchableOpacity>
@@ -203,14 +203,14 @@ const styles = StyleSheet.create({
     height: 19 * scaleX,
     tintColor: colors.primary.main,
   },
-  menuButton: {
+  filterButton: {
     width: 26 * scaleX,
     height: 12 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 18 * scaleX, // Gap between search bar and menu icon
+    marginLeft: 18 * scaleX, // Gap between search bar and filter icon
   },
-  menuIcon: {
+  filterIcon: {
     width: 26,
     height: 12,
     tintColor: colors.primary.main,

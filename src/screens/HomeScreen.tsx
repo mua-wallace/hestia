@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { CompositeNavigationProp } from '@react-navigation/native';
@@ -20,6 +20,8 @@ import HomeHeader from '../components/home/HomeHeader';
 import CategoryCard from '../components/home/CategoryCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
+import HomeFilterModal from '../components/home/HomeFilterModal';
+import { FilterState, FilterCounts } from '../types/filter.types';
 
 import type { MainTabsParamList } from '../navigation/types';
 
@@ -34,6 +36,7 @@ export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('Home');
   const [refreshing, setRefreshing] = useState(false);
   const [showMorePopup, setShowMorePopup] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   const handleShiftToggle = (shift: ShiftType) => {
     setHomeData(prev => ({ ...prev, selectedShift: shift }));
@@ -44,9 +47,8 @@ export default function HomeScreen() {
     console.log('Search:', text);
   };
 
-  const handleMenuPress = () => {
-    // TODO: Implement menu logic
-    console.log('Menu pressed');
+  const handleFilterPress = () => {
+    setShowFilterModal(true);
   };
 
   const handleBellPress = () => {
@@ -106,6 +108,61 @@ export default function HomeScreen() {
       setRefreshing(false);
     }, 1000);
   }, []);
+
+  // Calculate filter counts from homeData
+  const filterCounts: FilterCounts = useMemo(() => {
+    // Aggregate counts from all categories
+    const roomStates = {
+      dirty: 0,
+      inProgress: 0,
+      cleaned: 0,
+      inspected: 0,
+      priority: 0,
+    };
+
+    const guests = {
+      arrivals: 0,
+      departures: 0,
+      turnDown: 0,
+      stayOver: 0,
+    };
+
+    homeData.categories.forEach((category) => {
+      // Room state counts
+      roomStates.dirty += category.status.dirty;
+      roomStates.inProgress += category.status.inProgress;
+      roomStates.cleaned += category.status.cleaned;
+      roomStates.inspected += category.status.inspected;
+      if (category.priority) {
+        roomStates.priority += category.priority;
+      }
+
+      // Guest counts based on category name
+      if (category.name === 'Arrivals') {
+        guests.arrivals += category.total;
+      } else if (category.name === 'StayOvers') {
+        guests.stayOver += category.total;
+      }
+      // Note: Departures and Turn Down would need additional data
+      // For now, using mock values
+      guests.departures = 18; // Mock value
+      guests.turnDown = 12; // Mock value
+    });
+
+    return { roomStates, guests };
+  }, [homeData]);
+
+  const handleGoToResults = (filters: FilterState) => {
+    navigation.navigate('AllRooms', {
+      filters,
+      showBackButton: true,
+    } as any);
+  };
+
+  const handleAdvanceFilter = () => {
+    // TODO: Navigate to advanced filter screen when implemented
+    console.log('Advanced filter');
+  };
 
   return (
     <View style={styles.container}>
@@ -167,13 +224,13 @@ export default function HomeScreen() {
           />
         </View>
         <TouchableOpacity
-          style={styles.menuButton}
-          onPress={handleMenuPress}
+          style={styles.filterButton}
+          onPress={handleFilterPress}
           activeOpacity={0.7}
         >
           <Image
             source={require('../../assets/icons/menu-icon.png')}
-            style={styles.menuIcon}
+            style={styles.filterIcon}
             resizeMode="contain"
           />
         </TouchableOpacity>
@@ -192,6 +249,15 @@ export default function HomeScreen() {
         visible={showMorePopup}
         onClose={handleClosePopup}
         onMenuItemPress={handleMenuItemPress}
+      />
+
+      {/* Filter Modal */}
+      <HomeFilterModal
+        visible={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onGoToResults={handleGoToResults}
+        onAdvanceFilter={handleAdvanceFilter}
+        filterCounts={filterCounts}
       />
     </View>
   );
@@ -270,14 +336,14 @@ const styles = StyleSheet.create({
     height: 19 * scaleX,
     tintColor: colors.primary.main,
   },
-  menuButton: {
+  filterButton: {
     width: 26 * scaleX,
     height: 12 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 18 * scaleX, // Gap between search bar and menu icon
+    marginLeft: 18 * scaleX, // Gap between search bar and filter icon
   },
-  menuIcon: {
+  filterIcon: {
     width: 26,
     height: 12,
     tintColor: colors.primary.main,
