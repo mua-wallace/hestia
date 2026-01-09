@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { typography } from '../../theme';
-import { scaleX, ASSIGNED_TO } from '../../constants/roomDetailStyles';
+import { scaleX, ROOM_DETAIL_HEADER, ASSIGNED_TO } from '../../constants/roomDetailStyles';
 import { REFUSE_SERVICE_MODAL, REFUSE_SERVICE_REASONS } from '../../constants/refuseServiceModalStyles';
 
 interface RefuseServiceModalProps {
@@ -177,11 +177,11 @@ export default function RefuseServiceModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'transparent', // No backdrop - header should remain visible
   },
   modalOverlay: {
     position: 'absolute',
-    top: REFUSE_SERVICE_MODAL.overlay.top * scaleX,
+    top: ROOM_DETAIL_HEADER.height * scaleX, // Start at 232px (header bottom) with 0px gap
     left: 0,
     right: 0,
     bottom: 0,
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100 * scaleX, // Extra padding at bottom for scrolling
   },
   title: {
-    marginTop: (REFUSE_SERVICE_MODAL.title.top - REFUSE_SERVICE_MODAL.overlay.top) * scaleX,
+    marginTop: (REFUSE_SERVICE_MODAL.title.top - ROOM_DETAIL_HEADER.height) * scaleX,
     marginLeft: REFUSE_SERVICE_MODAL.title.left * scaleX,
     marginBottom: ((REFUSE_SERVICE_MODAL.question.top - REFUSE_SERVICE_MODAL.title.top - 20) * 0.7) * scaleX, // Reduced spacing
     fontSize: REFUSE_SERVICE_MODAL.title.fontSize * scaleX,

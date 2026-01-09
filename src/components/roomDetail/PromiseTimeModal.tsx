@@ -182,11 +182,11 @@ export default function PromiseTimeModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'transparent', // No backdrop - header should remain visible
   },
   modalOverlay: {
     position: 'absolute',
-    top: PROMISE_TIME_MODAL.overlay.top * scaleX, // Start at 213px to match Figma
+    top: ROOM_DETAIL_HEADER.height * scaleX, // Start at 232px (header bottom) with 0px gap
     left: 0,
     right: 0,
     bottom: 0,
@@ -199,12 +199,12 @@ const styles = StyleSheet.create({
     paddingBottom: 100 * scaleX, // Extra padding at bottom for scrolling
   },
   title: {
-    marginTop: (PROMISE_TIME_MODAL.title.top - PROMISE_TIME_MODAL.overlay.top) * scaleX,
+    marginTop: (PROMISE_TIME_MODAL.title.top - ROOM_DETAIL_HEADER.height) * scaleX,
     marginLeft: PROMISE_TIME_MODAL.title.left * scaleX,
     marginBottom: (PROMISE_TIME_MODAL.instruction.top - PROMISE_TIME_MODAL.title.top - 20) * scaleX,
     fontSize: PROMISE_TIME_MODAL.title.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold as any,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
     color: PROMISE_TIME_MODAL.title.color,
   },
   instruction: {
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
     height: PROMISE_TIME_MODAL.datePicker.height * scaleX,
-    marginTop: (PROMISE_TIME_MODAL.datePicker.top - PROMISE_TIME_MODAL.overlay.top) * scaleX,
+    marginTop: (PROMISE_TIME_MODAL.datePicker.top - ROOM_DETAIL_HEADER.height) * scaleX,
     marginBottom: ((PROMISE_TIME_MODAL.confirmButton.top - PROMISE_TIME_MODAL.datePicker.top - PROMISE_TIME_MODAL.datePicker.height) * 0.5) * scaleX, // Further reduced spacing
   },
   datePickerContainer: {

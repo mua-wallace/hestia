@@ -12,6 +12,7 @@ interface RoomDetailHeaderProps {
   onBackPress: () => void;
   onStatusPress?: () => void;
   statusButtonRef?: React.RefObject<any>;
+  customStatusText?: string; // Custom status text to display (e.g., "Return Later", "Promise Time", "Refuse Service")
 }
 
 export default function RoomDetailHeader({
@@ -21,10 +22,51 @@ export default function RoomDetailHeader({
   onBackPress,
   onStatusPress,
   statusButtonRef,
+  customStatusText,
 }: RoomDetailHeaderProps) {
   const statusConfig = STATUS_CONFIGS[status];
-  // Use the status color for the header background
-  const headerBackgroundColor = statusConfig.color;
+  
+  // Use custom status text if provided, otherwise use the status config label
+  const displayStatusText = customStatusText || statusConfig.label;
+  
+  // Use #202A2F for specific status options, otherwise use the status color
+  const specialStatusColors = ['Return Later', 'Refuse Service', 'Pause', 'Promise Time', 'Promised Time'];
+  const headerBackgroundColor = customStatusText && specialStatusColors.includes(customStatusText)
+    ? '#202A2F'
+    : statusConfig.color;
+
+  // Determine which icon to use based on customStatusText or status
+  const getStatusIcon = () => {
+    if (customStatusText === 'Pause') {
+      return require('../../../assets/icons/pause.png');
+    }
+    if (customStatusText === 'Refuse Service') {
+      return require('../../../assets/icons/refuse-service.png');
+    }
+    if (customStatusText === 'Return Later') {
+      return require('../../../assets/icons/return-later.png');
+    }
+    // Default to status-based icons
+    if (status === 'InProgress') {
+      return require('../../../assets/icons/in-progress-icon.png');
+    }
+    if (status === 'Dirty') {
+      return require('../../../assets/icons/dirty-icon.png');
+    }
+    if (status === 'Cleaned') {
+      return require('../../../assets/icons/cleaned-icon.png');
+    }
+    if (status === 'Inspected') {
+      return require('../../../assets/icons/inspected-status-icon.png');
+    }
+    return statusConfig.icon;
+  };
+
+  const statusIconSource = getStatusIcon();
+  
+  // These icons have colored backgrounds, so don't apply tintColor
+  const iconsWithColor = ['Pause', 'Refuse Service', 'Return Later'];
+  const shouldTintIcon = !customStatusText || !iconsWithColor.includes(customStatusText);
 
   return (
     <View style={[styles.headerContainer, { backgroundColor: headerBackgroundColor }]}>
@@ -57,22 +99,12 @@ export default function RoomDetailHeader({
         activeOpacity={0.8}
       >
         <Image
-          source={
-            status === 'InProgress'
-              ? require('../../../assets/icons/in-progress-icon.png')
-              : status === 'Dirty'
-              ? require('../../../assets/icons/dirty-icon.png')
-              : status === 'Cleaned'
-              ? require('../../../assets/icons/cleaned-icon.png')
-              : status === 'Inspected'
-              ? require('../../../assets/icons/inspected-status-icon.png')
-              : statusConfig.icon
-          }
+          source={statusIconSource}
           style={styles.statusIcon}
           resizeMode="contain"
-          tintColor="#FFFFFF"
+          tintColor={shouldTintIcon ? "#FFFFFF" : undefined}
         />
-        <Text style={styles.statusText}>{statusConfig.label}</Text>
+        <Text style={styles.statusText}>{displayStatusText}</Text>
         <Image
           source={require('../../../assets/icons/dropdown-arrow.png')}
           style={styles.dropdownArrow}

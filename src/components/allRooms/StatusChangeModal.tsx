@@ -124,15 +124,14 @@ export default function StatusChangeModal({
     const triangleHalfWidth = 12 * scaleX; // Half of triangle base
     triangleLeft = (buttonCenterX - modalLeft - triangleHalfWidth) / scaleX;
   } else {
-    // Position modal directly below header with no gap - modal starts exactly where header ends
+    // Position modal directly at header bottom with 0px gap - modal starts exactly where header ends
     // Header height is 232px from roomDetailStyles
-    // Moving modal up to align with status indicator at bottom of header (176px + status height)
+    // Since BlurView now starts at 232px, modal position is relative to BlurView (0px from BlurView top = header bottom)
     const HEADER_HEIGHT = 232 * scaleX;
-    const STATUS_INDICATOR_BOTTOM = (176 + 30.769) * scaleX; // Status indicator top (176) + height (30.769)
     const statusBarOffset = Platform.OS === 'android' ? insets.top : 0;
     const screenMargin = CARD_DIMENSIONS.marginHorizontal * scaleX; // 7px scaled (matches card margin)
     modalLeft = screenMargin; // Align with card margin
-    modalTopPosition = STATUS_INDICATOR_BOTTOM + statusBarOffset; // Position modal at status indicator bottom, moved up from header bottom
+    modalTopPosition = 0; // Position modal at 0px from BlurView top (which is at header bottom)
     triangleLeft = 0; // Not used when triangle is hidden
   }
 
@@ -152,8 +151,12 @@ export default function StatusChangeModal({
       onRequestClose={handleClose}
       statusBarTranslucent={Platform.OS === 'android'}
     >
-      {/* Blurred Background Overlay */}
-      <Animated.View style={{ opacity: opacityAnim }}>
+      {/* Blurred Background Overlay - Start below header */}
+      <Animated.View style={{ flex: 1, opacity: opacityAnim }}>
+        {/* Header area - no blur */}
+        <View style={styles.headerArea} />
+        
+        {/* Blurred area - below header */}
         <BlurView
           intensity={20}
           tint="light"
@@ -222,16 +225,30 @@ export default function StatusChangeModal({
 }
 
 const styles = StyleSheet.create({
+  headerArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 232 * scaleX, // Header height from roomDetailStyles
+    backgroundColor: 'transparent',
+    zIndex: 1001, // Above blur but below modal
+  },
   blurOverlay: {
-    flex: 1,
+    position: 'absolute',
+    top: 232 * scaleX, // Start below header
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
-    height: '100%',
   },
   backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)', // Slight dark overlay for better contrast
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
   },
   modalWrapper: {
     position: 'absolute',
@@ -289,10 +306,10 @@ const styles = StyleSheet.create({
     paddingTop: 20 * scaleX,
   },
   headerText: {
-    fontSize: 16 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold as any,
-    color: '#1e1e1e',
+    fontSize: 20 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    color: '#607AA1',
     marginBottom: 16 * scaleX,
   },
   optionsGrid: {

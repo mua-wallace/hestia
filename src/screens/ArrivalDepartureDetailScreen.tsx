@@ -19,6 +19,7 @@ import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal';
 import ReassignModal from '../components/roomDetail/ReassignModal';
 import AddNoteModal from '../components/roomDetail/AddNoteModal';
 import type { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
+import { STATUS_OPTIONS } from '../types/allRooms.types';
 import type { RoomDetailData, DetailTab, Note } from '../types/roomDetail.types';
 import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
@@ -46,6 +47,8 @@ export default function ArrivalDepartureDetailScreen() {
   const statusButtonRef = useRef<TouchableOpacity>(null);
   // Track current status to update header background color
   const [currentStatus, setCurrentStatus] = useState<RoomCardData['status']>(room.status);
+  // Track selected status option text to display in header
+  const [selectedStatusText, setSelectedStatusText] = useState<string | undefined>(undefined);
   // Track notes and assigned staff in state
   // Initialize notes based on room status - show default notes for InProgress, empty for others
   const [notes, setNotes] = useState<Note[]>(() => {
@@ -141,10 +144,15 @@ export default function ArrivalDepartureDetailScreen() {
   };
 
   const handleStatusSelect = (statusOption: StatusChangeOption) => {
+    // Find the status option label
+    const statusOptionConfig = STATUS_OPTIONS.find(opt => opt.id === statusOption);
+    const statusLabel = statusOptionConfig?.label || '';
+
     // If Return Later is selected, show the Return Later modal
     if (statusOption === 'ReturnLater') {
       setShowStatusModal(false);
       setShowReturnLaterModal(true);
+      setSelectedStatusText(statusLabel);
       return;
     }
 
@@ -153,6 +161,7 @@ export default function ArrivalDepartureDetailScreen() {
       console.log('PromisedTime selected, opening PromiseTimeModal');
       setShowStatusModal(false);
       setShowPromiseTimeModal(true);
+      setSelectedStatusText(statusLabel);
       return;
     }
 
@@ -161,6 +170,7 @@ export default function ArrivalDepartureDetailScreen() {
       console.log('RefuseService selected, opening RefuseServiceModal');
       setShowStatusModal(false);
       setShowRefuseServiceModal(true);
+      setSelectedStatusText(statusLabel);
       return;
     }
 
@@ -190,6 +200,9 @@ export default function ArrivalDepartureDetailScreen() {
 
     // Update local status state to change header background color
     setCurrentStatus(newStatus);
+    
+    // Update selected status text to show the selected option label
+    setSelectedStatusText(statusLabel);
 
     // TODO: Update room status in backend/API
     console.log('Status changed for room:', room.roomNumber, 'to:', newStatus);
@@ -203,7 +216,7 @@ export default function ArrivalDepartureDetailScreen() {
     // TODO: Save return time to backend/API
     console.log('Return Later confirmed for room:', room.roomNumber, 'at:', returnTime, period);
     
-    // Close modal
+    // Close modal but keep selected status text to show "Return Later" in header
     setShowReturnLaterModal(false);
     
     // TODO: Update room status or show success message
@@ -213,7 +226,7 @@ export default function ArrivalDepartureDetailScreen() {
     // TODO: Save promise time to backend/API
     console.log('Promise Time confirmed for room:', room.roomNumber, 'on:', date.toDateString(), 'at:', time, period);
     
-    // Close modal
+    // Close modal but keep selected status text to show "Promised Time" in header
     setShowPromiseTimeModal(false);
     
     // TODO: Update room status or show success message
@@ -223,7 +236,7 @@ export default function ArrivalDepartureDetailScreen() {
     // TODO: Save refuse service reasons to backend/API
     console.log('Refuse Service confirmed for room:', room.roomNumber, 'reasons:', selectedReasons, 'custom:', customReason);
     
-    // Close modal
+    // Close modal but keep selected status text to show "Refuse Service" in header
     setShowRefuseServiceModal(false);
     
     // TODO: Update room status or show success message
@@ -324,6 +337,15 @@ export default function ArrivalDepartureDetailScreen() {
         onBackPress={handleBackPress}
         onStatusPress={handleStatusPress}
         statusButtonRef={statusButtonRef}
+        customStatusText={
+          showReturnLaterModal
+            ? 'Return Later'
+            : showPromiseTimeModal
+            ? 'Promise Time'
+            : showRefuseServiceModal
+            ? 'Refuse Service'
+            : selectedStatusText
+        }
       />
 
       {/* Tab Navigation - Below header (252px) */}
@@ -491,7 +513,11 @@ export default function ArrivalDepartureDetailScreen() {
       {/* Return Later Modal */}
       <ReturnLaterModal
         visible={showReturnLaterModal}
-        onClose={() => setShowReturnLaterModal(false)}
+        onClose={() => {
+          setShowReturnLaterModal(false);
+          // Clear selected status text when modal is closed without confirmation
+          setSelectedStatusText(undefined);
+        }}
         onConfirm={handleReturnLaterConfirm}
         roomNumber={room.roomNumber}
         assignedTo={roomDetail.assignedTo}
@@ -501,7 +527,11 @@ export default function ArrivalDepartureDetailScreen() {
       {/* Promise Time Modal */}
       <PromiseTimeModal
         visible={showPromiseTimeModal}
-        onClose={() => setShowPromiseTimeModal(false)}
+        onClose={() => {
+          setShowPromiseTimeModal(false);
+          // Clear selected status text when modal is closed without confirmation
+          setSelectedStatusText(undefined);
+        }}
         onConfirm={handlePromiseTimeConfirm}
         roomNumber={room.roomNumber}
         assignedTo={roomDetail.assignedTo}
@@ -511,7 +541,11 @@ export default function ArrivalDepartureDetailScreen() {
       {/* Refuse Service Modal */}
       <RefuseServiceModal
         visible={showRefuseServiceModal}
-        onClose={() => setShowRefuseServiceModal(false)}
+        onClose={() => {
+          setShowRefuseServiceModal(false);
+          // Clear selected status text when modal is closed without confirmation
+          setSelectedStatusText(undefined);
+        }}
         onConfirm={handleRefuseServiceConfirm}
         roomNumber={room.roomNumber}
         assignedTo={roomDetail.assignedTo}

@@ -199,11 +199,11 @@ export default function ReturnLaterModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'transparent', // No backdrop - header should remain visible
   },
   modalOverlay: {
     position: 'absolute',
-    top: RETURN_LATER_MODAL.overlay.top * scaleX, // Start at 213px to match Figma
+    top: ROOM_DETAIL_HEADER.height * scaleX, // Start at 232px (header bottom) with 0px gap
     left: 0,
     right: 0,
     bottom: 0,
@@ -216,12 +216,12 @@ const styles = StyleSheet.create({
     paddingBottom: 100 * scaleX, // Extra padding at bottom for scrolling
   },
   title: {
-    marginTop: (RETURN_LATER_MODAL.title.top - RETURN_LATER_MODAL.overlay.top) * scaleX,
+    marginTop: (RETURN_LATER_MODAL.title.top - ROOM_DETAIL_HEADER.height) * scaleX,
     marginLeft: RETURN_LATER_MODAL.title.left * scaleX,
     marginBottom: (RETURN_LATER_MODAL.instruction.top - RETURN_LATER_MODAL.title.top - 20) * scaleX, // Space to instruction
     fontSize: RETURN_LATER_MODAL.title.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold as any,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
     color: RETURN_LATER_MODAL.title.color,
   },
   instruction: {
