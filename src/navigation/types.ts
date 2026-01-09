@@ -21,7 +21,7 @@ export type MainTabsParamList = {
   Rooms: undefined;
   Chat: undefined;
   Tickets: undefined;
-  LostAndFound: undefined;
+  LostAndFound: { openRegisterModal?: boolean } | undefined;
   Staff: undefined;
   Settings: undefined;
 };

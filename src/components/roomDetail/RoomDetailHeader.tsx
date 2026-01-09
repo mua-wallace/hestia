@@ -70,6 +70,7 @@ export default function RoomDetailHeader({
           }
           style={styles.statusIcon}
           resizeMode="contain"
+          tintColor="#FFFFFF"
         />
         <Text style={styles.statusText}>{statusConfig.label}</Text>
         <Image
@@ -78,13 +79,6 @@ export default function RoomDetailHeader({
           resizeMode="contain"
         />
       </TouchableOpacity>
-
-      {/* Profile Picture */}
-      <Image
-        source={require('../../../assets/icons/profile-avatar.png')}
-        style={styles.profilePicture}
-        resizeMode="cover"
-      />
     </View>
   );
 }
@@ -166,14 +160,6 @@ const styles = StyleSheet.create({
     marginLeft: 8 * scaleX,
     tintColor: '#ffffff',
     // No rotation - use icon directly as is
-  },
-  profilePicture: {
-    position: 'absolute',
-    left: ROOM_DETAIL_HEADER.profilePicture.left * scaleX,
-    top: ROOM_DETAIL_HEADER.profilePicture.top * scaleX,
-    width: ROOM_DETAIL_HEADER.profilePicture.width * scaleX,
-    height: ROOM_DETAIL_HEADER.profilePicture.height * scaleX,
-    borderRadius: (ROOM_DETAIL_HEADER.profilePicture.width / 2) * scaleX,
   },
 });
 

@@ -8,6 +8,8 @@ interface AssignedToSectionProps {
     id: string;
     name: string;
     avatar?: any;
+    initials?: string;
+    avatarColor?: string;
   };
   onReassignPress?: () => void;
 }
@@ -16,17 +18,37 @@ export default function AssignedToSection({
   staff,
   onReassignPress,
 }: AssignedToSectionProps) {
+  // Get first letter for initial if no avatar
+  const initial = staff.initials || (staff.name ? staff.name.charAt(0).toUpperCase() : '?');
+  
+  // Generate color for initial circle based on name
+  const getInitialColor = (name: string): string => {
+    const colors = ['#ff4dd8', '#5a759d', '#607aa1', '#f0be1b'];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
   return (
     <View style={styles.container}>
       {/* Section Title */}
       <Text style={styles.title}>Assigned to</Text>
 
-      {/* Staff Info */}
-      <Image
-        source={staff.avatar || require('../../../assets/icons/profile-avatar.png')}
-        style={styles.profilePicture}
-        resizeMode="cover"
-      />
+      {/* Staff Info - Avatar or Initials */}
+      {staff.avatar ? (
+        <Image
+          key={staff.id} // Force re-render when staff changes
+          source={staff.avatar}
+          style={styles.profilePicture}
+          resizeMode="cover"
+        />
+      ) : (
+        <View 
+          key={staff.id} // Force re-render when staff changes
+          style={[styles.initialsCircle, { backgroundColor: staff.avatarColor || getInitialColor(staff.name) }]}
+        >
+          <Text style={styles.initialsText}>{initial}</Text>
+        </View>
+      )}
       <Text style={styles.staffName}>{staff.name}</Text>
 
       {/* Reassign Button */}
@@ -90,6 +112,22 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.regular as any,
     color: ASSIGNED_TO.reassignButton.color,
+  },
+  initialsCircle: {
+    position: 'absolute',
+    left: ASSIGNED_TO.profilePicture.left * scaleX,
+    top: (ASSIGNED_TO.profilePicture.top - ASSIGNED_TO.title.top) * scaleX,
+    width: ASSIGNED_TO.profilePicture.width * scaleX,
+    height: ASSIGNED_TO.profilePicture.height * scaleX,
+    borderRadius: (ASSIGNED_TO.profilePicture.width / 2) * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  initialsText: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.bold as any,
+    color: '#ffffff',
   },
 });
 

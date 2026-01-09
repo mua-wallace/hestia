@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
 import BottomTabBar from '../components/navigation/BottomTabBar';
@@ -35,6 +35,8 @@ type LostAndFoundScreenNavigationProp = BottomTabNavigationProp<MainTabsParamLis
 
 export default function LostAndFoundScreen() {
   const navigation = useNavigation<LostAndFoundScreenNavigationProp>();
+  const route = useRoute();
+  const params = route.params as { openRegisterModal?: boolean } | undefined;
   const [activeTab, setActiveTab] = useState('LostAndFound');
   const [showMorePopup, setShowMorePopup] = useState(false);
   const [selectedTab, setSelectedTab] = useState<LostAndFoundTab>('created');
@@ -47,6 +49,15 @@ export default function LostAndFoundScreen() {
     itemImage?: string;
     itemData: any;
   } | null>(null);
+
+  // Open register modal if param is set
+  useEffect(() => {
+    if (params?.openRegisterModal) {
+      setShowRegisterModal(true);
+      // Clear the param to prevent reopening on subsequent renders
+      navigation.setParams({ openRegisterModal: false } as any);
+    }
+  }, [params?.openRegisterModal, navigation]);
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab);

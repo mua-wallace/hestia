@@ -15,9 +15,11 @@ import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
 import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
 import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal';
 import ReassignModal from '../components/roomDetail/ReassignModal';
+import AddNoteModal from '../components/roomDetail/AddNoteModal';
 import type { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import type { RoomDetailData, DetailTab, Note } from '../types/roomDetail.types';
 import type { RootStackParamList } from '../navigation/types';
+import { mockStaffData } from '../data/mockStaffData';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -37,10 +39,58 @@ export default function ArrivalDepartureDetailScreen() {
   const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
   const [showRefuseServiceModal, setShowRefuseServiceModal] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
+  const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const statusButtonRef = useRef<TouchableOpacity>(null);
   // Track current status to update header background color
   const [currentStatus, setCurrentStatus] = useState<RoomCardData['status']>(room.status);
+  // Track notes and assigned staff in state
+  // Initialize notes based on room status - show default notes for InProgress, empty for others
+  const [notes, setNotes] = useState<Note[]>(() => {
+    // For InProgress status, show default notes; for other statuses (Cleaned, Dirty, Inspected), start with empty or room notes
+    if (room.status === 'InProgress') {
+      return [
+        {
+          id: '1',
+          text: "Guest wants 2 extra bath towels + 1 hand towel. Don't move items on desk. Refill water bottles daily. Check minibar usage. Leave AC on medium-cool.",
+          staff: {
+            name: room.staff?.name || 'Stella Kitou',
+            avatar: require('../../assets/icons/profile-avatar.png'),
+          },
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: '2',
+          text: 'Deep clean bathroom (heavy bath use). Change all linens + pillow protectors. Vacuum under bed. Restock all amenities. Light at entrance flickering report to maintenance.',
+          staff: {
+            name: room.staff?.name || 'Stella Kitou',
+            avatar: require('../../assets/icons/profile-avatar.png'),
+          },
+          createdAt: new Date().toISOString(),
+        },
+      ];
+    }
+    // For Cleaned, Dirty, Inspected statuses, start with empty notes array
+    // In a real app, you would fetch notes from the API based on room status
+    return [];
+  });
+  const [assignedStaff, setAssignedStaff] = useState<{
+    id: string;
+    name: string;
+    avatar?: any;
+    initials?: string;
+    avatarColor?: string;
+  } | undefined>(
+    room.staff
+      ? {
+          id: room.staff.id || '1',
+          name: room.staff.name,
+          avatar: room.staff.avatar || require('../../assets/icons/profile-avatar.png'),
+          initials: room.staff.initials,
+          avatarColor: room.staff.avatarColor,
+        }
+      : undefined
+  );
 
   // Transform room data to detail data format
   // In a real app, this would come from an API or be passed directly
@@ -49,35 +99,8 @@ export default function ArrivalDepartureDetailScreen() {
     specialInstructions: room.guests && room.guests.length > 0
       ? 'Please prepare a high-floor suite with a city view, away from the elevators, set to 21°C, with hypoallergenic pillows and a fresh orchid on the nightstand.'
       : undefined,
-    // Provide default notes for display (in real app, these would come from API)
-    // For In Progress rooms, show relevant notes
-    notes: [
-      {
-        id: '1',
-        text: "Guest wants 2 extra bath towels + 1 hand towel. Don't move items on desk. Refill water bottles daily. Check minibar usage. Leave AC on medium-cool.",
-        staff: {
-          name: room.staff?.name || 'Stella Kitou',
-          avatar: require('../../assets/icons/profile-avatar.png'),
-        },
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: '2',
-        text: 'Deep clean bathroom (heavy bath use). Change all linens + pillow protectors. Vacuum under bed. Restock all amenities. Light at entrance flickering report to maintenance.',
-        staff: {
-          name: room.staff?.name || 'Stella Kitou',
-          avatar: require('../../assets/icons/profile-avatar.png'),
-        },
-        createdAt: new Date().toISOString(),
-      },
-    ] as Note[],
-    assignedTo: room.staff
-      ? {
-          id: '1',
-          name: room.staff.name,
-          avatar: room.staff.avatar || require('../../assets/icons/profile-avatar.png'),
-        }
-      : undefined,
+    notes: notes,
+    assignedTo: assignedStaff,
     isUrgent: room.isPriority,
   };
 
@@ -210,13 +233,31 @@ export default function ArrivalDepartureDetailScreen() {
   };
 
   const handleAddNote = () => {
-    // TODO: Show add note modal
-    console.log('Add note');
+    setShowAddNoteModal(true);
+  };
+
+  const handleSaveNote = (noteText: string) => {
+    // Create a new note with current user info (in real app, get from auth context)
+    const newNote: Note = {
+      id: Date.now().toString(),
+      text: noteText,
+      staff: {
+        name: 'Stella Kitou', // In real app, get from current user
+        avatar: require('../../assets/icons/profile-avatar.png'),
+      },
+      createdAt: new Date().toISOString(),
+    };
+    setNotes([...notes, newNote]);
+    // TODO: Save note to backend/API
+    console.log('Note saved:', noteText);
   };
 
   const handleAddPhotos = () => {
-    // TODO: Show photo picker
-    console.log('Add photos');
+    // Navigate to Lost and Found screen and open the register modal
+    navigation.navigate('Main' as any, {
+      screen: 'LostAndFound',
+      params: { openRegisterModal: true },
+    } as any);
   };
 
   const handleReassign = () => {
@@ -226,11 +267,23 @@ export default function ArrivalDepartureDetailScreen() {
 
   const handleStaffSelect = (staffId: string) => {
     console.log('Staff selected:', staffId);
-    // TODO: Update room assignment in backend
-    // Update local state
-    if (roomDetail.assignedTo) {
-      roomDetail.assignedTo.id = staffId;
-      // In a real app, you'd fetch the staff member details
+    // Find the selected staff member from mock data
+    const selectedStaff = mockStaffData.find((s) => s.id === staffId);
+    if (selectedStaff) {
+      setAssignedStaff({
+        id: selectedStaff.id,
+        name: selectedStaff.name,
+        avatar: selectedStaff.avatar,
+        initials: selectedStaff.initials,
+        // Generate color for initial circle based on name if no avatarColor
+        avatarColor: selectedStaff.avatarColor || (() => {
+          const colors = ['#ff4dd8', '#5a759d', '#607aa1', '#f0be1b'];
+          const index = selectedStaff.name.charCodeAt(0) % colors.length;
+          return colors[index];
+        })(),
+      });
+      // TODO: Update room assignment in backend/API
+      console.log('Room assigned to:', selectedStaff.name);
     }
     setShowReassignModal(false);
   };
@@ -445,6 +498,14 @@ export default function ArrivalDepartureDetailScreen() {
         onStaffSelect={handleStaffSelect}
         onAutoAssign={handleAutoAssign}
         currentAssignedStaffId={roomDetail.assignedTo?.id}
+        roomNumber={room.roomNumber}
+      />
+
+      {/* Add Note Modal */}
+      <AddNoteModal
+        visible={showAddNoteModal}
+        onClose={() => setShowAddNoteModal(false)}
+        onSave={handleSaveNote}
         roomNumber={room.roomNumber}
       />
     </View>

@@ -17,6 +17,8 @@ export interface RoomDetailData extends RoomCardData {
     id: string;
     name: string;
     avatar?: any;
+    initials?: string;
+    avatarColor?: string;
   };
   isUrgent?: boolean;
 }
