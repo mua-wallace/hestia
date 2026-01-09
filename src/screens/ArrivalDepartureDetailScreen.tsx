@@ -10,6 +10,8 @@ import GuestInfoCard from '../components/roomDetail/GuestInfoCard';
 import NotesSection from '../components/roomDetail/NotesSection';
 import LostAndFoundSection from '../components/roomDetail/LostAndFoundSection';
 import AssignedToSection from '../components/roomDetail/AssignedToSection';
+import ChecklistSection from '../components/roomDetail/ChecklistSection';
+import RoomTicketsSection from '../components/roomDetail/RoomTicketsSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
 import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
@@ -331,14 +333,38 @@ export default function ArrivalDepartureDetailScreen() {
       />
 
       {/* Content Area - Starts at 285px */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-
-        {/* Content Sections - Only show Overview tab content for now */}
-        {activeTab === 'Overview' && (
+      {/* Checklist and Tickets Tabs have their own ScrollView, so render separately */}
+      {activeTab === 'Checklist' ? (
+        <ChecklistSection
+          roomNumber={room.roomNumber}
+          roomStatus={currentStatus}
+          onSubmit={(data) => {
+            // TODO: Handle checklist submission
+            console.log('Checklist submitted:', data);
+            // Optionally show success message or navigate back
+          }}
+          onCancel={() => {
+            // TODO: Handle cancel - could navigate back or reset
+            console.log('Checklist cancelled');
+          }}
+        />
+      ) : activeTab === 'Tickets' ? (
+        <RoomTicketsSection
+          roomNumber={room.roomNumber}
+          onSubmit={(ticketData) => {
+            // TODO: Handle ticket submission
+            console.log('Ticket submitted:', ticketData);
+            // Optionally show success message or navigate back
+          }}
+        />
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Content Sections - Only show Overview tab content for now */}
+          {activeTab === 'Overview' && (
           <>
             {/* Guest Info Section */}
             {hasGuestsToDisplay && (
@@ -437,15 +463,16 @@ export default function ArrivalDepartureDetailScreen() {
           </>
         )}
 
-        {/* Other tabs content - placeholder */}
-        {activeTab !== 'Overview' && (
-          <View style={styles.placeholderContent}>
-            <Text style={styles.placeholderText}>
-              {activeTab} content coming soon
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+          {/* Other tabs content - placeholder */}
+          {activeTab !== 'Overview' && (
+            <View style={styles.placeholderContent}>
+              <Text style={styles.placeholderText}>
+                {activeTab} content coming soon
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
 
       {/* Status Change Modal */}
       <StatusChangeModal
