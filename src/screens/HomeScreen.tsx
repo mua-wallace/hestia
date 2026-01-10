@@ -344,8 +344,8 @@ const styles = StyleSheet.create({
     marginLeft: 18 * scaleX, // Gap between search bar and filter icon
   },
   filterIcon: {
-    width: 26,
-    height: 12,
+    width: 26 * scaleX,
+    height: 12 * scaleX,
     tintColor: colors.primary.main,
   },
   blurOverlayDarkener: {

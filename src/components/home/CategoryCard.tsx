@@ -42,9 +42,6 @@ const STATUS_CONFIG = {
 export default function CategoryCard({ category, onPress }: CategoryCardProps) {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      {/* Left colored border */}
-      <View style={[styles.leftBorder, { backgroundColor: category.borderColor }]} />
-
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
@@ -56,6 +53,9 @@ export default function CategoryCard({ category, onPress }: CategoryCardProps) {
         )}
       </View>
 
+      {/* Divider */}
+      <View style={styles.divider} />
+
       {/* Status Indicators */}
       <View style={styles.statusGrid}>
         <StatusIndicator
@@ -63,6 +63,8 @@ export default function CategoryCard({ category, onPress }: CategoryCardProps) {
           icon={STATUS_CONFIG.dirty.icon}
           count={category.status.dirty}
           label={STATUS_CONFIG.dirty.label}
+          iconWidth={29.478}
+          iconHeight={30.769}
         />
         <StatusIndicator
           color={STATUS_CONFIG.inProgress.color}
@@ -79,12 +81,16 @@ export default function CategoryCard({ category, onPress }: CategoryCardProps) {
           icon={STATUS_CONFIG.cleaned.icon}
           count={category.status.cleaned}
           label={STATUS_CONFIG.cleaned.label}
+          iconWidth={29.478}
+          iconHeight={30.769}
         />
         <StatusIndicator
           color={STATUS_CONFIG.inspected.color}
           icon={STATUS_CONFIG.inspected.icon}
           count={category.status.inspected}
           label={STATUS_CONFIG.inspected.label}
+          iconWidth={29.478}
+          iconHeight={30.769}
         />
       </View>
     </TouchableOpacity>
@@ -95,19 +101,12 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: 'rgba(238,240,246,0.35)',
     borderRadius: 12 * scaleX,
+    borderWidth: 1,
+    borderColor: '#e3e3e3', // Light grey border color
     height: 223 * scaleX,
     marginHorizontal: 10 * scaleX,
     marginVertical: 13 * scaleX,
     position: 'relative',
-  },
-  leftBorder: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 5 * scaleX,
-    borderTopLeftRadius: 12 * scaleX,
-    borderBottomLeftRadius: 12 * scaleX,
   },
   header: {
     flexDirection: 'row',
@@ -133,11 +132,20 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.bold as any,
     color: '#000000',
   },
+  divider: {
+    position: 'absolute',
+    left: 0, // Touch left border
+    right: 0, // Touch right border
+    top: (17 + 30 + 20 + 10) * scaleX, // paddingTop (17) + content height (~30px for 24px font with line height) + paddingBottom (20) + extra spacing (10) = 77px
+    height: 1,
+    backgroundColor: '#e3e3e3', // Light grey divider color (same as other cards)
+  },
   statusGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around', // Use space-around for even distribution
     alignItems: 'flex-start', // Align all items at the top for consistent vertical alignment
-    paddingHorizontal: 20 * normalizedScaleX,
+    paddingLeft: 21 * scaleX, // Match header paddingHorizontal for equal left padding
+    paddingRight: 21 * scaleX, // Match header paddingHorizontal for equal right padding
     marginTop: 30 * normalizedScaleX,
     flexWrap: 'nowrap', // Prevent wrapping on small screens
   },

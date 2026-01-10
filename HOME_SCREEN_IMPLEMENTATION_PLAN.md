@@ -11,22 +11,24 @@ The Home Screen is a dashboard showing room status overview for housekeeping sta
 
 ```
 ┌─────────────────────────────────┐
-│  Header (178px)                 │
+│  Header (153px)                 │
 │  - Profile & User Info          │
 │  - AM/PM Toggle                 │
-│  - Date & Overview Title        │
-│  - Search Bar                   │
+├─────────────────────────────────┤
+│  Search Bar (59px)              │
+│  - Below header, fixed          │
 ├─────────────────────────────────┤
 │  Content (Scrollable)           │
 │  ┌─────────────────────────┐   │
 │  │ Flagged Section (223px) │   │
 │  │ - Purple left border    │   │
 │  │ - 4 Status indicators   │   │
-│  │ - Priority badge        │   │
+│  │ - Priority/Rush badge   │   │
 │  └─────────────────────────┘   │
 │  ┌─────────────────────────┐   │
 │  │ Arrivals Section        │   │
 │  │ - Green left border     │   │
+│  │ - Priority/Rush badge   │   │
 │  └─────────────────────────┘   │
 │  ┌─────────────────────────┐   │
 │  │ StayOvers Section       │   │
@@ -42,32 +44,29 @@ The Home Screen is a dashboard showing room status overview for housekeeping sta
 
 ## 2. Component Breakdown
 
-### A. Header Component (Height: 178px)
-**Position:** Top fixed, white background with shadow
+### A. Header Component (Height: 153px)
+**Position:** Top fixed, background: #e3e8f0 with shadow
+**Background Color:** #e3e8f0 (light grey-blue)
 
 #### Components:
-1. **Profile Section** (x: 22, y: 110)
+1. **Profile Section** (x: 22, y: 74)
    - Profile image: 51×51px circle
-   - Name: "Stella Kitou" (17px, Light)
-   - Role: "Executive Housekeeper" (14px, Regular)
-   - Flag icon (30.708×30.708px) - overlaid on bottom-right of profile
+   - Name: "Stella Kitou" (17px, Light, Helvetica)
+   - Role: "Executive Housekeeper" (14px, Regular, Helvetica)
+   - Profile overlay icon (30.708×30.708px) - overlaid on bottom-right of profile
+     - Note: Design shows a gold fan icon or flag icon overlay
 
-2. **AM/PM Toggle** (x: 247, y: 118)
+2. **AM/PM Toggle** (x: 247, y: 82)
    - Container: 121×35.243px, rounded-[68px], bg: #f1f6fc
    - Active button: 64.612×30.544px, bg: #5a759d
-   - Buttons: "AM" (white, bold), "PM" (gray, light)
+   - Buttons: "AM" (white, bold when active), "PM" (gray, light when inactive)
 
-3. **Overview Today** (x: 21, y: 194)
-   - Title: "Overview Today" (18px, Light)
-   - Date: "Mon 23 Feb 2025" (11px, Semi-Bold)
-
-4. **Bell Icon** (Top-right, notification indicator)
-
-5. **Search Bar** (x: 15, y: 252)
+3. **Search Bar** (Positioned below header, fixed)
    - Container: 347×59px, rounded-[82px], bg: #f1f6fc
-   - Placeholder: "Search Rooms, Guests, Floors etc" (13px)
-   - Search icon (left)
-   - Menu icon (right) - 3 horizontal lines
+   - Position: x: 15, y: (153 + 14) = 167px from top
+   - Placeholder: "Search Rooms, Guests, Floors etc" (13px, Inter)
+   - Search icon (left, 19×19px)
+   - Menu/Filter icon (right, 26×12px) - 3 horizontal lines
 
 ---
 
@@ -82,23 +81,26 @@ The Home Screen is a dashboard showing room status overview for housekeeping sta
    - StayOvers: #8d908d (gray)
 
 2. **Header Row**
-   - Category name (20px, Bold) - left
-   - Total count (24px, Bold) - next to name
-   - Priority badge (if applicable) - right
-     - Background: #ffebeb
-     - Icon + "Priority" text (13px, Semi-Bold, #f92424)
-     - Count (20px, Bold, #f92424)
+   - Total count (24px, Bold, Helvetica) - left, black (#000000)
+   - Category name (20px, Bold, Helvetica) - next to count, rgba(30, 30, 30, 0.7)
+   - Priority/Rush badge (if applicable) - right
+     - Circular red icon with white running human figure
+     - Red badge with count (24×24px circle, white text, #f92424 background)
+     - Positioned top-right of card header
 
 3. **Status Indicators Grid** (4 items)
-   Each indicator (50.017×50.017px):
-   - **Dirty**: Red (#f92424) circle with icon
-   - **In Progress**: Yellow (#f0be1b) circle with icon
-   - **Cleaned**: Blue (#4a91fc) circle with icon
-   - **Inspected**: Green (#41d541) circle with icon
+   Each indicator (50.017×50.017px circle):
+   - **Dirty**: Red (#f92424) circle with white splattered dirt icon
+   - **In Progress**: Yellow (#f0be1b) circle with white vacuum cleaner icon
+     - Special: Has left label icon and right label icon (down arrow rotated 90deg)
+   - **Cleaned**: Blue (#4a91fc) circle with white hand cleaning icon
+   - **Inspected**: Green (#41d541) circle with white thumbs-up icon
    
    Each has:
-   - Count badge (34×34px circle, overlaid bottom-right)
-   - Label below (14px, Light)
+   - Count badge (34×34px white circle, overlaid bottom-right)
+   - Badge shows count in black (20px, Bold, Helvetica)
+   - Label below (14px, Light, Inter, black)
+   - Labels: "Dirty", "In Progress", "Cleaned", "Inspected"
 
 ---
 
@@ -186,11 +188,11 @@ interface HomeScreenData {
    - `more-icon.png` - Three lines menu
 
 3. **Other Icons:**
-   - `bell-icon.png` - Notification bell
-   - `search-icon.png` - Search magnifier
-   - `menu-icon.png` - Hamburger menu
-   - `flag-icon.png` - Flag overlay on profile
-   - `priority-icon.png` - Priority warning icon
+   - `search-icon.png` - Search magnifier (19×19px)
+   - `menu-icon.png` - Hamburger menu/filter (26×12px)
+   - `flag-icon.png` or profile overlay icon - Profile badge overlay
+   - `rushed-icon.png` or `prioirty-icon.png` - Priority/Rush indicator (circular red with white running figure)
+   - `down-arrow.png` - Down arrow for "In Progress" label
 
 4. **Images:**
    - Profile placeholder or avatar system
@@ -267,12 +269,15 @@ src/
 - **Status Count:** 20px, Bold, Helvetica
 
 ### Spacing:
-- Screen padding: 10px horizontal
-- Card gap: 26px vertical
-- Status indicators gap: 10-15px
-- Header height: 178px
+- Screen padding: 10px horizontal (card margins)
+- Card gap: 13px vertical (marginVertical)
+- Status indicators gap: space-around distribution
+- Header height: 153px
+- Search bar height: 59px
+- Search bar top: 167px (153 + 14 margin)
 - Nav height: 152px
-- Card height: 223px (Flagged), 208px (others)
+- Card height: 223px (all cards)
+- Card width: 422px (with 10px horizontal margins)
 
 ---
 
