@@ -84,10 +84,11 @@ const styles = StyleSheet.create({
   tabsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    alignItems: 'flex-start', // Align items at top
-    paddingHorizontal: 34 * scaleX,
-    paddingTop: 30 * scaleX, // Reduced top padding
-    paddingBottom: 20 * scaleX, // Added bottom padding for labels
+    alignItems: 'center', // Center align items vertically
+    paddingHorizontal: 20 * scaleX, // Reduced horizontal padding for better spacing
+    paddingTop: 20 * scaleX, // Top padding
+    paddingBottom: 20 * scaleX, // Bottom padding for labels
+    height: '100%', // Use full container height
   },
 });
 

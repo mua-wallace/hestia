@@ -18,9 +18,14 @@ interface TabBarItemProps {
 }
 
 export default function TabBarItem({ icon, label, active = false, badge, onPress, iconWidth, iconHeight }: TabBarItemProps) {
+  // Use Math.round to ensure pixel-perfect rendering and prevent blurriness
   const iconStyle = iconWidth && iconHeight 
-    ? { width: iconWidth * normalizedScaleX, height: iconHeight * normalizedScaleX }
-    : styles.icon;
+    ? { 
+        width: Math.round(iconWidth * normalizedScaleX), 
+        height: Math.round(iconHeight * normalizedScaleX),
+        tintColor: active ? colors.primary.main : colors.text.primary, // Blue when active, dark gray when inactive
+      }
+    : [styles.icon, { tintColor: active ? colors.primary.main : colors.text.primary }];
     
   return (
     <TouchableOpacity
@@ -33,6 +38,8 @@ export default function TabBarItem({ icon, label, active = false, badge, onPress
           source={icon}
           style={iconStyle}
           resizeMode="contain"
+          shouldRasterizeIOS={true}
+          renderToHardwareTextureAndroid={true}
         />
         {badge !== undefined && badge > 0 && (
           <View style={styles.badgeContainer}>
@@ -51,20 +58,21 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 40 * normalizedScaleX,
+    flex: 1, // Equal spacing for all tabs
+    minWidth: Math.round(40 * normalizedScaleX), // Rounded for pixel-perfect rendering
   },
   iconContainer: {
     position: 'relative',
-    width: (50 + 12) * normalizedScaleX, // Accommodate largest icon (50) + badge space (12)
-    height: (36 + 12) * normalizedScaleX, // Accommodate tallest icon (36) + badge space (12)
-    marginBottom: 8 * normalizedScaleX, // Increased spacing for better visual balance
+    width: Math.round((50 + 12) * normalizedScaleX), // Accommodate largest icon (50) + badge space (12) - rounded for pixel-perfect
+    height: Math.round((36 + 12) * normalizedScaleX), // Accommodate tallest icon (36) + badge space (12) - rounded for pixel-perfect
+    marginBottom: Math.round(8 * normalizedScaleX), // Increased spacing for better visual balance
     justifyContent: 'center',
     alignItems: 'center',
   },
   icon: {
     width: '100%',
     height: '100%',
-    tintColor: colors.primary.main,
+    // tintColor will be set dynamically based on active state
   },
   badgeContainer: {
     position: 'absolute',
@@ -93,10 +101,11 @@ const styles = StyleSheet.create({
     fontSize: 15 * normalizedScaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.regular as any,
-    color: colors.primary.main,
+    color: colors.text.primary, // Dark gray/black for inactive tabs
   },
   labelActive: {
     fontWeight: typography.fontWeights.bold as any,
+    color: colors.primary.main, // Blue for active tab
   },
 });
 
