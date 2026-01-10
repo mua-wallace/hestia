@@ -200,41 +200,44 @@ export default function HomeScreen() {
       />
 
       {/* Search Bar and Filter - Fixed below header */}
-      <View style={styles.searchSection}>
-        <View style={styles.searchBar}>
+      {!showFilterModal && (
+        <View style={styles.searchSection}>
+          <View style={styles.searchBar}>
+            <TouchableOpacity
+              style={styles.searchIconButton}
+              onPress={() => {/* Search action */}}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={require('../../assets/icons/search-icon.png')}
+                style={styles.searchIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+            <SearchInput
+              placeholder={{ bold: 'Search ', normal: 'Rooms, Guests, Floors etc' }}
+              onSearch={handleSearch}
+              inputStyle={styles.searchInput}
+              placeholderStyle={styles.placeholderText}
+              placeholderBoldStyle={styles.placeholderBold}
+              placeholderNormalStyle={styles.placeholderNormal}
+              inputWrapperStyle={styles.searchInputContainer}
+            />
+          </View>
           <TouchableOpacity
-            style={styles.searchIconButton}
-            onPress={() => {/* Search action */}}
+            style={styles.filterButton}
+            onPress={handleFilterPress}
             activeOpacity={0.7}
           >
             <Image
-              source={require('../../assets/icons/search-icon.png')}
-              style={styles.searchIcon}
+              source={require('../../assets/icons/menu-icon.png')}
+              style={styles.filterIcon}
               resizeMode="contain"
             />
           </TouchableOpacity>
-          <SearchInput
-            placeholder={{ bold: 'Search ', normal: 'Rooms, Guests, Floors etc' }}
-            onSearch={handleSearch}
-            inputStyle={styles.searchInput}
-            placeholderStyle={styles.placeholderText}
-            placeholderBoldStyle={styles.placeholderBold}
-            placeholderNormalStyle={styles.placeholderNormal}
-            inputWrapperStyle={styles.searchInputContainer}
-          />
         </View>
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={handleFilterPress}
-          activeOpacity={0.7}
-        >
-          <Image
-            source={require('../../assets/icons/menu-icon.png')}
-            style={styles.filterIcon}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-      </View>
+      )}
+      
 
       {/* Bottom Navigation (no blur) */}
       <BottomTabBar
@@ -258,6 +261,7 @@ export default function HomeScreen() {
         onGoToResults={handleGoToResults}
         onAdvanceFilter={handleAdvanceFilter}
         filterCounts={filterCounts}
+        onFilterIconPress={handleFilterPress}
       />
     </View>
   );
@@ -337,15 +341,16 @@ const styles = StyleSheet.create({
     tintColor: colors.primary.main,
   },
   filterButton: {
-    width: 26 * scaleX,
-    height: 12 * scaleX,
+    width: 40 * scaleX, // Increased touch target for easier clicking
+    height: 40 * scaleX, // Increased touch target for easier clicking
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 18 * scaleX, // Gap between search bar and filter icon
+    padding: 8 * scaleX, // Add padding for better touch area
   },
   filterIcon: {
-    width: 26 * scaleX,
-    height: 12 * scaleX,
+    width: 32 * scaleX, // Increased from 26px for better visibility
+    height: 16 * scaleX, // Increased from 12px for better visibility (maintaining aspect ratio)
     tintColor: colors.primary.main,
   },
   blurOverlayDarkener: {

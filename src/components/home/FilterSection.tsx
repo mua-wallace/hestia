@@ -13,6 +13,7 @@ interface FilterSectionProps {
   options: FilterOption[];
   onToggle: (id: string) => void;
   isRoomState?: boolean; // Indicates if this is room state section (circular icons)
+  reducedMargin?: boolean; // For Guest section to reduce top margin
 }
 
 export default function FilterSection({
@@ -20,9 +21,10 @@ export default function FilterSection({
   options,
   onToggle,
   isRoomState = false,
+  reducedMargin = false,
 }: FilterSectionProps) {
   return (
-    <View style={styles.section}>
+    <View style={[styles.section, reducedMargin && styles.sectionReducedMargin]}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <View style={styles.optionsContainer}>
         {options.map((option) => {
@@ -54,6 +56,10 @@ export default function FilterSection({
 const styles = StyleSheet.create({
   section: {
     marginBottom: 32 * scaleX,
+  },
+  sectionReducedMargin: {
+    marginTop: -24 * scaleX, // Reduce top margin for Guest section (more reduction)
+    marginBottom: 16 * scaleX, // Reduced margin since actions follow directly
   },
   sectionTitle: {
     fontSize: 18 * scaleX,

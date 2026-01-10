@@ -500,6 +500,7 @@ export default function AllRoomsScreen() {
         onSearch={handleSearch}
         onFilterPress={handleFilterPress}
         onBackPress={handleBackPress}
+        showFilterModal={showFilterModal}
       />
 
       {/* Bottom Navigation (no blur) */}
@@ -540,9 +541,10 @@ export default function AllRoomsScreen() {
         onApplyFilters={handleApplyFilters}
         initialFilters={activeFilters || undefined}
         filterCounts={filterCounts}
-        headerHeight={217 * scaleX} // AllRoomsScreen header height
+        headerHeight={153 * scaleX} // Match HomeScreen header height when modal is open
         searchBarHeight={59 * scaleX} // Same search bar height
-        searchBarTop={(133 + 25) * scaleX} // Top section (133px) + marginTop (25px) = 158px
+        searchBarTop={undefined} // Don't pass searchBarTop when modal is open - use HomeScreen logic
+        onFilterIconPress={handleFilterPress}
       />
 
     </View>

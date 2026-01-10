@@ -28,13 +28,13 @@ export default function FilterCheckbox({
           width: checkboxSize,
           height: checkboxSize,
           borderWidth: borderWidth,
-          backgroundColor: checked ? '#A9A9A9' : 'transparent',
+          backgroundColor: 'transparent', // No fill, just border
           borderColor: '#A9A9A9',
         },
       ]}
     >
       {checked && (
-        <Text style={[styles.checkmark, { fontSize: checkboxSize * 0.7 }]}>✓</Text>
+        <Text style={[styles.checkmark, { fontSize: checkboxSize * 0.8, lineHeight: checkboxSize * 0.8 }]}>✓</Text>
       )}
     </View>
   );
@@ -47,8 +47,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkmark: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-    lineHeight: 0,
+    color: '#1e1e1e', // Dark color for visibility (primary text color)
+    fontWeight: '900', // Extra bold for better visibility
+    includeFontPadding: false, // Remove extra padding
+    textAlignVertical: 'center',
   },
 });

@@ -13,6 +13,7 @@ interface AllRoomsHeaderProps {
   onFilterPress?: () => void; // Optional - filter handler
   onBackPress?: () => void; // Optional - navigation handler
   searchPlaceholder?: string | { bold: string; normal: string }; // Optional dynamic placeholder
+  showFilterModal?: boolean; // Whether filter modal is open
 }
 
 export default function AllRoomsHeader({
@@ -22,15 +23,16 @@ export default function AllRoomsHeader({
   onFilterPress,
   onBackPress,
   searchPlaceholder = { bold: 'Search ', normal: 'Rooms, Guests, etc' },
+  showFilterModal = false,
 }: AllRoomsHeaderProps) {
   const handleSearchChange = (text: string) => {
     onSearch(text);
   };
 
   return (
-    <View style={styles.container}>
-      {/* Blue gradient background */}
-      <View style={styles.headerBackground} />
+    <View style={[styles.container, showFilterModal && styles.containerModalOpen]}>
+      {/* Blue gradient background - white when filter modal is open */}
+      <View style={[styles.headerBackground, showFilterModal && styles.headerBackgroundWhite]} />
       
       {/* Top section with back button, title, and AM/PM toggle */}
       <View style={styles.topSection}>
@@ -58,44 +60,46 @@ export default function AllRoomsHeader({
         </View>
       </View>
       
-      {/* Search bar section */}
-      <View style={styles.searchSection}>
-        <View style={styles.searchBar}>
-          <TouchableOpacity
-            style={styles.searchIconButton}
-            onPress={() => {/* Search action */}}
-            activeOpacity={0.7}
-          >
-            <Image
-              source={require('../../../assets/icons/search-icon.png')}
-              style={styles.searchIcon}
-              resizeMode="contain"
+      {/* Search bar section - hidden when filter modal is open */}
+      {!showFilterModal && (
+        <View style={styles.searchSection}>
+          <View style={styles.searchBar}>
+            <TouchableOpacity
+              style={styles.searchIconButton}
+              onPress={() => {/* Search action */}}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={require('../../../assets/icons/search-icon.png')}
+                style={styles.searchIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+            <SearchInput
+              placeholder={searchPlaceholder}
+              onSearch={handleSearchChange}
+              inputStyle={styles.searchInput}
+              placeholderStyle={styles.placeholderText}
+              placeholderBoldStyle={styles.placeholderBold}
+              placeholderNormalStyle={styles.placeholderNormal}
+              inputWrapperStyle={styles.searchInputContainer}
             />
-          </TouchableOpacity>
-          <SearchInput
-            placeholder={searchPlaceholder}
-            onSearch={handleSearchChange}
-            inputStyle={styles.searchInput}
-            placeholderStyle={styles.placeholderText}
-            placeholderBoldStyle={styles.placeholderBold}
-            placeholderNormalStyle={styles.placeholderNormal}
-            inputWrapperStyle={styles.searchInputContainer}
-          />
+          </View>
+          {onFilterPress && (
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={onFilterPress}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={require('../../../assets/icons/menu-icon.png')}
+                style={styles.filterIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          )}
         </View>
-        {onFilterPress && (
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={onFilterPress}
-            activeOpacity={0.7}
-          >
-            <Image
-              source={require('../../../assets/icons/menu-icon.png')}
-              style={styles.filterIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        )}
-      </View>
+      )}
     </View>
   );
 }
@@ -106,8 +110,11 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 217 * scaleX, // Adjusted to fit search bar
+    height: 217 * scaleX, // Full height with search bar
     zIndex: 10,
+  },
+  containerModalOpen: {
+    height: 153 * scaleX, // Match HomeScreen header height when modal is open
   },
   headerBackground: {
     position: 'absolute',
@@ -116,6 +123,10 @@ const styles = StyleSheet.create({
     right: 0,
     height: 133 * scaleX,
     backgroundColor: '#e4eefe', // Light blue background
+  },
+  headerBackgroundWhite: {
+    backgroundColor: '#FFF', // White when filter modal is open
+    height: 153 * scaleX, // Match HomeScreen header height when modal is open
   },
   topSection: {
     flexDirection: 'row',
@@ -204,15 +215,16 @@ const styles = StyleSheet.create({
     tintColor: colors.primary.main,
   },
   filterButton: {
-    width: 26 * scaleX,
-    height: 12 * scaleX,
+    width: 40 * scaleX, // Increased touch target for easier clicking
+    height: 40 * scaleX, // Increased touch target for easier clicking
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 18 * scaleX, // Gap between search bar and filter icon
+    padding: 8 * scaleX, // Add padding for better touch area
   },
   filterIcon: {
-    width: 26,
-    height: 12,
+    width: 32 * scaleX, // Increased from 26px for better visibility (and fixed to use scaleX)
+    height: 16 * scaleX, // Increased from 12px for better visibility (maintaining aspect ratio)
     tintColor: colors.primary.main,
   },
 });

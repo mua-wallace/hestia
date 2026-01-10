@@ -5,9 +5,9 @@ import {
   Modal,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   Dimensions,
   Image,
+  ScrollView,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { colors, typography } from '../../theme';
@@ -35,6 +35,7 @@ interface HomeFilterModalProps {
   headerHeight?: number; // Optional header height for positioning (defaults to HomeScreen height)
   searchBarHeight?: number; // Optional search bar height (defaults to HomeScreen height)
   searchBarTop?: number; // Optional search bar top position (for AllRoomsScreen where search is inside header)
+  onFilterIconPress?: () => void; // Callback for filter icon press
 }
 
 export default function HomeFilterModal({
@@ -48,21 +49,35 @@ export default function HomeFilterModal({
   headerHeight,
   searchBarHeight,
   searchBarTop,
+  onFilterIconPress,
 }: HomeFilterModalProps) {
   // Calculate position below filter button
   // Use provided heights or defaults for HomeScreen
   const HEADER_HEIGHT = headerHeight || DEFAULT_HEADER_HEIGHT;
+  const HEADER_HEIGHT_MINUS_30 = HEADER_HEIGHT - 30 * scaleX; // Subtract 30 directly from HEADER_HEIGHT for responsive calculation
   const HEADER_MARGIN = DEFAULT_HEADER_MARGIN;
   const SEARCH_BAR_HEIGHT = searchBarHeight || DEFAULT_SEARCH_BAR_HEIGHT;
   
+  // Calculate filter icon position (when modal is open)
+  const FILTER_ICON_TOP = HEADER_HEIGHT_MINUS_30 + 5 * scaleX; // Just below header, on top of overlay
+  const FILTER_ICON_HEIGHT = 40 * scaleX; // Filter icon container height
+  const FILTER_ICON_BOTTOM = FILTER_ICON_TOP + FILTER_ICON_HEIGHT; // Bottom of filter icon
+  const MODAL_MARGIN_FROM_ICON = 10 * scaleX; // Margin between icon and modal
+  
   // If searchBarTop is provided (AllRoomsScreen), use it directly
   // Otherwise calculate from header height + margin (HomeScreen)
+  // When filter modal is open, search bar is hidden, so filter button is at header bottom
   const FILTER_BUTTON_TOP = searchBarTop !== undefined 
     ? searchBarTop 
-    : HEADER_HEIGHT + HEADER_MARGIN; // Top of search section
-  const FILTER_BUTTON_BOTTOM = FILTER_BUTTON_TOP + SEARCH_BAR_HEIGHT; // Bottom of search bar
-  const BLUR_TOP_OFFSET = FILTER_BUTTON_BOTTOM + 5 * scaleX; // 5px margin below search bar for blur
-  const MODAL_TOP_OFFSET = FILTER_BUTTON_BOTTOM + 10 * scaleX; // 10px spacing below filter button
+    : HEADER_HEIGHT + HEADER_MARGIN; // Top of search section (or filter button when modal open)
+  const FILTER_BUTTON_BOTTOM = searchBarTop !== undefined
+    ? FILTER_BUTTON_TOP + SEARCH_BAR_HEIGHT // AllRoomsScreen: search bar exists
+    : HEADER_HEIGHT + HEADER_MARGIN + 12 * scaleX; // HomeScreen: filter button height when modal open (no search bar)
+  const BLUR_TOP_OFFSET = HEADER_HEIGHT; // 0px margin from header - blur starts right at header bottom
+  // When searchBarTop is undefined (modal open, search hidden), position modal with margin from filter icon
+  const MODAL_TOP_OFFSET = searchBarTop !== undefined
+    ? FILTER_BUTTON_BOTTOM + 10 * scaleX // Normal spacing when search bar exists
+    : FILTER_ICON_BOTTOM + MODAL_MARGIN_FROM_ICON; // Position modal below filter icon with margin
   const {
     filters,
     setFilters,
@@ -212,21 +227,32 @@ export default function HomeFilterModal({
 
   // Create dynamic styles based on calculated positions
   const dynamicStyles = {
+    filterIconContainer: {
+      position: 'absolute' as const,
+      top: FILTER_ICON_TOP, // Position on top of overlay
+      right: 15 * scaleX, // Position on the right side
+      width: 40 * scaleX, // Match the increased size from HomeScreen
+      height: FILTER_ICON_HEIGHT, // Match the increased size from HomeScreen
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      zIndex: 1002, // Higher than overlay (999) and modal (1000) to be on top
+    },
     headerArea: {
       position: 'absolute' as const,
       top: 0,
       left: 0,
       right: 0,
-      height: BLUR_TOP_OFFSET, // Include the margin in the non-blurred area
+      height: HEADER_HEIGHT, // Header area - no blur
       backgroundColor: 'transparent',
       zIndex: 1001,
     },
     blurOverlay: {
       position: 'absolute' as const,
-      top: BLUR_TOP_OFFSET,
+      top: HEADER_HEIGHT_MINUS_30, // Responsive calculation: HEADER_HEIGHT - 30
       left: 0,
       right: 0,
       bottom: 0,
+      zIndex: 999, // Below modal and filter icon
     },
     modalContainer: {
       position: 'absolute' as const,
@@ -234,9 +260,8 @@ export default function HomeFilterModal({
       left: SCREEN_WIDTH * 0.05, // 5% of screen width
       width: SCREEN_WIDTH * 0.9, // 90% of screen width
       maxWidth: 400 * scaleX,
-      height: SCREEN_HEIGHT * 0.7,
-      maxHeight: 600 * scaleX,
-      zIndex: 1000,
+      bottom: 20 * scaleX, // Add margin bottom
+      zIndex: 1000, // On top of overlay
     },
   };
 
@@ -248,6 +273,21 @@ export default function HomeFilterModal({
       onRequestClose={onClose}
     >
       <View style={styles.backdrop}>
+        {/* Filter Icon - On top of overlay */}
+        {onFilterIconPress && (
+          <TouchableOpacity
+            style={dynamicStyles.filterIconContainer}
+            onPress={onFilterIconPress}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={require('../../../assets/icons/menu-icon.png')}
+              style={styles.filterIconImage}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+        )}
+        
         {/* Header area - no blur, clickable to close */}
         <TouchableOpacity
           style={dynamicStyles.headerArea}
@@ -291,10 +331,10 @@ export default function HomeFilterModal({
               </TouchableOpacity>
             </View>
 
-            {/* Scrollable Content */}
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
+            {/* Content - Scrollable to ensure buttons are visible */}
+            <ScrollView 
+              style={styles.contentScrollView}
+              contentContainerStyle={styles.content}
               showsVerticalScrollIndicator={false}
             >
               {/* Room State Section */}
@@ -311,38 +351,44 @@ export default function HomeFilterModal({
                 options={guestOptions}
                 onToggle={handleToggleGuest}
                 isRoomState={false}
+                reducedMargin={true}
               />
-            </ScrollView>
 
-            {/* Action Buttons */}
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={[
-                  styles.goToResultsButton,
-                  !hasActiveFilters && styles.goToResultsButtonDisabled,
-                ]}
-                onPress={handleGoToResults}
-                activeOpacity={0.7}
-                disabled={!hasActiveFilters}
-              >
-                <Text style={styles.goToResultsButtonText}>Go to Results</Text>
-                <Image
-                  source={require('../../../assets/icons/forward-arrow-icon.png')}
-                  style={styles.arrowIcon}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-
-              {onAdvanceFilter && (
+              {/* Action Buttons - Directly below Stayover */}
+              <View style={styles.actionsInline}>
                 <TouchableOpacity
-                  style={styles.advanceFilterButton}
-                  onPress={onAdvanceFilter}
+                  style={styles.goToResultsButton}
+                  onPress={handleGoToResults}
                   activeOpacity={0.7}
+                  disabled={!hasActiveFilters}
                 >
-                  <Text style={styles.advanceFilterText}>Advance Filter</Text>
+                  <Text style={[
+                    styles.goToResultsButtonText,
+                    !hasActiveFilters && styles.goToResultsButtonTextDisabled,
+                  ]}>
+                    Go to Results
+                  </Text>
+                  <Image
+                    source={require('../../../assets/icons/spear-arrow.png')}
+                    style={[
+                      styles.arrowIcon,
+                      !hasActiveFilters && styles.arrowIconDisabled,
+                    ]}
+                    resizeMode="contain"
+                  />
                 </TouchableOpacity>
-              )}
-            </View>
+
+                {onAdvanceFilter && (
+                  <TouchableOpacity
+                    style={styles.advanceFilterButton}
+                    onPress={onAdvanceFilter}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.advanceFilterText}>Advance Filter</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </ScrollView>
           </View>
         </View>
       </View>
@@ -403,55 +449,65 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     opacity: 0.5,
   },
-  scrollView: {
+  contentScrollView: {
     flex: 1,
   },
-  scrollContent: {
+  content: {
     paddingHorizontal: 20 * scaleX,
     paddingTop: 24 * scaleX,
-    paddingBottom: 24 * scaleX,
+    paddingBottom: 20 * scaleX, // Padding to ensure buttons are visible
   },
-  actions: {
-    paddingHorizontal: 20 * scaleX,
-    paddingTop: 16 * scaleX,
-    paddingBottom: 24 * scaleX,
-    borderTopWidth: 1,
-    borderTopColor: '#e6e6e6',
-    minHeight: 100 * scaleX,
+  actionsInline: {
+    marginTop: 4 * scaleX, // Minimal spacing after Stayover
   },
   goToResultsButton: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: colors.primary.main,
-    borderRadius: 8 * scaleX,
-    paddingVertical: 14 * scaleX,
-    marginBottom: 12 * scaleX,
-  },
-  goToResultsButtonDisabled: {
-    backgroundColor: colors.text.secondary,
-    opacity: 0.5,
+    paddingVertical: 8 * scaleX, // Reduced padding
+    marginBottom: 4 * scaleX, // Reduced spacing before Advance Filter
   },
   goToResultsButtonText: {
-    fontSize: 16 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.semibold as any,
-    color: '#ffffff',
-    marginRight: 8 * scaleX,
+    fontSize: 18 * scaleX, // Increased from 16px for better visibility
+    fontFamily: typography.fontFamily.primary, // Helvetica
+    fontWeight: typography.fontWeights.bold as any, // 700
+    color: '#5A759D', // Exact color from Figma
+    lineHeight: typography.lineHeights.normal, // normal
+  },
+  goToResultsButtonTextDisabled: {
+    color: colors.text.secondary,
+    opacity: 0.5,
   },
   arrowIcon: {
-    width: 16 * scaleX,
-    height: 16 * scaleX,
-    tintColor: '#ffffff',
+    width: 20 * scaleX, // Increased from 16px for better visibility
+    height: 20 * scaleX, // Increased from 16px for better visibility
+    tintColor: colors.primary.main,
+  },
+  arrowIconDisabled: {
+    tintColor: colors.text.secondary,
+    opacity: 0.5,
   },
   advanceFilterButton: {
-    alignItems: 'center',
-    paddingVertical: 8 * scaleX,
+    paddingVertical: 4 * scaleX, // Reduced padding
+    paddingLeft: 0, // Align with Go to Results text
   },
   advanceFilterText: {
-    fontSize: 14 * scaleX,
+    fontSize: 14 * scaleX, // Matches Figma - smaller than Go to Results
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.regular as any,
-    color: colors.primary.main,
+    color: colors.text.secondary, // Lighter grey color
+  },
+  filterIconContainer: {
+    position: 'absolute' as const,
+    width: 26 * scaleX,
+    height: 12 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1002, // Higher than overlay (999) and modal (1000) to be on top
+  },
+  filterIconImage: {
+    width: 32 * scaleX, // Match the increased size from HomeScreen
+    height: 16 * scaleX, // Match the increased size from HomeScreen (maintaining aspect ratio)
+    tintColor: colors.primary.main,
   },
 });
