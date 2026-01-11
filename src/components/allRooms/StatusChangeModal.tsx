@@ -18,6 +18,7 @@ interface StatusChangeModalProps {
   room?: RoomCardData; // Room data
   buttonPosition?: { x: number; y: number; width: number; height: number } | null; // Status button position on screen
   showTriangle?: boolean; // Whether to show the triangle pointer (default: true)
+  headerHeight?: number; // Header height in design pixels (default: 232 for ArrivalDepartureDetailScreen, use 217 for AllRoomsScreen)
 }
 
 export default function StatusChangeModal({
@@ -28,6 +29,7 @@ export default function StatusChangeModal({
   room,
   buttonPosition,
   showTriangle = true,
+  headerHeight = 232, // Default to 232px for ArrivalDepartureDetailScreen
 }: StatusChangeModalProps) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -102,14 +104,24 @@ export default function StatusChangeModal({
   let triangleLeft: number;
   const triangleTopOffset = -10 * scaleX; // Position triangle above modal top to point upward to button
 
+  // Use provided headerHeight or default based on showTriangle
+  // When showTriangle=true (AllRoomsScreen), header is 217px
+  // When showTriangle=false (ArrivalDepartureDetailScreen), header is 232px
+  const HEADER_HEIGHT_PX = headerHeight || (showTriangle ? 217 : 232);
+  const HEADER_HEIGHT = HEADER_HEIGHT_PX * scaleX;
+
   if (showTriangle && buttonPosition) {
     // Calculate modal position: below the status button with margin
-    // buttonPosition.y is the top of the button, buttonPosition.height is the button height
+    // buttonPosition.y is the top of the button measured from window top (absolute position)
+    // buttonPosition.height is the button height
     // So buttonPosition.y + buttonPosition.height gives us the bottom of the button
-    // On Android, account for status bar if statusBarTranslucent is true
-    const statusBarOffset = Platform.OS === 'android' ? insets.top : 0;
-    const spacing = 20 * scaleX; // Margin between button and modal (increased for better triangle visibility)
-    modalTopPosition = buttonPosition.y + buttonPosition.height + spacing + statusBarOffset;
+    // The modal is positioned relative to BlurView which starts at HEADER_HEIGHT from window top
+    // So we need to subtract HEADER_HEIGHT to convert absolute position to BlurView-relative position
+    // Increased spacing to move modal further down from status button
+    const spacing = 50 * scaleX; // Margin between button bottom and modal top
+    // Convert button bottom position from window coordinates to BlurView-relative coordinates
+    const buttonBottomAbsolute = buttonPosition.y + buttonPosition.height;
+    modalTopPosition = buttonBottomAbsolute - HEADER_HEIGHT + spacing;
     
     // Status button center X position on screen (already in screen pixels, scaled)
     const buttonCenterX = buttonPosition.x + buttonPosition.width / 2;
@@ -125,10 +137,7 @@ export default function StatusChangeModal({
     triangleLeft = (buttonCenterX - modalLeft - triangleHalfWidth) / scaleX;
   } else {
     // Position modal directly at header bottom with 0px gap - modal starts exactly where header ends
-    // Header height is 232px from roomDetailStyles
-    // Since BlurView now starts at 232px, modal position is relative to BlurView (0px from BlurView top = header bottom)
-    const HEADER_HEIGHT = 232 * scaleX;
-    const statusBarOffset = Platform.OS === 'android' ? insets.top : 0;
+    // Since BlurView now starts at HEADER_HEIGHT, modal position is relative to BlurView (0px from BlurView top = header bottom)
     const screenMargin = CARD_DIMENSIONS.marginHorizontal * scaleX; // 7px scaled (matches card margin)
     modalLeft = screenMargin; // Align with card margin
     modalTopPosition = 0; // Position modal at 0px from BlurView top (which is at header bottom)
@@ -154,13 +163,13 @@ export default function StatusChangeModal({
       {/* Blurred Background Overlay - Start below header */}
       <Animated.View style={{ flex: 1, opacity: opacityAnim }}>
         {/* Header area - no blur */}
-        <View style={styles.headerArea} />
+        <View style={[styles.headerArea, { height: HEADER_HEIGHT }]} />
         
         {/* Blurred area - below header */}
         <BlurView
           intensity={20}
           tint="light"
-          style={styles.blurOverlay}
+          style={[styles.blurOverlay, { top: HEADER_HEIGHT }]}
         >
           {/* Backdrop - transparent, just for closing modal */}
           <TouchableOpacity
@@ -230,13 +239,13 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 232 * scaleX, // Header height from roomDetailStyles
+    // Height is set dynamically via inline style based on headerHeight prop
     backgroundColor: 'transparent',
     zIndex: 1001, // Above blur but below modal
   },
   blurOverlay: {
     position: 'absolute',
-    top: 232 * scaleX, // Start below header
+    // Top position is set dynamically via inline style based on headerHeight prop
     left: 0,
     right: 0,
     bottom: 0,
