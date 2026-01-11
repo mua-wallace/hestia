@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { View, ScrollView, StyleSheet, Dimensions, RefreshControl, useWindowDimensions } from 'react-native';
+import { View, ScrollView, StyleSheet, Dimensions, RefreshControl, useWindowDimensions, Text, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -18,6 +18,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { BlurView } from 'expo-blur';
 import { FilterState, FilterCounts } from '../types/filter.types';
 import HomeFilterModal from '../components/home/HomeFilterModal';
+import { CARD_DIMENSIONS, CARD_COLORS } from '../constants/allRoomsStyles';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -77,8 +78,17 @@ export default function AllRoomsScreen() {
     }
   }, [routeFilters]);
   
-  // Use route filters if available, otherwise use local filters
-  const activeFilters = routeFilters || localFilters;
+  // Prefer local filters (user's current selection) over route filters (initial state)
+  // This allows reset to work properly by overriding route filters
+  const activeFilters = localFilters !== undefined ? localFilters : routeFilters;
+  
+  // Check if there are active filters
+  const hasActiveFilters = useMemo(() => {
+    if (!activeFilters) return false;
+    const hasRoomStateFilter = Object.values(activeFilters.roomStates || {}).some(v => v);
+    const hasGuestFilter = Object.values(activeFilters.guests || {}).some(v => v);
+    return hasRoomStateFilter || hasGuestFilter || !!searchQuery;
+  }, [activeFilters, searchQuery]);
 
   const handleShiftToggle = (shift: ShiftType) => {
     setAllRoomsData(prev => ({ ...prev, selectedShift: shift }));
@@ -467,24 +477,44 @@ export default function AllRoomsScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {filteredRooms.map((room) => (
-            <RoomCard
-              key={room.id}
-              ref={(ref) => {
-                if (ref) {
-                  cardRefs.current[room.id] = ref;
-                }
-              }}
-              room={room}
-              onPress={() => handleRoomPress(room)}
-              onStatusPress={() => handleStatusPress(room)}
-              statusButtonRef={(ref) => {
-                if (ref) {
-                  statusButtonRefs.current[room.id] = ref;
-                }
-              }}
-            />
-          ))}
+          {hasActiveFilters && filteredRooms.length === 0 ? (
+            // Empty state card when filters don't match any rooms
+            <View style={styles.emptyStateCard}>
+              <View style={styles.emptyStateIconContainer}>
+                <View style={styles.emptyStateIconCircle}>
+                  <Image
+                    source={require('../../assets/icons/menu-icon.png')}
+                    style={styles.emptyStateIcon}
+                    resizeMode="contain"
+                    tintColor="#5a759d"
+                  />
+                </View>
+              </View>
+              <Text style={styles.emptyStateTitle}>No rooms found</Text>
+              <Text style={styles.emptyStateMessage}>
+                The chosen filter options do not match any rooms.{'\n'}Try adjusting your filters or search query.
+              </Text>
+            </View>
+          ) : (
+            filteredRooms.map((room) => (
+              <RoomCard
+                key={room.id}
+                ref={(ref) => {
+                  if (ref) {
+                    cardRefs.current[room.id] = ref;
+                  }
+                }}
+                room={room}
+                onPress={() => handleRoomPress(room)}
+                onStatusPress={() => handleStatusPress(room)}
+                statusButtonRef={(ref) => {
+                  if (ref) {
+                    statusButtonRefs.current[room.id] = ref;
+                  }
+                }}
+              />
+            ))
+          )}
         </ScrollView>
         
         {/* Blur Overlay for More Popup - covers content area */}
@@ -616,6 +646,65 @@ const styles = StyleSheet.create({
   blurOverlayDarkener: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(200, 200, 200, 0.6)',
+  },
+  emptyStateCard: {
+    width: CARD_DIMENSIONS.width * scaleX,
+    alignSelf: 'center',
+    backgroundColor: '#f8faff',
+    borderWidth: 2,
+    borderColor: '#d4e3f7',
+    borderRadius: 16 * scaleX,
+    padding: 32 * scaleX,
+    marginTop: 20 * scaleX,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 220 * scaleX,
+    shadowColor: 'rgba(90, 117, 157, 0.25)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 10,
+    // Gradient-like effect using multiple layers
+    overflow: 'hidden',
+  },
+  emptyStateIconContainer: {
+    marginBottom: 20 * scaleX,
+  },
+  emptyStateIconCircle: {
+    width: 80 * scaleX,
+    height: 80 * scaleX,
+    borderRadius: 40 * scaleX,
+    backgroundColor: 'rgba(90, 117, 157, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#5a759d',
+    shadowColor: '#5a759d',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  emptyStateIcon: {
+    width: 40 * scaleX,
+    height: 40 * scaleX,
+  },
+  emptyStateTitle: {
+    fontSize: 22 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    color: '#5a759d',
+    marginBottom: 12 * scaleX,
+    textAlign: 'center',
+  },
+  emptyStateMessage: {
+    fontSize: 15 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '400' as any,
+    color: '#607AA1',
+    textAlign: 'center',
+    lineHeight: 22 * scaleX,
+    paddingHorizontal: 10 * scaleX,
   },
 });
 

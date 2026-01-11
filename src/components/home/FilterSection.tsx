@@ -55,18 +55,18 @@ export default function FilterSection({
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: 32 * scaleX,
+    marginBottom: 20 * scaleX, // Reduced from 32px
   },
   sectionReducedMargin: {
-    marginTop: -24 * scaleX, // Reduce top margin for Guest section (more reduction)
-    marginBottom: 16 * scaleX, // Reduced margin since actions follow directly
+    marginTop: -16 * scaleX, // Reduce top margin for Guest section
+    marginBottom: 8 * scaleX, // Reduced margin since actions follow directly
   },
   sectionTitle: {
     fontSize: 18 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.semiBold as any,
     color: colors.text.primary,
-    marginBottom: 16 * scaleX,
+    marginBottom: 12 * scaleX, // Reduced from 16px
   },
   optionsContainer: {
     // No additional styling needed, rows handle their own spacing

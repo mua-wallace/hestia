@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12 * scaleX,
+    paddingVertical: 8 * scaleX, // Reduced from 12px
     paddingHorizontal: 0,
   },
   iconContainer: {

@@ -225,6 +225,39 @@ export default function HomeFilterModal({
     onClose();
   };
 
+  const handleResetFilters = () => {
+    // Get the reset filters state (all false/empty)
+    const resetFilterState: FilterState = {
+      roomStates: {
+        dirty: false,
+        inProgress: false,
+        cleaned: false,
+        inspected: false,
+        priority: false,
+      },
+      guests: {
+        arrivals: false,
+        departures: false,
+        turnDown: false,
+        stayOver: false,
+      },
+    };
+    
+    // Reset filters in the hook
+    resetFilters();
+    
+    // Apply reset filters to show all cards
+    // Pass empty filter state (all false) which will show all rooms
+    if (onApplyFilters) {
+      onApplyFilters(resetFilterState);
+    } else {
+      onGoToResults(resetFilterState);
+    }
+    
+    // Close the modal
+    onClose();
+  };
+
   // Create dynamic styles based on calculated positions
   const dynamicStyles = {
     filterIconContainer: {
@@ -331,64 +364,83 @@ export default function HomeFilterModal({
               </TouchableOpacity>
             </View>
 
-            {/* Content - Scrollable to ensure buttons are visible */}
-            <ScrollView 
-              style={styles.contentScrollView}
-              contentContainerStyle={styles.content}
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Room State Section */}
-              <FilterSection
-                title="Room State"
-                options={roomStateOptions}
-                onToggle={handleToggleRoomState}
-                isRoomState={true}
-              />
+            {/* Content - Optimized to fit without scrolling */}
+            <View style={styles.content}>
+              <View style={styles.contentScrollable}>
+                {/* Room State Section */}
+                <FilterSection
+                  title="Room State"
+                  options={roomStateOptions}
+                  onToggle={handleToggleRoomState}
+                  isRoomState={true}
+                />
 
-              {/* Guest Section */}
-              <FilterSection
-                title="Guest"
-                options={guestOptions}
-                onToggle={handleToggleGuest}
-                isRoomState={false}
-                reducedMargin={true}
-              />
+                {/* Guest Section */}
+                <FilterSection
+                  title="Guest"
+                  options={guestOptions}
+                  onToggle={handleToggleGuest}
+                  isRoomState={false}
+                  reducedMargin={true}
+                />
 
-              {/* Action Buttons - Directly below Stayover */}
-              <View style={styles.actionsInline}>
-                <TouchableOpacity
-                  style={styles.goToResultsButton}
-                  onPress={handleGoToResults}
-                  activeOpacity={0.7}
-                  disabled={!hasActiveFilters}
-                >
-                  <Text style={[
-                    styles.goToResultsButtonText,
-                    !hasActiveFilters && styles.goToResultsButtonTextDisabled,
-                  ]}>
-                    Go to Results
-                  </Text>
-                  <Image
-                    source={require('../../../assets/icons/spear-arrow.png')}
-                    style={[
-                      styles.arrowIcon,
-                      !hasActiveFilters && styles.arrowIconDisabled,
-                    ]}
-                    resizeMode="contain"
-                  />
-                </TouchableOpacity>
-
-                {onAdvanceFilter && (
+                {/* Action Buttons - Directly below Stayover */}
+                <View style={styles.actionsInline}>
                   <TouchableOpacity
-                    style={styles.advanceFilterButton}
-                    onPress={onAdvanceFilter}
+                    style={styles.goToResultsButton}
+                    onPress={handleGoToResults}
                     activeOpacity={0.7}
+                    disabled={!hasActiveFilters}
                   >
-                    <Text style={styles.advanceFilterText}>Advance Filter</Text>
+                    <Text style={[
+                      styles.goToResultsButtonText,
+                      !hasActiveFilters && styles.goToResultsButtonTextDisabled,
+                    ]}>
+                      Go to Results
+                    </Text>
+                    <Image
+                      source={require('../../../assets/icons/spear-arrow.png')}
+                      style={[
+                        styles.arrowIcon,
+                        !hasActiveFilters && styles.arrowIconDisabled,
+                      ]}
+                      resizeMode="contain"
+                    />
                   </TouchableOpacity>
-                )}
+
+                  {onAdvanceFilter && (
+                    <TouchableOpacity
+                      style={styles.advanceFilterButton}
+                      onPress={onAdvanceFilter}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.advanceFilterText}>Advance Filter</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            </ScrollView>
+              
+              {/* Reset Button - Bottom Right */}
+              {hasActiveFilters && (
+                <View style={styles.resetButtonBottomContainer}>
+                  <TouchableOpacity
+                    style={styles.resetButton}
+                    onPress={handleResetFilters}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.resetIconCircle}>
+                      <Image
+                        source={require('../../../assets/icons/menu-icon.png')}
+                        style={styles.resetIcon}
+                        resizeMode="contain"
+                        tintColor="#ffffff"
+                      />
+                    </View>
+                    <Text style={styles.resetButtonText}>Reset</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           </View>
         </View>
       </View>
@@ -424,16 +476,57 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20 * scaleX,
-    paddingVertical: 20 * scaleX,
+    paddingVertical: 16 * scaleX, // Reduced from 20px
     borderBottomWidth: 1,
     borderBottomColor: '#e6e6e6',
-    minHeight: 60 * scaleX,
+    minHeight: 56 * scaleX, // Reduced from 60px
+    position: 'relative',
   },
   headerTitle: {
     fontSize: 20 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: colors.text.primary,
+    flex: 1,
+  },
+  resetButtonBottomContainer: {
+    alignSelf: 'flex-end',
+    marginTop: 1 * scaleX, // Minimal gap (50% of 2px = 1px)
+    marginRight: 0, // No right margin since content has padding
+    marginBottom: 16 * scaleX, // Bottom margin to position button lower
+  },
+  resetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#5a759d',
+    paddingVertical: 8 * scaleX,
+    paddingHorizontal: 16 * scaleX,
+    borderRadius: 20 * scaleX,
+    shadowColor: 'rgba(90, 117, 157, 0.4)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  resetIconCircle: {
+    width: 20 * scaleX,
+    height: 20 * scaleX,
+    borderRadius: 10 * scaleX,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8 * scaleX,
+  },
+  resetIcon: {
+    width: 12 * scaleX,
+    height: 12 * scaleX,
+  },
+  resetButtonText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.semibold as any,
+    color: '#ffffff',
   },
   resultsButton: {
     paddingHorizontal: 12 * scaleX,
@@ -449,30 +542,34 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     opacity: 0.5,
   },
-  contentScrollView: {
-    flex: 1,
-  },
   content: {
     paddingHorizontal: 20 * scaleX,
-    paddingTop: 24 * scaleX,
-    paddingBottom: 20 * scaleX, // Padding to ensure buttons are visible
+    paddingTop: 16 * scaleX,
+    paddingBottom: 16 * scaleX, // Bottom padding for reset button
+    flex: 1,
+    justifyContent: 'space-between', // Distribute content to fill space
+  },
+  contentScrollable: {
+    flex: 1, // Take available space, leaving room for reset button
   },
   actionsInline: {
-    marginTop: 4 * scaleX, // Minimal spacing after Stayover
+    marginTop: 16 * scaleX, // Spacing to push buttons down
+    marginBottom: 0 * scaleX, // No bottom margin
+    paddingHorizontal: 16 * scaleX, // Padding to move buttons inward
   },
   goToResultsButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8 * scaleX, // Reduced padding
-    marginBottom: 4 * scaleX, // Reduced spacing before Advance Filter
+    paddingVertical: 6 * scaleX, // Further reduced padding
+    marginBottom: 2 * scaleX, // Reduced spacing before Advance Filter
   },
   goToResultsButtonText: {
     fontSize: 18 * scaleX, // Increased from 16px for better visibility
     fontFamily: typography.fontFamily.primary, // Helvetica
     fontWeight: typography.fontWeights.bold as any, // 700
     color: '#5A759D', // Exact color from Figma
-    lineHeight: typography.lineHeights.normal, // normal
+    // lineHeight: typography.lineHeights.normal, // normal - removed to fix type error
   },
   goToResultsButtonTextDisabled: {
     color: colors.text.secondary,
@@ -488,8 +585,9 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   advanceFilterButton: {
-    paddingVertical: 4 * scaleX, // Reduced padding
+    paddingVertical: 2 * scaleX, // Further reduced padding
     paddingLeft: 0, // Align with Go to Results text
+    marginBottom: 0, // No bottom margin
   },
   advanceFilterText: {
     fontSize: 14 * scaleX, // Matches Figma - smaller than Go to Results
