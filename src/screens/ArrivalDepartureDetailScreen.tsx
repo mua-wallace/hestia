@@ -252,13 +252,17 @@ export default function ArrivalDepartureDetailScreen() {
   };
 
   const handleSaveNote = (noteText: string) => {
-    // Create a new note with current user info (in real app, get from auth context)
+    // Get current logged-in user (default to first staff member)
+    // In real app, get from auth context
+    const currentUser = mockStaffData[0]; // Default logged-in user
+    
+    // Create a new note with current user info
     const newNote: Note = {
       id: Date.now().toString(),
       text: noteText,
       staff: {
-        name: 'Stella Kitou', // In real app, get from current user
-        avatar: require('../../assets/icons/profile-avatar.png'),
+        name: currentUser.name,
+        avatar: currentUser.avatar || require('../../assets/icons/profile-avatar.png'),
       },
       createdAt: new Date().toISOString(),
     };

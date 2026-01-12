@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
 import { scaleX, NOTES_SECTION } from '../../constants/roomDetailStyles';
@@ -11,8 +11,78 @@ interface NotesSectionProps {
 }
 
 export default function NotesSection({ notes, onAddPress }: NotesSectionProps) {
+  const FIRST_NOTE_TOP = NOTES_SECTION.note.text.top; // 706px
+  const [noteHeights, setNoteHeights] = useState<{ [key: string]: number }>({});
+  
+  // Relative spacing: 10-15% of the previous note's height, with a minimum of 8px
+  const getSpacingBetweenNotes = (previousNoteHeight: number): number => {
+    const relativeSpacing = previousNoteHeight * 0.12; // 12% of previous note height
+    const minSpacing = 8 * scaleX; // Minimum 8px scaled
+    return Math.max(relativeSpacing, minSpacing);
+  };
+  
+  // Handle height measurement from NoteItem
+  const handleNoteHeightMeasured = useCallback((noteId: string, height: number) => {
+    setNoteHeights(prev => {
+      if (prev[noteId] !== height) {
+        return { ...prev, [noteId]: height };
+      }
+      return prev;
+    });
+  }, []);
+  
+  // Calculate positions for each note dynamically based on actual measured heights
+  const calculateNotePositions = (): number[] => {
+    const positions: number[] = [];
+    let currentTop = FIRST_NOTE_TOP;
+    
+    notes.forEach((note, index) => {
+      if (index === 0) {
+        positions.push(currentTop);
+      } else {
+        // Get previous note's actual measured height, or use estimated if not yet measured
+        const previousNote = notes[index - 1];
+        const previousNoteHeight = noteHeights[previousNote.id] || estimateNoteHeight(previousNote.text);
+        
+        // Calculate relative spacing based on previous note's height
+        const spacing = getSpacingBetweenNotes(previousNoteHeight);
+        
+        // Next note starts after previous note's bottom + relative spacing
+        currentTop = positions[index - 1] + previousNoteHeight + spacing;
+        positions.push(currentTop);
+      }
+    });
+    
+    return positions;
+  };
+  
+  // Fallback estimation for initial render before heights are measured
+  const estimateNoteHeight = (text: string): number => {
+    const charsPerLine = 50;
+    const lineHeight = 18 * scaleX;
+    const estimatedLines = Math.ceil(text.length / charsPerLine);
+    const textHeight = estimatedLines * lineHeight;
+    // Add profile + name section height (scaled)
+    const profileNameSectionHeight = (10 + 25 + 5 + 11) * scaleX; // spacing + profile + offset + name
+    return textHeight + profileNameSectionHeight;
+  };
+  
+  const notePositions = calculateNotePositions();
+  
+  // Calculate dynamic container height based on last note
+  const calculateContainerHeight = () => {
+    if (notes.length === 0) {
+      return (879 - 646 + 50) * scaleX; // Default height
+    }
+    const lastNote = notes[notes.length - 1];
+    const lastNoteTop = notePositions[notePositions.length - 1];
+    const lastNoteHeight = noteHeights[lastNote.id] || estimateNoteHeight(lastNote.text);
+    const lastNoteBottom = lastNoteTop + lastNoteHeight;
+    return (lastNoteBottom - 646 + 50) * scaleX; // Add padding
+  };
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { minHeight: calculateContainerHeight() }]}>
       {/* Section Header - Icon */}
       <Image
         source={require('../../../assets/icons/notes-icon.png')}
@@ -39,15 +109,13 @@ export default function NotesSection({ notes, onAddPress }: NotesSectionProps) {
 
       {/* Notes List */}
       {notes.map((note, index) => {
-        const noteAbsoluteTop = index === 0 
-          ? NOTES_SECTION.note.text.top 
-          : NOTES_SECTION.note.note2.textTop;
         return (
           <NoteItem
             key={note.id}
             note={note}
-            absoluteTop={noteAbsoluteTop}
+            absoluteTop={notePositions[index]}
             contentAreaTop={646} // Notes section starts at 646px
+            onHeightMeasured={(height) => handleNoteHeightMeasured(note.id, height)}
           />
         );
       })}
@@ -59,7 +127,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     width: '100%',
-    minHeight: (879 - 646 + 50) * scaleX, // From Notes start (646) to last staff name (879) + padding = 233px + 50px
+    minHeight: (879 - 646 + 50) * scaleX, // Default height, will be overridden dynamically
     marginTop: (646 - 625) * scaleX, // Space from previous divider (625) to Notes section (646) = 21px
   },
   icon: {

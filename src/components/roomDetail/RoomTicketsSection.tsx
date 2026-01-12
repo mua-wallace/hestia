@@ -14,6 +14,8 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { typography } from '../../theme';
 import { CONTENT_AREA, scaleX } from '../../constants/roomDetailStyles';
+import TicketCard from '../tickets/TicketCard';
+import { TicketData } from '../../types/tickets.types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -184,6 +186,21 @@ export default function RoomTicketsSection({
   const selectedDepartmentName = DEPARTMENT_NAMES[selectedDepartment];
   const selectedDepartmentIcon = DEPARTMENT_ICONS[selectedDepartment];
 
+  // Mock current ticket for the room - in real app, this would come from props or API
+  const currentTicket: TicketData = {
+    id: 'current-ticket-1',
+    title: 'TV not working',
+    description: 'Guess could not connect the TV with chrome cast, kindly assist',
+    roomNumber: roomNumber,
+    dueTime: '10 mins',
+    createdBy: {
+      name: 'Stella Kitou',
+      avatar: require('../../../assets/icons/profile-avatar.png'),
+    },
+    status: 'unsolved',
+    locationIcon: require('../../../assets/icons/location.png'),
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -191,8 +208,28 @@ export default function RoomTicketsSection({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Department Title */}
-        <Text style={styles.departmentTitle}>{selectedDepartmentName}</Text>
+        {/* Current Ticket Section */}
+        <Text style={[styles.sectionTitle, styles.firstSectionTitle]}>Current Ticket</Text>
+        <View style={styles.currentTicketContainer}>
+          <View style={styles.ticketCardWrapper}>
+            <TicketCard
+              ticket={currentTicket}
+              onPress={() => {
+                // TODO: Navigate to ticket detail
+                console.log('Current ticket pressed');
+              }}
+              onStatusPress={() => {
+                // TODO: Handle status change
+                console.log('Current ticket status pressed');
+              }}
+            />
+          </View>
+        </View>
+
+        {/* Create a ticket Section */}
+        <Text style={styles.sectionTitle}>Create a ticket</Text>
+        <View style={styles.createTicketContent}>
+          <Text style={styles.departmentSubtitle}>Select Department</Text>
 
         {/* Department Icons - Horizontal Scrollable */}
         <ScrollView
@@ -273,21 +310,34 @@ export default function RoomTicketsSection({
           </TouchableOpacity>
         ) : (
           <View style={styles.picturesContainer}>
-            {pictures.map((uri, index) => (
-              <View key={index} style={styles.pictureWrapper}>
-                <Image source={{ uri }} style={styles.picture} resizeMode="cover" />
-                <TouchableOpacity
-                  style={styles.removePictureButton}
-                  onPress={() => handleRemovePicture(index)}
-                  activeOpacity={0.7}
+            {pictures.map((uri, index) => {
+              // Single photo: full width, Multiple photos: two columns max
+              const isSinglePhoto = pictures.length === 1;
+              return (
+                <View 
+                  key={index} 
+                  style={[
+                    styles.pictureWrapper,
+                    isSinglePhoto ? styles.pictureWrapperSingle : styles.pictureWrapperMultiple
+                  ]}
                 >
-                  <Text style={styles.removePictureText}>×</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+                  <Image source={{ uri }} style={styles.picture} resizeMode="cover" />
+                  <TouchableOpacity
+                    style={styles.removePictureButton}
+                    onPress={() => handleRemovePicture(index)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.removePictureText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
             {pictures.length < 10 && (
               <TouchableOpacity
-                style={styles.addMorePhotoButton}
+                style={[
+                  styles.addMorePhotoButton,
+                  pictures.length === 1 ? styles.addMorePhotoButtonSingle : styles.addMorePhotoButtonMultiple
+                ]}
                 onPress={handleAddPicture}
                 activeOpacity={0.7}
               >
@@ -370,6 +420,7 @@ export default function RoomTicketsSection({
         >
           <Text style={styles.submitButtonText}>Submit</Text>
         </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
@@ -387,6 +438,54 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20 * scaleX,
     paddingTop: 20 * scaleX,
     paddingBottom: 40 * scaleX,
+  },
+  sectionTitle: {
+    fontSize: 20 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: 'bold' as any,
+    color: '#000000',
+    marginTop: 24 * scaleX,
+    marginBottom: 16 * scaleX,
+  },
+  firstSectionTitle: {
+    marginTop: 0, // No top margin for first section
+  },
+  currentTicketContainer: {
+    marginBottom: 32 * scaleX,
+    width: '100%',
+    alignItems: 'center',
+  },
+  ticketCardWrapper: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -20 * scaleX, // Negative margin to offset parent padding
+    marginRight: -20 * scaleX, // Negative margin to offset parent padding
+  },
+  noTicketContainer: {
+    backgroundColor: '#f9fafc',
+    borderRadius: 9 * scaleX,
+    borderWidth: 1,
+    borderColor: '#e3e3e3',
+    padding: 24 * scaleX,
+    alignItems: 'center',
+    marginBottom: 32 * scaleX,
+  },
+  noTicketText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: 'regular' as any,
+    color: '#666666',
+  },
+  createTicketContent: {
+    // No extra padding needed, scrollContent already has padding
+  },
+  departmentSubtitle: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: 'bold' as any,
+    color: '#000000',
+    marginBottom: 16 * scaleX,
   },
   departmentTitle: {
     fontSize: 16 * scaleX,
@@ -480,14 +579,19 @@ const styles = StyleSheet.create({
   },
   pictureWrapper: {
     position: 'relative',
-    flex: 1,
-    minWidth: 100 * scaleX,
-    maxWidth: '48%', // Allow 2 per row with spacing
     aspectRatio: 1,
     borderRadius: 8 * scaleX,
     overflow: 'hidden',
-    marginRight: 12 * scaleX,
     marginBottom: 12 * scaleX,
+  },
+  pictureWrapperSingle: {
+    width: '100%', // Full width for single photo
+  },
+  pictureWrapperMultiple: {
+    flex: 1,
+    minWidth: 100 * scaleX,
+    maxWidth: '48%', // Two columns max
+    marginRight: 12 * scaleX,
   },
   picture: {
     width: '100%',
@@ -510,9 +614,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold' as any,
   },
   addMorePhotoButton: {
-    flex: 1,
-    minWidth: 100 * scaleX,
-    maxWidth: '48%', // Allow 2 per row with spacing
     aspectRatio: 1,
     borderRadius: 8 * scaleX,
     borderWidth: 1,
@@ -522,6 +623,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12 * scaleX,
+  },
+  addMorePhotoButtonSingle: {
+    width: '100%', // Full width when only one photo exists
+  },
+  addMorePhotoButtonMultiple: {
+    flex: 1,
+    minWidth: 100 * scaleX,
+    maxWidth: '48%', // Two columns max
+    marginRight: 12 * scaleX,
   },
   addMorePhotoIcon: {
     width: 24 * scaleX,
