@@ -54,6 +54,12 @@ export interface ChatMessage {
   senderName: string;
   message: string;
   timestamp: string;
+  type?: 'text' | 'image' | 'voice';
+  imageUri?: string;
+  voiceUri?: string;
+  voiceDuration?: number; // Duration in seconds
+  taggedUserId?: string; // User ID of the tagged person
+  taggedUserName?: string; // Name of the tagged person
 }
 
 export interface Chat {

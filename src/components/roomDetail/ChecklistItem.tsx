@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     color: '#999999',
   },
   quantityInput: {
-    width: 40 * scaleX,
+    width: 50 * scaleX,
     height: 32 * scaleX,
     textAlign: 'center',
     fontSize: 14 * scaleX,
@@ -208,6 +208,9 @@ const styles = StyleSheet.create({
     fontWeight: 'regular' as any,
     color: '#000000',
     backgroundColor: '#ffffff',
+    paddingHorizontal: 4 * scaleX,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
     // No border as per Figma design
     marginHorizontal: 1 * scaleX,
   },
