@@ -19,13 +19,13 @@ interface TabBarItemProps {
 
 export default function TabBarItem({ icon, label, active = false, badge, onPress, iconWidth, iconHeight }: TabBarItemProps) {
   // Use Math.round to ensure pixel-perfect rendering and prevent blurriness
+  // Icons are used directly without tintColor to preserve original colors from Figma
   const iconStyle = iconWidth && iconHeight 
     ? { 
         width: Math.round(iconWidth * normalizedScaleX), 
         height: Math.round(iconHeight * normalizedScaleX),
-        tintColor: active ? colors.primary.main : colors.text.primary, // Blue when active, dark gray when inactive
       }
-    : [styles.icon, { tintColor: active ? colors.primary.main : colors.text.primary }];
+    : styles.icon;
     
   return (
     <TouchableOpacity
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   icon: {
     width: '100%',
     height: '100%',
-    // tintColor will be set dynamically based on active state
+    // Icons are used directly without tintColor to preserve original colors
   },
   badgeContainer: {
     position: 'absolute',

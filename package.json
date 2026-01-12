@@ -32,6 +32,9 @@
     "@types/react": "~19.1.10",
     "babel-plugin-module-resolver": "^5.0.0",
     "babel-preset-expo": "~54.0.9",
+    "pdf-parse": "^2.4.5",
+    "pdf.js-extract": "^0.2.1",
+    "pdfjs-dist": "^5.4.530",
     "sharp": "^0.34.5",
     "typescript": "^5.1.3"
   },
