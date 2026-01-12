@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native';
 import { colors } from '../../theme';
+import { normalizedScaleX } from '../../utils/responsive';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -22,8 +23,8 @@ export default function MoreMenuItem({
   iconHeight = 40 
 }: MoreMenuItemProps) {
   const iconStyle = {
-    width: iconWidth * scaleX,
-    height: iconHeight * scaleX,
+    width: Math.round(iconWidth * normalizedScaleX),
+    height: Math.round(iconHeight * normalizedScaleX),
     tintColor: colors.primary.main,
   };
 
@@ -49,20 +50,20 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'flex-start',
-    minWidth: 96 * scaleX, // Consistent width for all items
+    minWidth: Math.round(96 * normalizedScaleX), // Consistent width for all items
   },
   iconContainer: {
-    height: 48 * scaleX, // Fixed height to align all icons at top
-    marginBottom: 6 * scaleX,
+    height: Math.round(68 * normalizedScaleX), // Accommodate tallest icon (68) - rounded for pixel-perfect
+    marginBottom: Math.round(6 * normalizedScaleX),
     justifyContent: 'center',
     alignItems: 'center',
   },
   label: {
     fontFamily: 'Helvetica',
-    fontSize: 15 * scaleX,
+    fontSize: Math.round(15 * normalizedScaleX),
     color: colors.primary.main,
     textAlign: 'center',
-    lineHeight: 16 * scaleX,
+    lineHeight: Math.round(16 * normalizedScaleX),
   },
 });
 

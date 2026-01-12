@@ -47,7 +47,7 @@ export default function FilterRow({
           ],
         ]}
       >
-        {(!isCircular || isPriority) && (
+        {icon && (!isCircular || isPriority) && (
           <Image
             source={icon}
             style={[

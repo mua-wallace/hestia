@@ -15,17 +15,19 @@ interface TabBarItemProps {
   onPress: () => void;
   iconWidth?: number;
   iconHeight?: number;
+  iconOpacity?: number;
 }
 
-export default function TabBarItem({ icon, label, active = false, badge, onPress, iconWidth, iconHeight }: TabBarItemProps) {
+export default function TabBarItem({ icon, label, active = false, badge, onPress, iconWidth, iconHeight, iconOpacity }: TabBarItemProps) {
   // Use Math.round to ensure pixel-perfect rendering and prevent blurriness
   // Icons are used directly without tintColor to preserve original colors from Figma
   const iconStyle = iconWidth && iconHeight 
     ? { 
         width: Math.round(iconWidth * normalizedScaleX), 
         height: Math.round(iconHeight * normalizedScaleX),
+        opacity: iconOpacity !== undefined ? iconOpacity : 1,
       }
-    : styles.icon;
+    : { ...styles.icon, opacity: iconOpacity !== undefined ? iconOpacity : 1 };
     
   return (
     <TouchableOpacity
@@ -38,8 +40,8 @@ export default function TabBarItem({ icon, label, active = false, badge, onPress
           source={icon}
           style={iconStyle}
           resizeMode="contain"
-          shouldRasterizeIOS={true}
-          renderToHardwareTextureAndroid={true}
+          shouldRasterizeIOS={iconOpacity !== undefined && iconOpacity < 1 ? false : true}
+          renderToHardwareTextureAndroid={iconOpacity !== undefined && iconOpacity < 1 ? false : true}
         />
         {badge !== undefined && badge > 0 && (
           <View style={styles.badgeContainer}>
@@ -63,9 +65,9 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     position: 'relative',
-    width: Math.round((50 + 12) * normalizedScaleX), // Accommodate largest icon (50) + badge space (12) - rounded for pixel-perfect
-    height: Math.round((36 + 12) * normalizedScaleX), // Accommodate tallest icon (36) + badge space (12) - rounded for pixel-perfect
-    marginBottom: Math.round(8 * normalizedScaleX), // Increased spacing for better visual balance
+    width: Math.round((70 + 12) * normalizedScaleX), // Accommodate largest icon (70) + badge space (12) - rounded for pixel-perfect
+    height: Math.round((68 + 12) * normalizedScaleX), // Accommodate tallest icon (68) + badge space (12) - rounded for pixel-perfect
+    marginBottom: Math.round(5.6 * normalizedScaleX), // Reduced to 70% of original 8px gap (8 * 0.7 = 5.6)
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -102,10 +104,14 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.regular as any,
     color: colors.text.primary, // Dark gray/black for inactive tabs
+    includeFontPadding: false, // Remove extra padding for consistent rendering
+    marginTop: Math.round(6 * normalizedScaleX), // Increased margin for text
+    marginBottom: Math.round(6 * normalizedScaleX), // Increased margin for text
   },
   labelActive: {
     fontWeight: typography.fontWeights.bold as any,
     color: colors.primary.main, // Blue for active tab
+    includeFontPadding: false, // Remove extra padding for consistent rendering
   },
 });
 

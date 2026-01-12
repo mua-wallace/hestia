@@ -11,13 +11,18 @@ interface StatusButtonProps {
   hasNotes?: boolean;
 }
 
-const StatusButton = forwardRef<TouchableOpacity, StatusButtonProps>(({ 
+const StatusButton = forwardRef<any, StatusButtonProps>(({ 
   status, 
   onPress,
   isPriority = false,
   isArrivalDeparture = false,
   hasNotes = false,
 }, ref) => {
+  // Safety check: ensure status is valid and config exists
+  if (!status || !STATUS_CONFIGS[status]) {
+    return null; // Return null if status is invalid or config doesn't exist
+  }
+  
   const config = STATUS_CONFIGS[status];
   const isInProgress = status === 'InProgress';
   const isDirty = status === 'Dirty';
@@ -41,6 +46,11 @@ const StatusButton = forwardRef<TouchableOpacity, StatusButtonProps>(({
   } else {
     buttonLeft = STATUS_BUTTON.positions.standard.left;
     buttonTop = STATUS_BUTTON.positions.standard.top;
+  }
+
+  // Safety check: ensure config.icon exists before rendering
+  if (!config || !config.icon) {
+    return null;
   }
 
   return (

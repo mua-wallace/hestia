@@ -51,6 +51,22 @@ export default function HomeFilterModal({
   searchBarTop,
   onFilterIconPress,
 }: HomeFilterModalProps) {
+  // Ensure filterCounts is always defined with default values
+  const safeFilterCounts: FilterCounts = filterCounts || {
+    roomStates: {
+      dirty: 0,
+      inProgress: 0,
+      cleaned: 0,
+      inspected: 0,
+      priority: 0,
+    },
+    guests: {
+      arrivals: 0,
+      departures: 0,
+      turnDown: 0,
+      stayOver: 0,
+    },
+  };
   // Calculate position below filter button
   // Use provided heights or defaults for HomeScreen
   const HEADER_HEIGHT = headerHeight || DEFAULT_HEADER_HEIGHT;
@@ -97,21 +113,21 @@ export default function HomeFilterModal({
 
   const resultCount = useMemo(() => {
     if (!filters) return 0;
-    return calculateResultCount(filterCounts);
-  }, [filters, filterCounts, calculateResultCount]);
+    return calculateResultCount(safeFilterCounts);
+  }, [filters, safeFilterCounts, calculateResultCount]);
 
   // Room State filter options
   const roomStateOptions: FilterOption[] = useMemo(
     () => {
-      if (!filters || !filters.roomStates) return [];
+      if (!filters || !filters.roomStates || !safeFilterCounts || !safeFilterCounts.roomStates) return [];
       return [
         {
           id: 'dirty',
           label: 'Dirty',
           icon: require('../../../assets/icons/dirty-state-icon.png'),
           iconColor: '#f92424',
-          count: filterCounts.roomStates.dirty,
-          selected: filters.roomStates.dirty,
+          count: safeFilterCounts.roomStates.dirty || 0,
+          selected: filters.roomStates.dirty || false,
           type: 'dirty',
         },
         {
@@ -119,8 +135,8 @@ export default function HomeFilterModal({
           label: 'In Progress',
           icon: require('../../../assets/icons/in-progess-state-icon.png'),
           iconColor: '#f0be1b',
-          count: filterCounts.roomStates.inProgress,
-          selected: filters.roomStates.inProgress,
+          count: safeFilterCounts.roomStates.inProgress || 0,
+          selected: filters.roomStates.inProgress || false,
           type: 'inProgress',
         },
         {
@@ -128,8 +144,8 @@ export default function HomeFilterModal({
           label: 'Cleaned',
           icon: require('../../../assets/icons/cleaned-state-icon.png'),
           iconColor: '#4a91fc',
-          count: filterCounts.roomStates.cleaned,
-          selected: filters.roomStates.cleaned,
+          count: safeFilterCounts.roomStates.cleaned || 0,
+          selected: filters.roomStates.cleaned || false,
           type: 'cleaned',
         },
         {
@@ -137,8 +153,8 @@ export default function HomeFilterModal({
           label: 'Inspected',
           icon: require('../../../assets/icons/inspected-state-icon.png'),
           iconColor: '#41d541',
-          count: filterCounts.roomStates.inspected,
-          selected: filters.roomStates.inspected,
+          count: safeFilterCounts.roomStates.inspected || 0,
+          selected: filters.roomStates.inspected || false,
           type: 'inspected',
         },
         {
@@ -146,27 +162,27 @@ export default function HomeFilterModal({
           label: 'Priority',
           icon: require('../../../assets/icons/priority-status.png'),
           iconColor: undefined, // No tint color - icon has its own colors
-          count: filterCounts.roomStates.priority,
-          selected: filters.roomStates.priority,
+          count: safeFilterCounts.roomStates.priority || 0,
+          selected: filters.roomStates.priority || false,
           type: 'priority',
         },
       ];
     },
-    [filters?.roomStates, filterCounts.roomStates]
+    [filters?.roomStates, safeFilterCounts?.roomStates]
   );
 
   // Guest filter options
   const guestOptions: FilterOption[] = useMemo(
     () => {
-      if (!filters || !filters.guests) return [];
+      if (!filters || !filters.guests || !safeFilterCounts || !safeFilterCounts.guests) return [];
       return [
         {
           id: 'arrivals',
           label: 'Arrivals',
           icon: require('../../../assets/icons/guest-arrival-icon.png'),
           iconColor: '#41d541',
-          count: filterCounts.guests.arrivals,
-          selected: filters.guests.arrivals,
+          count: safeFilterCounts.guests.arrivals || 0,
+          selected: filters.guests.arrivals || false,
           type: 'arrivals',
         },
         {
@@ -174,8 +190,8 @@ export default function HomeFilterModal({
           label: 'Departures',
           icon: require('../../../assets/icons/guest-departure-icon.png'),
           iconColor: '#f92424',
-          count: filterCounts.guests.departures,
-          selected: filters.guests.departures,
+          count: safeFilterCounts.guests.departures || 0,
+          selected: filters.guests.departures || false,
           type: 'departures',
         },
         {
@@ -183,8 +199,8 @@ export default function HomeFilterModal({
           label: 'Turn Down',
           icon: require('../../../assets/icons/turndown-icon.png'),
           iconColor: '#4a91fc',
-          count: filterCounts.guests.turnDown,
-          selected: filters.guests.turnDown,
+          count: safeFilterCounts.guests.turnDown || 0,
+          selected: filters.guests.turnDown || false,
           type: 'turnDown',
         },
         {
@@ -192,13 +208,13 @@ export default function HomeFilterModal({
           label: 'StayOver',
           icon: require('../../../assets/icons/stayover-icon.png'),
           iconColor: '#1e1e1e',
-          count: filterCounts.guests.stayOver,
-          selected: filters.guests.stayOver,
+          count: safeFilterCounts.guests.stayOver || 0,
+          selected: filters.guests.stayOver || false,
           type: 'stayOver',
         },
       ];
     },
-    [filters?.guests, filterCounts.guests]
+    [filters?.guests, safeFilterCounts?.guests]
   );
 
   const handleToggleRoomState = (id: string) => {
@@ -368,21 +384,25 @@ export default function HomeFilterModal({
             <View style={styles.content}>
               <View style={styles.contentScrollable}>
                 {/* Room State Section */}
-                <FilterSection
-                  title="Room State"
-                  options={roomStateOptions}
-                  onToggle={handleToggleRoomState}
-                  isRoomState={true}
-                />
+                {Array.isArray(roomStateOptions) && roomStateOptions.length > 0 && (
+                  <FilterSection
+                    title="Room State"
+                    options={roomStateOptions}
+                    onToggle={handleToggleRoomState}
+                    isRoomState={true}
+                  />
+                )}
 
                 {/* Guest Section */}
-                <FilterSection
-                  title="Guest"
-                  options={guestOptions}
-                  onToggle={handleToggleGuest}
-                  isRoomState={false}
-                  reducedMargin={true}
-                />
+                {Array.isArray(guestOptions) && guestOptions.length > 0 && (
+                  <FilterSection
+                    title="Guest"
+                    options={guestOptions}
+                    onToggle={handleToggleGuest}
+                    isRoomState={false}
+                    reducedMargin={true}
+                  />
+                )}
 
                 {/* Action Buttons - Directly below Stayover */}
                 <View style={styles.actionsInline}>

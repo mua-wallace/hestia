@@ -23,11 +23,18 @@ export default function FilterSection({
   isRoomState = false,
   reducedMargin = false,
 }: FilterSectionProps) {
+  // Safety check: ensure options is an array
+  const safeOptions = Array.isArray(options) ? options : [];
+  
   return (
     <View style={[styles.section, reducedMargin && styles.sectionReducedMargin]}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <View style={styles.optionsContainer}>
-        {options.map((option) => {
+        {safeOptions.map((option) => {
+          // Safety check: skip undefined or invalid options
+          if (!option || !option.id || !option.icon) {
+            return null;
+          }
           // Room state options (except priority) and turnDown/stayOver should be circular
           // Priority should show just the icon without circular background
           const shouldBeCircular = (isRoomState && option.id !== 'priority') || option.id === 'turnDown' || option.id === 'stayOver';
@@ -36,13 +43,13 @@ export default function FilterSection({
           return (
             <FilterRow
               key={option.id}
-              label={option.label}
+              label={option.label || ''}
               icon={option.icon}
               iconColor={option.iconColor}
-              count={option.count}
-              selected={option.selected}
+              count={option.count || 0}
+              selected={option.selected || false}
               onToggle={() => onToggle(option.id)}
-              showCount={option.count > 0}
+              showCount={(option.count || 0) > 0}
               isCircular={shouldBeCircular}
               isPriority={isPriority}
             />

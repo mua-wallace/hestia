@@ -23,16 +23,16 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatB
           label="Home"
           active={activeTab === 'Home'}
           onPress={() => onTabPress('Home')}
-          iconWidth={36}
-          iconHeight={36}
+          iconWidth={56}
+          iconHeight={56}
         />
         <TabBarItem
           icon={require('../../../assets/icons/rooms-icon.png')}
           label="Rooms"
           active={activeTab === 'Rooms'}
           onPress={() => onTabPress('Rooms')}
-          iconWidth={50}
-          iconHeight={36}
+          iconWidth={70}
+          iconHeight={56}
         />
         <TabBarItem
           icon={require('../../../assets/icons/chat-icon.png')}
@@ -40,24 +40,24 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatB
           active={activeTab === 'Chat'}
           badge={chatBadgeCount}
           onPress={() => onTabPress('Chat')}
-          iconWidth={36}
-          iconHeight={36}
+          iconWidth={56}
+          iconHeight={56}
         />
         <TabBarItem
           icon={require('../../../assets/icons/tickets-icon.png')}
           label="Tickets"
           active={activeTab === 'Tickets'}
           onPress={() => onTabPress('Tickets')}
-          iconWidth={29}
-          iconHeight={34}
+          iconWidth={49}
+          iconHeight={54}
         />
         <TabBarItem
           icon={require('../../../assets/icons/more-icon.png')}
           label="More"
           active={false}
           onPress={onMorePress}
-          iconWidth={44}
-          iconHeight={22}
+          iconWidth={56}
+          iconHeight={56}
         />
       </View>
     </View>
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', // Center align items vertically
     paddingHorizontal: 20 * scaleX, // Reduced horizontal padding for better spacing
     paddingTop: 20 * scaleX, // Top padding
-    paddingBottom: 20 * scaleX, // Bottom padding for labels
+    paddingBottom: 24 * scaleX, // Increased bottom padding for text margin
     height: '100%', // Use full container height
   },
 });
