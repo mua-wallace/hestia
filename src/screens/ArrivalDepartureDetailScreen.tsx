@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme';
@@ -24,8 +24,6 @@ import { STATUS_OPTIONS } from '../types/allRooms.types';
 import type { RoomDetailData, DetailTab, Note } from '../types/roomDetail.types';
 import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 type ArrivalDepartureDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -350,15 +348,13 @@ export default function ArrivalDepartureDetailScreen() {
     return null;
   }
 
+  // For Arrival/Departure rooms, find both guests
   const arrivalGuest = room.guests.find((g) => g.timeLabel === 'ETA');
   const departureGuest = room.guests.find((g) => g.timeLabel === 'EDT');
-  // For single guest rooms without ETA/EDT, use the first guest
-  const singleGuest = room.guests.length === 1 && !arrivalGuest && !departureGuest 
-    ? room.guests[0] 
-    : null;
   
-  // Ensure we always have at least one guest to display
-  const hasGuestsToDisplay = arrivalGuest || departureGuest || singleGuest || (room.guests && room.guests.length > 0);
+  // Ensure we have both guests for Arrival/Departure screen
+  const hasArrivalGuest = !!arrivalGuest;
+  const hasDepartureGuest = !!departureGuest;
 
   return (
     <View style={styles.container}>
@@ -426,7 +422,7 @@ export default function ArrivalDepartureDetailScreen() {
           {activeTab === 'Overview' && (
           <>
             {/* Guest Info Section */}
-            {hasGuestsToDisplay && (
+            {(hasArrivalGuest || hasDepartureGuest) && (
               <View style={styles.guestInfoSection}>
                 <Text style={styles.guestInfoTitle}>Guest Info</Text>
 
@@ -445,67 +441,33 @@ export default function ArrivalDepartureDetailScreen() {
                 {/* Divider - show after arrival guest if there's a departure guest */}
                 {arrivalGuest && departureGuest && <View style={styles.divider1} />}
 
-                {/* Departure Guest - use arrival position if it's a single guest departure room */}
+                {/* Departure Guest */}
                 {departureGuest && (
                   <GuestInfoCard
                     guest={departureGuest}
                     isArrival={false}
                     numberBadge={room.secondGuestPriorityCount?.toString() || room.priorityCount?.toString()}
-                    specialInstructions={roomDetail.specialInstructions}
+                    specialInstructions={undefined} // Departure guests don't have special instructions
                     isSecondGuest={!!arrivalGuest} // Second guest if there's an arrival guest
-                    absoluteTop={
-                      // For single guest departure rooms, use arrival position
-                      (room.guests.length === 1 && !arrivalGuest) 
-                        ? GUEST_INFO.arrival.name.top 
-                        : GUEST_INFO.departure.name.top
-                    }
+                    absoluteTop={GUEST_INFO.departure.name.top}
                     contentAreaTop={CONTENT_AREA.top}
                   />
                 )}
 
-                {/* Divider - show after departure guest in Arrival/Departure rooms or single departure guest */}
+                {/* Divider - show after departure guest in Arrival/Departure rooms */}
                 {departureGuest && arrivalGuest && <View style={styles.divider2} />}
-                {/* Divider for single departure guest after their info */}
-                {departureGuest && room.guests.length === 1 && !arrivalGuest && <View style={styles.divider1} />}
-
-                {/* For single guest rooms without ETA/EDT labels, show the first guest */}
-                {singleGuest && (
-                  <>
-                    <GuestInfoCard
-                      guest={singleGuest}
-                      isArrival={singleGuest.timeLabel === 'ETA' || room.category === 'Arrival' || room.category === 'Stayover' || room.category === 'Turndown'}
-                      numberBadge={room.priorityCount?.toString()}
-                      specialInstructions={roomDetail.specialInstructions}
-                      absoluteTop={GUEST_INFO.arrival.name.top}
-                      contentAreaTop={CONTENT_AREA.top}
-                    />
-                    <View style={styles.divider1} />
-                  </>
-                )}
-                
-                {/* Fallback: If no guest matched ETA/EDT and no singleGuest, show first guest anyway */}
-                {!arrivalGuest && !departureGuest && !singleGuest && room.guests && room.guests.length > 0 && (
-                  <>
-                    <GuestInfoCard
-                      guest={room.guests[0]}
-                      isArrival={room.category === 'Arrival' || room.category === 'Stayover' || room.category === 'Turndown'}
-                      numberBadge={room.priorityCount?.toString()}
-                      specialInstructions={roomDetail.specialInstructions}
-                      absoluteTop={GUEST_INFO.arrival.name.top}
-                      contentAreaTop={CONTENT_AREA.top}
-                    />
-                    <View style={styles.divider1} />
-                  </>
-                )}
               </View>
             )}
 
             {/* Spacer to reserve space for absolutely positioned card */}
             <View style={styles.cardSpacer} />
 
-            {/* Assigned to Title - Outside and above the card */}
+            {/* Assigned to Section Container - Similar structure to Lost and Found */}
             {roomDetail.assignedTo && (
-              <Text style={styles.assignedToTitle}>Assigned to</Text>
+              <View style={styles.assignedToSectionContainer}>
+                {/* Assigned to Title - Outside and above the card */}
+                <Text style={styles.assignedToTitle}>Assigned to</Text>
+              </View>
             )}
 
             {/* Card Container for Assigned to and Task sections */}
@@ -536,7 +498,7 @@ export default function ArrivalDepartureDetailScreen() {
               onTitlePress={handleLostAndFoundTitlePress}
             />
 
-            {/* Divider - positioned after Lost and Found at 1171px */}
+            {/* Divider - positioned after Lost and Found at 1075.09px */}
             <View style={styles.divider3} />
 
             {/* Notes Section */}
@@ -661,7 +623,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
     paddingTop: (GUEST_INFO.title.top - CONTENT_AREA.top) * scaleX, // Space from content area start to Guest Info title
-    minHeight: (646 - 303) * scaleX, // From Guest Info title (303) to Notes start (646)
+    minHeight: (625 - 303) * scaleX, // From Guest Info title (303) to second divider (625) - reduced gap
   },
   guestInfoTitle: {
     position: 'absolute',
@@ -694,7 +656,7 @@ const styles = StyleSheet.create({
     width: NOTES_SECTION.divider.width * scaleX,
     height: NOTES_SECTION.divider.height,
     backgroundColor: NOTES_SECTION.divider.color,
-    marginTop: (1075.09 - 1075.09) * scaleX, // Position after Lost and Found box ends (1075.09px): 1075.09 - 1075.09 = 0px (divider is at same position as box end)
+    marginTop: 0, // No gap - divider is exactly at Lost & Found box bottom
     marginBottom: 0,
   },
   placeholderContent: {
@@ -711,13 +673,20 @@ const styles = StyleSheet.create({
     // Spacer to reserve space for the absolutely positioned card
     // Card starts at (650 - 285) = 365px from content area start
     // Card height is 206.09px
+    // Reduced to exact card height to minimize gap
     height: ((650 - 285) + 206.09) * scaleX, // 571.09px total height
     width: '100%',
+  },
+  assignedToSectionContainer: {
+    position: 'relative',
+    width: '100%',
+    minHeight: 20 * scaleX, // Minimum height for title section
+    marginTop: (ASSIGNED_TO.title.top - CONTENT_AREA.top) * scaleX, // 630 - 285 = 345px from content area start
   },
   assignedToTitle: {
     position: 'absolute',
     left: ASSIGNED_TO.title.left * scaleX,
-    top: (ASSIGNED_TO.title.top - CONTENT_AREA.top) * scaleX, // 630 - 285 = 345px from content area start
+    top: 0, // At top of container (similar to Lost and Found)
     fontSize: ASSIGNED_TO.title.fontSize * scaleX,
     fontFamily: 'Helvetica',
     fontWeight: 'bold' as any,
@@ -746,4 +715,3 @@ const styles = StyleSheet.create({
     backgroundColor: ASSIGNED_TASK_CARD.divider.backgroundColor,
   },
 });
-

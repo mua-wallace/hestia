@@ -45,9 +45,9 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     width: '100%',
-    minHeight: (1075.09 - 856.09 + 50) * scaleX, // From Lost and Found start (856.09) to box end (1075.09) + padding = 219px + 50px
+    minHeight: (1075.09 - 856.09) * scaleX, // From Lost and Found start (856.09) to box end (1075.09) - reduced padding
     // Spacer handles the card space, Lost & Found starts immediately after card (0px margin)
-    marginTop: (856.09 - 856.09) * scaleX, // 0px spacing after card ends
+    marginTop: 0, // No gap - starts immediately after card
   },
   title: {
     position: 'absolute',

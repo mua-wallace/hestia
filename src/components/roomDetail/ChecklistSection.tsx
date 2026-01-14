@@ -190,7 +190,7 @@ export default function ChecklistSection({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginTop: CONTENT_AREA.top * scaleX, // Match content area start from ArrivalDepartureDetailScreen
+    marginTop: CONTENT_AREA.top * scaleX, // Match content area start position
   },
   scrollView: {
     flex: 1,

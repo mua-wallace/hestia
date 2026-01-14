@@ -18,7 +18,7 @@ interface StatusChangeModalProps {
   room?: RoomCardData; // Room data
   buttonPosition?: { x: number; y: number; width: number; height: number } | null; // Status button position on screen
   showTriangle?: boolean; // Whether to show the triangle pointer (default: true)
-  headerHeight?: number; // Header height in design pixels (default: 232 for ArrivalDepartureDetailScreen, use 217 for AllRoomsScreen)
+  headerHeight?: number; // Header height in design pixels (default: 232, use 217 for AllRoomsScreen)
 }
 
 export default function StatusChangeModal({
@@ -29,7 +29,7 @@ export default function StatusChangeModal({
   room,
   buttonPosition,
   showTriangle = true,
-  headerHeight = 232, // Default to 232px for ArrivalDepartureDetailScreen
+  headerHeight = 232, // Default to 232px
 }: StatusChangeModalProps) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -106,7 +106,7 @@ export default function StatusChangeModal({
 
   // Use provided headerHeight or default based on showTriangle
   // When showTriangle=true (AllRoomsScreen), header is 217px
-  // When showTriangle=false (ArrivalDepartureDetailScreen), header is 232px
+  // When showTriangle=false, header is 232px
   const HEADER_HEIGHT_PX = headerHeight || (showTriangle ? 217 : 232);
   const HEADER_HEIGHT = HEADER_HEIGHT_PX * scaleX;
 

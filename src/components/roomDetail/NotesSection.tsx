@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     width: '100%',
     minHeight: (879 - 1086.09 + 50) * scaleX, // Default height, will be overridden dynamically (updated base position)
-    marginTop: (1086.09 - 1075.09) * scaleX, // Space from previous divider (1075.09) to Notes section (1086.09) = 11px
+    marginTop: (1086.09 - 1075.09) * scaleX, // Minimal gap from divider (1075.09) to Notes section (1086.09) = 11px (matches Figma)
   },
   icon: {
     position: 'absolute',

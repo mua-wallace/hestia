@@ -401,7 +401,7 @@ export const ASSIGNED_TASK_CARD = {
 export const ASSIGNED_TO = {
   title: {
     left: 32, // Absolute position from screen left (same as Lost & Found title)
-    top: 630, // Positioned above card (card starts at 650px, so 630px is 20px above)
+    top: 630, // Positioned above card (card starts at 650px, so 630px is 20px above) - matches Figma
     fontSize: 15,
     fontWeight: 'bold' as const,
     color: '#000000',

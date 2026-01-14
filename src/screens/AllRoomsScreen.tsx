@@ -169,12 +169,12 @@ export default function AllRoomsScreen() {
   };
 
   const handleRoomPress = (room: RoomCardData) => {
-    // Navigate to detail screen for all room statuses including In Progress
-    if (room.category === 'Arrival/Departure' || room.status === 'Dirty' || room.status === 'Cleaned' || room.status === 'Inspected' || room.status === 'InProgress') {
+    // Navigate to detail screen based on room category
+    if (room.category === 'Arrival/Departure') {
       navigation.navigate('ArrivalDepartureDetail', { room } as any);
     } else {
-      // TODO: Navigate to other room detail screens
-      console.log('Room pressed:', room.roomNumber);
+      // TODO: Navigate to other room detail screens (Arrival, Departure, Stayover, Turndown)
+      console.log('Room pressed:', room.roomNumber, 'Category:', room.category);
     }
   };
 
