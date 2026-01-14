@@ -70,10 +70,9 @@ const styles = StyleSheet.create({
     elevation: 10,
     flexDirection: 'row',
     justifyContent: 'space-evenly', // Equal spacing between items
-    alignItems: 'flex-start', // Align items at top
+    alignItems: 'center', // Center items vertically
     paddingHorizontal: 16 * scaleX,
-    paddingTop: 21 * scaleX, // Top padding from design
-    paddingBottom: 19 * scaleX,
+    paddingVertical: 0, // Remove vertical padding to allow true centering
   },
   trianglePointer: {
     width: 0,

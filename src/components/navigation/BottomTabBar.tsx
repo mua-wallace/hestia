@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import TabBarItem from './TabBarItem';
 
@@ -15,50 +16,62 @@ interface BottomTabBarProps {
 }
 
 export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatBadgeCount = 0 }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
+  
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <View style={styles.tabsContainer}>
-        <TabBarItem
-          icon={require('../../../assets/icons/home-icon.png')}
-          label="Home"
-          active={activeTab === 'Home'}
-          onPress={() => onTabPress('Home')}
-          iconWidth={56}
-          iconHeight={56}
-        />
-        <TabBarItem
-          icon={require('../../../assets/icons/rooms-icon.png')}
-          label="Rooms"
-          active={activeTab === 'Rooms'}
-          onPress={() => onTabPress('Rooms')}
-          iconWidth={70}
-          iconHeight={56}
-        />
-        <TabBarItem
-          icon={require('../../../assets/icons/chat-icon.png')}
-          label="Chat"
-          active={activeTab === 'Chat'}
-          badge={chatBadgeCount}
-          onPress={() => onTabPress('Chat')}
-          iconWidth={56}
-          iconHeight={56}
-        />
-        <TabBarItem
-          icon={require('../../../assets/icons/tickets-icon.png')}
-          label="Tickets"
-          active={activeTab === 'Tickets'}
-          onPress={() => onTabPress('Tickets')}
-          iconWidth={49}
-          iconHeight={54}
-        />
-        <TabBarItem
-          icon={require('../../../assets/icons/more-icon.png')}
-          label="More"
-          active={false}
-          onPress={onMorePress}
-          iconWidth={56}
-          iconHeight={56}
-        />
+        <View style={styles.tabItemContainer}>
+          <TabBarItem
+            icon={require('../../../assets/icons/home-icon.png')}
+            label="Home"
+            active={activeTab === 'Home'}
+            onPress={() => onTabPress('Home')}
+            iconWidth={56}
+            iconHeight={56}
+          />
+        </View>
+        <View style={styles.tabItemContainer}>
+          <TabBarItem
+            icon={require('../../../assets/icons/rooms-icon.png')}
+            label="Rooms"
+            active={activeTab === 'Rooms'}
+            onPress={() => onTabPress('Rooms')}
+            iconWidth={70}
+            iconHeight={56}
+          />
+        </View>
+        <View style={styles.tabItemContainer}>
+          <TabBarItem
+            icon={require('../../../assets/icons/chat-icon.png')}
+            label="Chat"
+            active={activeTab === 'Chat'}
+            badge={chatBadgeCount}
+            onPress={() => onTabPress('Chat')}
+            iconWidth={56}
+            iconHeight={56}
+          />
+        </View>
+        <View style={[styles.tabItemContainer, styles.ticketsContainer]}>
+          <TabBarItem
+            icon={require('../../../assets/icons/tickets-icon.png')}
+            label="Tickets"
+            active={activeTab === 'Tickets'}
+            onPress={() => onTabPress('Tickets')}
+            iconWidth={49}
+            iconHeight={54}
+          />
+        </View>
+        <View style={styles.tabItemContainer}>
+          <TabBarItem
+            icon={require('../../../assets/icons/more-icon.png')}
+            label="More"
+            active={false}
+            onPress={onMorePress}
+            iconWidth={56}
+            iconHeight={56}
+          />
+        </View>
       </View>
     </View>
   );
@@ -70,7 +83,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 152 * scaleX,
+    minHeight: 152 * scaleX, // Use minHeight to allow safe area padding
     backgroundColor: colors.background.primary,
     borderTopWidth: 1,
     borderTopColor: '#e6e6e6',
@@ -83,12 +96,21 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center', // Center align items vertically
-    paddingHorizontal: 20 * scaleX, // Reduced horizontal padding for better spacing
-    paddingTop: 20 * scaleX, // Top padding
-    paddingBottom: 24 * scaleX, // Increased bottom padding for text margin
+    justifyContent: 'space-evenly', // Equal spacing between items (same as MorePopup)
+    alignItems: 'center', // Center items vertically (same as MorePopup)
+    paddingHorizontal: 16 * scaleX, // Same as MorePopup
     height: '100%', // Use full container height
+    paddingVertical: 0, // Remove vertical padding to allow true centering (same as MorePopup)
+  },
+  tabItemContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+  },
+  ticketsContainer: {
+    // Special alignment for Tickets tab if needed
+    // Can be adjusted to center icon and text properly
   },
 });
 

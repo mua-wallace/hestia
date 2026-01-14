@@ -49,13 +49,13 @@ export default function MoreMenuItem({
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'center', // Center content vertically
     minWidth: Math.round(96 * normalizedScaleX), // Consistent width for all items
   },
   iconContainer: {
     height: Math.round(68 * normalizedScaleX), // Accommodate tallest icon (68) - rounded for pixel-perfect
     marginBottom: Math.round(6 * normalizedScaleX),
-    justifyContent: 'center',
+    justifyContent: 'center', // Center icon vertically within container
     alignItems: 'center',
   },
   label: {
