@@ -13,6 +13,7 @@ interface RoomDetailHeaderProps {
   onStatusPress?: () => void;
   statusButtonRef?: React.RefObject<any>;
   customStatusText?: string; // Custom status text to display (e.g., "Return Later", "Promise Time", "Refuse Service")
+  pausedAt?: string; // Time when room was paused (e.g., "11:22")
 }
 
 export default function RoomDetailHeader({
@@ -23,6 +24,7 @@ export default function RoomDetailHeader({
   onStatusPress,
   statusButtonRef,
   customStatusText,
+  pausedAt,
 }: RoomDetailHeaderProps) {
   const statusConfig = STATUS_CONFIGS[status];
   
@@ -111,6 +113,11 @@ export default function RoomDetailHeader({
           resizeMode="contain"
         />
       </TouchableOpacity>
+
+      {/* Paused Time - show when paused */}
+      {pausedAt && (
+        <Text style={styles.pausedTime}>Paused at {pausedAt}</Text>
+      )}
     </View>
   );
 }
@@ -192,6 +199,17 @@ const styles = StyleSheet.create({
     marginLeft: 8 * scaleX,
     tintColor: '#ffffff',
     // No rotation - use icon directly as is
+  },
+  pausedTime: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: (ROOM_DETAIL_HEADER.statusIndicator.top + ROOM_DETAIL_HEADER.statusIndicator.height + 8) * scaleX, // Below status indicator with 8px spacing
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: 'light' as any,
+    color: '#ffffff',
+    textAlign: 'center',
   },
 });
 

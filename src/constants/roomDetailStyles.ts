@@ -140,6 +140,18 @@ export const GUEST_INFO = {
       fontWeight: 'light' as const,
       color: '#334866',
     },
+    categoryBadge: {
+      // Pill-shaped badge on the right
+      right: 32, // From right edge
+      top: 349, // Same as name
+      backgroundColor: '#41d541', // Green for Arrival
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 12,
+      fontSize: 12,
+      fontWeight: 'bold' as const,
+      color: '#ffffff',
+    },
     dates: {
       left: 79,
       top: 377,
@@ -201,6 +213,18 @@ export const GUEST_INFO = {
       fontWeight: 'light' as const,
       color: '#334866',
     },
+    categoryBadge: {
+      // Pill-shaped badge on the right
+      right: 32, // From right edge
+      top: 542, // Same as name
+      backgroundColor: '#f92424', // Red for Departure
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 12,
+      fontSize: 12,
+      fontWeight: 'bold' as const,
+      color: '#ffffff',
+    },
     dates: {
       left: 78,
       top: 568,
@@ -226,21 +250,21 @@ export const GUEST_INFO = {
   },
 } as const;
 
-// Notes Section
+// Notes Section - Positioned after Lost and Found section
 export const NOTES_SECTION = {
   icon: {
     // Center-align icon with badge vertically
-    // Badge center: 646 + 20.455/2 = 646 + 10.2275 = 656.2275
-    // Icon center should be: 656.2275
-    // Icon top: 656.2275 - 31.974/2 = 656.2275 - 15.987 = 640.24
+    // Badge center: 1040 + 20.455/2 = 1040 + 10.2275 = 1050.2275
+    // Icon center should be: 1050.2275
+    // Icon top: 1050.2275 - 31.974/2 = 1050.2275 - 15.987 = 1034.24
     left: 25, // From Figma visual inspection
-    top: 640.24, // Center-aligned with badge
+    top: 1034.24, // Center-aligned with badge (updated position)
     width: 31.974,
     height: 31.974,
   },
   badge: {
     left: 52, // Figma: left-[52px]
-    top: 646, // Figma: top-[646px] - exact match
+    top: 1040, // Positioned after Lost and Found section (which ends around 1029px)
     fontSize: 15,
     fontWeight: 'light' as any,
     color: '#ffffff',
@@ -251,18 +275,18 @@ export const NOTES_SECTION = {
   },
   badgeText: {
     left: 58.55, // Figma: left-[58.55px]
-    top: 647.45, // Figma: top-[647.45px] - exact match
+    top: 1041.45, // Updated position
   },
   title: {
     left: 83, // Figma: calc(50%-137px) = 220-137 = 83px (title starts after badge)
-    top: 647, // Updated from 652 to match Figma
+    top: 1041, // Updated position
     fontSize: 18,
     fontWeight: 'bold' as const,
     color: '#000000',
   },
   addButton: {
     left: 331,
-    top: 646,
+    top: 1040,
     width: 74,
     height: 39,
     borderRadius: 41,
@@ -274,7 +298,7 @@ export const NOTES_SECTION = {
   },
   divider: {
     left: 0,
-    top: 1171,
+    top: 1029, // Positioned after Lost and Found box ends (810 + 39 + 180 = 1029)
     width: 448,
     height: 1,
     color: '#c6c5c5',
@@ -282,7 +306,7 @@ export const NOTES_SECTION = {
   note: {
     text: {
       left: 29, // calc(50%-192px) = 220-192 = 28px, rounded to 29px
-      top: 706, // First note text from Figma
+      top: 1100, // First note text (updated: 1040 + 60 spacing = 1100)
       fontSize: 13,
       fontWeight: 'light' as const,
       color: '#000000',
@@ -290,37 +314,37 @@ export const NOTES_SECTION = {
     },
     profilePicture: {
       left: 29,
-      top: 767, // First profile picture from Figma
+      top: 1161, // First profile picture (updated: 1100 + 61 spacing)
       width: 25,
       height: 25,
     },
     staffName: {
       left: 63,
-      top: 772, // First staff name from Figma
+      top: 1166, // First staff name (updated: 1161 + 5 spacing)
       fontSize: 11,
       fontWeight: 'regular' as const,
       color: '#000000',
     },
     note2: {
-      textTop: 808, // Second note text from Figma
-      profileTop: 869, // Second profile picture from Figma
-      staffNameTop: 874, // Second staff name from Figma
+      textTop: 1202, // Second note text (updated: 1100 + 102 spacing)
+      profileTop: 1263, // Second profile picture (updated)
+      staffNameTop: 1268, // Second staff name (updated)
     },
   },
 } as const;
 
-// Lost and Found Section
+// Lost and Found Section - Positioned after Task section
 export const LOST_AND_FOUND = {
   title: {
     left: 32,
-    top: 934,
+    top: 810, // Positioned after Task section (which ends around 800px)
     fontSize: 15,
     fontWeight: 'bold' as const,
     color: '#000000',
   },
   box: {
     left: 32,
-    top: 973,
+    top: 849, // 810 + 39 (relative to title)
     width: 384,
     height: 180,
     borderRadius: 7,
@@ -350,31 +374,31 @@ export const LOST_AND_FOUND = {
   },
 } as const;
 
-// Assigned to Section
+// Assigned to Section - Now positioned right after Guest Info
 export const ASSIGNED_TO = {
   title: {
     left: 32, // calc(50%-192px) ≈ 32px
-    top: 1190,
+    top: 650, // Positioned after Guest Info section (which ends around 625px)
     fontSize: 15,
     fontWeight: 'bold' as const,
     color: '#000000',
   },
   profilePicture: {
     left: 31,
-    top: 1239,
+    top: 699, // 650 + 49 (relative to title)
     width: 35,
     height: 35,
   },
   staffName: {
     left: 85,
-    top: 1240,
+    top: 700, // 650 + 50 (relative to title)
     fontSize: 13,
     fontWeight: 'bold' as const,
     color: '#1e1e1e',
   },
   reassignButton: {
     left: 291,
-    top: 1231,
+    top: 691, // 650 + 41 (relative to title)
     width: 122,
     height: 49,
     borderRadius: 41,
@@ -382,6 +406,29 @@ export const ASSIGNED_TO = {
     fontSize: 18,
     fontWeight: 'regular' as const,
     color: '#5a759d',
+  },
+} as const;
+
+// Task Section - Positioned after Assigned to section
+export const TASK_SECTION = {
+  title: {
+    left: 32, // Same as Assigned to section
+    top: 750, // Positioned after Assigned to section (which ends around 740px)
+    fontSize: 15,
+    fontWeight: 'bold' as const,
+    color: '#000000',
+  },
+  addButton: {
+    left: 331, // Same as Notes section add button
+    top: 746, // Aligned with title (4px above for visual alignment)
+    width: 74,
+    height: 39,
+    borderRadius: 41,
+    borderWidth: 1,
+    borderColor: '#000000',
+    fontSize: 14,
+    fontWeight: 'light' as const,
+    color: '#000000',
   },
 } as const;
 

@@ -10,6 +10,7 @@ import GuestInfoCard from '../components/roomDetail/GuestInfoCard';
 import NotesSection from '../components/roomDetail/NotesSection';
 import LostAndFoundSection from '../components/roomDetail/LostAndFoundSection';
 import AssignedToSection from '../components/roomDetail/AssignedToSection';
+import TaskSection from '../components/roomDetail/TaskSection';
 import ChecklistSection from '../components/roomDetail/ChecklistSection';
 import RoomTicketsSection from '../components/roomDetail/RoomTicketsSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
@@ -95,6 +96,11 @@ export default function ArrivalDepartureDetailScreen() {
           avatarColor: room.staff.avatarColor,
         }
       : undefined
+  );
+  
+  // Track paused time - show when status is Pause
+  const [pausedAt, setPausedAt] = useState<string | undefined>(
+    selectedStatusText === 'Pause' ? '11:22' : undefined // Default for demo, in real app get from room data
   );
 
   // Transform room data to detail data format
@@ -203,6 +209,16 @@ export default function ArrivalDepartureDetailScreen() {
     
     // Update selected status text to show the selected option label
     setSelectedStatusText(statusLabel);
+    
+    // If Pause is selected, set paused time (in real app, get from API)
+    if (statusOption === 'Pause') {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      setPausedAt(`${hours}:${minutes}`);
+    } else {
+      setPausedAt(undefined);
+    }
 
     // TODO: Update room status in backend/API
     console.log('Status changed for room:', room.roomNumber, 'to:', newStatus);
@@ -350,6 +366,7 @@ export default function ArrivalDepartureDetailScreen() {
             ? 'Refuse Service'
             : selectedStatusText
         }
+        pausedAt={pausedAt}
       />
 
       {/* Tab Navigation - Below header (252px) */}
@@ -467,10 +484,20 @@ export default function ArrivalDepartureDetailScreen() {
               </View>
             )}
 
-            {/* Notes Section */}
-            <NotesSection
-              notes={roomDetail.notes}
-              onAddPress={handleAddNote}
+            {/* Assigned to Section */}
+            {roomDetail.assignedTo && (
+              <AssignedToSection
+                staff={roomDetail.assignedTo}
+                onReassignPress={handleReassign}
+              />
+            )}
+
+            {/* Task Section */}
+            <TaskSection
+              onAddPress={() => {
+                // TODO: Handle task add
+                console.log('Add task pressed');
+              }}
             />
 
             {/* Lost and Found Section */}
@@ -479,13 +506,11 @@ export default function ArrivalDepartureDetailScreen() {
             {/* Divider - positioned after Lost and Found at 1171px */}
             <View style={styles.divider3} />
 
-            {/* Assigned to Section */}
-            {roomDetail.assignedTo && (
-              <AssignedToSection
-                staff={roomDetail.assignedTo}
-                onReassignPress={handleReassign}
-              />
-            )}
+            {/* Notes Section */}
+            <NotesSection
+              notes={roomDetail.notes}
+              onAddPress={handleAddNote}
+            />
           </>
         )}
 
@@ -636,7 +661,7 @@ const styles = StyleSheet.create({
     width: NOTES_SECTION.divider.width * scaleX,
     height: NOTES_SECTION.divider.height,
     backgroundColor: NOTES_SECTION.divider.color,
-    marginTop: (1171 - 1153) * scaleX, // Position after Lost and Found box ends (1153px): 1171 - 1153 = 18px
+    marginTop: (1029 - 1029) * scaleX, // Position after Lost and Found box ends (1029px): 1029 - 1029 = 0px (divider is at same position as box end)
     marginBottom: 0,
   },
   placeholderContent: {

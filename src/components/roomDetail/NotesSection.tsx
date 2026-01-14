@@ -11,7 +11,7 @@ interface NotesSectionProps {
 }
 
 export default function NotesSection({ notes, onAddPress }: NotesSectionProps) {
-  const FIRST_NOTE_TOP = NOTES_SECTION.note.text.top; // 706px
+  const FIRST_NOTE_TOP = NOTES_SECTION.note.text.top; // Updated to new position
   const [noteHeights, setNoteHeights] = useState<{ [key: string]: number }>({});
   
   // Relative spacing: 10-15% of the previous note's height, with a minimum of 8px
@@ -114,7 +114,7 @@ export default function NotesSection({ notes, onAddPress }: NotesSectionProps) {
             key={note.id}
             note={note}
             absoluteTop={notePositions[index]}
-            contentAreaTop={646} // Notes section starts at 646px
+            contentAreaTop={1040} // Notes section starts at 1040px (updated)
             onHeightMeasured={(height) => handleNoteHeightMeasured(note.id, height)}
           />
         );
@@ -127,20 +127,20 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     width: '100%',
-    minHeight: (879 - 646 + 50) * scaleX, // Default height, will be overridden dynamically
-    marginTop: (646 - 625) * scaleX, // Space from previous divider (625) to Notes section (646) = 21px
+    minHeight: (879 - 1040 + 50) * scaleX, // Default height, will be overridden dynamically (updated base position)
+    marginTop: (1040 - 1029) * scaleX, // Space from previous divider (1029) to Notes section (1040) = 11px
   },
   icon: {
     position: 'absolute',
     left: NOTES_SECTION.icon.left * scaleX,
-    top: (NOTES_SECTION.icon.top - 646) * scaleX, // Relative to container start (646px): 640.24 - 646 = -5.76px (center-aligned with badge)
+    top: (NOTES_SECTION.icon.top - 1040) * scaleX, // Relative to container start (1040px): 1034.24 - 1040 = -5.76px (center-aligned with badge)
     width: NOTES_SECTION.icon.width * scaleX,
     height: NOTES_SECTION.icon.height * scaleX,
   },
   badge: {
     position: 'absolute',
     left: NOTES_SECTION.badge.left * scaleX,
-    top: (NOTES_SECTION.badge.top - 646) * scaleX, // Relative to container start (646px): 646 - 646 = 0px
+    top: (NOTES_SECTION.badge.top - 1040) * scaleX, // Relative to container start (1040px): 1040 - 1040 = 0px
     width: NOTES_SECTION.badge.width * scaleX,
     height: NOTES_SECTION.badge.height * scaleX,
     borderRadius: NOTES_SECTION.badge.borderRadius * scaleX,
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   title: {
     position: 'absolute',
     left: NOTES_SECTION.title.left * scaleX,
-    top: (NOTES_SECTION.title.top - 646) * scaleX, // Relative to container start (646px): 647 - 646 = 1px
+    top: (NOTES_SECTION.title.top - 1040) * scaleX, // Relative to container start (1040px): 1041 - 1040 = 1px
     fontSize: NOTES_SECTION.title.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   addButton: {
     position: 'absolute',
     left: NOTES_SECTION.addButton.left * scaleX,
-    top: (NOTES_SECTION.addButton.top - 646) * scaleX, // Relative to container start (646px)
+    top: (NOTES_SECTION.addButton.top - 1040) * scaleX, // Relative to container start (1040px)
     width: NOTES_SECTION.addButton.width * scaleX,
     height: NOTES_SECTION.addButton.height * scaleX,
     borderRadius: NOTES_SECTION.addButton.borderRadius * scaleX,

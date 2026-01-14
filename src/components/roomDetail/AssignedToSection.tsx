@@ -67,8 +67,8 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     width: '100%',
-    minHeight: (1280 - 1190 + 50) * scaleX, // From Assigned to start (1190) to button end (~1280) + padding = 90px + 50px
-    marginTop: (1190 - 1171) * scaleX, // Position after divider (1171px): 1190 - 1171 = 19px
+    minHeight: (740 - 650 + 50) * scaleX, // From Assigned to start (650) to button end (~740) + padding = 90px + 50px
+    marginTop: (650 - 625) * scaleX, // Position after Guest Info divider (625px): 650 - 625 = 25px
   },
   title: {
     position: 'absolute',

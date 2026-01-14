@@ -37,8 +37,8 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     width: '100%',
-    minHeight: (1153 - 934 + 50) * scaleX, // From Lost and Found start (934) to box end (1153) + padding = 219px + 50px
-    marginTop: (934 - 879 - 20) * scaleX, // Reduced spacing: 55px - 20px = 35px to match Figma visual spacing
+    minHeight: (1029 - 810 + 50) * scaleX, // From Lost and Found start (810) to box end (1029) + padding = 219px + 50px
+    marginTop: (810 - 800) * scaleX, // Position after Task section (which ends around 800px): 810 - 800 = 10px
   },
   title: {
     position: 'absolute',

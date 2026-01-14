@@ -100,6 +100,34 @@ export default function GuestInfoCard({
         absolutePositioning={false}
       />
 
+      {/* Arrival/Departure Pill Badge - on the right */}
+      <View
+        style={[
+          styles.categoryBadge,
+          {
+            right: ROOM_DETAIL_GUEST_INFO[isArrival ? 'arrival' : 'departure'].categoryBadge.right * normalizedScaleX,
+            top: (config.name.top - absoluteTop) * normalizedScaleX,
+            backgroundColor: isArrival 
+              ? ROOM_DETAIL_GUEST_INFO.arrival.categoryBadge.backgroundColor 
+              : ROOM_DETAIL_GUEST_INFO.departure.categoryBadge.backgroundColor,
+            paddingHorizontal: ROOM_DETAIL_GUEST_INFO.arrival.categoryBadge.paddingHorizontal * normalizedScaleX,
+            paddingVertical: ROOM_DETAIL_GUEST_INFO.arrival.categoryBadge.paddingVertical * normalizedScaleX,
+            borderRadius: ROOM_DETAIL_GUEST_INFO.arrival.categoryBadge.borderRadius * normalizedScaleX,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.categoryBadgeText,
+            {
+              fontSize: ROOM_DETAIL_GUEST_INFO.arrival.categoryBadge.fontSize * normalizedScaleX,
+            },
+          ]}
+        >
+          {isArrival ? 'Arrival' : 'Departure'}
+        </Text>
+      </View>
+
       {/* Special Instructions - show for all guests if available */}
       {specialInstructions && (
         <View style={styles.specialInstructionsContainer}>
@@ -174,6 +202,16 @@ const styles = StyleSheet.create({
     width: ROOM_DETAIL_GUEST_INFO.divider.width * normalizedScaleX,
     height: ROOM_DETAIL_GUEST_INFO.divider.height,
     backgroundColor: ROOM_DETAIL_GUEST_INFO.divider.color,
+  },
+  categoryBadge: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryBadgeText: {
+    fontFamily: 'Helvetica',
+    fontWeight: 'bold' as any,
+    color: '#ffffff',
   },
 });
 
