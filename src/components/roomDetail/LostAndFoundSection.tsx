@@ -5,15 +5,23 @@ import { scaleX, LOST_AND_FOUND } from '../../constants/roomDetailStyles';
 
 interface LostAndFoundSectionProps {
   onAddPhotosPress?: () => void;
+  onTitlePress?: () => void;
 }
 
 export default function LostAndFoundSection({
   onAddPhotosPress,
+  onTitlePress,
 }: LostAndFoundSectionProps) {
   return (
     <View style={styles.container}>
       {/* Section Title */}
-      <Text style={styles.title}>Lost and Found</Text>
+      <TouchableOpacity
+        onPress={onTitlePress}
+        activeOpacity={0.7}
+        disabled={!onTitlePress}
+      >
+        <Text style={styles.title}>Lost and Found</Text>
+      </TouchableOpacity>
 
       {/* Add Photos Box */}
       <TouchableOpacity
@@ -27,7 +35,7 @@ export default function LostAndFoundSection({
           resizeMode="contain"
         />
         <Text style={styles.plusIcon}>+</Text>
-        <Text style={styles.addPhotosText}>Add Photos</Text>
+        <Text style={styles.addPhotosText}>Add Lost & Found</Text>
       </TouchableOpacity>
     </View>
   );
@@ -37,8 +45,9 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     width: '100%',
-    minHeight: (1029 - 810 + 50) * scaleX, // From Lost and Found start (810) to box end (1029) + padding = 219px + 50px
-    marginTop: (810 - 800) * scaleX, // Position after Task section (which ends around 800px): 810 - 800 = 10px
+    minHeight: (1075.09 - 856.09 + 50) * scaleX, // From Lost and Found start (856.09) to box end (1075.09) + padding = 219px + 50px
+    // Spacer handles the card space, Lost & Found starts immediately after card (0px margin)
+    marginTop: (856.09 - 856.09) * scaleX, // 0px spacing after card ends
   },
   title: {
     position: 'absolute',

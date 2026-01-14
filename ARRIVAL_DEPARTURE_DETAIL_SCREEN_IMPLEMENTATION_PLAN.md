@@ -77,17 +77,41 @@ Starts below tabs at y=285px
   - Plus icon: "+" - #5a759d, 42px
   - Position: top: 973px
 
-##### D. Assigned to Section
-- **Title**: "Assigned to" - Bold, 15px, black, top: 1190px
+##### D. Assigned to and Task Card
+A card container that groups the Assigned to and Task sections together.
+
+**Card Container:**
+- **Background**: #f9fafc
+- **Border**: 1px, #e3e3e3
+- **Border radius**: 9px
+- **Position**: left: 16px, top: 650px
+- **Size**: 416x130px
+- **Padding**: 16px horizontal and vertical
+
+**Assigned to Section (inside card):**
+- **Title**: "Assigned to" - Bold, 15px, black
 - **Staff Info**:
-  - Profile picture: 35x35px, left: 31px, top: 1239px
-  - Name: "Etleva Hoxha" - Bold, 13px, #1e1e1e, left: 85px, top: 1240px
+  - Profile picture: 35x35px
+  - Name: "Etleva Hoxha" - Bold, 13px, #1e1e1e
 - **Reassign Button**:
   - Background: #f1f6fc
   - Border radius: 41px
   - Text: "Reassign" - Regular, 18px, #5a759d
   - Size: 122x49px
-  - Position: left: 291px, top: 1231px
+
+**Divider (inside card):**
+- **Position**: Horizontal line between Assigned to and Task sections
+- **Color**: #e3e3e3 (same as card border)
+- **Height**: 1px
+- **Width**: Full width of card content area
+
+**Task Section (inside card):**
+- **Title**: "Task" - Bold, 15px, black
+- **Add Button**:
+  - Border: 1px, black
+  - Border radius: 41px
+  - Text: "Add" - Light, 14px, black
+  - Size: 74x39px
 
 #### 4. Urgent Badge
 - **Text**: "Urgent" - Bold, 13px, white

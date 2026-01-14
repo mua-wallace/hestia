@@ -10,6 +10,7 @@ interface AssignedToSectionProps {
     avatar?: any;
     initials?: string;
     avatarColor?: string;
+    department?: string; // Department/role (e.g., "HSK")
   };
   onReassignPress?: () => void;
 }
@@ -30,9 +31,6 @@ export default function AssignedToSection({
 
   return (
     <View style={styles.container}>
-      {/* Section Title */}
-      <Text style={styles.title}>Assigned to</Text>
-
       {/* Staff Info - Avatar or Initials */}
       {staff.avatar ? (
         <Image
@@ -51,6 +49,11 @@ export default function AssignedToSection({
       )}
       <Text style={styles.staffName}>{staff.name}</Text>
 
+      {/* Department/Role - show if available */}
+      {staff.department && (
+        <Text style={styles.department}>{staff.department}</Text>
+      )}
+
       {/* Reassign Button */}
       <TouchableOpacity
         style={styles.reassignButton}
@@ -67,22 +70,12 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     width: '100%',
-    minHeight: (740 - 650 + 50) * scaleX, // From Assigned to start (650) to button end (~740) + padding = 90px + 50px
-    marginTop: (650 - 625) * scaleX, // Position after Guest Info divider (625px): 650 - 625 = 25px
-  },
-  title: {
-    position: 'absolute',
-    left: ASSIGNED_TO.title.left * scaleX,
-    top: 0, // At top of container
-    fontSize: ASSIGNED_TO.title.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold as any,
-    color: ASSIGNED_TO.title.color,
+    minHeight: 50 * scaleX, // Minimum height for the section within card
   },
   profilePicture: {
     position: 'absolute',
     left: ASSIGNED_TO.profilePicture.left * scaleX,
-    top: (ASSIGNED_TO.profilePicture.top - ASSIGNED_TO.title.top) * scaleX, // Relative to title (49px below title)
+    top: ASSIGNED_TO.profilePicture.top * scaleX, // Relative to card content area
     width: ASSIGNED_TO.profilePicture.width * scaleX,
     height: ASSIGNED_TO.profilePicture.height * scaleX,
     borderRadius: (ASSIGNED_TO.profilePicture.width / 2) * scaleX,
@@ -90,16 +83,25 @@ const styles = StyleSheet.create({
   staffName: {
     position: 'absolute',
     left: ASSIGNED_TO.staffName.left * scaleX,
-    top: (ASSIGNED_TO.staffName.top - ASSIGNED_TO.title.top) * scaleX, // Relative to title (50px below title)
+    top: ASSIGNED_TO.staffName.top * scaleX, // Relative to card content area
     fontSize: ASSIGNED_TO.staffName.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: ASSIGNED_TO.staffName.color,
   },
+  department: {
+    position: 'absolute',
+    left: ASSIGNED_TO.department.left * scaleX,
+    top: ASSIGNED_TO.department.top * scaleX, // Relative to card content area
+    fontSize: ASSIGNED_TO.department.fontSize * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.light as any,
+    color: ASSIGNED_TO.department.color,
+  },
   reassignButton: {
     position: 'absolute',
     left: ASSIGNED_TO.reassignButton.left * scaleX,
-    top: (ASSIGNED_TO.reassignButton.top - ASSIGNED_TO.title.top) * scaleX, // Relative to title (41px below title)
+    top: ASSIGNED_TO.reassignButton.top * scaleX, // Relative to card content area
     width: ASSIGNED_TO.reassignButton.width * scaleX,
     height: ASSIGNED_TO.reassignButton.height * scaleX,
     borderRadius: ASSIGNED_TO.reassignButton.borderRadius * scaleX,
@@ -116,7 +118,7 @@ const styles = StyleSheet.create({
   initialsCircle: {
     position: 'absolute',
     left: ASSIGNED_TO.profilePicture.left * scaleX,
-    top: (ASSIGNED_TO.profilePicture.top - ASSIGNED_TO.title.top) * scaleX,
+    top: ASSIGNED_TO.profilePicture.top * scaleX, // Relative to card content area
     width: ASSIGNED_TO.profilePicture.width * scaleX,
     height: ASSIGNED_TO.profilePicture.height * scaleX,
     borderRadius: (ASSIGNED_TO.profilePicture.width / 2) * scaleX,

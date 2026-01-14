@@ -72,6 +72,16 @@ export default function GuestInfoCard({
   // Keep icon at original left (164) but align top with ETA/EDT (23px)
   const countIconLeftRelative = config.occupancy.iconLeft; // 164 - original position to avoid date overlap
   const countTextLeftRelative = config.occupancy.textLeft; // 183 - original position
+  
+  // Calculate badge vertical alignment: position badge higher up
+  // Use the absolute position from constants and convert to relative, then adjust upward
+  // Category badge absolute top from constants: 349 for arrival, 542 for departure
+  // Convert to relative: config.categoryBadge.top - absoluteTop
+  // Then move it higher by subtracting additional pixels
+  const badgeAbsoluteTop = config.categoryBadge.top; // 349 for arrival, 542 for departure
+  const badgeTopFromConstants = badgeAbsoluteTop - absoluteTop; // Relative position from constants
+  // Move badge significantly higher - align with name top or above
+  const categoryBadgeTopRelative = badgeTopFromConstants - 8; // Move badge 8px higher than constants position
 
   return (
     <View style={[styles.container, { top: containerTop * normalizedScaleX }]}>
@@ -100,13 +110,13 @@ export default function GuestInfoCard({
         absolutePositioning={false}
       />
 
-      {/* Arrival/Departure Pill Badge - on the right */}
+      {/* Arrival/Departure Pill Badge - positioned after number badge */}
       <View
         style={[
           styles.categoryBadge,
           {
-            right: ROOM_DETAIL_GUEST_INFO[isArrival ? 'arrival' : 'departure'].categoryBadge.right * normalizedScaleX,
-            top: (config.name.top - absoluteTop) * normalizedScaleX,
+            left: ROOM_DETAIL_GUEST_INFO[isArrival ? 'arrival' : 'departure'].categoryBadge.left * normalizedScaleX,
+            top: categoryBadgeTopRelative * normalizedScaleX,
             backgroundColor: isArrival 
               ? ROOM_DETAIL_GUEST_INFO.arrival.categoryBadge.backgroundColor 
               : ROOM_DETAIL_GUEST_INFO.departure.categoryBadge.backgroundColor,

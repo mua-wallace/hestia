@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, Dimensions, TouchableOpacity } from
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme';
-import { scaleX, ROOM_DETAIL_HEADER, DETAIL_TABS, CONTENT_AREA, GUEST_INFO, NOTES_SECTION, LOST_AND_FOUND, ASSIGNED_TO } from '../constants/roomDetailStyles';
+import { scaleX, ROOM_DETAIL_HEADER, DETAIL_TABS, CONTENT_AREA, GUEST_INFO, NOTES_SECTION, LOST_AND_FOUND, ASSIGNED_TO, ASSIGNED_TASK_CARD } from '../constants/roomDetailStyles';
 import RoomDetailHeader from '../components/roomDetail/RoomDetailHeader';
 import DetailTabNavigation from '../components/roomDetail/DetailTabNavigation';
 import GuestInfoCard from '../components/roomDetail/GuestInfoCard';
@@ -86,14 +86,20 @@ export default function ArrivalDepartureDetailScreen() {
     avatar?: any;
     initials?: string;
     avatarColor?: string;
+    department?: string;
   } | undefined>(
     room.staff
       ? {
-          id: room.staff.id || '1',
+          id: '1', // Default id since StaffInfo doesn't have id
           name: room.staff.name,
           avatar: room.staff.avatar || require('../../assets/icons/profile-avatar.png'),
           initials: room.staff.initials,
           avatarColor: room.staff.avatarColor,
+          // Get department from mock data by matching name
+          department: (() => {
+            const staffMember = mockStaffData.find(s => s.name === room.staff?.name);
+            return staffMember?.department;
+          })(),
         }
       : undefined
   );
@@ -207,16 +213,18 @@ export default function ArrivalDepartureDetailScreen() {
     // Update local status state to change header background color
     setCurrentStatus(newStatus);
     
-    // Update selected status text to show the selected option label
-    setSelectedStatusText(statusLabel);
-    
-    // If Pause is selected, set paused time (in real app, get from API)
+    // If Pause is selected, don't change the status text (keep "In Progress")
+    // Only set paused time to show "Paused at {time}" below the status
     if (statusOption === 'Pause') {
       const now = new Date();
       const hours = now.getHours().toString().padStart(2, '0');
       const minutes = now.getMinutes().toString().padStart(2, '0');
       setPausedAt(`${hours}:${minutes}`);
+      // Don't set selectedStatusText - keep it undefined so it shows "In Progress"
+      setSelectedStatusText(undefined);
     } else {
+      // Update selected status text to show the selected option label
+      setSelectedStatusText(statusLabel);
       setPausedAt(undefined);
     }
 
@@ -295,6 +303,13 @@ export default function ArrivalDepartureDetailScreen() {
     } as any);
   };
 
+  const handleLostAndFoundTitlePress = () => {
+    // Navigate to Lost and Found screen
+    navigation.navigate('Main' as any, {
+      screen: 'LostAndFound',
+    } as any);
+  };
+
   const handleReassign = () => {
     console.log('handleReassign called, opening ReassignModal');
     setShowReassignModal(true);
@@ -310,6 +325,7 @@ export default function ArrivalDepartureDetailScreen() {
         name: selectedStaff.name,
         avatar: selectedStaff.avatar,
         initials: selectedStaff.initials,
+        department: selectedStaff.department, // Include department
         // Generate color for initial circle based on name if no avatarColor
         avatarColor: selectedStaff.avatarColor || (() => {
           const colors = ['#ff4dd8', '#5a759d', '#607aa1', '#f0be1b'];
@@ -484,24 +500,41 @@ export default function ArrivalDepartureDetailScreen() {
               </View>
             )}
 
-            {/* Assigned to Section */}
+            {/* Spacer to reserve space for absolutely positioned card */}
+            <View style={styles.cardSpacer} />
+
+            {/* Assigned to Title - Outside and above the card */}
             {roomDetail.assignedTo && (
-              <AssignedToSection
-                staff={roomDetail.assignedTo}
-                onReassignPress={handleReassign}
-              />
+              <Text style={styles.assignedToTitle}>Assigned to</Text>
             )}
 
-            {/* Task Section */}
-            <TaskSection
-              onAddPress={() => {
-                // TODO: Handle task add
-                console.log('Add task pressed');
-              }}
-            />
+            {/* Card Container for Assigned to and Task sections */}
+            <View style={styles.assignedTaskCard}>
+              {/* Assigned to Section */}
+              {roomDetail.assignedTo && (
+                <AssignedToSection
+                  staff={roomDetail.assignedTo}
+                  onReassignPress={handleReassign}
+                />
+              )}
+
+              {/* Divider between Assigned to and Task sections */}
+              <View style={styles.cardDivider} />
+
+              {/* Task Section */}
+              <TaskSection
+                onAddPress={() => {
+                  // TODO: Handle task add
+                  console.log('Add task pressed');
+                }}
+              />
+            </View>
 
             {/* Lost and Found Section */}
-            <LostAndFoundSection onAddPhotosPress={handleAddPhotos} />
+            <LostAndFoundSection 
+              onAddPhotosPress={handleAddPhotos}
+              onTitlePress={handleLostAndFoundTitlePress}
+            />
 
             {/* Divider - positioned after Lost and Found at 1171px */}
             <View style={styles.divider3} />
@@ -661,7 +694,7 @@ const styles = StyleSheet.create({
     width: NOTES_SECTION.divider.width * scaleX,
     height: NOTES_SECTION.divider.height,
     backgroundColor: NOTES_SECTION.divider.color,
-    marginTop: (1029 - 1029) * scaleX, // Position after Lost and Found box ends (1029px): 1029 - 1029 = 0px (divider is at same position as box end)
+    marginTop: (1075.09 - 1075.09) * scaleX, // Position after Lost and Found box ends (1075.09px): 1075.09 - 1075.09 = 0px (divider is at same position as box end)
     marginBottom: 0,
   },
   placeholderContent: {
@@ -673,6 +706,44 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 16 * scaleX,
     color: '#999',
+  },
+  cardSpacer: {
+    // Spacer to reserve space for the absolutely positioned card
+    // Card starts at (650 - 285) = 365px from content area start
+    // Card height is 206.09px
+    height: ((650 - 285) + 206.09) * scaleX, // 571.09px total height
+    width: '100%',
+  },
+  assignedToTitle: {
+    position: 'absolute',
+    left: ASSIGNED_TO.title.left * scaleX,
+    top: (ASSIGNED_TO.title.top - CONTENT_AREA.top) * scaleX, // 630 - 285 = 345px from content area start
+    fontSize: ASSIGNED_TO.title.fontSize * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: 'bold' as any,
+    color: ASSIGNED_TO.title.color,
+  },
+  assignedTaskCard: {
+    position: 'absolute',
+    left: ASSIGNED_TASK_CARD.left * scaleX,
+    top: (ASSIGNED_TASK_CARD.top - CONTENT_AREA.top) * scaleX,
+    width: ASSIGNED_TASK_CARD.width * scaleX,
+    height: ASSIGNED_TASK_CARD.height * scaleX,
+    borderRadius: ASSIGNED_TASK_CARD.borderRadius * scaleX,
+    backgroundColor: ASSIGNED_TASK_CARD.backgroundColor,
+    borderWidth: ASSIGNED_TASK_CARD.borderWidth,
+    borderColor: ASSIGNED_TASK_CARD.borderColor,
+    paddingHorizontal: ASSIGNED_TASK_CARD.paddingHorizontal * scaleX,
+    paddingVertical: ASSIGNED_TASK_CARD.paddingVertical * scaleX,
+    zIndex: 1, // Ensure card is above spacer
+  },
+  cardDivider: {
+    position: 'absolute',
+    left: ASSIGNED_TASK_CARD.paddingHorizontal * scaleX, // Divider starts after card padding
+    top: ASSIGNED_TASK_CARD.divider.top * scaleX,
+    width: ASSIGNED_TASK_CARD.divider.width * scaleX,
+    height: ASSIGNED_TASK_CARD.divider.height,
+    backgroundColor: ASSIGNED_TASK_CARD.divider.backgroundColor,
   },
 });
 

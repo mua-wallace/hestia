@@ -29,13 +29,12 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     width: '100%',
-    minHeight: 50 * scaleX, // Minimum height for the section
-    marginTop: (TASK_SECTION.title.top - 740) * scaleX, // Position after Assigned to section (which ends around 740px)
+    minHeight: 50 * scaleX, // Minimum height for the section within card
   },
   title: {
     position: 'absolute',
     left: TASK_SECTION.title.left * scaleX,
-    top: 0, // At top of container
+    top: TASK_SECTION.title.top * scaleX, // Relative to card content area
     fontSize: TASK_SECTION.title.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
@@ -44,7 +43,7 @@ const styles = StyleSheet.create({
   addButton: {
     position: 'absolute',
     left: TASK_SECTION.addButton.left * scaleX,
-    top: (TASK_SECTION.addButton.top - TASK_SECTION.title.top) * scaleX, // Relative to title
+    top: TASK_SECTION.addButton.top * scaleX, // Relative to card content area
     width: TASK_SECTION.addButton.width * scaleX,
     height: TASK_SECTION.addButton.height * scaleX,
     borderRadius: TASK_SECTION.addButton.borderRadius * scaleX,
