@@ -1,12 +1,13 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { View, ScrollView, StyleSheet, Dimensions, RefreshControl, useWindowDimensions, Text, Image } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme';
 import { ShiftType } from '../types/home.types';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
 import { mockHomeData } from '../data/mockHomeData';
+import { mockChatData } from '../data/mockChatData';
 import { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import AllRoomsHeader from '../components/allRooms/AllRoomsHeader';
 import RoomCard from '../components/allRooms/RoomCard';
@@ -353,17 +354,32 @@ export default function AllRoomsScreen() {
     console.log('Status changed for room:', selectedRoomForStatusChange.roomNumber, 'to:', newStatus);
   };
 
+  // Sync activeTab with current route
+  useFocusEffect(
+    React.useCallback(() => {
+      const routeName = route.name as string;
+      if (routeName === 'Home' || routeName === 'Rooms' || routeName === 'Chat' || routeName === 'Tickets') {
+        setActiveTab(routeName);
+      }
+    }, [route.name])
+  );
+
+  // Calculate total unread chat messages for badge
+  const chatBadgeCount = React.useMemo(() => {
+    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
+  }, []);
+
   const handleTabPress = (tab: string) => {
-    setActiveTab(tab);
+    setActiveTab(tab); // Update immediately
     setShowMorePopup(false);
     if (tab === 'Home') {
-      navigation.navigate('Home');
+      navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
-      navigation.navigate('Rooms');
+      navigation.navigate('Rooms' as any);
     } else if (tab === 'Chat') {
-      navigation.navigate('Chat');
+      navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
-      navigation.navigate('Tickets');
+      navigation.navigate('Tickets' as any);
     }
   };
 
@@ -554,7 +570,7 @@ export default function AllRoomsScreen() {
         activeTab={activeTab}
         onTabPress={handleTabPress}
         onMorePress={handleMorePress}
-        chatBadgeCount={mockHomeData.notifications.chat}
+        chatBadgeCount={chatBadgeCount}
       />
 
       {/* More Popup */}

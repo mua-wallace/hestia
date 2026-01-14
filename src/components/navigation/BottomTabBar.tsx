@@ -46,7 +46,7 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatB
             icon={require('../../../assets/icons/chat-icon.png')}
             label="Chat"
             active={activeTab === 'Chat'}
-            badge={chatBadgeCount}
+            badge={chatBadgeCount > 0 ? chatBadgeCount : undefined}
             onPress={() => onTabPress('Chat')}
             iconWidth={56}
             iconHeight={56}

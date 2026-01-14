@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +14,7 @@ const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 import type { ShiftType } from '../types/home.types';
 import { mockHomeData } from '../data/mockHomeData';
+import { mockChatData } from '../data/mockChatData';
 import type { MoreMenuItemId } from '../types/more.types';
 import type { RootStackParamList } from '../navigation/types';
 import HomeHeader from '../components/home/HomeHeader';
@@ -32,11 +33,27 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  const route = useRoute();
   const [homeData, setHomeData] = useState(mockHomeData);
   const [activeTab, setActiveTab] = useState('Home');
   const [refreshing, setRefreshing] = useState(false);
   const [showMorePopup, setShowMorePopup] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
+
+  // Sync activeTab with current route
+  useFocusEffect(
+    React.useCallback(() => {
+      const routeName = route.name as string;
+      if (routeName === 'Home' || routeName === 'Rooms' || routeName === 'Chat' || routeName === 'Tickets') {
+        setActiveTab(routeName);
+      }
+    }, [route.name])
+  );
+
+  // Calculate total unread chat messages for badge
+  const chatBadgeCount = useMemo(() => {
+    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
+  }, []);
 
   const handleShiftToggle = (shift: ShiftType) => {
     setHomeData(prev => ({ ...prev, selectedShift: shift }));
@@ -57,17 +74,17 @@ export default function HomeScreen() {
   };
 
   const handleTabPress = (tab: string) => {
-    setActiveTab(tab);
+    setActiveTab(tab); // Update immediately
     setShowMorePopup(false); // Close popup when switching tabs
     // Navigate to the respective screen
     if (tab === 'Home') {
-      navigation.navigate('Home');
+      navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
-      navigation.navigate('Rooms');
+      navigation.navigate('Rooms' as any);
     } else if (tab === 'Chat') {
-      navigation.navigate('Chat');
+      navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
-      navigation.navigate('Tickets');
+      navigation.navigate('Tickets' as any);
     }
   };
 
@@ -244,7 +261,7 @@ export default function HomeScreen() {
         activeTab={activeTab}
         onTabPress={handleTabPress}
         onMorePress={handleMorePress}
-        chatBadgeCount={homeData.notifications.chat}
+        chatBadgeCount={chatBadgeCount}
       />
 
       {/* More Popup */}

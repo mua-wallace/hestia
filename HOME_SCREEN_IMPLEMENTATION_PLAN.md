@@ -293,7 +293,7 @@ src/
 ### Phase 2: Bottom Navigation (1 hour)
 1. Create `BottomTabBar.tsx` component
 2. Create `TabBarItem.tsx` with icon + label
-3. Add notification badge support (for Chat)
+3. Implement navigation logic
 4. Implement navigation logic
 5. Add active/inactive states
 6. Test navigation flow
@@ -374,7 +374,6 @@ src/
 - [ ] Status counts display correctly
 - [ ] Priority badges show when needed
 - [ ] Bottom navigation works
-- [ ] Chat badge displays notification count
 - [ ] All icons load properly
 - [ ] Scroll behavior is smooth
 - [ ] Pull-to-refresh works

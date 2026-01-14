@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CompositeNavigationProp } from '@react-navigation/native';
@@ -49,16 +49,16 @@ export default function ChatScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const handleTabPress = (tab: string) => {
-    setActiveTab(tab);
+    setActiveTab(tab); // Update immediately
     setShowMorePopup(false);
     if (tab === 'Home') {
-      navigation.navigate('Home');
+      navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
-      navigation.navigate('Rooms');
+      navigation.navigate('Rooms' as any);
     } else if (tab === 'Chat') {
-      navigation.navigate('Chat');
+      navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
-      navigation.navigate('Tickets');
+      navigation.navigate('Tickets' as any);
     }
   };
 
@@ -129,6 +129,11 @@ export default function ChatScreen() {
     }, 1000);
   }, []);
 
+  // Calculate total unread chat messages for badge
+  const chatBadgeCount = React.useMemo(() => {
+    return chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
+  }, [chats]);
+
   // Filter chats based on search query
   const filteredChats = searchQuery
     ? chats.filter(
@@ -139,98 +144,87 @@ export default function ChatScreen() {
     : chats;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <View style={styles.container}>
+      {/* Scrollable Content */}
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <View style={styles.container}>
-          {/* Scrollable Content */}
-          <View style={styles.scrollContainer}>
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              scrollEnabled={!showMorePopup && !showNewChatMenu}
-              refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-              }
-              keyboardShouldPersistTaps="handled"
-            >
-              {/* Chat Items */}
-              {filteredChats.map((chat, index) => (
-                <React.Fragment key={chat.id}>
-                  <ChatItem
-                    chat={chat}
-                    onPress={() => handleChatPress(chat)}
-                  />
-                  {/* Divider */}
-                  {index < filteredChats.length - 1 && (
-                    <View style={styles.divider} />
-                  )}
-                </React.Fragment>
-              ))}
-            </ScrollView>
+        <View style={styles.scrollContainer}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={!showMorePopup && !showNewChatMenu}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Chat Items */}
+            {filteredChats.map((chat, index) => (
+              <React.Fragment key={chat.id}>
+                <ChatItem
+                  chat={chat}
+                  onPress={() => handleChatPress(chat)}
+                />
+                {/* Divider */}
+                {index < filteredChats.length - 1 && (
+                  <View style={styles.divider} />
+                )}
+              </React.Fragment>
+            ))}
+          </ScrollView>
 
-            {/* Blur Overlay for content only */}
-            {(showMorePopup || showNewChatMenu) && (
-              <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
-                <View style={styles.blurOverlayDarkener} />
-              </BlurView>
-            )}
-          </View>
-
-          {/* Header - Fixed at top */}
-          <ChatHeader
-            onBackPress={handleBackPress}
-            onSearch={handleSearch}
-            onMessagePress={handleMessagePress}
-          />
-
-          {/* Bottom Navigation - Will stay above keyboard */}
-          <SafeAreaView style={styles.bottomNavSafeArea} edges={['bottom']}>
-            <BottomTabBar
-              activeTab={activeTab}
-              onTabPress={handleTabPress}
-              onMorePress={handleMorePress}
-              chatBadgeCount={mockHomeData.notifications.chat}
-            />
-          </SafeAreaView>
-
-          {/* More Popup */}
-          <MorePopup
-            visible={showMorePopup}
-            onClose={handleClosePopup}
-            onMenuItemPress={handleMenuItemPress}
-          />
-
-          {/* New Chat Menu */}
-          <NewChatMenu
-            visible={showNewChatMenu}
-            onClose={handleNewChatMenuClose}
-            onOptionPress={handleNewChatOptionPress}
-          />
+          {/* Blur Overlay for content only */}
+          {(showMorePopup || showNewChatMenu) && (
+            <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
+              <View style={styles.blurOverlayDarkener} />
+            </BlurView>
+          )}
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+
+      {/* Header - Fixed at top */}
+      <ChatHeader
+        onBackPress={handleBackPress}
+        onSearch={handleSearch}
+        onMessagePress={handleMessagePress}
+      />
+
+      {/* Bottom Navigation - Outside KeyboardAvoidingView to prevent movement */}
+      <BottomTabBar
+        activeTab={activeTab}
+        onTabPress={handleTabPress}
+        onMorePress={handleMorePress}
+        chatBadgeCount={chatBadgeCount}
+      />
+
+      {/* More Popup */}
+      <MorePopup
+        visible={showMorePopup}
+        onClose={handleClosePopup}
+        onMenuItemPress={handleMenuItemPress}
+      />
+
+      {/* New Chat Menu */}
+      <NewChatMenu
+        visible={showNewChatMenu}
+        onClose={handleNewChatMenuClose}
+        onOptionPress={handleNewChatOptionPress}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: CHAT_COLORS.background,
   },
   keyboardAvoidingView: {
     flex: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: CHAT_COLORS.background,
-  },
-  bottomNavSafeArea: {
-    backgroundColor: CHAT_COLORS.background,
   },
   scrollContainer: {
     flex: 1,

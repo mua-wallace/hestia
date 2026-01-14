@@ -511,7 +511,6 @@ interface BottomTabBarProps {
   activeTab: string;
   onTabPress: (tab: string) => void;
   onMorePress?: () => void; // New prop
-  chatBadgeCount?: number;
 }
 
 // In TabBarItem for More:
@@ -545,7 +544,6 @@ return (
       activeTab={activeTab}
       onTabPress={handleTabPress}
       onMorePress={handleMorePress}
-      chatBadgeCount={homeData.notifications.chat}
     />
   </View>
 );
