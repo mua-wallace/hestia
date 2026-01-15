@@ -43,21 +43,18 @@ export default function GuestInfoCard({
   // Container is at containerTop relative to contentArea, which equals absoluteTop absolute
   // So relative positions = absolute - absoluteTop
   
-  const nameTopRelative = 0; // Name at absoluteTop, container at absoluteTop, so relative = 0
-  // Date should be positioned with same spacing as All Rooms cards
-  // In All Rooms: name at top 87, date at top 109, so spacing = 22px below name
-  // For room detail: name at top 0, so date at top 22px (relative to container)
-  const dateTopRelative = 22; // Same spacing as All Rooms (22px below name)
-  // Time (ETA/EDT) should be positioned with same spacing as All Rooms
-  // In All Rooms: name at top 87, time at top 110, so spacing = 23px below name
-  // For room detail: name at top 0, so time at top 23px (relative to container)
-  const timeTopRelative = 23; // Same spacing as All Rooms (23px below name)
-  // Count (person icon) should be below date and aligned with ETA/EDT
-  // Position it at the same top as ETA/EDT (23px) to be vertically aligned
-  const countTopRelative = 23; // Same top as ETA/EDT, below the date
+  // From Figma: All positions are absolute, convert to relative to container
+  // Container is at absoluteTop, so relative = absolute - absoluteTop
+  const nameTopRelative = 0; // Name at absoluteTop (349 or 542), container at absoluteTop, so relative = 0
+  // From Figma: dates at 377px for arrival, 568px for departure
+  // Relative to name: 377 - 349 = 28px (arrival), 568 - 542 = 26px (departure)
+  const dateTopRelative = config.dates.top - absoluteTop; // 28px for arrival, 26px for departure
+  // From Figma: ETA at 377px (arrival), EDT at 567px (departure)
+  const timeTopRelative = (isArrival ? config.eta.top : config.edt.top) - absoluteTop;
+  // From Figma: occupancy at 378px (arrival), 566px (departure)
+  const countTopRelative = config.occupancy.top - absoluteTop;
   
-  // All left positions are absolute from screen, container is at left: 0
-  // So relative positions = absolute positions
+  // All left positions are absolute from screen edge
   const containerLeft = 0;
   const iconLeftRelative = config.icon.left; // 21
   const iconTopRelative = 0; // Icon at same top as name (absoluteTop), so relative = 0
@@ -140,7 +137,7 @@ export default function GuestInfoCard({
 
       {/* Special Instructions - show for all guests if available */}
       {specialInstructions && (
-        <View style={styles.specialInstructionsContainer}>
+        <>
           <Text
             style={[
               styles.specialInstructionsTitle,
@@ -164,7 +161,7 @@ export default function GuestInfoCard({
           >
             {specialInstructions}
           </Text>
-        </View>
+        </>
       )}
       
       {/* Divider after Special Instructions - only show for arrival guests, not departure */}
@@ -187,9 +184,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-  },
-  specialInstructionsContainer: {
-    position: 'relative',
+    zIndex: 1, // Ensure guest info is above dividers
   },
   specialInstructionsTitle: {
     position: 'absolute',
@@ -197,6 +192,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica',
     fontWeight: 'bold' as any,
     color: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.title.color,
+    zIndex: 2, // Above divider
   },
   specialInstructionsText: {
     position: 'absolute',
@@ -205,6 +201,7 @@ const styles = StyleSheet.create({
     fontWeight: 'light' as any,
     color: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.text.color,
     lineHeight: 18 * normalizedScaleX,
+    zIndex: 2, // Above divider
   },
   dividerAfterSpecial: {
     position: 'absolute',
@@ -212,6 +209,7 @@ const styles = StyleSheet.create({
     width: ROOM_DETAIL_GUEST_INFO.divider.width * normalizedScaleX,
     height: ROOM_DETAIL_GUEST_INFO.divider.height,
     backgroundColor: ROOM_DETAIL_GUEST_INFO.divider.color,
+    zIndex: 0, // Below content
   },
   categoryBadge: {
     position: 'absolute',

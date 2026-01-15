@@ -415,8 +415,7 @@ const styles = StyleSheet.create({
   guestRow: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'center', // Vertically center all items including badge
-    alignContent: 'center',
+    alignItems: 'flex-start', // Changed from 'center' to 'flex-start' to prevent text clipping
     left: 0,
     width: 300 * normalizedScaleX, // Fixed width - card is 426px, container starts at 73px, so 426-73=353px available, use 300px to leave space
     overflow: 'visible', // Ensure text is not clipped
@@ -440,7 +439,7 @@ const styles = StyleSheet.create({
   },
   guestNameContainer: {
     flexDirection: 'row', // Horizontal layout for name and badge
-    alignItems: 'center', // Vertically center name and badge
+    alignItems: 'baseline', // Align name and badge by baseline so name is fully visible
     flexShrink: 1, // Allow shrinking but prefer to show full name
     flexGrow: 0, // Don't grow - let badge follow immediately after
     minWidth: 120 * normalizedScaleX, // Minimum width to ensure name starts showing
@@ -459,6 +458,8 @@ const styles = StyleSheet.create({
     color: GUEST_INFO.name.color,
     lineHeight: GUEST_INFO.name.lineHeight * normalizedScaleX,
     backgroundColor: 'transparent', // Ensure no background covers text
+    includeFontPadding: false, // Remove extra padding that clips text
+    textAlignVertical: 'top', // Align to top so bottom part is visible
   },
   priorityCount: {
     position: 'absolute',
@@ -476,6 +477,8 @@ const styles = StyleSheet.create({
     lineHeight: GUEST_INFO.priorityBadge.lineHeight * normalizedScaleX,
     marginLeft: 4 * normalizedScaleX, // Consistent spacing after name text - matches Figma (4px)
     flexShrink: 0, // Prevent badge from shrinking
+    includeFontPadding: false, // Remove extra padding
+    textAlignVertical: 'top', // Align to top for consistent baseline
   },
   priorityCountSmall: {
     fontSize: (GUEST_INFO.priorityBadge.fontSize * 0.85) * normalizedScaleX, // 85% of original size (12 * 0.85 = 10.2px)
@@ -484,32 +487,29 @@ const styles = StyleSheet.create({
   detailsRow: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Changed from 'center' to 'flex-start' to prevent clipping
     left: 0,
-    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Set explicit height for alignment - don't extend beyond
+    minHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Changed from fixed height to minHeight
     zIndex: 5, // Very low z-index so time appears above
     overflow: 'visible', // Ensure content is not clipped
-    maxHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Prevent container from extending
   },
   detailsRowWithCount: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center', // Keep 'center' for this row to align icon and count text properly on same line
     left: 0,
-    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Don't extend beyond this height
+    minHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Changed from fixed height to minHeight
     zIndex: 5, // Very low z-index so time appears above
     overflow: 'visible', // Ensure content is not clipped
-    maxHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Prevent container from extending
   },
   detailsRowWithTime: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Changed from 'center' to 'flex-start' to prevent clipping
     left: 0,
-    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Don't extend beyond this height
+    minHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Changed from fixed height to minHeight
     zIndex: 5, // Very low z-index so time appears above
     overflow: 'visible', // Ensure content is not clipped
-    maxHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Prevent container from extending
   },
   guestCountRow: {
     position: 'absolute',
@@ -533,6 +533,7 @@ const styles = StyleSheet.create({
     height: GUEST_INFO.guestCount.icon.height * normalizedScaleX,
     tintColor: '#334866',
     marginLeft: 8 * normalizedScaleX, // Spacing after date
+    alignSelf: 'center', // Vertically center icon with text on same row
   },
   countTextInline: {
     fontSize: GUEST_INFO.guestCount.fontSize * normalizedScaleX,
@@ -543,6 +544,8 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
     marginLeft: 4 * normalizedScaleX, // Spacing after icon
+    marginTop: 0, // Ensure no extra top margin
+    paddingTop: 0, // Ensure no extra top padding
   },
   time: {
     position: 'absolute',

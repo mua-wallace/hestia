@@ -134,7 +134,7 @@ export const GUEST_INFO = {
     fontSize: 14,
     fontWeight: 'bold' as const,
     color: '#000000',
-    lineHeight: 10, // Figma shows h-[10px]
+    lineHeight: 18, // Increased from 10px to 18px to prevent text clipping (font size 14px needs at least 18px line height)
     top: 87, // Room 201 first guest: top-[87px]
   },
   nameSecond: {
@@ -174,7 +174,7 @@ export const GUEST_INFO = {
     fontSize: 14,
     fontWeight: 'regular' as const,
     color: '#000000',
-    lineHeight: 11, // Figma shows h-[11px]
+    lineHeight: 18, // Increased from 11px to 18px to prevent text clipping (font size 14px needs at least 18px line height)
     positions: {
       priorityFirst: { left: 75, top: 130 }, // Room 201 first guest: left-[75px] top-[130px] ETA: 17:00 (exact from Figma)
       prioritySecond: { left: 73, top: 204 }, // Room 201 second guest: left-[73px] top-[204px] EDT: 12:00 (exact from Figma)
@@ -188,7 +188,7 @@ export const GUEST_INFO = {
     fontSize: 14,
     fontWeight: 'light' as const,
     color: '#000000',
-    lineHeight: 13, // Figma shows h-[13px]
+    lineHeight: 18, // Increased from 13px to 18px to prevent text clipping (font size 14px needs at least 18px line height)
     icon: {
       width: 13, // Person icon size for guest count
       height: 12,

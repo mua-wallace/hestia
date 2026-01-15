@@ -19,9 +19,11 @@ import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
 import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal';
 import ReassignModal from '../components/roomDetail/ReassignModal';
 import AddNoteModal from '../components/roomDetail/AddNoteModal';
+import AddTaskModal from '../components/roomDetail/AddTaskModal';
+import ViewTaskModal from '../components/roomDetail/ViewTaskModal';
 import type { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import { STATUS_OPTIONS } from '../types/allRooms.types';
-import type { RoomDetailData, DetailTab, Note } from '../types/roomDetail.types';
+import type { RoomDetailData, DetailTab, Note, Task } from '../types/roomDetail.types';
 import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
 
@@ -42,6 +44,9 @@ export default function ArrivalDepartureDetailScreen() {
   const [showRefuseServiceModal, setShowRefuseServiceModal] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [showViewTaskModal, setShowViewTaskModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const statusButtonRef = useRef<TouchableOpacity>(null);
   // Track current status to update header background color
@@ -101,6 +106,8 @@ export default function ArrivalDepartureDetailScreen() {
         }
       : undefined
   );
+  // Track tasks in state
+  const [tasks, setTasks] = useState<Task[]>([]);
   
   // Track paused time - show when status is Pause
   const [pausedAt, setPausedAt] = useState<string | undefined>(
@@ -115,6 +122,7 @@ export default function ArrivalDepartureDetailScreen() {
       ? 'Please prepare a high-floor suite with a city view, away from the elevators, set to 21°C, with hypoallergenic pillows and a fresh orchid on the nightstand.'
       : undefined,
     notes: notes,
+    tasks: tasks,
     assignedTo: assignedStaff,
     isUrgent: room.isPriority,
   };
@@ -271,6 +279,35 @@ export default function ArrivalDepartureDetailScreen() {
 
   const handleAddNote = () => {
     setShowAddNoteModal(true);
+  };
+
+  const handleAddTask = () => {
+    setShowAddTaskModal(true);
+  };
+
+  const handleSeeMoreTask = (task: Task) => {
+    setSelectedTask(task);
+    setShowViewTaskModal(true);
+  };
+
+  const handleCloseViewTaskModal = () => {
+    setShowViewTaskModal(false);
+    setSelectedTask(null);
+  };
+
+  const handleSaveTask = (taskText: string) => {
+    // Create a new task (no creator/staff info needed)
+    const newTask: Task = {
+      id: Date.now().toString(),
+      text: taskText,
+      createdAt: new Date().toISOString(),
+    };
+    
+    // Add task to state
+    setTasks(prev => [...prev, newTask]);
+    
+    // TODO: Save task to backend/API
+    console.log('Task added for room:', room.roomNumber, 'task:', taskText);
   };
 
   const handleSaveNote = (noteText: string) => {
@@ -485,10 +522,9 @@ export default function ArrivalDepartureDetailScreen() {
 
               {/* Task Section */}
               <TaskSection
-                onAddPress={() => {
-                  // TODO: Handle task add
-                  console.log('Add task pressed');
-                }}
+                tasks={roomDetail.tasks || []}
+                onAddPress={handleAddTask}
+                onSeeMorePress={handleSeeMoreTask}
               />
             </View>
 
@@ -497,9 +533,6 @@ export default function ArrivalDepartureDetailScreen() {
               onAddPhotosPress={handleAddPhotos}
               onTitlePress={handleLostAndFoundTitlePress}
             />
-
-            {/* Divider - positioned after Lost and Found at 1075.09px */}
-            <View style={styles.divider3} />
 
             {/* Notes Section */}
             <NotesSection
@@ -593,6 +626,19 @@ export default function ArrivalDepartureDetailScreen() {
         onSave={handleSaveNote}
         roomNumber={room.roomNumber}
       />
+
+      {/* Add Task Modal */}
+      <AddTaskModal
+        visible={showAddTaskModal}
+        onClose={() => setShowAddTaskModal(false)}
+        onSave={handleSaveTask}
+      />
+
+      <ViewTaskModal
+        visible={showViewTaskModal}
+        task={selectedTask}
+        onClose={handleCloseViewTaskModal}
+      />
     </View>
   );
 }
@@ -641,6 +687,7 @@ const styles = StyleSheet.create({
     width: GUEST_INFO.divider.width * scaleX,
     height: GUEST_INFO.divider.height,
     backgroundColor: GUEST_INFO.divider.color,
+    zIndex: 0, // Below guest info content
   },
   divider2: {
     position: 'absolute',
@@ -649,15 +696,7 @@ const styles = StyleSheet.create({
     width: GUEST_INFO.divider2.width * scaleX,
     height: GUEST_INFO.divider2.height,
     backgroundColor: GUEST_INFO.divider2.color,
-  },
-  divider3: {
-    position: 'relative',
-    left: NOTES_SECTION.divider.left,
-    width: NOTES_SECTION.divider.width * scaleX,
-    height: NOTES_SECTION.divider.height,
-    backgroundColor: NOTES_SECTION.divider.color,
-    marginTop: 0, // No gap - divider is exactly at Lost & Found box bottom
-    marginBottom: 0,
+    zIndex: 0, // Below guest info content
   },
   placeholderContent: {
     padding: 40 * scaleX,
@@ -670,18 +709,23 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   cardSpacer: {
-    // Spacer to reserve space for the absolutely positioned card
-    // Card starts at (650 - 285) = 365px from content area start
-    // Card height is 206.09px
-    // Reduced to exact card height to minimize gap
-    height: ((650 - 285) + 206.09) * scaleX, // 571.09px total height
+    // Spacer to reserve space for the absolutely positioned card and title
+    // From Figma:
+    // Guest Info section ends at divider 2: 625px absolute = (625 - 285) = 340px from content area
+    // "Assigned to" title starts at: 644px absolute = (644 - 285) = 359px from content area (19px gap)
+    // Card starts at: 674px absolute = (674 - 285) = 389px from content area (30px gap from title)
+    // Card ends at: 674 + 206.09 = 880.09px absolute = (880.09 - 285) = 595.09px from content area
+    // Total spacer height: From Guest Info end (625px) to card end (880.09px) = 255.09px
+    height: ((ASSIGNED_TASK_CARD.top - GUEST_INFO.divider2.top) + ASSIGNED_TASK_CARD.height) * scaleX, // (674 - 625) + 206.09 = 255.09px
     width: '100%',
   },
   assignedToSectionContainer: {
-    position: 'relative',
+    position: 'absolute',
+    left: 0,
     width: '100%',
-    minHeight: 20 * scaleX, // Minimum height for title section
-    marginTop: (ASSIGNED_TO.title.top - CONTENT_AREA.top) * scaleX, // 630 - 285 = 345px from content area start
+    top: (ASSIGNED_TO.title.top - CONTENT_AREA.top) * scaleX, // 644 - 285 = 359px from content area start (Figma)
+    height: 20 * scaleX, // Height for title section (title is 15px, so 20px gives some space)
+    zIndex: 2, // Above card
   },
   assignedToTitle: {
     position: 'absolute',
@@ -695,9 +739,9 @@ const styles = StyleSheet.create({
   assignedTaskCard: {
     position: 'absolute',
     left: ASSIGNED_TASK_CARD.left * scaleX,
-    top: (ASSIGNED_TASK_CARD.top - CONTENT_AREA.top) * scaleX,
+    top: (ASSIGNED_TASK_CARD.top - CONTENT_AREA.top) * scaleX, // 674 - 285 = 389px from content area start (Figma)
     width: ASSIGNED_TASK_CARD.width * scaleX,
-    height: ASSIGNED_TASK_CARD.height * scaleX,
+    height: ASSIGNED_TASK_CARD.height * scaleX, // Fixed height: 206.09px from Figma
     borderRadius: ASSIGNED_TASK_CARD.borderRadius * scaleX,
     backgroundColor: ASSIGNED_TASK_CARD.backgroundColor,
     borderWidth: ASSIGNED_TASK_CARD.borderWidth,
@@ -705,13 +749,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: ASSIGNED_TASK_CARD.paddingHorizontal * scaleX,
     paddingVertical: ASSIGNED_TASK_CARD.paddingVertical * scaleX,
     zIndex: 1, // Ensure card is above spacer
+    overflow: 'hidden', // Clip content that extends beyond card boundaries
   },
   cardDivider: {
     position: 'absolute',
     left: ASSIGNED_TASK_CARD.paddingHorizontal * scaleX, // Divider starts after card padding
-    top: ASSIGNED_TASK_CARD.divider.top * scaleX,
+    top: ASSIGNED_TASK_CARD.divider.top * scaleX, // 80px from card content top (updated)
     width: ASSIGNED_TASK_CARD.divider.width * scaleX,
-    height: ASSIGNED_TASK_CARD.divider.height,
+    height: ASSIGNED_TASK_CARD.divider.height, // 1px
     backgroundColor: ASSIGNED_TASK_CARD.divider.backgroundColor,
+    zIndex: 2, // Above both Assigned to (zIndex: 1) and Task sections (zIndex: 0)
   },
 });

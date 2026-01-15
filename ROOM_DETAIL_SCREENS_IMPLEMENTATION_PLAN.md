@@ -47,31 +47,49 @@ Starts at y=285px, scrollable
   - **Turndown:** Single turndown guest entry
 
 #### B. Assigned to Section
-- **Title:** "Assigned to" - Bold, 15px, black (top: 630px)
+- **Title:** "Assigned to" - Bold, 15px, black (top: 630px, left: 32px)
 - **Card Container:** 
   - Background: `#f9fafc`
   - Border: 1px, `#e3e3e3`
   - Border radius: 9px
-  - Position: left: 25px, top: 650px
+  - Position: left: 25px, top: 650px (absolute)
   - Size: 390x206.09px
   - Padding: 16px horizontal and vertical
-- **Content:**
-  - Profile picture (35x35px)
-  - Staff name and department
-  - Reassign button (122x49px, `#f1f6fc` background)
+- **Content (inside card):**
+  - **Left Column (vertically stacked):**
+    - Profile picture (35x35px) - left: 15px (relative to card content), top: 17px
+    - Staff name - directly below profile picture, same left position (15px relative to card content)
+    - Department/role (e.g., "HSK") - below staff name, same left position, smaller gray text
+  - **Right Column:**
+    - Reassign button (122x49px, `#f1f6fc` background) - right aligned, top: 9px (relative to card content)
+- **Layout:** Profile picture, name, and department are vertically stacked on the left. Reassign button is on the right side.
+- **Divider:** Horizontal line at top: 90px (relative to card content), between Assigned to and Task sections
 
 #### C. Task Section
 - **Inside Assigned to card container**
-- **Title:** "Task" - Bold, 15px, black
-- **Add Button:** Border button, 74x39px
+- **Title:** "Task" - Bold, 15px, black (left: 16px, top: 101px relative to card content)
+- **Add Button:** Border button, 74x39px (left: 284px, top: 101px relative to card content)
+- **Note:** Task title and Add button are horizontally aligned (same top position: 101px)
 
 #### D. Lost and Found Section
-- **Title:** "Lost & Found" - Bold, 15px, black (top: 856.09px)
-- **Add Photos Box:**
-  - Dashed border rectangle (384x180px)
-  - Border: `#cbc7c7`, dashed style
-  - Border radius: 7px
-  - Icon and "Add Photos" text
+- **Title:** "Lost & Found" - Bold, 15px, black (top: 856.09px, left: 32px)
+  - **Positioning:** Immediately after card ends (0px gap from card bottom at 856.09px)
+  - Aligned with "Assigned to" title (same left: 32px)
+- **Add Lost & Found Box:**
+  - Solid border rectangle (390x97px)
+  - Position: left: 25px (centered, same as assigned task card), top: 895.09px (39px below title)
+  - Border: `rgba(90, 117, 157, 0.23)`, solid style (1px)
+  - Border radius: 12px
+  - Background: `#F9FAFC`
+  - Padding: 16px horizontal
+  - **Layout:** Horizontal flex layout with icon on left and text on right
+  - **Content:**
+    - **Left:** Icon container with:
+      - Laundry basket icon (53.176x58.008px) - light blue outlined icon
+      - Plus sign "+" (42px font, `#5a759d`) - positioned as overlay on icon (top-right of icon)
+    - **Right:** Text "Add Lost & Found" (19px, bold, `#5a759d`) - right-aligned within box
+  - **Box ends at:** 992.09px (895.09 + 97)
+  - **Note:** The entire box is clickable and navigates to Lost & Found screen
 
 #### E. Notes Section
 - **Title:** "Notes" with badge count - Bold, 18px, black (top: 1087.09px)
@@ -373,6 +391,17 @@ export interface RoomDetailData extends RoomCardData {
 - Content: starts at y=285px, scrollable
 - Use `scaleX` for responsive scaling (design width: 440px)
 
+### Card and Section Spacing
+- **Guest Info Section:** Ends at divider 2 (625px absolute)
+- **Gap to Assigned to title:** 5px (630px - 625px)
+- **Gap to Card:** 20px (650px - 630px)
+- **Card:** 650px - 856.09px (206.09px height)
+- **Lost & Found title:** 856.09px (0px gap from card - starts immediately after)
+- **Lost & Found box:** 895.09px - 1075.09px (39px below title, 180px height)
+- **Divider 3:** 1075.09px (0px gap from Lost & Found box bottom)
+- **Notes Section:** 1086.09px (11px gap from divider)
+
+
 ### Colors
 - **Header Background:** Dynamic based on status
   - Default: `#f0be1b` (yellow)
@@ -479,15 +508,29 @@ src/
 - **Stayover:** Single stayover guest (optional special instructions)
 - **Turndown:** Single turndown guest (optional special instructions)
 
-### 4. Assigned To & Task
-- Card container with staff info
-- Reassign button functionality
-- Task section with Add button
+### 4. Assigned To & Task Card
+- **Card Container:**
+  - Positioned absolutely at 650px (25px after Guest Info divider)
+  - Contains both Assigned to and Task sections
+  - Divider at 90px from card content top separating sections
+- **Assigned to Section:**
+  - Title outside card at 630px (20px above card)
+  - Staff info inside card (profile, name, department, reassign button)
+- **Task Section:**
+  - Inside card, below divider
+  - Task title and Add button horizontally aligned at same top (101px from card content top)
+  - Task title on left (16px from card content), Add button on right (284px from card content)
 
 ### 5. Lost and Found
-- Dashed border box
-- Add photos functionality
-- Navigation to Lost & Found screen
+- **Title:** Positioned at 856.09px (0px gap from card bottom)
+- **Add Lost & Found Box:**
+  - Dashed border rectangle (384x180px)
+  - Positioned at 895.09px (39px below title)
+  - Content centered horizontally:
+    - Laundry basket icon
+    - Plus sign (+)
+    - Text "Add Lost & Found"
+- **Navigation:** Clicking box or title navigates to Lost & Found screen
 
 ### 6. Notes
 - Display list of notes

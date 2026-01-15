@@ -11,7 +11,8 @@ interface NotesSectionProps {
 }
 
 export default function NotesSection({ notes, onAddPress }: NotesSectionProps) {
-  const FIRST_NOTE_TOP = NOTES_SECTION.note.text.top; // Updated to new position
+  const NOTES_SECTION_START = 1105; // From Figma: Notes icon/section starts at 1105px absolute
+  const FIRST_NOTE_TOP = 1169; // From Figma: First note text at 1169px absolute
   const [noteHeights, setNoteHeights] = useState<{ [key: string]: number }>({});
   
   // Relative spacing: 10-15% of the previous note's height, with a minimum of 8px
@@ -72,13 +73,13 @@ export default function NotesSection({ notes, onAddPress }: NotesSectionProps) {
   // Calculate dynamic container height based on last note
   const calculateContainerHeight = () => {
     if (notes.length === 0) {
-      return (879 - 646 + 50) * scaleX; // Default height
+      return 100 * scaleX; // Default height when no notes
     }
     const lastNote = notes[notes.length - 1];
     const lastNoteTop = notePositions[notePositions.length - 1];
     const lastNoteHeight = noteHeights[lastNote.id] || estimateNoteHeight(lastNote.text);
     const lastNoteBottom = lastNoteTop + lastNoteHeight;
-    return (lastNoteBottom - 646 + 50) * scaleX; // Add padding
+    return (lastNoteBottom - NOTES_SECTION_START + 50) * scaleX; // Add padding relative to section start
   };
 
   return (
@@ -114,7 +115,7 @@ export default function NotesSection({ notes, onAddPress }: NotesSectionProps) {
             key={note.id}
             note={note}
             absoluteTop={notePositions[index]}
-            contentAreaTop={1086.09} // Notes section starts at 1086.09px (updated)
+            contentAreaTop={NOTES_SECTION_START} // Notes section starts at 1110px from Figma
             onHeightMeasured={(height) => handleNoteHeightMeasured(note.id, height)}
           />
         );
@@ -127,40 +128,43 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     width: '100%',
-    minHeight: (879 - 1086.09 + 50) * scaleX, // Default height, will be overridden dynamically (updated base position)
-    marginTop: (1086.09 - 1075.09) * scaleX, // Minimal gap from divider (1075.09) to Notes section (1086.09) = 11px (matches Figma)
+    // From Figma: Notes section header starts at ~1105px (icon top)
+    // Lost & Found box ends at 940 + 97 = 1037px
+    // Gap: 1105 - 1037 = 68px (matches Figma spacing to icon)
+    marginTop: 68 * scaleX, // 68px gap from Lost & Found box end to Notes icon start
+    minHeight: 200 * scaleX, // Default height, will be overridden dynamically
   },
   icon: {
     position: 'absolute',
     left: NOTES_SECTION.icon.left * scaleX,
-    top: (NOTES_SECTION.icon.top - 1086.09) * scaleX, // Relative to container start (1086.09px): 1080.33 - 1086.09 = -5.76px (center-aligned with badge)
+    top: (NOTES_SECTION.icon.top - 1105) * scaleX, // Relative to container start at 1105px: 1105 - 1105 = 0px
     width: NOTES_SECTION.icon.width * scaleX,
     height: NOTES_SECTION.icon.height * scaleX,
   },
   badge: {
     position: 'absolute',
     left: NOTES_SECTION.badge.left * scaleX,
-    top: (NOTES_SECTION.badge.top - 1086.09) * scaleX, // Relative to container start (1086.09px): 1086.09 - 1086.09 = 0px
+    top: (NOTES_SECTION.badge.top - 1105) * scaleX, // Relative to container start at 1105px: 1109 - 1105 = 4px
     width: NOTES_SECTION.badge.width * scaleX,
     height: NOTES_SECTION.badge.height * scaleX,
     borderRadius: NOTES_SECTION.badge.borderRadius * scaleX,
     backgroundColor: NOTES_SECTION.badge.backgroundColor,
-    justifyContent: 'center', // Center content vertically
-    alignItems: 'center', // Center content horizontally
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   badgeText: {
     fontSize: NOTES_SECTION.badge.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.light as any,
     color: NOTES_SECTION.badge.color,
-    textAlign: 'center', // Center text horizontally
-    includeFontPadding: false, // Remove extra padding for precise alignment
-    textAlignVertical: 'center', // Center text vertically (Android)
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   title: {
     position: 'absolute',
     left: NOTES_SECTION.title.left * scaleX,
-    top: (NOTES_SECTION.title.top - 1086.09) * scaleX, // Relative to container start (1086.09px): 1087.09 - 1086.09 = 1px
+    top: (NOTES_SECTION.title.top - 1105) * scaleX, // Relative to container start at 1105px: 1110 - 1105 = 5px
     fontSize: NOTES_SECTION.title.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
@@ -169,7 +173,7 @@ const styles = StyleSheet.create({
   addButton: {
     position: 'absolute',
     left: NOTES_SECTION.addButton.left * scaleX,
-    top: (NOTES_SECTION.addButton.top - 1086.09) * scaleX, // Relative to container start (1086.09px)
+    top: (NOTES_SECTION.addButton.top - 1105) * scaleX, // Relative to container start at 1105px: 1098 - 1105 = -7px
     width: NOTES_SECTION.addButton.width * scaleX,
     height: NOTES_SECTION.addButton.height * scaleX,
     borderRadius: NOTES_SECTION.addButton.borderRadius * scaleX,
