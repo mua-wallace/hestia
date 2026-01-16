@@ -15,8 +15,8 @@ import ChecklistSection from '../components/roomDetail/ChecklistSection';
 import RoomTicketsSection from '../components/roomDetail/RoomTicketsSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
-import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
-import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal';
+// import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal'; // TODO: Implement Promise Time modal
+// import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal'; // TODO: Implement Refuse Service modal
 import ReassignModal from '../components/roomDetail/ReassignModal';
 import AddNoteModal from '../components/roomDetail/AddNoteModal';
 import AddTaskModal from '../components/roomDetail/AddTaskModal';
@@ -40,8 +40,8 @@ export default function ArrivalDepartureDetailScreen() {
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
-  const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
-  const [showRefuseServiceModal, setShowRefuseServiceModal] = useState(false);
+  // const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false); // TODO: Implement Promise Time modal
+  // const [showRefuseServiceModal, setShowRefuseServiceModal] = useState(false); // TODO: Implement Refuse Service modal
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -176,18 +176,18 @@ export default function ArrivalDepartureDetailScreen() {
 
     // If PromisedTime is selected, show the Promise Time modal
     if (statusOption === 'PromisedTime') {
-      console.log('PromisedTime selected, opening PromiseTimeModal');
+      console.log('PromisedTime selected - modal not yet implemented');
       setShowStatusModal(false);
-      setShowPromiseTimeModal(true);
+      // setShowPromiseTimeModal(true); // TODO: Implement Promise Time modal
       setSelectedStatusText(statusLabel);
       return;
     }
 
     // If RefuseService is selected, show the Refuse Service modal
     if (statusOption === 'RefuseService') {
-      console.log('RefuseService selected, opening RefuseServiceModal');
+      console.log('RefuseService selected - modal not yet implemented');
       setShowStatusModal(false);
-      setShowRefuseServiceModal(true);
+      // setShowRefuseServiceModal(true); // TODO: Implement Refuse Service modal
       setSelectedStatusText(statusLabel);
       return;
     }
@@ -242,35 +242,47 @@ export default function ArrivalDepartureDetailScreen() {
     setStatusButtonPosition(null);
   };
 
-  const handleReturnLaterConfirm = (returnTime: string, period: 'AM' | 'PM') => {
+  const handleReturnLaterConfirm = (returnTime: string, period: 'AM' | 'PM', taskDescription?: string) => {
     // TODO: Save return time to backend/API
     console.log('Return Later confirmed for room:', room.roomNumber, 'at:', returnTime, period);
     
-    // Close modal but keep selected status text to show "Return Later" in header
+    
+    // Save task if provided
+    if (taskDescription && taskDescription.trim()) {
+      const newTask: Task = {
+        id: Date.now().toString(),
+        text: taskDescription,
+        createdAt: new Date().toISOString(),
+      };
+      setTasks(prev => [...prev, newTask]);
+      console.log('Task saved from Return Later modal:', taskDescription);
+    }    // Close modal but keep selected status text to show "Return Later" in header
     setShowReturnLaterModal(false);
     
     // TODO: Update room status or show success message
   };
 
-  const handlePromiseTimeConfirm = (date: Date, time: string, period: 'AM' | 'PM') => {
-    // TODO: Save promise time to backend/API
-    console.log('Promise Time confirmed for room:', room.roomNumber, 'on:', date.toDateString(), 'at:', time, period);
-    
-    // Close modal but keep selected status text to show "Promised Time" in header
-    setShowPromiseTimeModal(false);
-    
-    // TODO: Update room status or show success message
-  };
+  // TODO: Implement Promise Time modal
+  // const handlePromiseTimeConfirm = (date: Date, time: string, period: 'AM' | 'PM') => {
+  //   // TODO: Save promise time to backend/API
+  //   console.log('Promise Time confirmed for room:', room.roomNumber, 'on:', date.toDateString(), 'at:', time, period);
+  //
+  //   // Close modal but keep selected status text to show "Promised Time" in header
+  //   setShowPromiseTimeModal(false);
+  //
+  //   // TODO: Update room status or show success message
+  // };
 
-  const handleRefuseServiceConfirm = (selectedReasons: string[], customReason?: string) => {
-    // TODO: Save refuse service reasons to backend/API
-    console.log('Refuse Service confirmed for room:', room.roomNumber, 'reasons:', selectedReasons, 'custom:', customReason);
-    
-    // Close modal but keep selected status text to show "Refuse Service" in header
-    setShowRefuseServiceModal(false);
-    
-    // TODO: Update room status or show success message
-  };
+  // TODO: Implement Refuse Service modal
+  // const handleRefuseServiceConfirm = (selectedReasons: string[], customReason?: string) => {
+  //   // TODO: Save refuse service reasons to backend/API
+  //   console.log('Refuse Service confirmed for room:', room.roomNumber, 'reasons:', selectedReasons, 'custom:', customReason);
+  //
+  //   // Close modal but keep selected status text to show "Refuse Service" in header
+  //   setShowRefuseServiceModal(false);
+  //
+  //   // TODO: Update room status or show success message
+  // };
 
   const handleTabPress = (tab: DetailTab) => {
     setActiveTab(tab);
@@ -409,11 +421,9 @@ export default function ArrivalDepartureDetailScreen() {
         customStatusText={
           showReturnLaterModal
             ? 'Return Later'
-            : showPromiseTimeModal
-            ? 'Promise Time'
-            : showRefuseServiceModal
-            ? 'Refuse Service'
-            : selectedStatusText
+            : // showPromiseTimeModal ? 'Promise Time' : // TODO: Implement Promise Time modal
+            // showRefuseServiceModal ? 'Refuse Service' : // TODO: Implement Refuse Service modal
+            selectedStatusText
         }
         pausedAt={pausedAt}
       />
@@ -567,7 +577,6 @@ export default function ArrivalDepartureDetailScreen() {
         showTriangle={false}
       />
 
-      {/* Return Later Modal */}
       <ReturnLaterModal
         visible={showReturnLaterModal}
         onClose={() => {
@@ -579,10 +588,10 @@ export default function ArrivalDepartureDetailScreen() {
         roomNumber={room.roomNumber}
         assignedTo={roomDetail.assignedTo}
         onReassignPress={handleReassign}
-      />
+        taskDescription={roomDetail.tasks && roomDetail.tasks.length > 0 ? roomDetail.tasks[0].text : undefined}      />
 
-      {/* Promise Time Modal */}
-      <PromiseTimeModal
+      {/* TODO: Implement Promise Time modal */}
+      {/* <PromiseTimeModal
         visible={showPromiseTimeModal}
         onClose={() => {
           setShowPromiseTimeModal(false);
@@ -593,10 +602,10 @@ export default function ArrivalDepartureDetailScreen() {
         roomNumber={room.roomNumber}
         assignedTo={roomDetail.assignedTo}
         onReassignPress={handleReassign}
-      />
+      /> */}
 
-      {/* Refuse Service Modal */}
-      <RefuseServiceModal
+      {/* TODO: Implement Refuse Service modal */}
+      {/* <RefuseServiceModal
         visible={showRefuseServiceModal}
         onClose={() => {
           setShowRefuseServiceModal(false);
@@ -607,7 +616,7 @@ export default function ArrivalDepartureDetailScreen() {
         roomNumber={room.roomNumber}
         assignedTo={roomDetail.assignedTo}
         onReassignPress={handleReassign}
-      />
+      /> */}
 
       {/* Reassign Modal */}
       <ReassignModal
