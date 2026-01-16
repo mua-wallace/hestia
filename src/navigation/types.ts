@@ -3,13 +3,16 @@
  * Centralized navigation types for type safety
  */
 
+import type { RoomType } from '../types/roomDetail.types';
+
 export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   Main: undefined;
   AllRooms: { showBackButton?: boolean };
   RoomDetails: { roomId: string };
-  ArrivalDepartureDetail: { room: any }; // RoomCardData
+  RoomDetail: { room: any; roomType: RoomType }; // New reusable room detail screen
+  ArrivalDepartureDetail: { room: any }; // RoomCardData - DEPRECATED: Use RoomDetail instead
   ChatDetail: { chatId: string };
   TicketDetail: { ticketId: string };
   CreateTicket: undefined;

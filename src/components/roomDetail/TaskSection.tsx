@@ -9,9 +9,10 @@ interface TaskSectionProps {
   tasks?: Task[];
   onAddPress?: () => void;
   onSeeMorePress?: (task: Task) => void; // Callback to open view task modal
+  cardHeight?: number; // Dynamic card height based on room type (defaults to 206.09)
 }
 
-export default function TaskSection({ tasks = [], onAddPress, onSeeMorePress }: TaskSectionProps) {
+export default function TaskSection({ tasks = [], onAddPress, onSeeMorePress, cardHeight = 206.09 }: TaskSectionProps) {
   const [taskHeights, setTaskHeights] = useState<{ [key: string]: number }>({});
   
   // Handle height measurement from TaskItem
@@ -40,17 +41,16 @@ export default function TaskSection({ tasks = [], onAddPress, onSeeMorePress }: 
   
   // No longer need to calculate positions since tasks are in a ScrollView with relative positioning
 
-  // Fixed container height from Figma
-  // Card has fixed height: 206.09px from Figma
-  // TaskSection container starts at 80px (after divider at 80px), so available height = 206.09 - 80 = 126.09px
-  const CONTAINER_HEIGHT = 206.09 - 80; // Fixed height: 126.09px
+  // Dynamic container height based on card height
+  // TaskSection container starts at 80px (after divider at 80px), so available height = cardHeight - 80
+  const CONTAINER_HEIGHT = cardHeight - 80; // Dynamic height based on card height
   
   // Calculate scrollable area height
   // From Figma: Task title at 777px absolute, card at 674px = 103px from card top (relative to card content)
   // Title and Add button area: title top (103px) + button height (39px) - container start (80px) = 62px
   // Available scroll height = container height - (title/button area + spacing)
   const TITLE_BUTTON_AREA = 103 + 39 - 80 + 8; // 103px from card + 39px button - 80px container start + 8px spacing = 70px
-  const SCROLL_VIEW_HEIGHT = CONTAINER_HEIGHT - TITLE_BUTTON_AREA; // 126.09 - 70 = 56.09px
+  const SCROLL_VIEW_HEIGHT = CONTAINER_HEIGHT - TITLE_BUTTON_AREA; // Dynamic based on card height
 
   return (
     <View style={[styles.container, { height: CONTAINER_HEIGHT * scaleX }]}>
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     top: 81 * scaleX, // Start after divider (80px divider + 1px divider height = 81px from card content top)
     left: 0,
     width: '100%',
-    height: (206.09 - 81) * scaleX, // Fixed height from after divider (81px) to card bottom (206.09px) = 125.09px
+    // height is set dynamically in component based on cardHeight prop
     zIndex: 0, // Below divider and Assigned to section
     overflow: 'hidden', // Clip tasks that extend beyond container
     paddingHorizontal: 16 * scaleX, // Add horizontal padding matching card padding

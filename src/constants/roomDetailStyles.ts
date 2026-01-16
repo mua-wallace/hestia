@@ -477,3 +477,36 @@ export const URGENT_BADGE = {
   backgroundColor: '#f92424', // Red
 } as const;
 
+// Stayover/Turndown Specific Constants
+// These room types have smaller card height (183px vs 206.09px)
+// and display actual lost & found items instead of empty box
+export const STAYOVER_TURNDOWN = {
+  cardHeight: 183, // Smaller card height for Stayover/Turndown
+  lostAndFoundItem: {
+    image: {
+      width: 76,
+      height: 80,
+      borderRadius: 10,
+    },
+    name: {
+      fontSize: 19,
+      fontWeight: 'bold' as const,
+      color: '#5a759d',
+    },
+    description: {
+      fontSize: 11,
+      fontWeight: 'light' as const,
+      color: '#000000',
+    },
+    status: {
+      fontSize: 12,
+      fontWeight: 'bold' as const,
+      color: '#ffffff',
+    },
+    location: {
+      fontSize: 12,
+      fontWeight: 'regular' as const,
+      color: '#000000',
+    },
+  },
+} as const;

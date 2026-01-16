@@ -2,16 +2,27 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
 import { scaleX, LOST_AND_FOUND, CONTENT_AREA } from '../../constants/roomDetailStyles';
+import type { LostAndFoundItem } from '../../types/lostAndFound.types';
+import LostAndFoundItemDisplay from './LostAndFoundItemDisplay';
 
 interface LostAndFoundSectionProps {
+  displayType: 'empty' | 'withItems'; // Type of display based on room type
+  items?: LostAndFoundItem[]; // Items to display (for Stayover/Turndown)
   onAddPhotosPress?: () => void;
   onTitlePress?: () => void;
+  onItemPress?: (item: LostAndFoundItem) => void; // Callback when item is pressed
 }
 
 export default function LostAndFoundSection({
+  displayType,
+  items = [],
   onAddPhotosPress,
   onTitlePress,
+  onItemPress,
 }: LostAndFoundSectionProps) {
+  const showEmptyBox = displayType === 'empty';
+  const showItems = displayType === 'withItems' && items.length > 0;
+
   return (
     <View style={styles.container}>
       {/* Section Title - "Lost & Found" */}
@@ -23,25 +34,40 @@ export default function LostAndFoundSection({
         <Text style={styles.title}>Lost & Found</Text>
       </TouchableOpacity>
 
-      {/* Add Photos Box */}
-      <TouchableOpacity
-        style={styles.box}
-        onPress={onAddPhotosPress}
-        activeOpacity={0.7}
-      >
-        {/* Left: Icon with plus sign overlay */}
-        <View style={styles.iconContainer}>
-          <Image
-            source={require('../../../assets/icons/add-photo-basket.png')}
-            style={styles.icon}
-            resizeMode="contain"
-          />
-          <Text style={styles.plusIcon}>+</Text>
+      {/* Empty Box - For Arrival/Departure/Arrival+Departure */}
+      {showEmptyBox && (
+        <TouchableOpacity
+          style={styles.box}
+          onPress={onAddPhotosPress}
+          activeOpacity={0.7}
+        >
+          {/* Left: Icon with plus sign overlay */}
+          <View style={styles.iconContainer}>
+            <Image
+              source={require('../../../assets/icons/add-photo-basket.png')}
+              style={styles.icon}
+              resizeMode="contain"
+            />
+            <Text style={styles.plusIcon}>+</Text>
+          </View>
+          
+          {/* Right: Text */}
+          <Text style={styles.addPhotosText}>Add Lost & Found</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Items Display - For Stayover/Turndown */}
+      {showItems && (
+        <View style={styles.itemsContainer}>
+          {items.map((item) => (
+            <LostAndFoundItemDisplay
+              key={item.id}
+              item={item}
+              onPress={() => onItemPress?.(item)}
+            />
+          ))}
         </View>
-        
-        {/* Right: Text */}
-        <Text style={styles.addPhotosText}>Add Lost & Found</Text>
-      </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -113,6 +139,14 @@ const styles = StyleSheet.create({
     color: LOST_AND_FOUND.addPhotosText.color,
     // Text on the right side of the flex container
     textAlign: 'right',
+  },
+  itemsContainer: {
+    position: 'absolute',
+    left: LOST_AND_FOUND.box.left * scaleX,
+    top: (LOST_AND_FOUND.box.top - LOST_AND_FOUND.title.top) * scaleX, // Same position as box
+    width: LOST_AND_FOUND.box.width * scaleX,
+    flexDirection: 'column',
+    gap: 12 * scaleX, // Space between items
   },
 });
 

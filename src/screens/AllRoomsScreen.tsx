@@ -169,13 +169,28 @@ export default function AllRoomsScreen() {
   };
 
   const handleRoomPress = (room: RoomCardData) => {
-    // Navigate to detail screen based on room category
-    if (room.category === 'Arrival/Departure') {
-      navigation.navigate('ArrivalDepartureDetail', { room } as any);
-    } else {
-      // TODO: Navigate to other room detail screens (Arrival, Departure, Stayover, Turndown)
-      console.log('Room pressed:', room.roomNumber, 'Category:', room.category);
-    }
+    // Map room category to RoomType
+    const mapCategoryToRoomType = (category: string) => {
+      switch (category) {
+        case 'Arrival':
+          return 'Arrival';
+        case 'Departure':
+          return 'Departure';
+        case 'Arrival/Departure':
+          return 'ArrivalDeparture';
+        case 'Stayover':
+          return 'Stayover';
+        case 'Turndown':
+          return 'Turndown';
+        default:
+          return 'ArrivalDeparture'; // Default fallback
+      }
+    };
+
+    const roomType = mapCategoryToRoomType(room.category);
+    
+    // Navigate to the new reusable RoomDetail screen
+    navigation.navigate('RoomDetail', { room, roomType } as any);
   };
 
   const handleStatusPress = (room: RoomCardData) => {
