@@ -15,7 +15,7 @@ import ChecklistSection from '../components/roomDetail/ChecklistSection';
 import RoomTicketsSection from '../components/roomDetail/RoomTicketsSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
-// import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal'; // TODO: Implement Promise Time modal
+import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
 // import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal'; // TODO: Implement Refuse Service modal
 import ReassignModal from '../components/roomDetail/ReassignModal';
 import AddNoteModal from '../components/roomDetail/AddNoteModal';
@@ -40,7 +40,7 @@ export default function ArrivalDepartureDetailScreen() {
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
-  // const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false); // TODO: Implement Promise Time modal
+  const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
   // const [showRefuseServiceModal, setShowRefuseServiceModal] = useState(false); // TODO: Implement Refuse Service modal
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
@@ -176,9 +176,8 @@ export default function ArrivalDepartureDetailScreen() {
 
     // If PromisedTime is selected, show the Promise Time modal
     if (statusOption === 'PromisedTime') {
-      console.log('PromisedTime selected - modal not yet implemented');
       setShowStatusModal(false);
-      // setShowPromiseTimeModal(true); // TODO: Implement Promise Time modal
+      setShowPromiseTimeModal(true);
       setSelectedStatusText(statusLabel);
       return;
     }
@@ -263,15 +262,13 @@ export default function ArrivalDepartureDetailScreen() {
   };
 
   // TODO: Implement Promise Time modal
-  // const handlePromiseTimeConfirm = (date: Date, time: string, period: 'AM' | 'PM') => {
-  //   // TODO: Save promise time to backend/API
-  //   console.log('Promise Time confirmed for room:', room.roomNumber, 'on:', date.toDateString(), 'at:', time, period);
-  //
-  //   // Close modal but keep selected status text to show "Promised Time" in header
-  //   setShowPromiseTimeModal(false);
-  //
-  //   // TODO: Update room status or show success message
-  // };
+  const handlePromiseTimeConfirm = (promiseTime: string, period: 'AM' | 'PM') => {
+    // TODO: Save promise time to backend/API
+    console.log('Promise Time confirmed for room:', room.roomNumber, 'at:', promiseTime, period);
+    // Close modal but keep selected status text to show "Promised Time" in header
+    setShowPromiseTimeModal(false);
+    // TODO: Update room status or show success message
+  };
 
   // TODO: Implement Refuse Service modal
   // const handleRefuseServiceConfirm = (selectedReasons: string[], customReason?: string) => {
@@ -421,7 +418,7 @@ export default function ArrivalDepartureDetailScreen() {
         customStatusText={
           showReturnLaterModal
             ? 'Return Later'
-            : // showPromiseTimeModal ? 'Promise Time' : // TODO: Implement Promise Time modal
+            : showPromiseTimeModal ? 'Promise Time' :
             // showRefuseServiceModal ? 'Refuse Service' : // TODO: Implement Refuse Service modal
             selectedStatusText
         }
@@ -590,8 +587,7 @@ export default function ArrivalDepartureDetailScreen() {
         onReassignPress={handleReassign}
         taskDescription={roomDetail.tasks && roomDetail.tasks.length > 0 ? roomDetail.tasks[0].text : undefined}      />
 
-      {/* TODO: Implement Promise Time modal */}
-      {/* <PromiseTimeModal
+      <PromiseTimeModal
         visible={showPromiseTimeModal}
         onClose={() => {
           setShowPromiseTimeModal(false);
@@ -600,9 +596,7 @@ export default function ArrivalDepartureDetailScreen() {
         }}
         onConfirm={handlePromiseTimeConfirm}
         roomNumber={room.roomNumber}
-        assignedTo={roomDetail.assignedTo}
-        onReassignPress={handleReassign}
-      /> */}
+      />
 
       {/* TODO: Implement Refuse Service modal */}
       {/* <RefuseServiceModal
