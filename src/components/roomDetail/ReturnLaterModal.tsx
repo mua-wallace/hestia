@@ -156,9 +156,44 @@ export default function ReturnLaterModal({
     return days[date.getDay()];
   };
   
+  // Check if a date/time combination is in the past
+  const isDateTimeInPast = (date: Date, hour: number, minute: number, period: 'AM' | 'PM') => {
+    const now = new Date();
+    const checkDate = new Date(date);
+    
+    // Convert 12-hour to 24-hour format
+    let hour24 = period === 'PM' ? (hour === 12 ? 12 : hour + 12) : (hour === 12 ? 0 : hour);
+    checkDate.setHours(hour24, minute, 0, 0);
+    
+    return checkDate.getTime() < now.getTime();
+  };
+
+  // Check if we're at the current date
+  const isCurrentDate = () => {
+    const now = new Date();
+    const selected = new Date(selectedDate);
+    return now.toDateString() === selected.toDateString();
+  };
+
+  // Check if selected date/time is in the past
+  const isSelectedDateTimeInPast = () => {
+    return isDateTimeInPast(selectedDate, selectedHour, selectedMinute, selectedPeriod);
+  };
+
   const changeDay = (direction: number) => {
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() + direction);
+    
+    // Don't allow going to past dates
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const checkDate = new Date(newDate);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    if (checkDate.getTime() < now.getTime()) {
+      return; // Don't allow past dates
+    }
+    
     setSelectedDate(newDate);
     
     // Scroll to center the selected date (always at index 6 in the 14-day range)
@@ -181,8 +216,15 @@ export default function ReturnLaterModal({
     const date = new Date(selectedDate);
     date.setDate(selectedDate.getDate() + index - 6);
     
-    // Only update if the date actually changed
-    if (date.toDateString() !== selectedDate.toDateString()) {
+    // Check if date is in the past
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    const isPast = checkDate.getTime() < now.getTime();
+    
+    // Only update if the date actually changed and is not in the past
+    if (date.toDateString() !== selectedDate.toDateString() && !isPast) {
       setSelectedDate(date);
     }
   };
@@ -193,9 +235,28 @@ export default function ReturnLaterModal({
     // Ensure we're at index 6 (center) and update selectedDate
     const date = new Date(selectedDate);
     date.setDate(selectedDate.getDate() + index - 6);
-    setSelectedDate(date);
-    // Scroll to center to ensure selected date is always between dividers
-    dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: true });
+    
+    // Check if date is in the past
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    const isPast = checkDate.getTime() < now.getTime();
+    
+    if (!isPast) {
+      setSelectedDate(date);
+      // Scroll to center to ensure selected date is always between dividers
+      dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: true });
+    } else {
+      // If scrolled to past date, scroll back to current date
+      const currentDate = new Date();
+      const selected = new Date(selectedDate);
+      const daysDiff = Math.floor((currentDate.getTime() - selected.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff !== 0) {
+        setSelectedDate(currentDate);
+        dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: true });
+      }
+    }
   };
 
   const handleHourScroll = (event: any) => {
@@ -212,8 +273,32 @@ export default function ReturnLaterModal({
     const index = Math.round(offsetY / ITEM_HEIGHT);
     const hour = index + 1;
     if (hour >= 1 && hour <= 12) {
-      setSelectedHour(hour);
-      hourScrollRef.current?.scrollTo({ y: (hour - 1) * ITEM_HEIGHT, animated: true });
+      // Check if this hour is in the past (only when on current date)
+      let isPast = false;
+      if (isCurrentDate()) {
+        const now = new Date();
+        const currentHour24 = now.getHours();
+        const currentHour12 = currentHour24 === 0 ? 12 : currentHour24 > 12 ? currentHour24 - 12 : currentHour24;
+        const currentPeriod = currentHour24 >= 12 ? 'PM' : 'AM';
+        
+        if (selectedPeriod === currentPeriod) {
+          isPast = hour < currentHour12;
+        } else if (selectedPeriod === 'AM' && currentPeriod === 'PM') {
+          isPast = true;
+        }
+      }
+      
+      if (!isPast) {
+        setSelectedHour(hour);
+        hourScrollRef.current?.scrollTo({ y: (hour - 1) * ITEM_HEIGHT, animated: true });
+      } else {
+        // Scroll back to current hour
+        const now = new Date();
+        const currentHour24 = now.getHours();
+        const currentHour12 = currentHour24 === 0 ? 12 : currentHour24 > 12 ? currentHour24 - 12 : currentHour24;
+        setSelectedHour(currentHour12);
+        hourScrollRef.current?.scrollTo({ y: (currentHour12 - 1) * ITEM_HEIGHT, animated: true });
+      }
     }
   };
 
@@ -229,8 +314,34 @@ export default function ReturnLaterModal({
     const offsetY = event.nativeEvent.contentOffset.y;
     const minute = Math.round(offsetY / ITEM_HEIGHT);
     if (minute >= 0 && minute <= 59) {
-      setSelectedMinute(minute);
-      minuteScrollRef.current?.scrollTo({ y: minute * ITEM_HEIGHT, animated: true });
+      // Check if this minute is in the past (only when on current date and current hour)
+      let isPast = false;
+      if (isCurrentDate()) {
+        const now = new Date();
+        const currentHour24 = now.getHours();
+        const currentHour12 = currentHour24 === 0 ? 12 : currentHour24 > 12 ? currentHour24 - 12 : currentHour24;
+        const currentPeriod = currentHour24 >= 12 ? 'PM' : 'AM';
+        const currentMinute = now.getMinutes();
+        
+        if (selectedHour === currentHour12 && selectedPeriod === currentPeriod) {
+          isPast = minute < currentMinute;
+        } else if (selectedPeriod === 'AM' && currentPeriod === 'PM') {
+          isPast = true;
+        } else if (selectedPeriod === currentPeriod && selectedHour < currentHour12) {
+          isPast = true;
+        }
+      }
+      
+      if (!isPast) {
+        setSelectedMinute(minute);
+        minuteScrollRef.current?.scrollTo({ y: minute * ITEM_HEIGHT, animated: true });
+      } else {
+        // Scroll back to current minute
+        const now = new Date();
+        const currentMinute = now.getMinutes();
+        setSelectedMinute(currentMinute);
+        minuteScrollRef.current?.scrollTo({ y: currentMinute * ITEM_HEIGHT, animated: true });
+      }
     }
   };
 
@@ -244,8 +355,28 @@ export default function ReturnLaterModal({
     const offsetY = event.nativeEvent.contentOffset.y;
     const index = Math.round(offsetY / ITEM_HEIGHT);
     const period = index === 0 ? 'AM' : 'PM';
-    setSelectedPeriod(period);
-    periodScrollRef.current?.scrollTo({ y: index * ITEM_HEIGHT, animated: true });
+    
+    // Check if AM is in the past (only when on current date and we're in PM)
+    let isPast = false;
+    if (isCurrentDate() && period === 'AM') {
+      const now = new Date();
+      const currentPeriod = now.getHours() >= 12 ? 'PM' : 'AM';
+      if (currentPeriod === 'PM') {
+        isPast = true;
+      }
+    }
+    
+    if (!isPast) {
+      setSelectedPeriod(period);
+      periodScrollRef.current?.scrollTo({ y: index * ITEM_HEIGHT, animated: true });
+    } else {
+      // Scroll back to current period
+      const now = new Date();
+      const currentPeriod = now.getHours() >= 12 ? 'PM' : 'AM';
+      setSelectedPeriod(currentPeriod);
+      const periodIndex = currentPeriod === 'AM' ? 0 : 1;
+      periodScrollRef.current?.scrollTo({ y: periodIndex * ITEM_HEIGHT, animated: true });
+    }
   };
 
   const handleDone = () => {
@@ -288,11 +419,6 @@ export default function ReturnLaterModal({
               </Text>
             )}
 
-            {/* Instruction */}
-            <Text style={styles.instruction}>
-              Add time slot for when the Guest wants you to return
-            </Text>
-
             {/* Divider */}
             <View style={styles.divider} />
 
@@ -316,11 +442,24 @@ export default function ReturnLaterModal({
               {/* Navigation Header */}
               <View style={styles.pickerHeader}>
                 <View style={styles.navArrows}>
-                  <TouchableOpacity onPress={() => changeDay(-1)} style={styles.navButton}>
-                    <Text style={styles.navArrow}>‹</Text>
+                  <TouchableOpacity 
+                    onPress={() => changeDay(-1)} 
+                    style={styles.navButton}
+                    disabled={isCurrentDate()}
+                  >
+                    <Text style={[
+                      styles.navArrow,
+                      isCurrentDate() && styles.navArrowDisabled
+                    ]}>‹</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => changeDay(1)} style={styles.navButton}>
-                    <Text style={styles.navArrow}>›</Text>
+                  <TouchableOpacity 
+                    onPress={() => changeDay(1)} 
+                    style={styles.navButton}
+                  >
+                    <Text style={[
+                      styles.navArrow,
+                      styles.navArrowActive
+                    ]}>›</Text>
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity onPress={handleDone}>
@@ -350,6 +489,14 @@ export default function ReturnLaterModal({
                       const date = new Date(selectedDate);
                       date.setDate(selectedDate.getDate() + i - 6); // Show 6 days before and 7 days after selected date
                       const isSelected = date.toDateString() === selectedDate.toDateString();
+                      
+                      // Check if date is in the past
+                      const now = new Date();
+                      now.setHours(0, 0, 0, 0);
+                      const checkDate = new Date(date);
+                      checkDate.setHours(0, 0, 0, 0);
+                      const isPast = checkDate.getTime() < now.getTime();
+                      
                       const dayName = getDayName(date);
                       const monthName = date.toLocaleDateString('en-US', { month: 'short' });
                       const dayNum = date.getDate();
@@ -357,15 +504,21 @@ export default function ReturnLaterModal({
                       return (
                         <TouchableOpacity
                           key={date.toDateString()}
-                          onPress={() => setSelectedDate(date)}
+                          onPress={() => {
+                            if (!isPast) {
+                              setSelectedDate(date);
+                            }
+                          }}
                           style={styles.wheelItem}
+                          disabled={isPast}
                         >
                           <Text 
                             numberOfLines={1}
                             ellipsizeMode="clip"
                             style={[
                               styles.wheelDateText,
-                              isSelected && styles.wheelSelectedDateText
+                              isSelected && styles.wheelSelectedDateText,
+                              isPast && styles.wheelDateTextDisabled
                             ]}
                           >
                             {dayName} {monthName} {dayNum}
@@ -391,15 +544,38 @@ export default function ReturnLaterModal({
                     {[...Array(12)].map((_, i) => {
                       const hour = i + 1;
                       const isSelected = selectedHour === hour;
+                      
+                      // Check if this hour is in the past (only when on current date)
+                      let isPast = false;
+                      if (isCurrentDate()) {
+                        const now = new Date();
+                        const currentHour24 = now.getHours();
+                        const currentHour12 = currentHour24 === 0 ? 12 : currentHour24 > 12 ? currentHour24 - 12 : currentHour24;
+                        const currentPeriod = currentHour24 >= 12 ? 'PM' : 'AM';
+                        
+                        // Check if this hour is before current hour (same period) or in previous period
+                        if (selectedPeriod === currentPeriod) {
+                          isPast = hour < currentHour12;
+                        } else if (selectedPeriod === 'AM' && currentPeriod === 'PM') {
+                          isPast = true; // All AM hours are in the past if we're in PM
+                        }
+                      }
+                      
                       return (
                         <TouchableOpacity
                           key={`hour-${hour}`}
-                          onPress={() => setSelectedHour(hour)}
+                          onPress={() => {
+                            if (!isPast) {
+                              setSelectedHour(hour);
+                            }
+                          }}
                           style={styles.wheelItem}
+                          disabled={isPast}
                         >
                           <Text style={[
                             styles.wheelNumberText,
-                            isSelected && styles.wheelSelectedNumberText
+                            isSelected && styles.wheelSelectedNumberText,
+                            isPast && styles.wheelNumberTextDisabled
                           ]}>
                             {hour}
                           </Text>
@@ -423,15 +599,41 @@ export default function ReturnLaterModal({
                   >
                     {[...Array(60)].map((_, i) => {
                       const isSelected = selectedMinute === i;
+                      
+                      // Check if this minute is in the past (only when on current date and current hour)
+                      let isPast = false;
+                      if (isCurrentDate()) {
+                        const now = new Date();
+                        const currentHour24 = now.getHours();
+                        const currentHour12 = currentHour24 === 0 ? 12 : currentHour24 > 12 ? currentHour24 - 12 : currentHour24;
+                        const currentPeriod = currentHour24 >= 12 ? 'PM' : 'AM';
+                        const currentMinute = now.getMinutes();
+                        
+                        // Check if we're in the same hour and period
+                        if (selectedHour === currentHour12 && selectedPeriod === currentPeriod) {
+                          isPast = i < currentMinute;
+                        } else if (selectedPeriod === 'AM' && currentPeriod === 'PM') {
+                          isPast = true; // All AM minutes are in the past if we're in PM
+                        } else if (selectedPeriod === currentPeriod && selectedHour < currentHour12) {
+                          isPast = true; // Past hour in same period
+                        }
+                      }
+                      
                       return (
                         <TouchableOpacity
                           key={`minute-${i}`}
-                          onPress={() => setSelectedMinute(i)}
+                          onPress={() => {
+                            if (!isPast) {
+                              setSelectedMinute(i);
+                            }
+                          }}
                           style={styles.wheelItem}
+                          disabled={isPast}
                         >
                           <Text style={[
                             styles.wheelNumberText,
-                            isSelected && styles.wheelSelectedNumberText
+                            isSelected && styles.wheelSelectedNumberText,
+                            isPast && styles.wheelNumberTextDisabled
                           ]}>
                             {i.toString().padStart(2, '0')}
                           </Text>
@@ -455,15 +657,32 @@ export default function ReturnLaterModal({
                   >
                     {['AM', 'PM'].map((period) => {
                       const isSelected = selectedPeriod === period;
+                      
+                      // Check if AM is in the past (only when on current date and we're in PM)
+                      let isPast = false;
+                      if (isCurrentDate() && period === 'AM') {
+                        const now = new Date();
+                        const currentPeriod = now.getHours() >= 12 ? 'PM' : 'AM';
+                        if (currentPeriod === 'PM') {
+                          isPast = true; // AM is in the past if we're in PM
+                        }
+                      }
+                      
                       return (
                         <TouchableOpacity
                           key={period}
-                          onPress={() => setSelectedPeriod(period as 'AM' | 'PM')}
+                          onPress={() => {
+                            if (!isPast) {
+                              setSelectedPeriod(period as 'AM' | 'PM');
+                            }
+                          }}
                           style={styles.wheelItem}
+                          disabled={isPast}
                         >
                           <Text style={[
                             styles.wheelNumberText,
-                            isSelected && styles.wheelSelectedNumberText
+                            isSelected && styles.wheelSelectedNumberText,
+                            isPast && styles.wheelNumberTextDisabled
                           ]}>
                             {period}
                           </Text>
@@ -667,6 +886,15 @@ const styles = StyleSheet.create({
     lineHeight: 36 * scaleX,
   },
   
+  navArrowActive: {
+    color: '#007AFF', // iOS blue - active color
+  },
+  
+  navArrowDisabled: {
+    color: '#E5E5EA', // Very light gray - disabled
+    opacity: 0.5,
+  },
+  
   doneButton: {
     fontSize: 17 * scaleX,
     color: '#007AFF', // iOS blue matching Figma
@@ -737,6 +965,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     textAlignVertical: 'center',
+  },
+  
+  wheelDateTextDisabled: {
+    color: '#E5E5EA',
+    opacity: 0.5,
   },
   
   // Number text styles (hour, minute, AM/PM - matching Figma)
