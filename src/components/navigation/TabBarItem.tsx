@@ -92,18 +92,19 @@ const styles = StyleSheet.create({
   },
   badgeContainer: {
     position: 'absolute',
-    // Position badge at top-right of icon, overlapping the icon edge
+    // Position badge at top-right of icon, overlapping the icon edge (as per Figma)
     // Chat icon is 56x56, centered in 70x68 container
     // Icon top edge: (68-56)/2 = 6px from container top
     // Icon right edge: (70-56)/2 = 7px from container right
     // Badge size: 20.455px (radius ~10.2275px)
-    // Position badge center at icon's top-right corner, slightly overlapping
-    top: Math.round((6 - 10.2275) * normalizedScaleX), // Icon top - half badge height = -4.2275px
-    right: Math.round((7 - 10.2275) * normalizedScaleX), // Icon right - half badge width = -3.2275px
+    // Position badge center to overlap icon's top-right corner
+    // Position badge center at icon's top-right area (8-9px) so badge clearly overlaps icon
+    top: Math.round(8 * normalizedScaleX), // Badge center 8px from top (2px inside icon top edge at 6px)
+    right: Math.round(8 * normalizedScaleX), // Badge center 8px from right (1px inside icon right edge at 7px)
     zIndex: 10,
   },
   badge: {
-    backgroundColor: '#f92424',
+    backgroundColor: '#FF46A3',
     borderRadius: Math.round(10.2275 * normalizedScaleX),
     minWidth: Math.round(20.455 * normalizedScaleX),
     height: Math.round(20.455 * normalizedScaleX),
