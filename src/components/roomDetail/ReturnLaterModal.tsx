@@ -65,8 +65,8 @@ export default function ReturnLaterModal({
   useEffect(() => {
     if (visible) {
       setTimeout(() => {
-        // Scroll date to index 2 (today, since we show from -2 to +11)
-        dateScrollRef.current?.scrollTo({ y: 2 * ITEM_HEIGHT, animated: false });
+        // Scroll date to index 6 (center of the 14-day range)
+        dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: false });
         
         // Scroll hour to selected hour (index is hour - 1)
         hourScrollRef.current?.scrollTo({ y: (selectedHour - 1) * ITEM_HEIGHT, animated: false });
@@ -84,8 +84,7 @@ export default function ReturnLaterModal({
   const handleSuggestionPress = (suggestion: string) => {
     setSelectedSuggestion(suggestion);
     
-    // Calculate new time based on suggestion
-    const now = new Date();
+    // Calculate new time based on suggestion from CURRENT picker state
     let minutesToAdd = 0;
     
     if (suggestion === '1 Hour') {
@@ -94,19 +93,35 @@ export default function ReturnLaterModal({
       minutesToAdd = parseInt(suggestion.replace(' mins', ''));
     }
     
-    const newTime = new Date(now.getTime() + minutesToAdd * 60 * 1000);
-    const hour24 = newTime.getHours();
-    const minute = newTime.getMinutes();
-    const period: ShiftType = hour24 >= 12 ? 'PM' : 'AM';
-    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+    // Create date from current picker selections
+    const currentDate = new Date(selectedDate);
+    let hour24 = selectedPeriod === 'PM' ? (selectedHour === 12 ? 12 : selectedHour + 12) : (selectedHour === 12 ? 0 : selectedHour);
+    currentDate.setHours(hour24, selectedMinute, 0, 0);
     
-    // Update date picker with calculated time
+    // Add the minutes from suggestion
+    const newTime = new Date(currentDate.getTime() + minutesToAdd * 60 * 1000);
+    const newHour24 = newTime.getHours();
+    const newMinute = newTime.getMinutes();
+    const newPeriod: ShiftType = newHour24 >= 12 ? 'PM' : 'AM';
+    const newHour12 = newHour24 === 0 ? 12 : newHour24 > 12 ? newHour24 - 12 : newHour24;
+    
+    // Update state
     setSelectedDate(newTime);
-    setSelectedHour(hour12);
-    setSelectedMinute(minute);
-    setSelectedPeriod(period);
+    setSelectedHour(newHour12);
+    setSelectedMinute(newMinute);
+    setSelectedPeriod(newPeriod);
     
-    const timeString = `${hour12.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} ${period}`;
+    // Scroll to the new positions
+    setTimeout(() => {
+      // Scroll date to center (index 6 in the 14-day range)
+      dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: true });
+      hourScrollRef.current?.scrollTo({ y: (newHour12 - 1) * ITEM_HEIGHT, animated: true });
+      minuteScrollRef.current?.scrollTo({ y: newMinute * ITEM_HEIGHT, animated: true });
+      const periodIndex = newPeriod === 'AM' ? 0 : 1;
+      periodScrollRef.current?.scrollTo({ y: periodIndex * ITEM_HEIGHT, animated: true });
+    }, 100);
+    
+    const timeString = `${newHour12.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')} ${newPeriod}`;
     setReturnTime(timeString);
   };
   
@@ -141,16 +156,96 @@ export default function ReturnLaterModal({
     return days[date.getDay()];
   };
   
-  const changeMonth = (direction: number) => {
+  const changeDay = (direction: number) => {
     const newDate = new Date(selectedDate);
-    newDate.setMonth(newDate.getMonth() + direction);
+    newDate.setDate(newDate.getDate() + direction);
     setSelectedDate(newDate);
+    
+    // Scroll to center the selected date (always at index 6 in the 14-day range)
+    setTimeout(() => {
+      dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: true });
+    }, 100);
   };
   
   const selectDay = (day: number) => {
     const newDate = new Date(selectedDate);
     newDate.setDate(day);
     setSelectedDate(newDate);
+  };
+
+  // Handle scroll events to update selected values
+  const handleDateScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    // Index 6 is the center (selected date), calculate the actual date relative to current selectedDate
+    const date = new Date(selectedDate);
+    date.setDate(selectedDate.getDate() + index - 6);
+    
+    // Only update if the date actually changed
+    if (date.toDateString() !== selectedDate.toDateString()) {
+      setSelectedDate(date);
+    }
+  };
+  
+  const handleDateScrollEnd = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    // Ensure we're at index 6 (center) and update selectedDate
+    const date = new Date(selectedDate);
+    date.setDate(selectedDate.getDate() + index - 6);
+    setSelectedDate(date);
+    // Scroll to center to ensure selected date is always between dividers
+    dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: true });
+  };
+
+  const handleHourScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const hour = index + 1;
+    if (hour >= 1 && hour <= 12) {
+      setSelectedHour(hour);
+    }
+  };
+
+  const handleHourScrollEnd = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const hour = index + 1;
+    if (hour >= 1 && hour <= 12) {
+      setSelectedHour(hour);
+      hourScrollRef.current?.scrollTo({ y: (hour - 1) * ITEM_HEIGHT, animated: true });
+    }
+  };
+
+  const handleMinuteScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const minute = Math.round(offsetY / ITEM_HEIGHT);
+    if (minute >= 0 && minute <= 59) {
+      setSelectedMinute(minute);
+    }
+  };
+
+  const handleMinuteScrollEnd = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const minute = Math.round(offsetY / ITEM_HEIGHT);
+    if (minute >= 0 && minute <= 59) {
+      setSelectedMinute(minute);
+      minuteScrollRef.current?.scrollTo({ y: minute * ITEM_HEIGHT, animated: true });
+    }
+  };
+
+  const handlePeriodScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    setSelectedPeriod(index === 0 ? 'AM' : 'PM');
+  };
+
+  const handlePeriodScrollEnd = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const period = index === 0 ? 'AM' : 'PM';
+    setSelectedPeriod(period);
+    periodScrollRef.current?.scrollTo({ y: index * ITEM_HEIGHT, animated: true });
   };
 
   const handleDone = () => {
@@ -221,10 +316,10 @@ export default function ReturnLaterModal({
               {/* Navigation Header */}
               <View style={styles.pickerHeader}>
                 <View style={styles.navArrows}>
-                  <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.navButton}>
+                  <TouchableOpacity onPress={() => changeDay(-1)} style={styles.navButton}>
                     <Text style={styles.navArrow}>‹</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => changeMonth(1)} style={styles.navButton}>
+                  <TouchableOpacity onPress={() => changeDay(1)} style={styles.navButton}>
                     <Text style={styles.navArrow}>›</Text>
                   </TouchableOpacity>
                 </View>
@@ -247,10 +342,13 @@ export default function ReturnLaterModal({
                     contentContainerStyle={styles.wheelScrollContent}
                     snapToInterval={50 * scaleX}
                     decelerationRate="fast"
+                    onScroll={handleDateScroll}
+                    onMomentumScrollEnd={handleDateScrollEnd}
+                    scrollEventThrottle={16}
                   >
                     {[...Array(14)].map((_, i) => {
-                      const date = new Date();
-                      date.setDate(date.getDate() + i - 2);
+                      const date = new Date(selectedDate);
+                      date.setDate(selectedDate.getDate() + i - 6); // Show 6 days before and 7 days after selected date
                       const isSelected = date.toDateString() === selectedDate.toDateString();
                       const dayName = getDayName(date);
                       const monthName = date.toLocaleDateString('en-US', { month: 'short' });
@@ -258,7 +356,7 @@ export default function ReturnLaterModal({
                       
                       return (
                         <TouchableOpacity
-                          key={`date-${i}`}
+                          key={date.toDateString()}
                           onPress={() => setSelectedDate(date)}
                           style={styles.wheelItem}
                         >
@@ -286,6 +384,9 @@ export default function ReturnLaterModal({
                     contentContainerStyle={styles.wheelScrollContent}
                     snapToInterval={50 * scaleX}
                     decelerationRate="fast"
+                    onScroll={handleHourScroll}
+                    onMomentumScrollEnd={handleHourScrollEnd}
+                    scrollEventThrottle={16}
                   >
                     {[...Array(12)].map((_, i) => {
                       const hour = i + 1;
@@ -316,6 +417,9 @@ export default function ReturnLaterModal({
                     contentContainerStyle={styles.wheelScrollContent}
                     snapToInterval={50 * scaleX}
                     decelerationRate="fast"
+                    onScroll={handleMinuteScroll}
+                    onMomentumScrollEnd={handleMinuteScrollEnd}
+                    scrollEventThrottle={16}
                   >
                     {[...Array(60)].map((_, i) => {
                       const isSelected = selectedMinute === i;
@@ -345,6 +449,9 @@ export default function ReturnLaterModal({
                     contentContainerStyle={styles.wheelScrollContent}
                     snapToInterval={50 * scaleX}
                     decelerationRate="fast"
+                    onScroll={handlePeriodScroll}
+                    onMomentumScrollEnd={handlePeriodScrollEnd}
+                    scrollEventThrottle={16}
                   >
                     {['AM', 'PM'].map((period) => {
                       const isSelected = selectedPeriod === period;
@@ -521,7 +628,7 @@ const styles = StyleSheet.create({
   // Date & Time Picker Container
   dateTimePickerContainer: {
     marginTop: 32 * scaleX,
-    marginHorizontal: 34 * scaleX,
+    marginHorizontal: 35 * scaleX, // Same as confirm button
     height: 302 * scaleX,
     backgroundColor: '#FFFFFF',
   },
@@ -533,7 +640,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16 * scaleX,
     paddingTop: 12 * scaleX,
-    paddingBottom: 8 * scaleX,
+    paddingBottom: 12 * scaleX,
+    backgroundColor: '#F2F2F7', // Light gray background for entire header
+    borderRadius: 10 * scaleX,
+    marginBottom: 8 * scaleX,
   },
   
   navArrows: {
@@ -607,7 +717,7 @@ const styles = StyleSheet.create({
     height: 50 * scaleX, // Exact height between dividers (150 - 100 = 50px)
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4 * scaleX,
+    paddingHorizontal: 2 * scaleX,
   },
   
   // Date text styles (matching Figma)
@@ -621,7 +731,7 @@ const styles = StyleSheet.create({
   },
   
   wheelSelectedDateText: {
-    fontSize: 20 * scaleX,
+    fontSize: 16 * scaleX,
     color: '#000000',
     fontFamily: 'Helvetica',
     fontWeight: '700',
@@ -640,7 +750,7 @@ const styles = StyleSheet.create({
   },
   
   wheelSelectedNumberText: {
-    fontSize: 28 * scaleX,
+    fontSize: 20 * scaleX,
     color: '#000000',
     fontFamily: 'Helvetica',
     fontWeight: '700',
@@ -678,7 +788,7 @@ const styles = StyleSheet.create({
   
   // Card Container for Assigned to and Task
   assignedTaskCard: {
-    marginHorizontal: 25 * scaleX, // (440 - 390) / 2 = 25px on each side
+    marginHorizontal: 35 * scaleX, // Same as confirm button
     minHeight: 181 * scaleX, // Min height from Figma, can grow
     backgroundColor: '#f9fafc',
     borderRadius: 9 * scaleX,
