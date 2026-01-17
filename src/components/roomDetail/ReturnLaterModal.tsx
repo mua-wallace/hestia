@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Dimensions } from 'react-native';
+import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, LayoutChangeEvent } from 'react-native';
 import { typography } from '../../theme';
 import { ShiftType } from '../../types/home.types';
 import TimeSuggestionButton from './TimeSuggestionButton';
 import AssignedToSection from './AssignedToSection';
+import ViewTaskModal from './ViewTaskModal';
+import type { Task } from '../../types/roomDetail.types';
 
 const TIME_SUGGESTIONS = ['10 mins', '20 mins', '30 mins', '1 Hour'];
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const scaleX = SCREEN_WIDTH / 430;
+
+// Constants for "See More" functionality (reused from TaskItem)
+const MAX_LINES = 2; // Maximum lines to show before truncating
+const LINE_HEIGHT = 18; // Line height in unscaled pixels
 
 interface ReturnLaterModalProps {
   visible: boolean;
@@ -37,8 +43,14 @@ export default function ReturnLaterModal({
 }: ReturnLaterModalProps) {
   const [selectedSuggestion, setSelectedSuggestion] = useState<string | null>(null);
   const [returnTime, setReturnTime] = useState<string>('');
-  const [taskDescription, setTaskDescription] = useState(initialTaskDescription || '');
-  const [isEditingTask, setIsEditingTask] = useState(false);
+  const dummyTaskText = 'Deep clean bathroom (heavy bath use). Change all linens + pillow protectors. Vacuum under bed. Restock all amenities. Light at entrance flickering report to maintenance.';
+  const [taskDescription] = useState(initialTaskDescription || dummyTaskText);
+  
+  // "See More" functionality state
+  const [showSeeMore, setShowSeeMore] = useState(false);
+  const [textHeight, setTextHeight] = useState<number>(0);
+  const [showViewTaskModal, setShowViewTaskModal] = useState(false);
+  const fullTextRef = useRef<Text>(null);
   
   // Date and Time picker state - Initialize with current date/time
   const [selectedDate, setSelectedDate] = useState(() => new Date());
@@ -60,6 +72,49 @@ export default function ReturnLaterModal({
   const periodScrollRef = useRef<ScrollView>(null);
 
   const ITEM_HEIGHT = 50 * scaleX;
+
+  // Calculate if text needs truncation (rough estimate for initial render)
+  const charsPerLine = 50;
+  const maxChars = MAX_LINES * charsPerLine;
+  const estimatedNeedsTruncation = dummyTaskText.length > maxChars;
+
+  // Measure full text height to determine if truncation is needed
+  const handleFullTextLayout = (event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    setTextHeight(height);
+    const maxHeight = MAX_LINES * LINE_HEIGHT * scaleX;
+    setShowSeeMore(height > maxHeight);
+  };
+
+  // Initialize showSeeMore based on estimated length
+  useEffect(() => {
+    if (textHeight === 0) {
+      setShowSeeMore(estimatedNeedsTruncation);
+    }
+  }, [dummyTaskText, textHeight, estimatedNeedsTruncation]);
+
+  // Get truncated text for display
+  const getDisplayText = () => {
+    if (!showSeeMore) {
+      return dummyTaskText;
+    }
+    // Truncate to approximately 2 lines worth of text
+    // Leave space for " see more" (9 characters)
+    const truncateLength = Math.max(0, maxChars - 9);
+    return dummyTaskText.substring(0, truncateLength);
+  };
+
+  // Handle see more press - open modal
+  const handleSeeMorePress = () => {
+    setShowViewTaskModal(true);
+  };
+
+  // Create task object for ViewTaskModal
+  const taskForModal: Task = {
+    id: 'return-later-task',
+    text: dummyTaskText,
+    createdAt: new Date().toISOString(),
+  };
 
   // Scroll to selected items on mount
   useEffect(() => {
@@ -728,40 +783,45 @@ export default function ReturnLaterModal({
 
                 {/* Task Section */}
                 <View style={styles.taskSection}>
-                  <View style={styles.taskHeader}>
-                    <Text style={styles.taskTitle}>Task</Text>
-                    {!isEditingTask && !taskDescription && (
-                      <TouchableOpacity
-                        style={styles.addButton}
-                        onPress={() => setIsEditingTask(true)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.addButtonText}>Add</Text>
-                      </TouchableOpacity>
+                  <Text style={styles.taskTitle}>Task</Text>
+                  {/* Hidden text to measure full height */}
+                  <Text
+                    ref={fullTextRef}
+                    style={[styles.taskText, styles.hiddenText]}
+                    onLayout={handleFullTextLayout}
+                  >
+                    {dummyTaskText}
+                  </Text>
+                  {/* Text with inline "see more" button */}
+                  <Text
+                    style={styles.taskText}
+                    numberOfLines={!showSeeMore ? MAX_LINES : undefined}
+                  >
+                    {getDisplayText()}
+                    {showSeeMore && (
+                      <>
+                        {' '}
+                        <Text
+                          style={styles.seeMoreText}
+                          onPress={handleSeeMorePress}
+                        >
+                          see more
+                        </Text>
+                      </>
                     )}
-                  </View>
-                  
-                  {isEditingTask || taskDescription ? (
-                    <TextInput
-                      style={styles.taskInput}
-                      value={taskDescription}
-                      onChangeText={setTaskDescription}
-                      placeholder="Enter task description..."
-                      placeholderTextColor="#999999"
-                      multiline
-                      autoFocus={isEditingTask}
-                      onBlur={() => {
-                        if (!taskDescription) {
-                          setIsEditingTask(false);
-                        }
-                      }}
-                    />
-                  ) : null}
+                  </Text>
                 </View>
             </View>
           </ScrollView>
         </View>
       </View>
+      
+      {/* View Task Modal */}
+      <ViewTaskModal
+        visible={showViewTaskModal}
+        task={taskForModal}
+        onClose={() => setShowViewTaskModal(false)}
+      />
     </Modal>
   );
 }
@@ -1036,9 +1096,9 @@ const styles = StyleSheet.create({
   // Divider between Assigned to and Task
   cardDivider: {
     position: 'absolute',
-    left: 0, // Full width divider
-    top: 94 * scaleX, // Position from Figma (1113 - 1019 = 94px from card top)
-    width: 390 * scaleX, // Full card width
+    left: 16 * scaleX, // Margin from left border (match card padding)
+    right: 16 * scaleX, // Margin from right border (match card padding)
+    top: 78 * scaleX,
     height: 1,
     backgroundColor: '#e3e3e3',
     zIndex: 2,
@@ -1049,52 +1109,37 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16 * scaleX, // Match card padding
     right: 16 * scaleX, // Match card padding
-    top: 102 * scaleX, // Below divider (94px) + 8px spacing
+    top: 86 * scaleX, // Below divider (78px) + 8px spacing
     paddingHorizontal: 0,
-  },
-  
-  taskHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10 * scaleX,
-    width: '100%',
   },
   
   taskTitle: {
     fontSize: 14 * scaleX,
     fontFamily: 'Helvetica',
     fontWeight: '700',
-    color: '#000000',
-    flex: 0, // Don't grow
+    color: '#1e1e1e',
+    marginBottom: 8 * scaleX,
   },
   
-  addButton: {
-    width: 74 * scaleX,
-    height: 39 * scaleX,
-    borderRadius: 41 * scaleX,
-    borderWidth: 1,
-    borderColor: '#000000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0, // Don't shrink
-  },
-  
-  addButtonText: {
-    fontSize: 14 * scaleX,
-    fontFamily: 'Helvetica',
-    fontWeight: '300',
-    color: '#000000',
-  },
-  
-  taskInput: {
+  taskText: {
     fontSize: 13 * scaleX,
     fontFamily: 'Helvetica',
     fontWeight: '300',
     color: '#000000',
-    lineHeight: 18 * scaleX,
-    minHeight: 60 * scaleX,
-    textAlignVertical: 'top',
-    padding: 0,
+    lineHeight: LINE_HEIGHT * scaleX,
+  },
+
+  hiddenText: {
+    position: 'absolute',
+    opacity: 0,
+    zIndex: -1,
+    width: '100%',
+  },
+
+  seeMoreText: {
+    fontSize: 13 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '500',
+    color: '#5a759d',
   },
 });
