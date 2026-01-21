@@ -213,11 +213,14 @@ const styles = StyleSheet.create({
   searchBar: {
     height: 59 * scaleX,
     width: 347 * scaleX,
-    backgroundColor: '#f1f6fc',
+    backgroundColor: '#ffffff',
     borderRadius: 82 * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20 * scaleX,
+  },
+  searchBarPM: {
+    backgroundColor: '#ffffff',
   },
   searchInputContainer: {
     height: '100%',
@@ -234,11 +237,20 @@ const styles = StyleSheet.create({
     color: 'rgba(0,0,0,0.6)',
     includeFontPadding: false,
   },
+  placeholderTextPM: {
+    color: 'rgba(0,0,0,0.6)',
+  },
   placeholderBold: {
     fontWeight: '700' as any, // Bold for "Search"
   },
+  placeholderBoldPM: {
+    color: 'rgba(0,0,0,0.6)',
+  },
   placeholderNormal: {
     fontWeight: '400' as any, // Regular for rest of text
+  },
+  placeholderNormalPM: {
+    color: 'rgba(0,0,0,0.6)',
   },
   searchIconButton: {
     width: 26 * scaleX,
@@ -252,6 +264,9 @@ const styles = StyleSheet.create({
     height: 19 * scaleX,
     tintColor: colors.primary.main,
   },
+  searchIconPM: {
+    tintColor: colors.primary.main,
+  },
   filterButton: {
     width: 40 * scaleX, // Increased touch target for easier clicking
     height: 40 * scaleX, // Increased touch target for easier clicking
@@ -263,6 +278,9 @@ const styles = StyleSheet.create({
   filterIcon: {
     width: 32 * scaleX, // Increased from 26px for better visibility (and fixed to use scaleX)
     height: 16 * scaleX, // Increased from 12px for better visibility (maintaining aspect ratio)
+    tintColor: colors.primary.main,
+  },
+  filterIconPM: {
     tintColor: colors.primary.main,
   },
   containerPM: {
@@ -281,25 +299,25 @@ const styles = StyleSheet.create({
     // Tint color handled inline
   },
   searchBarPM: {
-    backgroundColor: '#3A3D49', // Dark gray for PM mode
+    backgroundColor: '#ffffff',
   },
   searchInputPM: {
-    color: colors.text.white,
+    color: '#000000',
   },
   placeholderTextPM: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(0,0,0,0.6)',
   },
   placeholderBoldPM: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(0,0,0,0.6)',
   },
   placeholderNormalPM: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(0,0,0,0.6)',
   },
   searchIconPM: {
-    tintColor: colors.text.white,
+    tintColor: colors.primary.main,
   },
   filterIconPM: {
-    tintColor: colors.text.white,
+    tintColor: colors.primary.main,
   },
 });
 

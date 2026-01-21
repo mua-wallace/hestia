@@ -350,14 +350,14 @@ const styles = StyleSheet.create({
   searchBar: {
     height: 59 * scaleX,
     width: 347 * scaleX,
-    backgroundColor: '#f1f6fc',
+    backgroundColor: '#ffffff',
     borderRadius: 82 * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20 * scaleX,
   },
   searchBarPM: {
-    backgroundColor: '#3A3D49', // Slightly lighter dark gray for PM mode
+    backgroundColor: '#ffffff',
   },
   searchInputContainer: {
     height: '100%',
@@ -381,16 +381,16 @@ const styles = StyleSheet.create({
     fontWeight: '400' as any, // Regular for rest of text
   },
   searchInputPM: {
-    color: colors.text.white,
+    color: '#000000',
   },
   placeholderTextPM: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(0, 0, 0, 0.6)',
   },
   placeholderBoldPM: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(0, 0, 0, 0.6)',
   },
   placeholderNormalPM: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: 'rgba(0, 0, 0, 0.6)',
   },
   searchIconButton: {
     width: 26 * scaleX,
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     tintColor: colors.primary.main,
   },
   searchIconPM: {
-    tintColor: colors.text.white,
+    tintColor: colors.primary.main,
   },
   filterButton: {
     width: 40 * scaleX, // Increased touch target for easier clicking
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     tintColor: colors.primary.main,
   },
   filterIconPM: {
-    tintColor: colors.text.white,
+    tintColor: colors.primary.main,
   },
   blurOverlayDarkener: {
     ...StyleSheet.absoluteFillObject,
