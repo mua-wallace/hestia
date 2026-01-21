@@ -7,15 +7,16 @@ import {
   StyleSheet,
   Dimensions,
   Image,
-  ScrollView,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { colors, typography } from '../../theme';
 import FilterSection from './FilterSection';
-import { FilterState, FilterCounts, FilterOption } from '../../types/filter.types';
+import FilterCheckbox from './FilterCheckbox';
+import { FilterState, FilterCounts, FilterOption, FloorFilter } from '../../types/filter.types';
+import { ShiftType } from '../../types/home.types';
 import { useHomeFilters } from '../../hooks/useHomeFilters';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
@@ -36,6 +37,7 @@ interface HomeFilterModalProps {
   searchBarHeight?: number; // Optional search bar height (defaults to HomeScreen height)
   searchBarTop?: number; // Optional search bar top position (for AllRoomsScreen where search is inside header)
   onFilterIconPress?: () => void; // Callback for filter icon press
+  selectedShift?: ShiftType; // Determine which variant of the filter to show
 }
 
 export default function HomeFilterModal({
@@ -50,6 +52,7 @@ export default function HomeFilterModal({
   searchBarHeight,
   searchBarTop,
   onFilterIconPress,
+  selectedShift,
 }: HomeFilterModalProps) {
   // Ensure filterCounts is always defined with default values
   const safeFilterCounts: FilterCounts = filterCounts || {
@@ -66,6 +69,14 @@ export default function HomeFilterModal({
       turnDown: 0,
       stayOver: 0,
     },
+    floors: {
+      all: 0,
+      first: 0,
+      second: 0,
+      third: 0,
+      fourth: 0,
+    },
+    totalRooms: 0,
   };
   // Calculate position below filter button
   // Use provided heights or defaults for HomeScreen
@@ -99,10 +110,35 @@ export default function HomeFilterModal({
     setFilters,
     toggleRoomState,
     toggleGuest,
+    toggleFloor,
     calculateResultCount,
     hasActiveFilters,
     resetFilters,
   } = useHomeFilters(initialFilters);
+
+  const isAMShift = selectedShift === 'AM';
+  const floorKeys: FloorFilter[] = ['all', 'first', 'second', 'third', 'fourth'];
+
+  const derivedTotalRooms = useMemo(() => {
+    const roomStateTotal = safeFilterCounts?.roomStates
+      ? Object.values(safeFilterCounts.roomStates).reduce((sum, val) => sum + (val || 0), 0)
+      : 0;
+    return safeFilterCounts.totalRooms || roomStateTotal || 0;
+  }, [safeFilterCounts]);
+
+  const defaultFloorCounts = useMemo(() => {
+    if (safeFilterCounts.floors) {
+      return safeFilterCounts.floors;
+    }
+    const fallback = derivedTotalRooms || 24;
+    return {
+      all: fallback,
+      first: fallback,
+      second: fallback,
+      third: fallback,
+      fourth: fallback,
+    };
+  }, [safeFilterCounts.floors, derivedTotalRooms]);
 
   // Reset filters when modal closes
   useEffect(() => {
@@ -115,6 +151,27 @@ export default function HomeFilterModal({
     if (!filters) return 0;
     return calculateResultCount(safeFilterCounts);
   }, [filters, safeFilterCounts, calculateResultCount]);
+
+  const floorOptions = useMemo(() => {
+    const currentFloors =
+      filters?.floors || {
+        all: false,
+        first: false,
+        second: false,
+        third: false,
+        fourth: false,
+      };
+
+    return [
+      { id: 'all', label: 'All', count: defaultFloorCounts.all ?? derivedTotalRooms, selected: currentFloors.all },
+      { id: 'first', label: '1st Floor', count: defaultFloorCounts.first ?? derivedTotalRooms, selected: currentFloors.first },
+      { id: 'second', label: '2nd Floor', count: defaultFloorCounts.second ?? derivedTotalRooms, selected: currentFloors.second },
+      { id: 'third', label: '3rd Floor', count: defaultFloorCounts.third ?? derivedTotalRooms, selected: currentFloors.third },
+      { id: 'fourth', label: '4th Floor', count: defaultFloorCounts.fourth ?? derivedTotalRooms, selected: currentFloors.fourth },
+    ];
+  }, [filters?.floors, defaultFloorCounts, derivedTotalRooms]);
+
+  const displayResultCount = hasActiveFilters ? resultCount : (safeFilterCounts.totalRooms || defaultFloorCounts.all || derivedTotalRooms);
 
   // Room State filter options
   const roomStateOptions: FilterOption[] = useMemo(
@@ -223,6 +280,50 @@ export default function HomeFilterModal({
 
   const handleToggleGuest = (id: string) => {
     toggleGuest(id as keyof FilterState['guests']);
+  };
+
+  const handleToggleFloor = (id: string) => {
+    const currentFloors =
+      filters?.floors || {
+        all: false,
+        first: false,
+        second: false,
+        third: false,
+        fourth: false,
+      };
+
+    // When toggling "All", set all floors to the same value
+    if (id === 'all') {
+      const nextValue = !currentFloors.all;
+      const updatedFloors = floorKeys.reduce<Record<FloorFilter, boolean>>((acc, key) => {
+        acc[key] = nextValue;
+        return acc;
+      }, {} as Record<FloorFilter, boolean>);
+      setFilters((prev) => ({
+        ...prev,
+        floors: updatedFloors,
+      }));
+      return;
+    }
+
+    // Toggle individual floor and unset "All" when a child is toggled off
+    const nextValue = !currentFloors[id as FloorFilter];
+    const updatedFloors: Record<FloorFilter, boolean> = {
+      ...currentFloors,
+      [id]: nextValue,
+    };
+
+    // If any child is off, "all" is false; if every child (except all) is on, "all" becomes true
+    const allChildrenSelected = floorKeys
+      .filter((key) => key !== 'all')
+      .every((key) => key === id ? nextValue : currentFloors[key]);
+
+    updatedFloors.all = allChildrenSelected;
+
+    setFilters((prev) => ({
+      ...prev,
+      floors: updatedFloors,
+    }));
   };
 
   const handleGoToResults = () => {
@@ -360,107 +461,171 @@ export default function HomeFilterModal({
           pointerEvents="box-none"
         >
           <View style={styles.modalContent}>
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>Filter</Text>
-              <TouchableOpacity
-                style={styles.resultsButton}
-                onPress={handleGoToResults}
-                activeOpacity={0.7}
-                disabled={!hasActiveFilters}
-              >
-                <Text
-                  style={[
-                    styles.resultsButtonText,
-                    !hasActiveFilters && styles.resultsButtonTextDisabled,
-                  ]}
-                >
-                  {resultCount} {resultCount === 1 ? 'result' : 'results'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            {isAMShift ? (
+              <View style={styles.amContent}>
+                <View style={styles.amHeader}>
+                  <Text style={styles.headerTitle}>Floors Filter</Text>
+                  <View style={styles.resultsPill}>
+                    <Text style={styles.resultsPillText}>{displayResultCount} results</Text>
+                  </View>
+                </View>
 
-            {/* Content - Optimized to fit without scrolling */}
-            <View style={styles.content}>
-              <View style={styles.contentScrollable}>
-                {/* Room State Section */}
-                {Array.isArray(roomStateOptions) && roomStateOptions.length > 0 && (
-                  <FilterSection
-                    title="Room State"
-                    options={roomStateOptions}
-                    onToggle={handleToggleRoomState}
-                    isRoomState={true}
-                  />
-                )}
+                <View style={styles.amBody}>
+                  <Text style={styles.amSectionTitle}>Housekeeping Status</Text>
+                  <View style={styles.amDivider} />
+                  <View style={styles.floorList}>
+                    {floorOptions.map((option) => (
+                      <TouchableOpacity
+                        key={option.id}
+                        style={styles.floorRow}
+                        onPress={() => handleToggleFloor(option.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.floorCheckboxWrapper}>
+                          <FilterCheckbox
+                            checked={option.selected}
+                            onToggle={() => handleToggleFloor(option.id)}
+                            size={22}
+                          />
+                        </View>
+                    <View style={[styles.floorBullet, option.selected && styles.floorBulletActive]} />
+                        <Text style={styles.floorLabel}>{option.label}</Text>
+                        <Text style={styles.floorCount}>{option.count} Rooms</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
 
-                {/* Guest Section */}
-                {Array.isArray(guestOptions) && guestOptions.length > 0 && (
-                  <FilterSection
-                    title="Guest"
-                    options={guestOptions}
-                    onToggle={handleToggleGuest}
-                    isRoomState={false}
-                    reducedMargin={true}
-                  />
-                )}
-
-                {/* Action Buttons - Directly below Stayover */}
-                <View style={styles.actionsInline}>
+                  {/* Action Buttons - below floor list */}
+                  <View style={styles.amActions}>
+                    <TouchableOpacity
+                      style={styles.goToResultsButton}
+                      onPress={handleGoToResults}
+                      activeOpacity={0.7}
+                      disabled={!hasActiveFilters}
+                    >
+                      <Text style={[
+                        styles.goToResultsButtonText,
+                        !hasActiveFilters && styles.goToResultsButtonTextDisabled,
+                      ]}>
+                        Go to Results
+                      </Text>
+                      <Image
+                        source={require('../../../assets/icons/spear-arrow.png')}
+                        style={[
+                          styles.arrowIcon,
+                          !hasActiveFilters && styles.arrowIconDisabled,
+                        ]}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <>
+                {/* Header */}
+                <View style={styles.header}>
+                  <Text style={styles.headerTitle}>Filter</Text>
                   <TouchableOpacity
-                    style={styles.goToResultsButton}
+                    style={styles.resultsButton}
                     onPress={handleGoToResults}
                     activeOpacity={0.7}
                     disabled={!hasActiveFilters}
                   >
-                    <Text style={[
-                      styles.goToResultsButtonText,
-                      !hasActiveFilters && styles.goToResultsButtonTextDisabled,
-                    ]}>
-                      Go to Results
-                    </Text>
-                    <Image
-                      source={require('../../../assets/icons/spear-arrow.png')}
+                    <Text
                       style={[
-                        styles.arrowIcon,
-                        !hasActiveFilters && styles.arrowIconDisabled,
+                        styles.resultsButtonText,
+                        !hasActiveFilters && styles.resultsButtonTextDisabled,
                       ]}
-                      resizeMode="contain"
-                    />
-                  </TouchableOpacity>
-
-                  {onAdvanceFilter && (
-                    <TouchableOpacity
-                      style={styles.advanceFilterButton}
-                      onPress={onAdvanceFilter}
-                      activeOpacity={0.7}
                     >
-                      <Text style={styles.advanceFilterText}>Advance Filter</Text>
-                    </TouchableOpacity>
+                      {resultCount} {resultCount === 1 ? 'result' : 'results'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Content - Optimized to fit without scrolling */}
+                <View style={styles.content}>
+                  <View style={styles.contentScrollable}>
+                    {/* Room State Section */}
+                    {Array.isArray(roomStateOptions) && roomStateOptions.length > 0 && (
+                      <FilterSection
+                        title="Room State"
+                        options={roomStateOptions}
+                        onToggle={handleToggleRoomState}
+                        isRoomState={true}
+                      />
+                    )}
+
+                    {/* Guest Section */}
+                    {Array.isArray(guestOptions) && guestOptions.length > 0 && (
+                      <FilterSection
+                        title="Guest"
+                        options={guestOptions}
+                        onToggle={handleToggleGuest}
+                        isRoomState={false}
+                        reducedMargin={true}
+                      />
+                    )}
+
+                    {/* Action Buttons - Directly below Stayover */}
+                    <View style={styles.actionsInline}>
+                      <TouchableOpacity
+                        style={styles.goToResultsButton}
+                        onPress={handleGoToResults}
+                        activeOpacity={0.7}
+                        disabled={!hasActiveFilters}
+                      >
+                        <Text style={[
+                          styles.goToResultsButtonText,
+                          !hasActiveFilters && styles.goToResultsButtonTextDisabled,
+                        ]}>
+                          Go to Results
+                        </Text>
+                        <Image
+                          source={require('../../../assets/icons/spear-arrow.png')}
+                          style={[
+                            styles.arrowIcon,
+                            !hasActiveFilters && styles.arrowIconDisabled,
+                          ]}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+
+                      {onAdvanceFilter && (
+                        <TouchableOpacity
+                          style={styles.advanceFilterButton}
+                          onPress={onAdvanceFilter}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.advanceFilterText}>Advance Filter</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                  
+                  {/* Reset Button - Bottom Right */}
+                  {hasActiveFilters && (
+                    <View style={styles.resetButtonBottomContainer}>
+                      <TouchableOpacity
+                        style={styles.resetButton}
+                        onPress={handleResetFilters}
+                        activeOpacity={0.8}
+                      >
+                        <View style={styles.resetIconCircle}>
+                          <Image
+                            source={require('../../../assets/icons/menu-icon.png')}
+                            style={styles.resetIcon}
+                            resizeMode="contain"
+                            tintColor="#ffffff"
+                          />
+                        </View>
+                        <Text style={styles.resetButtonText}>Reset</Text>
+                      </TouchableOpacity>
+                    </View>
                   )}
                 </View>
-              </View>
-              
-              {/* Reset Button - Bottom Right */}
-              {hasActiveFilters && (
-                <View style={styles.resetButtonBottomContainer}>
-                  <TouchableOpacity
-                    style={styles.resetButton}
-                    onPress={handleResetFilters}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.resetIconCircle}>
-                      <Image
-                        source={require('../../../assets/icons/menu-icon.png')}
-                        style={styles.resetIcon}
-                        resizeMode="contain"
-                        tintColor="#ffffff"
-                      />
-                    </View>
-                    <Text style={styles.resetButtonText}>Reset</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
+              </>
+            )}
           </View>
         </View>
       </View>
@@ -627,5 +792,85 @@ const styles = StyleSheet.create({
     width: 32 * scaleX, // Match the increased size from HomeScreen
     height: 16 * scaleX, // Match the increased size from HomeScreen (maintaining aspect ratio)
     tintColor: colors.primary.main,
+  },
+  amContent: {
+    flex: 1,
+    paddingHorizontal: 20 * scaleX,
+    paddingTop: 16 * scaleX,
+    paddingBottom: 24 * scaleX,
+    backgroundColor: '#ffffff',
+  },
+  amHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12 * scaleX,
+  },
+  resultsPill: {
+    backgroundColor: '#f1f6fc',
+    paddingHorizontal: 14 * scaleX,
+    paddingVertical: 6 * scaleX,
+    borderRadius: 40 * scaleX,
+  },
+  resultsPillText: {
+    color: '#5a759d',
+    fontSize: 14 * scaleX,
+    fontFamily: 'Inter',
+    fontWeight: '600' as any,
+  },
+  amBody: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  amSectionTitle: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.bold as any,
+    color: colors.text.primary,
+    marginTop: 8 * scaleX,
+    marginBottom: 10 * scaleX,
+  },
+  amDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#e6e6e6',
+    marginBottom: 10 * scaleX,
+  },
+  floorList: {
+    marginTop: 4 * scaleX,
+  },
+  floorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6 * scaleX,
+    marginBottom: 6 * scaleX,
+  },
+  floorBullet: {
+    width: 14 * scaleX,
+    height: 14 * scaleX,
+    borderRadius: 7 * scaleX,
+    backgroundColor: '#cfd3d8',
+    marginRight: 12 * scaleX,
+  },
+  floorBulletActive: {
+    backgroundColor: '#1e1e1e',
+  },
+  floorCheckboxWrapper: {
+    marginRight: 12 * scaleX,
+  },
+  floorLabel: {
+    flex: 1,
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.regular as any,
+    color: '#1e1e1e',
+  },
+  floorCount: {
+    fontSize: 14 * scaleX,
+    color: '#a9a9a9',
+    fontFamily: 'Inter',
+  },
+  amActions: {
+    marginTop: 14 * scaleX,
+    paddingHorizontal: 16 * scaleX,
   },
 });

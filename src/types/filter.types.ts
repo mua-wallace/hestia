@@ -4,6 +4,7 @@
 
 export type RoomStateFilter = 'dirty' | 'inProgress' | 'cleaned' | 'inspected' | 'priority';
 export type GuestFilter = 'arrivals' | 'departures' | 'turnDown' | 'stayOver';
+export type FloorFilter = 'all' | 'first' | 'second' | 'third' | 'fourth';
 
 export interface FilterState {
   roomStates: {
@@ -19,6 +20,7 @@ export interface FilterState {
     turnDown: boolean;
     stayOver: boolean;
   };
+  floors?: Record<FloorFilter, boolean>;
 }
 
 export interface FilterCounts {
@@ -35,6 +37,8 @@ export interface FilterCounts {
     turnDown: number;
     stayOver: number;
   };
+  floors?: Record<FloorFilter, number>;
+  totalRooms?: number;
 }
 
 export interface FilterOption {

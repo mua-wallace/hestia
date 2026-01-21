@@ -143,6 +143,7 @@ export default function HomeScreen() {
       turnDown: 0,
       stayOver: 0,
     };
+    let totalRooms = 0;
 
     homeData.categories.forEach((category) => {
       // Room state counts
@@ -160,13 +161,22 @@ export default function HomeScreen() {
       } else if (category.name === 'StayOvers') {
         guests.stayOver += category.total;
       }
+      totalRooms += category.total;
       // Note: Departures and Turn Down would need additional data
       // For now, using mock values
       guests.departures = 18; // Mock value
       guests.turnDown = 12; // Mock value
     });
 
-    return { roomStates, guests };
+    const floors = {
+      all: totalRooms,
+      first: totalRooms,
+      second: totalRooms,
+      third: totalRooms,
+      fourth: totalRooms,
+    };
+
+    return { roomStates, guests, floors, totalRooms };
   }, [homeData]);
 
   const handleGoToResults = (filters: FilterState) => {
@@ -308,6 +318,7 @@ export default function HomeScreen() {
         onAdvanceFilter={handleAdvanceFilter}
         filterCounts={filterCounts}
         onFilterIconPress={handleFilterPress}
+        selectedShift={homeData.selectedShift}
       />
     </View>
   );

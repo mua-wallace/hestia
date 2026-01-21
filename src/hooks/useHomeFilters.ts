@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { FilterState, FilterCounts } from '../types/filter.types';
+import { FilterState, FilterCounts, FloorFilter } from '../types/filter.types';
 
 const defaultFilterState: FilterState = {
   roomStates: {
@@ -14,6 +14,13 @@ const defaultFilterState: FilterState = {
     departures: false,
     turnDown: false,
     stayOver: false,
+  },
+  floors: {
+    all: false,
+    first: false,
+    second: false,
+    third: false,
+    fourth: false,
   },
 };
 
@@ -38,6 +45,16 @@ export function useHomeFilters(initialFilters?: FilterState) {
       guests: {
         ...prev.guests,
         [guest]: !prev.guests[guest],
+      },
+    }));
+  }, []);
+
+  const toggleFloor = useCallback((floor: FloorFilter) => {
+    setFilters((prev) => ({
+      ...prev,
+      floors: {
+        ...(prev.floors || defaultFilterState.floors),
+        [floor]: !(prev.floors || defaultFilterState.floors)[floor],
       },
     }));
   }, []);
@@ -67,7 +84,18 @@ export function useHomeFilters(initialFilters?: FilterState) {
         }
       });
 
-      // If no filters selected, return total count or 0
+      // Count floors (if provided)
+      const floorSelections = filters.floors || defaultFilterState.floors;
+      if (filterCounts.floors) {
+        Object.entries(floorSelections).forEach(([key, selected]) => {
+          if (selected) {
+            hasAnyFilter = true;
+            count += filterCounts.floors?.[key as FloorFilter] || 0;
+          }
+        });
+      }
+
+      // If no filters selected, return 0 (caller can provide a fallback total if needed)
       if (!hasAnyFilter) {
         return 0;
       }
@@ -80,18 +108,26 @@ export function useHomeFilters(initialFilters?: FilterState) {
   const hasActiveFilters = useMemo(() => {
     return (
       Object.values(filters.roomStates).some((v) => v) ||
-      Object.values(filters.guests).some((v) => v)
+      Object.values(filters.guests).some((v) => v) ||
+      Object.values(filters.floors || {}).some((v) => v)
     );
   }, [filters]);
 
   // Ensure filters is always defined
-  const safeFilters = filters || defaultFilterState;
+  const safeFilters: FilterState = {
+    ...defaultFilterState,
+    ...filters,
+    roomStates: filters?.roomStates || defaultFilterState.roomStates,
+    guests: filters?.guests || defaultFilterState.guests,
+    floors: filters?.floors || defaultFilterState.floors,
+  };
 
   return {
     filters: safeFilters,
     setFilters,
     toggleRoomState,
     toggleGuest,
+    toggleFloor,
     resetFilters,
     calculateResultCount,
     hasActiveFilters,

@@ -88,7 +88,8 @@ export default function AllRoomsScreen() {
     if (!activeFilters) return false;
     const hasRoomStateFilter = Object.values(activeFilters.roomStates || {}).some(v => v);
     const hasGuestFilter = Object.values(activeFilters.guests || {}).some(v => v);
-    return hasRoomStateFilter || hasGuestFilter || !!searchQuery;
+    const hasFloorFilter = Object.values(activeFilters.floors || {}).some(v => v);
+    return hasRoomStateFilter || hasGuestFilter || hasFloorFilter || !!searchQuery;
   }, [activeFilters, searchQuery]);
 
   const handleShiftToggle = (shift: ShiftType) => {
@@ -121,6 +122,7 @@ export default function AllRoomsScreen() {
       turnDown: 0,
       stayOver: 0,
     };
+    const totalRooms = allRoomsData.rooms.length;
 
     allRoomsData.rooms.forEach((room) => {
       // Room state counts
@@ -145,7 +147,15 @@ export default function AllRoomsScreen() {
       }
     });
 
-    return { roomStates, guests };
+    const floors = {
+      all: totalRooms,
+      first: totalRooms,
+      second: totalRooms,
+      third: totalRooms,
+      fourth: totalRooms,
+    };
+
+    return { roomStates, guests, floors, totalRooms };
   }, [allRoomsData.rooms]);
 
   const handleApplyFilters = (appliedFilters: FilterState) => {
@@ -654,6 +664,7 @@ export default function AllRoomsScreen() {
         searchBarHeight={59 * scaleX} // Same search bar height
         searchBarTop={undefined} // Don't pass searchBarTop when modal is open - use HomeScreen logic
         onFilterIconPress={handleFilterPress}
+        selectedShift={allRoomsData.selectedShift}
       />
 
     </View>

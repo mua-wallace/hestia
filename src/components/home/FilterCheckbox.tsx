@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { colors } from '../../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -21,22 +21,35 @@ export default function FilterCheckbox({
   const borderWidth = 2 * scaleX;
 
   return (
-    <View
-      style={[
-        styles.checkbox,
-        {
-          width: checkboxSize,
-          height: checkboxSize,
-          borderWidth: borderWidth,
-          backgroundColor: 'transparent', // No fill, just border
-          borderColor: '#A9A9A9',
-        },
-      ]}
+    <TouchableOpacity
+      onPress={onToggle}
+      activeOpacity={0.8}
+      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
     >
-      {checked && (
-        <Text style={[styles.checkmark, { fontSize: checkboxSize * 0.8, lineHeight: checkboxSize * 0.8 }]}>✓</Text>
-      )}
-    </View>
+      <View
+        style={[
+          styles.checkbox,
+          {
+            width: checkboxSize,
+            height: checkboxSize,
+            borderWidth: borderWidth,
+            backgroundColor: checked ? '#1e1e1e' : 'transparent',
+            borderColor: checked ? '#1e1e1e' : '#A9A9A9',
+          },
+        ]}
+      >
+        {checked && (
+          <Text
+            style={[
+              styles.checkmark,
+              { fontSize: checkboxSize * 0.8, lineHeight: checkboxSize * 0.8 },
+            ]}
+          >
+            ✓
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -47,7 +60,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkmark: {
-    color: '#1e1e1e', // Dark color for visibility (primary text color)
+    color: '#ffffff',
     fontWeight: '900', // Extra bold for better visibility
     includeFontPadding: false, // Remove extra padding
     textAlignVertical: 'center',
