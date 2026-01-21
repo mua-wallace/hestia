@@ -16,7 +16,7 @@ export const DEFAULT_CHECKLIST_TEMPLATE: ChecklistCategory[] = [
         categoryId: 'minibar', 
         name: 'Valser Sparkling water', 
         description: 'How many bottles of Valser Sparkling water was consumed',
-        quantity: 1,
+        quantity: 0,
         initialStock: 10,
         order: 1,
         image: require('../../assets/images/sparling-water.png')
@@ -26,7 +26,7 @@ export const DEFAULT_CHECKLIST_TEMPLATE: ChecklistCategory[] = [
         categoryId: 'minibar', 
         name: 'Valser Still water', 
         description: 'How many bottles of Valser Still water was consumed',
-        quantity: 1,
+        quantity: 0,
         initialStock: 10,
         order: 2,
         image: require('../../assets/images/valser-still-water.png')
@@ -36,7 +36,7 @@ export const DEFAULT_CHECKLIST_TEMPLATE: ChecklistCategory[] = [
         categoryId: 'minibar', 
         name: 'Coca Cola Zero', 
         description: 'How many bottles of Coca Cola Zero',
-        quantity: 1,
+        quantity: 0,
         initialStock: 10,
         order: 3,
         image: require('../../assets/images/coca-cola-zero.png')
@@ -46,7 +46,7 @@ export const DEFAULT_CHECKLIST_TEMPLATE: ChecklistCategory[] = [
         categoryId: 'minibar', 
         name: 'Rivella', 
         description: 'How many bottles of Rivella was consumed',
-        quantity: 1,
+        quantity: 0,
         initialStock: 10,
         order: 4,
         image: require('../../assets/images/rivella.png')
@@ -63,7 +63,7 @@ export const DEFAULT_CHECKLIST_TEMPLATE: ChecklistCategory[] = [
         categoryId: 'laundry', 
         name: 'Towels changed', 
         description: 'How many times were towels changed',
-        quantity: 1,
+        quantity: 0,
         order: 1,
         image: require('../../assets/images/large-towels.png')
       },
@@ -72,7 +72,7 @@ export const DEFAULT_CHECKLIST_TEMPLATE: ChecklistCategory[] = [
         categoryId: 'laundry', 
         name: 'Medium Towels', 
         description: 'MediumTowels',
-        quantity: 1,
+        quantity: 0,
         order: 2,
         image: require('../../assets/images/medium-towels.png')
       },
@@ -81,7 +81,7 @@ export const DEFAULT_CHECKLIST_TEMPLATE: ChecklistCategory[] = [
         categoryId: 'laundry', 
         name: 'Face Towels', 
         description: 'Face Towels',
-        quantity: 1,
+        quantity: 0,
         order: 3,
         image: require('../../assets/images/face-towels.png')
       },

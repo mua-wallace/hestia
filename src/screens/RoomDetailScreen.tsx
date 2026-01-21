@@ -495,7 +495,7 @@ export default function RoomDetailScreen() {
                     contentAreaTop={CONTENT_AREA.top}
                     specialInstructionsTitleTop={positions.specialInstructionsTitle}
                     specialInstructionsTextTop={positions.specialInstructionsText}
-                    roomCategory={roomType}
+                    roomCategory={firstGuest.timeLabel === 'ETA' ? 'Arrival' : roomType}
                   />
                 )}
 

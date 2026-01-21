@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -26,6 +26,7 @@ import HomeFilterModal from '../components/home/HomeFilterModal';
 import { FilterState, FilterCounts } from '../types/filter.types';
 import type { CategorySection } from '../types/home.types';
 import type { RoomCardData } from '../types/allRooms.types';
+import { getShiftFromTime } from '../utils/shiftUtils';
 
 import type { MainTabsParamList } from '../navigation/types';
 
@@ -37,7 +38,10 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute();
-  const [homeData, setHomeData] = useState(mockHomeData);
+  const [homeData, setHomeData] = useState(() => ({
+    ...mockHomeData,
+    selectedShift: getShiftFromTime(),
+  }));
   const [activeFilters, setActiveFilters] = useState<FilterState | undefined>(
     (route.params as any)?.filters as FilterState | undefined
   );
@@ -286,106 +290,112 @@ export default function HomeScreen() {
       styles.container,
       homeData.selectedShift === 'PM' && styles.containerPM
     ]}>
-      {/* Scrollable Content with conditional blur */}
-      <View style={styles.scrollContainer}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={!showMorePopup}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {homeData.categories.map((category) => (
-            <CategoryCard 
-              key={category.id} 
-              category={category} 
-              onPress={handleCategoryPress}
-              selectedShift={homeData.selectedShift}
-            />
-          ))}
-        </ScrollView>
-        
-        {/* Blur Overlay for content only */}
-        {showMorePopup && (
-          <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
-            <View style={styles.blurOverlayDarkener} />
-          </BlurView>
-        )}
-      </View>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        {/* Scrollable Content with conditional blur */}
+        <View style={styles.scrollContainer}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={!showMorePopup}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            {homeData.categories.map((category) => (
+              <CategoryCard 
+                key={category.id} 
+                category={category} 
+                onPress={handleCategoryPress}
+                selectedShift={homeData.selectedShift}
+              />
+            ))}
+          </ScrollView>
+          
+          {/* Blur Overlay for content only */}
+          {showMorePopup && (
+            <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
+              <View style={styles.blurOverlayDarkener} />
+            </BlurView>
+          )}
+        </View>
 
-      {/* Header - Fixed at top (no blur) */}
-      <HomeHeader
-        user={homeData.user}
-        selectedShift={homeData.selectedShift}
-        date={homeData.date}
-        onShiftToggle={handleShiftToggle}
-        onBellPress={handleBellPress}
-      />
+        {/* Header - Fixed at top (no blur) */}
+        <HomeHeader
+          user={homeData.user}
+          selectedShift={homeData.selectedShift}
+          date={homeData.date}
+          onShiftToggle={handleShiftToggle}
+          onBellPress={handleBellPress}
+        />
 
-      {/* Search Bar and Filter - Fixed below header */}
-      {!showFilterModal && (
-        <View style={styles.searchSection}>
-          <View style={[
-            styles.searchBar,
-            homeData.selectedShift === 'PM' && styles.searchBarPM
-          ]}>
+        {/* Search Bar and Filter - Fixed below header */}
+        {!showFilterModal && (
+          <View style={styles.searchSection}>
+            <View style={[
+              styles.searchBar,
+              homeData.selectedShift === 'PM' && styles.searchBarPM
+            ]}>
+              <TouchableOpacity
+                style={styles.searchIconButton}
+                onPress={() => {/* Search action */}}
+                activeOpacity={0.7}
+              >
+                <Image
+                  source={require('../../assets/icons/search-icon.png')}
+                  style={[
+                    styles.searchIcon,
+                    homeData.selectedShift === 'PM' && styles.searchIconPM
+                  ]}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+              <SearchInput
+                placeholder={{ bold: 'Search ', normal: 'Rooms, Guests, Floors etc' }}
+                onSearch={handleSearch}
+                inputStyle={[
+                  styles.searchInput,
+                  homeData.selectedShift === 'PM' && styles.searchInputPM
+                ]}
+                placeholderStyle={[
+                  styles.placeholderText,
+                  homeData.selectedShift === 'PM' && styles.placeholderTextPM
+                ]}
+                placeholderBoldStyle={[
+                  styles.placeholderBold,
+                  homeData.selectedShift === 'PM' && styles.placeholderBoldPM
+                ]}
+                placeholderNormalStyle={[
+                  styles.placeholderNormal,
+                  homeData.selectedShift === 'PM' && styles.placeholderNormalPM
+                ]}
+                inputWrapperStyle={styles.searchInputContainer}
+              />
+            </View>
             <TouchableOpacity
-              style={styles.searchIconButton}
-              onPress={() => {/* Search action */}}
+              style={styles.filterButton}
+              onPress={handleFilterPress}
               activeOpacity={0.7}
             >
               <Image
-                source={require('../../assets/icons/search-icon.png')}
+                source={require('../../assets/icons/menu-icon.png')}
                 style={[
-                  styles.searchIcon,
-                  homeData.selectedShift === 'PM' && styles.searchIconPM
+                  styles.filterIcon,
+                  homeData.selectedShift === 'PM' && styles.filterIconPM
                 ]}
                 resizeMode="contain"
               />
             </TouchableOpacity>
-            <SearchInput
-              placeholder={{ bold: 'Search ', normal: 'Rooms, Guests, Floors etc' }}
-              onSearch={handleSearch}
-              inputStyle={[
-                styles.searchInput,
-                homeData.selectedShift === 'PM' && styles.searchInputPM
-              ]}
-              placeholderStyle={[
-                styles.placeholderText,
-                homeData.selectedShift === 'PM' && styles.placeholderTextPM
-              ]}
-              placeholderBoldStyle={[
-                styles.placeholderBold,
-                homeData.selectedShift === 'PM' && styles.placeholderBoldPM
-              ]}
-              placeholderNormalStyle={[
-                styles.placeholderNormal,
-                homeData.selectedShift === 'PM' && styles.placeholderNormalPM
-              ]}
-              inputWrapperStyle={styles.searchInputContainer}
-            />
           </View>
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={handleFilterPress}
-            activeOpacity={0.7}
-          >
-            <Image
-              source={require('../../assets/icons/menu-icon.png')}
-              style={[
-                styles.filterIcon,
-                homeData.selectedShift === 'PM' && styles.filterIconPM
-              ]}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        </View>
-      )}
-      
+        )}
+      </KeyboardAvoidingView>
 
-      {/* Bottom Navigation (no blur) */}
+      {/* Bottom Navigation - Outside KeyboardAvoidingView to prevent movement */}
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
@@ -422,6 +432,9 @@ const styles = StyleSheet.create({
   containerPM: {
     backgroundColor: '#38414F', // Dark slate gray for PM mode
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   scrollContainer: {
     flex: 1,
   },
@@ -451,14 +464,14 @@ const styles = StyleSheet.create({
   searchBar: {
     height: 59 * scaleX,
     width: 347 * scaleX,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F1F6FC',
     borderRadius: 82 * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20 * scaleX,
   },
   searchBarPM: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F1F6FC',
   },
   searchInputContainer: {
     height: '100%',

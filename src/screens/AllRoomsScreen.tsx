@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { View, ScrollView, StyleSheet, Dimensions, RefreshControl, useWindowDimensions, Text, Image } from 'react-native';
+import { View, ScrollView, StyleSheet, Dimensions, RefreshControl, useWindowDimensions, Text, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -20,6 +20,7 @@ import { BlurView } from 'expo-blur';
 import { FilterState, FilterCounts } from '../types/filter.types';
 import HomeFilterModal from '../components/home/HomeFilterModal';
 import { CARD_DIMENSIONS, CARD_COLORS } from '../constants/allRoomsStyles';
+import { getShiftFromTime } from '../utils/shiftUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -47,7 +48,10 @@ type AllRoomsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, '
 export default function AllRoomsScreen() {
   const navigation = useNavigation<AllRoomsScreenNavigationProp>();
   const route = useRoute();
-  const [allRoomsData, setAllRoomsData] = useState(mockAllRoomsData);
+  const [allRoomsData, setAllRoomsData] = useState(() => ({
+    ...mockAllRoomsData,
+    selectedShift: getShiftFromTime(),
+  }));
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('Rooms');
@@ -515,25 +519,31 @@ export default function AllRoomsScreen() {
       styles.container,
       allRoomsData.selectedShift === 'PM' && styles.containerPM
     ]}>
-      {/* Scrollable Content with conditional blur */}
-      <View style={styles.scrollContainer}>
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={!showMorePopup && !showStatusModal}
-          clipsToBounds={false}
-          contentInsetAdjustmentBehavior="automatic"
-          onScroll={(event) => {
-            // Track current scroll position
-            currentScrollYRef.current = event.nativeEvent.contentOffset.y;
-          }}
-          scrollEventThrottle={16}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        {/* Scrollable Content with conditional blur */}
+        <View style={styles.scrollContainer}>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={!showMorePopup && !showStatusModal}
+            clipsToBounds={false}
+            contentInsetAdjustmentBehavior="automatic"
+            keyboardShouldPersistTaps="handled"
+            onScroll={(event) => {
+              // Track current scroll position
+              currentScrollYRef.current = event.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={16}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
           {hasActiveFilters && filteredRooms.length === 0 ? (
             // Empty state card when filters don't match any rooms
             <View style={[
@@ -606,19 +616,20 @@ export default function AllRoomsScreen() {
             <View style={styles.blurOverlayDarkener} />
           </BlurView>
         )}
-      </View>
+        </View>
 
-      {/* Header - Fixed at top (no blur) */}
-      <AllRoomsHeader
-        selectedShift={allRoomsData.selectedShift}
-        onShiftToggle={handleShiftToggle}
-        onSearch={handleSearch}
-        onFilterPress={handleFilterPress}
-        onBackPress={handleBackPress}
-        showFilterModal={showFilterModal}
-      />
+        {/* Header - Fixed at top (no blur) */}
+        <AllRoomsHeader
+          selectedShift={allRoomsData.selectedShift}
+          onShiftToggle={handleShiftToggle}
+          onSearch={handleSearch}
+          onFilterPress={handleFilterPress}
+          onBackPress={handleBackPress}
+          showFilterModal={showFilterModal}
+        />
+      </KeyboardAvoidingView>
 
-      {/* Bottom Navigation (no blur) */}
+      {/* Bottom Navigation - Outside KeyboardAvoidingView to prevent movement */}
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
@@ -686,6 +697,9 @@ const styles = StyleSheet.create({
   },
   containerPM: {
     backgroundColor: '#38414F', // Dark slate gray for PM mode
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   scrollContainer: {
     flex: 1,

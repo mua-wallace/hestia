@@ -34,7 +34,8 @@
         "image": "./assets/app/splash.png",
         "resizeMode": "contain",
         "backgroundColor": "#000000"
-      }
+      },
+      "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "favicon": "./assets/app/favicon.png"
