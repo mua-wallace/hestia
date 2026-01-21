@@ -18,18 +18,18 @@ interface StatusIndicatorProps {
   label: string;
   iconWidth?: number;
   iconHeight?: number;
-  leftLabelIcon?: any;
   rightLabelIcon?: any;
+  isPM?: boolean;
 }
 
-export default function StatusIndicator({ color, icon, count, label, iconWidth, iconHeight, leftLabelIcon, rightLabelIcon }: StatusIndicatorProps) {
+export default function StatusIndicator({ color, icon, count, label, iconWidth, iconHeight, rightLabelIcon, isPM = false }: StatusIndicatorProps) {
   const [textWidth, setTextWidth] = useState(0);
   
   const iconStyle = [
     styles.icon,
-    iconWidth && { width: iconWidth * normalizedScaleX },
-    iconHeight && { height: iconHeight * normalizedScaleX },
-  ];
+    iconWidth ? { width: iconWidth * normalizedScaleX } : null,
+    iconHeight ? { height: iconHeight * normalizedScaleX } : null,
+  ].filter(Boolean) as any;
 
   // Calculate position for right icon to appear after centered text
   const rightIconOffset = rightLabelIcon && textWidth > 0 
@@ -55,15 +55,8 @@ export default function StatusIndicator({ color, icon, count, label, iconWidth, 
         )}
       </View>
       <View style={styles.labelContainer}>
-        {leftLabelIcon && (
-          <Image
-            source={leftLabelIcon}
-            style={styles.leftLabelIcon}
-            resizeMode="contain"
-          />
-        )}
         <Text 
-          style={styles.label}
+          style={[styles.label, isPM && styles.labelPM]}
           onLayout={(event) => {
             const { width } = event.nativeEvent.layout;
             setTextWidth(width);
@@ -164,10 +157,8 @@ const styles = StyleSheet.create({
     color: '#000000',
     textAlign: 'center',
   },
-  leftLabelIcon: {
-    width: 18 * normalizedScaleX,
-    height: 18 * normalizedScaleX,
-    marginRight: 4 * normalizedScaleX,
+  labelPM: {
+    color: '#ffffff',
   },
   rightLabelIcon: {
     width: 18 * normalizedScaleX,

@@ -82,6 +82,7 @@ export default function CategoryCard({ category, onPress, selectedShift }: Categ
           label={STATUS_CONFIG.dirty.label}
           iconWidth={29.478}
           iconHeight={30.769}
+          isPM={selectedShift === 'PM'}
         />
         <StatusIndicator
           color={STATUS_CONFIG.inProgress.color}
@@ -90,7 +91,7 @@ export default function CategoryCard({ category, onPress, selectedShift }: Categ
           label={STATUS_CONFIG.inProgress.label}
           iconWidth={29.478}
           iconHeight={30.769}
-          rightLabelIcon={require('../../../assets/icons/down-arrow.png')}
+          isPM={selectedShift === 'PM'}
         />
         <StatusIndicator
           color={STATUS_CONFIG.cleaned.color}
@@ -99,6 +100,7 @@ export default function CategoryCard({ category, onPress, selectedShift }: Categ
           label={STATUS_CONFIG.cleaned.label}
           iconWidth={29.478}
           iconHeight={30.769}
+          isPM={selectedShift === 'PM'}
         />
         <StatusIndicator
           color={STATUS_CONFIG.inspected.color}
@@ -107,6 +109,7 @@ export default function CategoryCard({ category, onPress, selectedShift }: Categ
           label={STATUS_CONFIG.inspected.label}
           iconWidth={29.478}
           iconHeight={30.769}
+          isPM={selectedShift === 'PM'}
         />
       </View>
     </TouchableOpacity>
