@@ -502,6 +502,9 @@ export default function AllRoomsScreen() {
     // PM mode: show only Turndown cards (per Figma / requirements)
     if (allRoomsData.selectedShift === 'PM') {
       rooms = rooms.filter((room) => room.category === 'Turndown');
+    } else {
+      // AM mode: hide Turndown cards entirely
+      rooms = rooms.filter((room) => room.category !== 'Turndown');
     }
 
     return rooms;

@@ -98,11 +98,14 @@ export default function StatusChangeModal({
 
   // Modal width (scaled) - full card width
   const modalWidth = CARD_DIMENSIONS.width * scaleX; // 426px scaled (full card width)
+  const modalHeight = 324.185 * scaleX; // Approximate modal height from Figma
   
   let modalTopPosition: number;
   let modalLeft: number;
   let triangleLeft: number;
-  const triangleTopOffset = -10 * scaleX; // Position triangle above modal top to point upward to button
+  const triangleTopOffset = -6 * scaleX; // Position triangle just above modal top to touch the button
+  const triangleBottomOffset = modalHeight - 1 * scaleX; // Bottom pointer position (overlap slightly)
+  let trianglePlacement: 'top' | 'bottom' = 'top';
 
   // Use provided headerHeight or default based on showTriangle
   // When showTriangle=true (AllRoomsScreen), header is 217px
@@ -117,11 +120,28 @@ export default function StatusChangeModal({
     // So buttonPosition.y + buttonPosition.height gives us the bottom of the button
     // The modal is positioned relative to BlurView which starts at HEADER_HEIGHT from window top
     // So we need to subtract HEADER_HEIGHT to convert absolute position to BlurView-relative position
-    // Increased spacing to move modal further down from status button
-    const spacing = 50 * scaleX; // Margin between button bottom and modal top
-    // Convert button bottom position from window coordinates to BlurView-relative coordinates
-    const buttonBottomAbsolute = buttonPosition.y + buttonPosition.height;
-    modalTopPosition = buttonBottomAbsolute - HEADER_HEIGHT + spacing;
+    // Desired gap between button and modal
+    const spacing = 70 * scaleX;
+    const buttonTopRelative = buttonPosition.y - HEADER_HEIGHT;
+    const buttonBottomRelative = buttonTopRelative + buttonPosition.height;
+
+    // Prefer opening below; if it would overflow, flip above.
+    const desiredBelowTop = buttonBottomRelative + spacing;
+    const desiredAboveTop = buttonTopRelative - spacing - modalHeight;
+
+    const maxTop =
+      Math.max(0, SCREEN_HEIGHT - HEADER_HEIGHT - modalHeight - insets.bottom - 12 * scaleX);
+
+    if (desiredBelowTop <= maxTop) {
+      modalTopPosition = desiredBelowTop;
+      trianglePlacement = 'top';
+    } else if (desiredAboveTop >= 0) {
+      modalTopPosition = desiredAboveTop;
+      trianglePlacement = 'bottom';
+    } else {
+      modalTopPosition = Math.min(Math.max(0, desiredBelowTop), maxTop);
+      trianglePlacement = 'top';
+    }
     
     // Status button center X position on screen (already in screen pixels, scaled)
     const buttonCenterX = buttonPosition.x + buttonPosition.width / 2;
@@ -144,9 +164,8 @@ export default function StatusChangeModal({
     triangleLeft = 0; // Not used when triangle is hidden
   }
 
-  // Calculate translateY for slide animation
-  // Start from below screen (translateY = modal height + some extra) and slide to 0
-  const modalHeight = 324.185 * scaleX; // Approximate modal height from Figma
+  // Safety clamp
+  modalTopPosition = Math.max(0, modalTopPosition);
   const translateY = slideAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [modalHeight + 50, 0], // Start below screen, end at position
@@ -190,14 +209,15 @@ export default function StatusChangeModal({
             ]} 
             pointerEvents="box-none"
           >
-          {/* Triangle Pointer - pointing up to status button */}
+          {/* Triangle Pointer - points to status button */}
           {showTriangle && (
             <View
               style={[
                 styles.trianglePointer,
                 { 
                   left: triangleLeft * scaleX, // triangleLeft is in design pixels, scale it
-                  top: triangleTopOffset,
+                  top: trianglePlacement === 'top' ? triangleTopOffset : triangleBottomOffset,
+                  transform: [{ rotate: trianglePlacement === 'top' ? '0deg' : '180deg' }],
                 },
               ]}
               pointerEvents="none"

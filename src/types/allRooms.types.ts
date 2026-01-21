@@ -1,4 +1,5 @@
 export type RoomCategory = 'Arrival' | 'Departure' | 'Stayover' | 'Turndown' | 'Arrival/Departure';
+export type ReservationStatus = 'Vacant' | 'Occupied';
 
 export type RoomStatus = 'Dirty' | 'InProgress' | 'Cleaned' | 'Inspected';
 
@@ -10,6 +11,7 @@ export interface GuestInfo {
   time: string; // ETA: 17:00 or EDT: 12:00
   guestCount: string; // "2/2"
   timeLabel: 'ETA' | 'EDT'; // To know if it's arrival or departure
+  isVacant?: boolean; // For turndown vacant state
 }
 
 export interface StaffInfo {
@@ -32,6 +34,7 @@ export interface RoomCardData {
   roomType: string; // "ST2K - 1.4"
   category: RoomCategory;
   status: RoomStatus;
+  reservationStatus?: ReservationStatus; // For distinguishing vacant turndown rooms
   guests: GuestInfo[]; // Array to support Arrival/Departure rooms with 2 guests
   staff: StaffInfo;
   isPriority: boolean; // Red border for priority rooms

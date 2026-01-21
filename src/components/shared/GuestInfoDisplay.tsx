@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
-import { GUEST_INFO, CARD_DIMENSIONS } from '../../constants/allRoomsStyles';
+import { GUEST_INFO, CARD_DIMENSIONS, GUEST_CONTAINER_BG } from '../../constants/allRoomsStyles';
 import { normalizedScaleX } from '../../utils/responsive';
 import type { GuestInfo } from '../../types/allRooms.types';
 
@@ -217,6 +217,7 @@ export default function GuestInfoDisplay({
   }
 
   const isPMTheme = themeVariant === 'pm';
+  const isVacantGuest = guest.isVacant === true;
 
   // Determine icon tint color
   const iconTintColor: string | undefined = isPMTheme
@@ -263,6 +264,64 @@ export default function GuestInfoDisplay({
 
   // Calculate container width: card width minus container left position to ensure content is visible
   const containerWidth = (CARD_DIMENSIONS.width - calculatedContainerLeft) * normalizedScaleX;
+
+  if (isVacantGuest) {
+    // For vacant turndown rooms, position at guest container top
+    // and center vertically within the container height
+    const vacantRowTop = isTurndown 
+      ? GUEST_CONTAINER_BG.positions.turndown.top 
+      : calculatedNameTop;
+    const vacantRowHeight = isTurndown
+      ? GUEST_CONTAINER_BG.positions.turndown.height
+      : 100;
+    // Align to the same left as standard guest rows inside the container
+    const vacantRowLeft = 0;
+    
+    return (
+      <View
+        style={[
+          styles.container,
+          {
+            left: calculatedContainerLeft * normalizedScaleX,
+            width: containerWidth,
+          },
+          containerStyle,
+        ]}
+      >
+        <View
+          style={[
+            styles.guestRow,
+            styles.guestRowVacant,
+            {
+              top: vacantRowTop * normalizedScaleX,
+              left: vacantRowLeft,
+              height: vacantRowHeight * normalizedScaleX,
+            },
+          ]}
+        >
+          <Image
+            source={require('../../../assets/icons/vacant-chair.png')}
+            style={[
+              styles.guestIconVacant,
+              isPMTheme ? styles.guestIconPM : styles.guestIconNoTint,
+            ]}
+            resizeMode="contain"
+          />
+          <Text
+            style={[
+              styles.guestName,
+              styles.guestVacantText,
+              isPMTheme && styles.guestNamePM,
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {guest.name || 'Vacant'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View 
@@ -446,12 +505,27 @@ const styles = StyleSheet.create({
   guestRow: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'flex-start', // Changed from 'center' to 'flex-start' to prevent text clipping
+    alignItems: 'flex-start', // Default: prevent text clipping for regular guests
     left: 0,
     width: 300 * normalizedScaleX, // Fixed width - card is 426px, container starts at 73px, so 426-73=353px available, use 300px to leave space
     overflow: 'visible', // Ensure text is not clipped
     zIndex: 30, // Highest z-index to ensure guest name is above divider and all other elements on iOS
     elevation: 30, // Android elevation for proper layering
+  },
+  guestRowVacant: {
+    alignItems: 'center', // Center icon and text vertically for vacant state
+    height: 100 * normalizedScaleX,
+    justifyContent: 'center',
+    paddingLeft: 0,
+  },
+  guestVacantText: {
+    marginLeft: 6 * normalizedScaleX,
+    lineHeight: GUEST_INFO.name.lineHeight * normalizedScaleX,
+  },
+  guestIconVacant: {
+    width: GUEST_INFO.icon.width * normalizedScaleX,
+    height: GUEST_INFO.icon.height * normalizedScaleX,
+    marginRight: 6 * normalizedScaleX,
   },
   guestIcon: {
     width: GUEST_INFO.icon.width * normalizedScaleX,

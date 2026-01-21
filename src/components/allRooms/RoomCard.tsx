@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
 import { scaleX } from '../../constants/allRoomsStyles';
 import type { RoomCardData } from '../../types/allRooms.types';
-import { CATEGORY_ICONS } from '../../types/allRooms.types';
+import { CATEGORY_ICONS, STATUS_CONFIGS } from '../../types/allRooms.types';
 import type { ShiftType } from '../../types/home.types';
 import {
   CARD_DIMENSIONS,
@@ -13,6 +13,7 @@ import {
   GUEST_CONTAINER_BG,
   STAFF_SECTION,
   DIVIDERS,
+  STATUS_BUTTON,
 } from '../../constants/allRoomsStyles';
 import GuestInfoSection from './GuestInfoSection';
 import StaffSection from './StaffSection';
@@ -49,7 +50,10 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
   const isArrival = room.category === 'Arrival';
   const isStayover = room.category === 'Stayover';
   const isTurndown = room.category === 'Turndown';
+  const isVacant = room.guests?.[0]?.isVacant === true;
+  const isVacantTurndown = isTurndown && isVacant;
   const hasNotes = !!room.notes;
+  const isPM = selectedShift === 'PM';
 
   // Calculate card height based on type - matching Figma exactly
   const getCardHeight = (): number => {
@@ -183,31 +187,76 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
         <View style={styles.guestDividerLine} />
       )}
 
-      {/* Guest Information Sections */}
-      {room.guests.map((guest, index) => {
-        const isFirstGuest = index === 0;
-        const isSecondGuest = index === 1;
-        
-        // Determine priority count for each guest
-        const guestPriorityCount = isArrivalDeparture
-          ? (isFirstGuest ? room.priorityCount : room.secondGuestPriorityCount)
-          : (isFirstGuest ? room.priorityCount : undefined);
-        
-        return (
-          <GuestInfoSection 
-            key={`guest-${index}`}
-            guest={guest} 
-            priorityCount={guestPriorityCount}
-            isPriority={room.isPriority}
-            isFirstGuest={isFirstGuest}
-            isSecondGuest={isSecondGuest}
-            hasNotes={hasNotes}
-            category={room.category}
-            isArrivalDeparture={isArrivalDeparture}
-            selectedShift={selectedShift}
-          />
-        );
-      })}
+      {/* Guest Information Sections or Vacant row */}
+      {isVacantTurndown ? (
+        <View
+          style={[
+            styles.vacantRowContainer,
+            {
+              top: GUEST_CONTAINER_BG.positions.turndown.top * scaleX,
+              left: GUEST_CONTAINER_BG.left * scaleX,
+              width: GUEST_CONTAINER_BG.width * scaleX,
+              height: GUEST_CONTAINER_BG.positions.turndown.height * scaleX,
+            },
+          ]}
+        >
+          <View style={styles.vacantLeft}>
+            <Image
+              source={require('../../../assets/icons/vacant-chair.png')}
+              style={[
+                styles.vacantIcon,
+                isPM && styles.vacantIconPM,
+              ]}
+              resizeMode="contain"
+            />
+            <Text
+              style={styles.vacantText}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              Vacant
+            </Text>
+          </View>
+          {STATUS_CONFIGS[room.status]?.icon && (
+            <TouchableOpacity
+              onPress={onStatusPress}
+              activeOpacity={0.8}
+              style={styles.vacantStatusButton}
+            >
+              <Image
+                source={STATUS_CONFIGS[room.status].icon}
+                style={styles.vacantStatusIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : (
+        room.guests.map((guest, index) => {
+          const isFirstGuest = index === 0;
+          const isSecondGuest = index === 1;
+          
+          // Determine priority count for each guest
+          const guestPriorityCount = isArrivalDeparture
+            ? (isFirstGuest ? room.priorityCount : room.secondGuestPriorityCount)
+            : (isFirstGuest ? room.priorityCount : undefined);
+          
+          return (
+            <GuestInfoSection 
+              key={`guest-${index}`}
+              guest={guest} 
+              priorityCount={guestPriorityCount}
+              isPriority={room.isPriority}
+              isFirstGuest={isFirstGuest}
+              isSecondGuest={isSecondGuest}
+              hasNotes={hasNotes}
+              category={room.category}
+              isArrivalDeparture={isArrivalDeparture}
+              selectedShift={selectedShift}
+            />
+          );
+        })
+      )}
 
       {/* Vertical Divider - separates room info from staff section */}
       <View style={[
@@ -224,14 +273,16 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
       />
 
       {/* Status Button */}
-      <StatusButton 
-        ref={statusButtonRef}
-        status={room.status} 
-        onPress={onStatusPress}
-        isPriority={room.isPriority}
-        isArrivalDeparture={isArrivalDeparture}
-        hasNotes={hasNotes}
-      />
+      {!isVacantTurndown && (
+        <StatusButton 
+          ref={statusButtonRef}
+          status={room.status} 
+          onPress={onStatusPress}
+          isPriority={room.isPriority}
+          isArrivalDeparture={isArrivalDeparture}
+          hasNotes={hasNotes}
+        />
+      )}
 
       {/* Notes Section - shown for cards with notes */}
       {hasNotes && (
@@ -391,6 +442,45 @@ const styles = StyleSheet.create({
     backgroundColor: DIVIDERS.horizontal.color,
     zIndex: 1, // Lowest z-index - below all guest info elements
     elevation: 1, // Android elevation - lowest
+  },
+  vacantRowContainer: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16 * scaleX,
+    width: '100%',
+  },
+  vacantLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  vacantIcon: {
+    width: GUEST_INFO.icon.width * scaleX,
+    height: GUEST_INFO.icon.height * scaleX,
+    tintColor: undefined,
+  },
+  vacantIconPM: {
+    tintColor: '#ffffff',
+  },
+  vacantText: {
+    marginLeft: 6 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontStyle: 'normal',
+    fontWeight: '700',
+    color: '#FFF',
+    lineHeight: undefined, // normal line height
+    flexShrink: 1,
+  },
+  vacantStatusButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vacantStatusIcon: {
+    width: STATUS_BUTTON.iconInProgress.width * scaleX,
+    height: STATUS_BUTTON.iconInProgress.height * scaleX,
   },
 });
 

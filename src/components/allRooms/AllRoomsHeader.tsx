@@ -213,14 +213,14 @@ const styles = StyleSheet.create({
   searchBar: {
     height: 59 * scaleX,
     width: 347 * scaleX,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F1F6FC',
     borderRadius: 82 * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20 * scaleX,
   },
   searchBarPM: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F1F6FC',
   },
   searchInputContainer: {
     height: '100%',
