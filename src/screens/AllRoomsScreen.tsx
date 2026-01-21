@@ -169,6 +169,11 @@ export default function AllRoomsScreen() {
     // Filters are already applied via activeFilters, no need to navigate
   };
 
+  const handleGoToHomeWithFilters = (appliedFilters: FilterState) => {
+    setShowFilterModal(false);
+    navigation.navigate('Home' as any, { filters: appliedFilters } as any);
+  };
+
   const handleAdvanceFilter = () => {
     // TODO: Navigate to advanced filter screen when implemented
     console.log('Advanced filter');
@@ -655,9 +660,9 @@ export default function AllRoomsScreen() {
       <HomeFilterModal
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
-        onGoToResults={handleGoToResults}
+        onGoToResults={allRoomsData.selectedShift === 'AM' ? handleGoToHomeWithFilters : handleGoToResults}
         onAdvanceFilter={handleAdvanceFilter}
-        onApplyFilters={handleApplyFilters}
+        onApplyFilters={allRoomsData.selectedShift === 'AM' ? undefined : handleApplyFilters}
         initialFilters={activeFilters || undefined}
         filterCounts={filterCounts}
         headerHeight={153 * scaleX} // Match HomeScreen header height when modal is open

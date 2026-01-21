@@ -35,6 +35,7 @@ export interface RoomCardData {
   guests: GuestInfo[]; // Array to support Arrival/Departure rooms with 2 guests
   staff: StaffInfo;
   isPriority: boolean; // Red border for priority rooms
+  flagged?: boolean; // If true, room contributes to "Flagged" category on Home
   notes?: NotesInfo;
   priorityCount?: number; // Number badge for priority (e.g., 11 for first guest)
   secondGuestPriorityCount?: number; // For Arrival/Departure rooms with 2 guests (e.g., 22)

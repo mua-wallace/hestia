@@ -125,6 +125,10 @@ export const GUEST_INFO = {
     left: 17, // Room 202 (Departure): icon at x=24 from screen, x=24-7=17px from card
     top: 93, // Room 202: icon at y=656 from screen, y=656-563=93px from card
   },
+  iconStandardArrival: {
+    left: 17, // Room 204/301 (Arrival): icon should align with name row, similar to Departure positioning
+    top: 87, // Room 204: name at top: 87px, icon should align with name
+  },
   iconWithNotes: {
     left: 14, // Room 203 (with notes): icon at x=21 from screen, card at x=7, so 21-7=14px from card
     top: 89, // Room 203: icon at y=860 from screen, card at y=771, so 860-771=89px from card

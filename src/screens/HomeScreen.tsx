@@ -15,6 +15,7 @@ const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 import type { ShiftType } from '../types/home.types';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockChatData } from '../data/mockChatData';
+import { mockAllRoomsData } from '../data/mockAllRoomsData';
 import type { MoreMenuItemId } from '../types/more.types';
 import type { RootStackParamList } from '../navigation/types';
 import HomeHeader from '../components/home/HomeHeader';
@@ -23,6 +24,8 @@ import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
 import HomeFilterModal from '../components/home/HomeFilterModal';
 import { FilterState, FilterCounts } from '../types/filter.types';
+import type { CategorySection } from '../types/home.types';
+import type { RoomCardData } from '../types/allRooms.types';
 
 import type { MainTabsParamList } from '../navigation/types';
 
@@ -35,6 +38,9 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute();
   const [homeData, setHomeData] = useState(mockHomeData);
+  const [activeFilters, setActiveFilters] = useState<FilterState | undefined>(
+    (route.params as any)?.filters as FilterState | undefined
+  );
   const [activeTab, setActiveTab] = useState('Home');
   const [refreshing, setRefreshing] = useState(false);
   const [showMorePopup, setShowMorePopup] = useState(false);
@@ -115,8 +121,89 @@ export default function HomeScreen() {
 
   const handleCategoryPress = () => {
     // Navigate to All Rooms screen with back button
-    navigation.navigate('AllRooms', { showBackButton: true } as any);
+    navigation.navigate('AllRooms', { showBackButton: true, filters: activeFilters } as any);
   };
+
+  const getRoomFloor = (roomNumber: string): number | null => {
+    const firstChar = (roomNumber || '').trim()[0];
+    const floor = Number.parseInt(firstChar || '', 10);
+    return Number.isFinite(floor) ? floor : null;
+  };
+
+  const filterRoomsByFloors = (rooms: RoomCardData[], filters?: FilterState) => {
+    const floorFilters = filters?.floors;
+    if (!floorFilters) return rooms;
+
+    const anySelected = Object.values(floorFilters).some(Boolean);
+    if (!anySelected) return rooms;
+
+    if (floorFilters.all) return rooms;
+
+    const allowedFloors = new Set<number>();
+    if (floorFilters.first) allowedFloors.add(1);
+    if (floorFilters.second) allowedFloors.add(2);
+    if (floorFilters.third) allowedFloors.add(3);
+    if (floorFilters.fourth) allowedFloors.add(4);
+
+    if (allowedFloors.size === 0) return rooms;
+
+    return rooms.filter((r) => {
+      const floor = getRoomFloor(r.roomNumber);
+      return floor !== null && allowedFloors.has(floor);
+    });
+  };
+
+  const buildCategory = (name: CategorySection['name'], id: string, borderColor: string, rooms: RoomCardData[]): CategorySection => {
+    const status = {
+      dirty: 0,
+      inProgress: 0,
+      cleaned: 0,
+      inspected: 0,
+    };
+
+    rooms.forEach((room) => {
+      if (room.status === 'Dirty') status.dirty += 1;
+      if (room.status === 'InProgress') status.inProgress += 1;
+      if (room.status === 'Cleaned') status.cleaned += 1;
+      if (room.status === 'Inspected') status.inspected += 1;
+    });
+
+    const priority = rooms.reduce((sum, r) => sum + (r.isPriority ? 1 : 0), 0);
+
+    return {
+      id,
+      name,
+      total: rooms.length,
+      priority,
+      borderColor,
+      status,
+    };
+  };
+
+  const derivedCategories = useMemo(() => {
+    const rooms = filterRoomsByFloors(mockAllRoomsData.rooms, activeFilters);
+
+    const flaggedRooms = rooms.filter((r) => !!r.flagged);
+    const arrivalRooms = rooms.filter((r) => r.category === 'Arrival' || r.category === 'Arrival/Departure');
+    const stayOverRooms = rooms.filter((r) => r.category === 'Stayover');
+
+    return [
+      buildCategory('Flagged', 'flagged', '#6e1eee', flaggedRooms),
+      buildCategory('Arrivals', 'arrivals', '#41d541', arrivalRooms),
+      buildCategory('StayOvers', 'stayovers', '#8d908d', stayOverRooms),
+    ];
+  }, [activeFilters]);
+
+  // Sync route filters -> local state
+  useEffect(() => {
+    const routeFilters = (route.params as any)?.filters as FilterState | undefined;
+    if (routeFilters) setActiveFilters(routeFilters);
+  }, [(route.params as any)?.filters]);
+
+  // Update visible home categories based on derived data
+  useEffect(() => {
+    setHomeData((prev) => ({ ...prev, categories: derivedCategories }));
+  }, [derivedCategories]);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -180,10 +267,13 @@ export default function HomeScreen() {
   }, [homeData]);
 
   const handleGoToResults = (filters: FilterState) => {
-    navigation.navigate('AllRooms', {
-      filters,
-      showBackButton: true,
-    } as any);
+    // AM: apply filters to Home stats/cards
+    if (homeData.selectedShift === 'AM') {
+      setActiveFilters(filters);
+      return;
+    }
+    // PM: existing behavior (navigate to Rooms list with filters)
+    navigation.navigate('AllRooms', { filters, showBackButton: true } as any);
   };
 
   const handleAdvanceFilter = () => {

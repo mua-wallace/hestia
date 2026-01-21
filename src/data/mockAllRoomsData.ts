@@ -1502,12 +1502,66 @@ export const mockAllRoomsData: AllRoomsScreenData = {
   selectedShift: 'AM',
   rooms: [
     {
+      id: 'room-101',
+      roomNumber: '101',
+      roomType: 'ST2K - 1.4',
+      category: 'Stayover',
+      status: 'Dirty',
+      isPriority: false,
+      flagged: true,
+      guests: [
+        {
+          name: 'Mr Mohamed. B',
+          dateRange: '07/10-15/10',
+          time: '17:00',
+          timeLabel: 'ETA',
+          guestCount: '2/2',
+        },
+      ],
+      staff: {
+        initials: 'Z',
+        name: 'Zoe Tsakeri',
+        statusText: 'Not Started',
+        statusColor: '#1e1e1e',
+      },
+    },
+    {
+      id: 'room-102',
+      roomNumber: '102',
+      roomType: 'ST2K - 1.4',
+      category: 'Arrival',
+      status: 'Cleaned',
+      isPriority: true,
+      flagged: false,
+      priorityCount: 11,
+      guests: [
+        {
+          name: 'Mr Felix. K',
+          dateRange: '07/10-15/10',
+          time: '17:00',
+          timeLabel: 'ETA',
+          guestCount: '2/2',
+        },
+      ],
+      staff: {
+        avatar: require('../../assets/icons/profile-avatar.png'),
+        name: 'Etleva Hoxha',
+        statusText: 'Finished: 60 mins',
+        statusColor: '#41d541',
+      },
+      notes: {
+        count: 1,
+        hasRushed: false,
+      },
+    },
+    {
       id: 'room-201',
       roomNumber: '201',
       roomType: 'ST2K - 1.4',
       category: 'Arrival/Departure',
       status: 'InProgress',
       isPriority: true,
+      flagged: true,
       priorityCount: 11, // First guest has 11
       guests: [
         {
@@ -1544,6 +1598,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       category: 'Departure',
       status: 'Dirty',
       isPriority: false,
+      flagged: false,
       guests: [
         {
           name: 'Mr Mohamed. B',
@@ -1568,6 +1623,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       category: 'Arrival',
       status: 'Cleaned',
       isPriority: false,
+      flagged: false,
       priorityCount: 11,
       guests: [
         {
@@ -1596,6 +1652,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       category: 'Stayover',
       status: 'Inspected',
       isPriority: false,
+      flagged: true,
       guests: [
         {
           name: 'Mr Mohamed. B',
@@ -1619,6 +1676,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       category: 'Turndown',
       status: 'Inspected',
       isPriority: false,
+      flagged: false,
       guests: [
         {
           name: 'Mr Mohamed. B',
@@ -1633,6 +1691,55 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         name: 'Yenchai Moliao',
         statusText: 'Finished: 65 mins',
         statusColor: '#f92424',
+      },
+    },
+    {
+      id: 'room-301',
+      roomNumber: '301',
+      roomType: 'ST2K - 1.4',
+      category: 'Arrival',
+      status: 'InProgress',
+      isPriority: false,
+      flagged: false,
+      guests: [
+        {
+          name: 'Mr Mohamed. B',
+          dateRange: '07/10-15/10',
+          time: '17:00',
+          timeLabel: 'ETA',
+          guestCount: '2/2',
+        },
+      ],
+      staff: {
+        avatar: require('../../assets/icons/profile-avatar.png'),
+        name: 'Etleva Hoxha',
+        statusText: 'Started: 15 mins',
+        statusColor: '#1e1e1e',
+      },
+    },
+    {
+      id: 'room-401',
+      roomNumber: '401',
+      roomType: 'ST2K - 1.4',
+      category: 'Stayover',
+      status: 'Cleaned',
+      isPriority: true,
+      flagged: false,
+      priorityCount: 4,
+      guests: [
+        {
+          name: 'Mr Felix. K',
+          dateRange: '07/10-15/10',
+          time: '17:00',
+          timeLabel: 'ETA',
+          guestCount: '2/2',
+        },
+      ],
+      staff: {
+        avatar: require('../../assets/icons/profile-avatar.png'),
+        name: 'Yenchai Moliao',
+        statusText: 'Finished: 45 mins',
+        statusColor: '#41d541',
       },
     },
   ],

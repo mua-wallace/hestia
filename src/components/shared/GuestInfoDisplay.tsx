@@ -204,6 +204,11 @@ export default function GuestInfoDisplay({
       left: GUEST_INFO.iconStandardDeparture.left,
       top: GUEST_INFO.iconStandardDeparture.top,
     };
+  } else if (isArrival && !isPriority && !hasNotes) {
+    guestIconPos = {
+      left: GUEST_INFO.iconStandardArrival.left,
+      top: GUEST_INFO.iconStandardArrival.top,
+    };
   } else if (hasNotes || isTurndown || isStayover) {
     guestIconPos = {
       left: GUEST_INFO.iconWithNotes.left,
