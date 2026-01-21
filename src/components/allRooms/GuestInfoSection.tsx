@@ -1,6 +1,7 @@
 import React from 'react';
 import GuestInfoDisplay from '../shared/GuestInfoDisplay';
 import type { GuestInfo } from '../../types/allRooms.types';
+import type { ShiftType } from '../../types/home.types';
 
 interface GuestInfoSectionProps {
   guest: GuestInfo;
@@ -11,6 +12,7 @@ interface GuestInfoSectionProps {
   hasNotes?: boolean;
   category?: string; // To determine if it's Arrival vs Departure
   isArrivalDeparture?: boolean; // To know if this is an Arrival/Departure card
+  selectedShift?: ShiftType;
 }
 
 export default function GuestInfoSection({ 
@@ -22,6 +24,7 @@ export default function GuestInfoSection({
   hasNotes = false,
   category = '',
   isArrivalDeparture = false,
+  selectedShift,
 }: GuestInfoSectionProps) {
   // Use the reusable GuestInfoDisplay component
   return (
@@ -34,6 +37,7 @@ export default function GuestInfoSection({
       hasNotes={hasNotes}
       category={category}
       isArrivalDeparture={isArrivalDeparture}
+      themeVariant={selectedShift === 'PM' ? 'pm' : 'am'}
     />
   );
 }

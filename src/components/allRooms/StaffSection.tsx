@@ -2,15 +2,17 @@ import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
 import { StaffInfo } from '../../types/allRooms.types';
+import type { ShiftType } from '../../types/home.types';
 import { scaleX, STAFF_SECTION } from '../../constants/allRoomsStyles';
 
 interface StaffSectionProps {
   staff: StaffInfo;
   isPriority?: boolean;
   category?: string; // To determine if it's Departure card
+  selectedShift?: ShiftType;
 }
 
-export default function StaffSection({ staff, isPriority = false, category = '' }: StaffSectionProps) {
+export default function StaffSection({ staff, isPriority = false, category = '', selectedShift }: StaffSectionProps) {
   if (!staff) {
     return null;
   }
@@ -56,7 +58,11 @@ export default function StaffSection({ staff, isPriority = false, category = '' 
       </View>
 
       {/* Staff Name */}
-      <Text style={[styles.staffName, { left: nameLeft * scaleX, top: nameTop * scaleX }]}>
+      <Text style={[
+        styles.staffName, 
+        { left: nameLeft * scaleX, top: nameTop * scaleX },
+        selectedShift === 'PM' && styles.staffNamePM
+      ]}>
         {staff.name}
       </Text>
 
@@ -100,7 +106,10 @@ export default function StaffSection({ staff, isPriority = false, category = '' 
       ]}>
         <Image
           source={require('../../../assets/icons/forward-arrow-icon.png')}
-          style={styles.forwardArrowIcon}
+          style={[
+            styles.forwardArrowIcon,
+            selectedShift === 'PM' && styles.forwardArrowIconPM
+          ]}
           resizeMode="contain"
         />
       </View>
@@ -150,6 +159,9 @@ const styles = StyleSheet.create({
     width: STAFF_SECTION.name.width * scaleX,
     lineHeight: STAFF_SECTION.name.lineHeight * scaleX,
   },
+  staffNamePM: {
+    color: '#ffffff',
+  },
   statusText: {
     position: 'absolute',
     fontSize: STAFF_SECTION.status.fontSize * scaleX,
@@ -184,6 +196,9 @@ const styles = StyleSheet.create({
     width: STAFF_SECTION.forwardArrow.width * scaleX,
     height: STAFF_SECTION.forwardArrow.height * scaleX,
     tintColor: '#1e1e1e', // Light black as in Figma for better visibility
+  },
+  forwardArrowIconPM: {
+    tintColor: '#ffffff',
   },
 });
 

@@ -15,6 +15,7 @@ interface GuestInfoDisplayProps {
   hasNotes?: boolean;
   category?: string; // To determine if it's Arrival vs Departure
   isArrivalDeparture?: boolean; // To know if this is an Arrival/Departure card
+  themeVariant?: 'am' | 'pm';
   // Positioning props for flexible usage
   containerLeft?: number; // Override container left position
   nameTop?: number; // Override name top position
@@ -52,6 +53,7 @@ export default function GuestInfoDisplay({
   hasNotes = false,
   category = '',
   isArrivalDeparture = false,
+  themeVariant = 'am',
   containerLeft,
   nameTop,
   dateTop,
@@ -209,10 +211,14 @@ export default function GuestInfoDisplay({
     };
   }
 
+  const isPMTheme = themeVariant === 'pm';
+
   // Determine icon tint color
-  const iconTintColor: string | undefined = (isArrivalDeparture || isArrival || isDeparture || isStayover || isTurndown)
-    ? undefined // Preserve original icon colors
-    : '#334866'; // Default color for other icons
+  const iconTintColor: string | undefined = isPMTheme
+    ? '#ffffff'
+    : (isArrivalDeparture || isArrival || isDeparture || isStayover || isTurndown)
+      ? undefined // Preserve original icon colors
+      : '#334866'; // Default color for other icons
 
   // Use numberBadge if provided, otherwise use priorityCount
   const displayBadge = numberBadge || (priorityCount ? priorityCount.toString() : undefined);
@@ -294,14 +300,15 @@ export default function GuestInfoDisplay({
               source={guestIconSource}
               style={[
                 styles.guestIcon,
-                (isArrival || isDeparture || isStayover || isTurndown) && styles.guestIconNoTint,
+                (isArrival || isDeparture || isStayover || isTurndown) && !isPMTheme && styles.guestIconNoTint,
+                isPMTheme && styles.guestIconPM,
               ]}
               resizeMode="contain"
             />
           )}
           <View style={[styles.guestNameContainer, guestIconPos !== null && styles.guestNameContainerNoIcon]}>
             <Text 
-              style={styles.guestName} 
+              style={[styles.guestName, isPMTheme && styles.guestNamePM]} 
               numberOfLines={1} 
               ellipsizeMode="tail"
             >
@@ -310,7 +317,7 @@ export default function GuestInfoDisplay({
             {/* Priority/Number Badge - positioned immediately after name text with consistent spacing */}
             {displayBadge && (
               <Text 
-                style={styles.priorityCountInline}
+                style={[styles.priorityCountInline, isPMTheme && styles.priorityCountInlinePM]}
                 numberOfLines={1}
               >
                 {displayBadge}
@@ -333,12 +340,12 @@ export default function GuestInfoDisplay({
             zIndex: 10, // Lower z-index so time can appear above
           }
         ]}>
-          <Text style={styles.dateRange}>{guest.dateRange}</Text>
+          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{guest.dateRange}</Text>
           {countPos && (
             <>
               <Image
                 source={require('../../../assets/icons/people-icon.png')}
-                style={styles.countIconInline}
+                style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM]}
                 resizeMode="contain"
               />
               <Text style={styles.countTextInline}>
@@ -357,8 +364,8 @@ export default function GuestInfoDisplay({
             zIndex: 10, // Lower z-index so time can appear above
           }
         ]}>
-          <Text style={styles.dateRange}>{guest.dateRange}</Text>
-          <Text style={styles.timeInline}>
+          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{guest.dateRange}</Text>
+          <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
             {guest.timeLabel}: {guest.time}
           </Text>
         </View>
@@ -371,7 +378,7 @@ export default function GuestInfoDisplay({
             zIndex: 10, // Lower z-index so time can appear above
           }
         ]}>
-          <Text style={styles.dateRange}>{guest.dateRange}</Text>
+          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{guest.dateRange}</Text>
         </View>
       )}
 
@@ -383,6 +390,7 @@ export default function GuestInfoDisplay({
             source={require('../../../assets/icons/people-icon.png')}
             style={[
               styles.countIcon,
+              isPMTheme && styles.countIconPM,
               {
                 left: guestCountIconLeft,
                 top: guestCountTop + iconVerticalOffset, // Center icon vertically with text
@@ -392,6 +400,7 @@ export default function GuestInfoDisplay({
           />
           <Text style={[
             styles.countText,
+            isPMTheme && styles.countTextPM,
             {
               left: guestCountTextLeft,
               top: guestCountTop, // Text top position
@@ -407,6 +416,7 @@ export default function GuestInfoDisplay({
       {guest.timeLabel && guest.time && timePos && (timeLeft !== undefined && timeTop !== undefined || !(isArrival || isStayover || isTurndown)) && (
         <Text style={[
           styles.time, 
+          isPMTheme && styles.timePM,
           { 
             left: ((timePos.left ?? 0) - calculatedContainerLeft) * normalizedScaleX,
             top: (timePos.top ?? 0) * normalizedScaleX,
@@ -444,6 +454,9 @@ const styles = StyleSheet.create({
     marginRight: 4 * normalizedScaleX,
     tintColor: '#334866',
   },
+  guestIconPM: {
+    tintColor: '#ffffff',
+  },
   guestIconAbsolute: {
     position: 'absolute',
     width: GUEST_INFO.iconArrivalDeparture.width * normalizedScaleX,
@@ -477,6 +490,9 @@ const styles = StyleSheet.create({
     includeFontPadding: false, // Remove extra padding that clips text
     textAlignVertical: 'top', // Align to top so bottom part is visible
   },
+  guestNamePM: {
+    color: '#ffffff',
+  },
   priorityCount: {
     position: 'absolute',
     fontSize: GUEST_INFO.priorityBadge.fontSize * normalizedScaleX,
@@ -495,6 +511,9 @@ const styles = StyleSheet.create({
     flexShrink: 0, // Prevent badge from shrinking
     includeFontPadding: false, // Remove extra padding
     textAlignVertical: 'top', // Align to top for consistent baseline
+  },
+  priorityCountInlinePM: {
+    color: '#ffffff',
   },
   priorityCountSmall: {
     fontSize: (GUEST_INFO.priorityBadge.fontSize * 0.85) * normalizedScaleX, // 85% of original size (12 * 0.85 = 10.2px)
@@ -544,12 +563,18 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center', // Center text vertically
     backgroundColor: 'transparent', // Ensure no background covers time
   },
+  dateRangePM: {
+    color: '#ffffff',
+  },
   countIconInline: {
     width: GUEST_INFO.guestCount.icon.width * normalizedScaleX,
     height: GUEST_INFO.guestCount.icon.height * normalizedScaleX,
     tintColor: '#334866',
     marginLeft: 8 * normalizedScaleX, // Spacing after date
     alignSelf: 'center', // Vertically center icon with text on same row
+  },
+  countIconInlinePM: {
+    tintColor: '#ffffff',
   },
   countTextInline: {
     fontSize: GUEST_INFO.guestCount.fontSize * normalizedScaleX,
@@ -576,6 +601,9 @@ const styles = StyleSheet.create({
     elevation: 30, // Android elevation for proper layering
     backgroundColor: 'transparent', // Ensure no background
   },
+  timePM: {
+    color: '#ffffff',
+  },
   timeInline: {
     fontSize: GUEST_INFO.time.fontSize * normalizedScaleX,
     fontFamily: typography.fontFamily.primary,
@@ -588,11 +616,17 @@ const styles = StyleSheet.create({
     zIndex: 25, // Highest z-index to ensure ETA/EDT are always visible above date
     elevation: 25, // Android elevation for proper layering
   },
+  timeInlinePM: {
+    color: '#ffffff',
+  },
   countIcon: {
     position: 'absolute',
     width: GUEST_INFO.guestCount.icon.width * normalizedScaleX,
     height: GUEST_INFO.guestCount.icon.height * normalizedScaleX,
     tintColor: '#334866',
+  },
+  countIconPM: {
+    tintColor: '#ffffff',
   },
   countText: {
     position: 'absolute',
@@ -603,6 +637,9 @@ const styles = StyleSheet.create({
     lineHeight: GUEST_INFO.guestCount.lineHeight * normalizedScaleX,
     includeFontPadding: false, // Remove extra padding for better alignment
     textAlignVertical: 'center', // Center text vertically
+  },
+  countTextPM: {
+    color: '#ffffff',
   },
 });
 

@@ -182,7 +182,10 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      homeData.selectedShift === 'PM' && styles.containerPM
+    ]}>
       {/* Scrollable Content with conditional blur */}
       <View style={styles.scrollContainer}>
         <ScrollView
@@ -195,7 +198,12 @@ export default function HomeScreen() {
           }
         >
           {homeData.categories.map((category) => (
-            <CategoryCard key={category.id} category={category} onPress={handleCategoryPress} />
+            <CategoryCard 
+              key={category.id} 
+              category={category} 
+              onPress={handleCategoryPress}
+              selectedShift={homeData.selectedShift}
+            />
           ))}
         </ScrollView>
         
@@ -219,7 +227,10 @@ export default function HomeScreen() {
       {/* Search Bar and Filter - Fixed below header */}
       {!showFilterModal && (
         <View style={styles.searchSection}>
-          <View style={styles.searchBar}>
+          <View style={[
+            styles.searchBar,
+            homeData.selectedShift === 'PM' && styles.searchBarPM
+          ]}>
             <TouchableOpacity
               style={styles.searchIconButton}
               onPress={() => {/* Search action */}}
@@ -227,17 +238,32 @@ export default function HomeScreen() {
             >
               <Image
                 source={require('../../assets/icons/search-icon.png')}
-                style={styles.searchIcon}
+                style={[
+                  styles.searchIcon,
+                  homeData.selectedShift === 'PM' && styles.searchIconPM
+                ]}
                 resizeMode="contain"
               />
             </TouchableOpacity>
             <SearchInput
               placeholder={{ bold: 'Search ', normal: 'Rooms, Guests, Floors etc' }}
               onSearch={handleSearch}
-              inputStyle={styles.searchInput}
-              placeholderStyle={styles.placeholderText}
-              placeholderBoldStyle={styles.placeholderBold}
-              placeholderNormalStyle={styles.placeholderNormal}
+              inputStyle={[
+                styles.searchInput,
+                homeData.selectedShift === 'PM' && styles.searchInputPM
+              ]}
+              placeholderStyle={[
+                styles.placeholderText,
+                homeData.selectedShift === 'PM' && styles.placeholderTextPM
+              ]}
+              placeholderBoldStyle={[
+                styles.placeholderBold,
+                homeData.selectedShift === 'PM' && styles.placeholderBoldPM
+              ]}
+              placeholderNormalStyle={[
+                styles.placeholderNormal,
+                homeData.selectedShift === 'PM' && styles.placeholderNormalPM
+              ]}
               inputWrapperStyle={styles.searchInputContainer}
             />
           </View>
@@ -248,7 +274,10 @@ export default function HomeScreen() {
           >
             <Image
               source={require('../../assets/icons/menu-icon.png')}
-              style={styles.filterIcon}
+              style={[
+                styles.filterIcon,
+                homeData.selectedShift === 'PM' && styles.filterIconPM
+              ]}
               resizeMode="contain"
             />
           </TouchableOpacity>
@@ -289,6 +318,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.primary,
   },
+  containerPM: {
+    backgroundColor: '#38414F', // Dark slate gray for PM mode
+  },
   scrollContainer: {
     flex: 1,
   },
@@ -324,6 +356,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20 * scaleX,
   },
+  searchBarPM: {
+    backgroundColor: '#3A3D49', // Slightly lighter dark gray for PM mode
+  },
   searchInputContainer: {
     height: '100%',
   },
@@ -345,6 +380,18 @@ const styles = StyleSheet.create({
   placeholderNormal: {
     fontWeight: '400' as any, // Regular for rest of text
   },
+  searchInputPM: {
+    color: colors.text.white,
+  },
+  placeholderTextPM: {
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  placeholderBoldPM: {
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  placeholderNormalPM: {
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
   searchIconButton: {
     width: 26 * scaleX,
     height: 26 * scaleX,
@@ -356,6 +403,9 @@ const styles = StyleSheet.create({
     width: 19 * scaleX,
     height: 19 * scaleX,
     tintColor: colors.primary.main,
+  },
+  searchIconPM: {
+    tintColor: colors.text.white,
   },
   filterButton: {
     width: 40 * scaleX, // Increased touch target for easier clicking
@@ -369,6 +419,9 @@ const styles = StyleSheet.create({
     width: 32 * scaleX, // Increased from 26px for better visibility
     height: 16 * scaleX, // Increased from 12px for better visibility (maintaining aspect ratio)
     tintColor: colors.primary.main,
+  },
+  filterIconPM: {
+    tintColor: colors.text.white,
   },
   blurOverlayDarkener: {
     ...StyleSheet.absoluteFillObject,

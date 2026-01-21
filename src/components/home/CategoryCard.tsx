@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import type { CategorySection } from '../../types/home.types';
+import type { CategorySection, ShiftType } from '../../types/home.types';
 import { colors, typography } from '../../theme';
 import { Dimensions } from 'react-native';
 import { normalizedScaleX, scaleX } from '../../utils/responsive';
@@ -13,6 +13,7 @@ import PriorityBadge from './PriorityBadge';
 interface CategoryCardProps {
   category: CategorySection;
   onPress?: () => void;
+  selectedShift?: ShiftType;
 }
 
 // Status configuration
@@ -39,14 +40,27 @@ const STATUS_CONFIG = {
   },
 };
 
-export default function CategoryCard({ category, onPress }: CategoryCardProps) {
+export default function CategoryCard({ category, onPress, selectedShift }: CategoryCardProps) {
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={[
+      styles.container,
+      selectedShift === 'PM' && styles.containerPM
+    ]} onPress={onPress} activeOpacity={0.7}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={styles.totalCount}>{category.total} </Text>
-          <Text style={styles.categoryName}>{category.name}</Text>
+          <Text style={[
+            styles.totalCount,
+            selectedShift === 'PM' && styles.totalCountPM
+          ]}>
+            {category.total}{' '}
+          </Text>
+          <Text style={[
+            styles.categoryName,
+            selectedShift === 'PM' && styles.categoryNamePM
+          ]}>
+            {category.name}
+          </Text>
         </View>
         {category.priority !== undefined && category.priority > 0 && (
           <PriorityBadge count={category.priority} />
@@ -54,7 +68,10 @@ export default function CategoryCard({ category, onPress }: CategoryCardProps) {
       </View>
 
       {/* Divider */}
-      <View style={styles.divider} />
+      <View style={[
+        styles.divider,
+        selectedShift === 'PM' && styles.dividerPM
+      ]} />
 
       {/* Status Indicators */}
       <View style={styles.statusGrid}>
@@ -125,11 +142,17 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.bold as any,
     color: 'rgba(30, 30, 30, 0.7)',
   },
+  categoryNamePM: {
+    color: colors.text.white,
+  },
   totalCount: {
     fontSize: 24 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: '#000000',
+  },
+  totalCountPM: {
+    color: colors.text.white,
   },
   divider: {
     position: 'absolute',
@@ -138,6 +161,9 @@ const styles = StyleSheet.create({
     top: (17 + 30 + 20 + 10) * scaleX, // paddingTop (17) + content height (~30px for 24px font with line height) + paddingBottom (20) + extra spacing (10) = 77px
     height: 1,
     backgroundColor: '#e3e3e3', // Light grey divider color (same as other cards)
+  },
+  dividerPM: {
+    backgroundColor: '#4A4D59', // Darker divider for PM mode
   },
   statusGrid: {
     flexDirection: 'row',

@@ -25,7 +25,10 @@ export default function HomeHeader({
 }: HomeHeaderProps) {
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      selectedShift === 'PM' && styles.containerPM
+    ]}>
       {/* Profile Section */}
       <View style={styles.profileSection}>
         <View style={styles.profileImageContainer}>
@@ -47,8 +50,18 @@ export default function HomeHeader({
           )}
         </View>
         <View style={styles.profileInfo}>
-          <Text style={styles.userName}>{user.name}</Text>
-          <Text style={styles.userRole}>{user.role}</Text>
+          <Text style={[
+            styles.userName,
+            selectedShift === 'PM' && styles.userNamePM
+          ]}>
+            {user.name}
+          </Text>
+          <Text style={[
+            styles.userRole,
+            selectedShift === 'PM' && styles.userRolePM
+          ]}>
+            {user.role}
+          </Text>
         </View>
       </View>
 
@@ -74,6 +87,9 @@ const styles = StyleSheet.create({
     shadowRadius: 105.1 * scaleX / 3,
     elevation: 8,
     zIndex: 100,
+  },
+  containerPM: {
+    backgroundColor: '#38414F', // Dark slate gray for PM mode
   },
   profileSection: {
     position: 'absolute',
@@ -131,6 +147,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 59.5 * scaleX,
     top: 82 * scaleX,
+  },
+  userNamePM: {
+    color: colors.text.white,
+  },
+  userRolePM: {
+    color: colors.text.white,
   },
 });
 

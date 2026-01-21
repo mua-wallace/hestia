@@ -30,9 +30,18 @@ export default function AllRoomsHeader({
   };
 
   return (
-    <View style={[styles.container, showFilterModal && styles.containerModalOpen]}>
+    <View style={[
+      styles.container, 
+      showFilterModal && styles.containerModalOpen,
+      selectedShift === 'PM' && styles.containerPM
+    ]}>
       {/* Blue gradient background - white when filter modal is open */}
-      <View style={[styles.headerBackground, showFilterModal && styles.headerBackgroundWhite]} />
+      <View style={[
+        styles.headerBackground, 
+        showFilterModal && styles.headerBackgroundWhite,
+        selectedShift === 'PM' && styles.headerBackgroundPM,
+        selectedShift === 'PM' && showFilterModal && styles.headerBackgroundPMModal
+      ]} />
       
       {/* Top section with back button, title, and AM/PM toggle */}
       <View style={styles.topSection}>
@@ -44,13 +53,21 @@ export default function AllRoomsHeader({
         >
             <Image
               source={require('../../../assets/icons/back-arrow.png')}
-              style={styles.backArrow}
+              style={[
+                styles.backArrow,
+                selectedShift === 'PM' && styles.backArrowPM
+              ]}
               resizeMode="contain"
-              tintColor="#5A759D"
+              tintColor={selectedShift === 'PM' ? colors.text.white : "#5A759D"}
             />
           </TouchableOpacity>
         
-        <Text style={styles.title}>All Rooms</Text>
+        <Text style={[
+          styles.title,
+          selectedShift === 'PM' && styles.titlePM
+        ]}>
+          All Rooms
+        </Text>
         
         <View style={styles.toggleContainer}>
           <AMPMToggle
@@ -63,7 +80,10 @@ export default function AllRoomsHeader({
       {/* Search bar section - hidden when filter modal is open */}
       {!showFilterModal && (
         <View style={styles.searchSection}>
-          <View style={styles.searchBar}>
+          <View style={[
+            styles.searchBar,
+            selectedShift === 'PM' && styles.searchBarPM
+          ]}>
             <TouchableOpacity
               style={styles.searchIconButton}
               onPress={() => {/* Search action */}}
@@ -71,17 +91,32 @@ export default function AllRoomsHeader({
             >
               <Image
                 source={require('../../../assets/icons/search-icon.png')}
-                style={styles.searchIcon}
+                style={[
+                  styles.searchIcon,
+                  selectedShift === 'PM' && styles.searchIconPM
+                ]}
                 resizeMode="contain"
               />
             </TouchableOpacity>
             <SearchInput
               placeholder={searchPlaceholder}
               onSearch={handleSearchChange}
-              inputStyle={styles.searchInput}
-              placeholderStyle={styles.placeholderText}
-              placeholderBoldStyle={styles.placeholderBold}
-              placeholderNormalStyle={styles.placeholderNormal}
+              inputStyle={[
+                styles.searchInput,
+                selectedShift === 'PM' && styles.searchInputPM
+              ]}
+              placeholderStyle={[
+                styles.placeholderText,
+                selectedShift === 'PM' && styles.placeholderTextPM
+              ]}
+              placeholderBoldStyle={[
+                styles.placeholderBold,
+                selectedShift === 'PM' && styles.placeholderBoldPM
+              ]}
+              placeholderNormalStyle={[
+                styles.placeholderNormal,
+                selectedShift === 'PM' && styles.placeholderNormalPM
+              ]}
               inputWrapperStyle={styles.searchInputContainer}
             />
           </View>
@@ -93,7 +128,10 @@ export default function AllRoomsHeader({
             >
               <Image
                 source={require('../../../assets/icons/menu-icon.png')}
-                style={styles.filterIcon}
+                style={[
+                  styles.filterIcon,
+                  selectedShift === 'PM' && styles.filterIconPM
+                ]}
                 resizeMode="contain"
               />
             </TouchableOpacity>
@@ -226,6 +264,42 @@ const styles = StyleSheet.create({
     width: 32 * scaleX, // Increased from 26px for better visibility (and fixed to use scaleX)
     height: 16 * scaleX, // Increased from 12px for better visibility (maintaining aspect ratio)
     tintColor: colors.primary.main,
+  },
+  containerPM: {
+    // Container already has dark background via headerBackgroundPM
+  },
+  headerBackgroundPM: {
+    backgroundColor: '#38414F', // Dark slate gray for PM mode
+  },
+  headerBackgroundPMModal: {
+    height: 153 * scaleX, // Match HomeScreen header height when modal is open
+  },
+  titlePM: {
+    color: colors.text.white,
+  },
+  backArrowPM: {
+    // Tint color handled inline
+  },
+  searchBarPM: {
+    backgroundColor: '#3A3D49', // Dark gray for PM mode
+  },
+  searchInputPM: {
+    color: colors.text.white,
+  },
+  placeholderTextPM: {
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  placeholderBoldPM: {
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  placeholderNormalPM: {
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  searchIconPM: {
+    tintColor: colors.text.white,
+  },
+  filterIconPM: {
+    tintColor: colors.text.white,
   },
 });
 

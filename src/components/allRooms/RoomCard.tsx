@@ -4,6 +4,7 @@ import { colors, typography } from '../../theme';
 import { scaleX } from '../../constants/allRoomsStyles';
 import type { RoomCardData } from '../../types/allRooms.types';
 import { CATEGORY_ICONS } from '../../types/allRooms.types';
+import type { ShiftType } from '../../types/home.types';
 import {
   CARD_DIMENSIONS,
   CARD_COLORS,
@@ -38,9 +39,10 @@ interface RoomCardProps {
   onStatusPress: () => void;
   onLayout?: (event: any) => void; // Optional layout handler for position tracking
   statusButtonRef?: (ref: any) => void; // Ref callback for status button
+  selectedShift?: ShiftType;
 }
 
-const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, onStatusPress, onLayout, statusButtonRef }, ref) => {
+const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, onStatusPress, onLayout, statusButtonRef, selectedShift }, ref) => {
   // Card type detection
   const isArrivalDeparture = room.category === 'Arrival/Departure';
   const isDeparture = room.category === 'Departure';
@@ -64,9 +66,21 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
     return CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 185px
   };
 
-  // Determine card background and border - based on status
+  // Determine card background and border - based on status and PM mode
   const getCardStyles = () => {
     const isInProgress = room.status === 'InProgress';
+    const isPM = selectedShift === 'PM';
+    
+    if (isPM) {
+      return {
+        backgroundColor: isInProgress 
+          ? '#4A4D59' // Darker gray for PM priority
+          : '#3A3D49', // Dark gray for PM mode
+        borderColor: '#4A4D59', // Darker border for PM mode
+        borderWidth: 1,
+      };
+    }
+    
     return {
       backgroundColor: isInProgress 
         ? CARD_COLORS.priorityBackground 
@@ -132,13 +146,19 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
           styles.roomInfo,
           !room.isPriority && styles.roomInfoStandard
         ]}>
-          <Text style={styles.roomNumber}>{room.roomNumber}</Text>
+          <Text style={[
+            styles.roomNumber,
+            selectedShift === 'PM' && styles.roomNumberPM
+          ]}>
+            {room.roomNumber}
+          </Text>
         </View>
         
         {/* Room Type (e.g., "ST2K - 1.4") */}
         <Text style={[
           styles.roomType,
-          !room.isPriority && styles.roomTypeStandard
+          !room.isPriority && styles.roomTypeStandard,
+          selectedShift === 'PM' && styles.roomTypePM
         ]}>
           {room.roomType}
         </Text>
@@ -146,7 +166,8 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
         {/* Category Label (e.g., "Arrival", "Departure", etc.) */}
         <Text style={[
           styles.categoryLabel,
-          !room.isPriority && styles.categoryLabelStandard
+          !room.isPriority && styles.categoryLabelStandard,
+          selectedShift === 'PM' && styles.categoryLabelPM
         ]}>
           {room.category}
         </Text>
@@ -183,6 +204,7 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
             hasNotes={hasNotes}
             category={room.category}
             isArrivalDeparture={isArrivalDeparture}
+            selectedShift={selectedShift}
           />
         );
       })}
@@ -197,7 +219,8 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
       <StaffSection 
         staff={room.staff} 
         isPriority={room.isPriority} 
-        category={room.category} 
+        category={room.category}
+        selectedShift={selectedShift}
       />
 
       {/* Status Button */}
@@ -349,6 +372,15 @@ const styles = StyleSheet.create({
   dividerVerticalStandard: {
     left: STAFF_SECTION.dividerStandard.left * scaleX,
     top: (STAFF_SECTION.dividerStandard.top ?? STAFF_SECTION.divider.top) * scaleX,
+  },
+  roomNumberPM: {
+    color: colors.text.white,
+  },
+  roomTypePM: {
+    color: colors.text.white,
+  },
+  categoryLabelPM: {
+    color: colors.text.white,
   },
   guestDividerLine: {
     position: 'absolute',

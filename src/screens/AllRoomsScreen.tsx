@@ -484,11 +484,19 @@ export default function AllRoomsScreen() {
       );
     }
 
+    // PM mode: show only Turndown cards (per Figma / requirements)
+    if (allRoomsData.selectedShift === 'PM') {
+      rooms = rooms.filter((room) => room.category === 'Turndown');
+    }
+
     return rooms;
-  }, [allRoomsData.rooms, activeFilters, searchQuery]);
+  }, [allRoomsData.rooms, allRoomsData.selectedShift, activeFilters, searchQuery]);
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      allRoomsData.selectedShift === 'PM' && styles.containerPM
+    ]}>
       {/* Scrollable Content with conditional blur */}
       <View style={styles.scrollContainer}>
         <ScrollView
@@ -510,7 +518,10 @@ export default function AllRoomsScreen() {
         >
           {hasActiveFilters && filteredRooms.length === 0 ? (
             // Empty state card when filters don't match any rooms
-            <View style={styles.emptyStateCard}>
+            <View style={[
+              styles.emptyStateCard,
+              allRoomsData.selectedShift === 'PM' && styles.emptyStateCardPM
+            ]}>
               <View style={styles.emptyStateIconContainer}>
                 <View style={styles.emptyStateIconCircle}>
                   <Image
@@ -521,8 +532,16 @@ export default function AllRoomsScreen() {
                   />
                 </View>
               </View>
-              <Text style={styles.emptyStateTitle}>No rooms found</Text>
-              <Text style={styles.emptyStateMessage}>
+              <Text style={[
+                styles.emptyStateTitle,
+                allRoomsData.selectedShift === 'PM' && styles.emptyStateTitlePM
+              ]}>
+                No rooms found
+              </Text>
+              <Text style={[
+                styles.emptyStateMessage,
+                allRoomsData.selectedShift === 'PM' && styles.emptyStateMessagePM
+              ]}>
                 The chosen filter options do not match any rooms.{'\n'}Try adjusting your filters or search query.
               </Text>
             </View>
@@ -543,6 +562,7 @@ export default function AllRoomsScreen() {
                     statusButtonRefs.current[room.id] = ref;
                   }
                 }}
+                selectedShift={allRoomsData.selectedShift}
               />
             ))
           )}
@@ -645,6 +665,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.primary,
   },
+  containerPM: {
+    backgroundColor: '#38414F', // Dark slate gray for PM mode
+  },
   scrollContainer: {
     flex: 1,
     position: 'relative',
@@ -736,6 +759,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22 * scaleX,
     paddingHorizontal: 10 * scaleX,
+  },
+  emptyStateCardPM: {
+    backgroundColor: '#3A3D49', // Dark gray for PM mode
+    borderColor: '#4A4D59', // Darker border for PM mode
+  },
+  emptyStateTitlePM: {
+    color: colors.text.white,
+  },
+  emptyStateMessagePM: {
+    color: colors.text.white,
   },
 });
 
