@@ -73,7 +73,6 @@ export default function CategoryCard({ category, onPress }: CategoryCardProps) {
           label={STATUS_CONFIG.inProgress.label}
           iconWidth={29.478}
           iconHeight={30.769}
-          leftLabelIcon={require('../../../assets/icons/in-progress-icon.png')}
           rightLabelIcon={require('../../../assets/icons/down-arrow.png')}
         />
         <StatusIndicator

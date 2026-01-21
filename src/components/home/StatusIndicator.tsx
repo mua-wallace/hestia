@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
 import { typography } from '../../theme';
 import { normalizedScaleX } from '../../utils/responsive';
@@ -23,11 +23,18 @@ interface StatusIndicatorProps {
 }
 
 export default function StatusIndicator({ color, icon, count, label, iconWidth, iconHeight, leftLabelIcon, rightLabelIcon }: StatusIndicatorProps) {
+  const [textWidth, setTextWidth] = useState(0);
+  
   const iconStyle = [
     styles.icon,
     iconWidth && { width: iconWidth * normalizedScaleX },
     iconHeight && { height: iconHeight * normalizedScaleX },
   ];
+
+  // Calculate position for right icon to appear after centered text
+  const rightIconOffset = rightLabelIcon && textWidth > 0 
+    ? textWidth / 2 + 9 * normalizedScaleX + 2 * normalizedScaleX 
+    : 0;
 
   return (
     <View style={styles.container}>
@@ -55,11 +62,25 @@ export default function StatusIndicator({ color, icon, count, label, iconWidth, 
             resizeMode="contain"
           />
         )}
-        <Text style={styles.label}>{label}</Text>
+        <Text 
+          style={styles.label}
+          onLayout={(event) => {
+            const { width } = event.nativeEvent.layout;
+            setTextWidth(width);
+          }}
+        >
+          {label}
+        </Text>
         {rightLabelIcon && (
           <Image
             source={rightLabelIcon}
-            style={[styles.rightLabelIcon, { transform: [{ rotate: '90deg' }] }]}
+            style={[
+              styles.rightLabelIcon,
+              { 
+                transform: [{ rotate: '90deg' }], 
+                marginLeft: rightIconOffset 
+              }
+            ]}
             resizeMode="contain"
           />
         )}
@@ -134,12 +155,14 @@ const styles = StyleSheet.create({
     width: '100%', // Ensure full width for proper centering
     // Ensure consistent horizontal alignment with icon above
     alignSelf: 'center',
+    position: 'relative', // For absolute positioning of right icon
   },
   label: {
     fontSize: 14 * normalizedScaleX,
     fontFamily: 'Inter',
     fontWeight: '300' as any,
     color: '#000000',
+    textAlign: 'center',
   },
   leftLabelIcon: {
     width: 18 * normalizedScaleX,
@@ -149,7 +172,8 @@ const styles = StyleSheet.create({
   rightLabelIcon: {
     width: 18 * normalizedScaleX,
     height: 18 * normalizedScaleX,
-    marginLeft: 4 * normalizedScaleX,
+    position: 'absolute',
+    left: '50%',
   },
 });
 
