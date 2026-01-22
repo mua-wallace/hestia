@@ -2,8 +2,9 @@
  * Filter Type Definitions
  */
 
-export type RoomStateFilter = 'dirty' | 'inProgress' | 'cleaned' | 'inspected' | 'priority';
-export type GuestFilter = 'arrivals' | 'departures' | 'turnDown' | 'stayOver';
+export type RoomStateFilter = 'dirty' | 'inProgress' | 'cleaned' | 'inspected' | 'priority' | 'paused' | 'refused' | 'returnLater';
+export type GuestFilter = 'arrivals' | 'departures' | 'turnDown' | 'stayOver' | 'stayOverWithLinen' | 'stayOverNoLinen' | 'checkedIn' | 'checkedOut' | 'checkedOutDueIn' | 'outOfOrder' | 'outOfService';
+export type ReservationFilter = 'occupied' | 'vacant';
 export type FloorFilter = 'all' | 'first' | 'second' | 'third' | 'fourth';
 
 export interface FilterState {
@@ -13,12 +14,26 @@ export interface FilterState {
     cleaned: boolean;
     inspected: boolean;
     priority: boolean;
+    paused?: boolean;
+    refused?: boolean;
+    returnLater?: boolean;
   };
   guests: {
     arrivals: boolean;
     departures: boolean;
     turnDown: boolean;
     stayOver: boolean;
+    stayOverWithLinen?: boolean;
+    stayOverNoLinen?: boolean;
+    checkedIn?: boolean;
+    checkedOut?: boolean;
+    checkedOutDueIn?: boolean;
+    outOfOrder?: boolean;
+    outOfService?: boolean;
+  };
+  reservations?: {
+    occupied: boolean;
+    vacant: boolean;
   };
   floors?: Record<FloorFilter, boolean>;
 }
@@ -30,12 +45,26 @@ export interface FilterCounts {
     cleaned: number;
     inspected: number;
     priority: number;
+    paused?: number;
+    refused?: number;
+    returnLater?: number;
   };
   guests: {
     arrivals: number;
     departures: number;
     turnDown: number;
     stayOver: number;
+    stayOverWithLinen?: number;
+    stayOverNoLinen?: number;
+    checkedIn?: number;
+    checkedOut?: number;
+    checkedOutDueIn?: number;
+    outOfOrder?: number;
+    outOfService?: number;
+  };
+  reservations?: {
+    occupied: number;
+    vacant: number;
   };
   floors?: Record<FloorFilter, number>;
   totalRooms?: number;

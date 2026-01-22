@@ -19,6 +19,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { BlurView } from 'expo-blur';
 import { FilterState, FilterCounts } from '../types/filter.types';
 import HomeFilterModal from '../components/home/HomeFilterModal';
+import AllRoomsFilterModal from '../components/allRooms/AllRoomsFilterModal';
 import { CARD_DIMENSIONS, CARD_COLORS } from '../constants/allRoomsStyles';
 import { getShiftFromTime } from '../utils/shiftUtils';
 
@@ -92,8 +93,9 @@ export default function AllRoomsScreen() {
     if (!activeFilters) return false;
     const hasRoomStateFilter = Object.values(activeFilters.roomStates || {}).some(v => v);
     const hasGuestFilter = Object.values(activeFilters.guests || {}).some(v => v);
+    const hasReservationFilter = Object.values(activeFilters.reservations || {}).some(v => v);
     const hasFloorFilter = Object.values(activeFilters.floors || {}).some(v => v);
-    return hasRoomStateFilter || hasGuestFilter || hasFloorFilter || !!searchQuery;
+    return hasRoomStateFilter || hasGuestFilter || hasReservationFilter || hasFloorFilter || !!searchQuery;
   }, [activeFilters, searchQuery]);
 
   const handleShiftToggle = (shift: ShiftType) => {
@@ -118,6 +120,9 @@ export default function AllRoomsScreen() {
       cleaned: 0,
       inspected: 0,
       priority: 0,
+      paused: 0,
+      refused: 0,
+      returnLater: 0,
     };
 
     const guests = {
@@ -125,6 +130,17 @@ export default function AllRoomsScreen() {
       departures: 0,
       turnDown: 0,
       stayOver: 0,
+      stayOverWithLinen: 0,
+      stayOverNoLinen: 0,
+      checkedIn: 0,
+      checkedOut: 0,
+      checkedOutDueIn: 0,
+      outOfOrder: 0,
+      outOfService: 0,
+    };
+    const reservations = {
+      occupied: 0,
+      vacant: 0,
     };
     const totalRooms = allRoomsData.rooms.length;
 
@@ -148,6 +164,16 @@ export default function AllRoomsScreen() {
       }
       if (room.category === 'Stayover') {
         guests.stayOver++;
+        // TODO: Determine stayover with/without linen based on room data
+        // For now, split evenly or use a flag if available
+        guests.stayOverWithLinen++;
+      }
+
+      // Reservation status counts
+      if (room.reservationStatus === 'Occupied') {
+        reservations.occupied++;
+      } else if (room.reservationStatus === 'Vacant') {
+        reservations.vacant++;
       }
     });
 
@@ -183,7 +209,7 @@ export default function AllRoomsScreen() {
       fourth: floorCounts.fourth,
     };
 
-    return { roomStates, guests, floors, totalRooms };
+    return { roomStates, guests, reservations, floors, totalRooms };
   }, [allRoomsData.rooms]);
 
   const handleApplyFilters = (appliedFilters: FilterState) => {
@@ -481,6 +507,7 @@ export default function AllRoomsScreen() {
     if (activeFilters) {
       const hasRoomStateFilter = Object.values(activeFilters.roomStates).some(v => v);
       const hasGuestFilter = Object.values(activeFilters.guests).some(v => v);
+      const hasReservationFilter = Object.values(activeFilters.reservations || {}).some(v => v);
       const hasFloorFilter = Object.values(activeFilters.floors || {}).some(v => v);
 
       // Apply floor filter first
@@ -526,9 +553,22 @@ export default function AllRoomsScreen() {
               (activeFilters.guests.arrivals && (room.category === 'Arrival' || room.category === 'Arrival/Departure')) ||
               (activeFilters.guests.departures && (room.category === 'Departure' || room.category === 'Arrival/Departure')) ||
               (activeFilters.guests.turnDown && room.category === 'Turndown') ||
-              (activeFilters.guests.stayOver && room.category === 'Stayover');
+              (activeFilters.guests.stayOver && room.category === 'Stayover') ||
+              (activeFilters.guests.stayOverWithLinen && room.category === 'Stayover') || // TODO: Add linen flag check
+              (activeFilters.guests.stayOverNoLinen && room.category === 'Stayover'); // TODO: Add linen flag check
 
             if (!matchesGuest) {
+              return false;
+            }
+          }
+
+          // Check reservation filters
+          if (hasReservationFilter) {
+            const matchesReservation =
+              (activeFilters.reservations?.occupied && room.reservationStatus === 'Occupied') ||
+              (activeFilters.reservations?.vacant && room.reservationStatus === 'Vacant');
+
+            if (!matchesReservation) {
               return false;
             }
           }
@@ -716,22 +756,35 @@ export default function AllRoomsScreen() {
         headerHeight={217} // AllRoomsScreen header height
       />
 
-      {/* Filter Modal */}
-      <HomeFilterModal
-        visible={showFilterModal}
-        onClose={() => setShowFilterModal(false)}
-        onGoToResults={allRoomsData.selectedShift === 'AM' ? handleGoToHomeWithFilters : handleGoToResults}
-        onAdvanceFilter={handleAdvanceFilter}
-        onApplyFilters={allRoomsData.selectedShift === 'AM' ? undefined : handleApplyFilters}
-        initialFilters={activeFilters || undefined}
-        filterCounts={filterCounts}
-        headerHeight={153 * scaleX} // Match HomeScreen header height when modal is open
-        searchBarHeight={59 * scaleX} // Same search bar height
-        searchBarTop={undefined} // Don't pass searchBarTop when modal is open - use HomeScreen logic
-        onFilterIconPress={handleFilterPress}
-        selectedShift={allRoomsData.selectedShift}
-        actualFilteredCount={filteredRooms.length} // Pass actual filtered room count
-      />
+      {/* Filter Modal - Use AllRoomsFilterModal for AM shift, HomeFilterModal for PM shift */}
+      {allRoomsData.selectedShift === 'AM' ? (
+        <AllRoomsFilterModal
+          visible={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          onApplyFilters={handleApplyFilters}
+          initialFilters={activeFilters || undefined}
+          filterCounts={filterCounts}
+          headerHeight={217}
+          onFilterIconPress={handleFilterPress}
+          actualFilteredCount={filteredRooms.length}
+        />
+      ) : (
+        <HomeFilterModal
+          visible={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          onGoToResults={handleGoToResults}
+          onAdvanceFilter={handleAdvanceFilter}
+          onApplyFilters={handleApplyFilters}
+          initialFilters={activeFilters || undefined}
+          filterCounts={filterCounts}
+          headerHeight={153 * scaleX}
+          searchBarHeight={59 * scaleX}
+          searchBarTop={undefined}
+          onFilterIconPress={handleFilterPress}
+          selectedShift={allRoomsData.selectedShift}
+          actualFilteredCount={filteredRooms.length}
+        />
+      )}
 
     </View>
   );

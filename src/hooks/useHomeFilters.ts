@@ -8,12 +8,26 @@ const defaultFilterState: FilterState = {
     cleaned: false,
     inspected: false,
     priority: false,
+    paused: false,
+    refused: false,
+    returnLater: false,
   },
   guests: {
     arrivals: false,
     departures: false,
     turnDown: false,
     stayOver: false,
+    stayOverWithLinen: false,
+    stayOverNoLinen: false,
+    checkedIn: false,
+    checkedOut: false,
+    checkedOutDueIn: false,
+    outOfOrder: false,
+    outOfService: false,
+  },
+  reservations: {
+    occupied: false,
+    vacant: false,
   },
   floors: {
     all: false,
@@ -33,8 +47,9 @@ export function useHomeFilters(initialFilters?: FilterState) {
     setFilters((prev) => ({
       ...prev,
       roomStates: {
+        ...defaultFilterState.roomStates,
         ...prev.roomStates,
-        [state]: !prev.roomStates[state],
+        [state]: !(prev.roomStates[state] || false),
       },
     }));
   }, []);
@@ -43,8 +58,19 @@ export function useHomeFilters(initialFilters?: FilterState) {
     setFilters((prev) => ({
       ...prev,
       guests: {
+        ...defaultFilterState.guests,
         ...prev.guests,
-        [guest]: !prev.guests[guest],
+        [guest]: !(prev.guests[guest] || false),
+      },
+    }));
+  }, []);
+
+  const toggleReservation = useCallback((reservation: keyof NonNullable<FilterState['reservations']>) => {
+    setFilters((prev) => ({
+      ...prev,
+      reservations: {
+        ...(prev.reservations || defaultFilterState.reservations),
+        [reservation]: !(prev.reservations || defaultFilterState.reservations)?.[reservation],
       },
     }));
   }, []);
@@ -165,6 +191,7 @@ export function useHomeFilters(initialFilters?: FilterState) {
     return (
       Object.values(filters.roomStates).some((v) => v) ||
       Object.values(filters.guests).some((v) => v) ||
+      Object.values(filters.reservations || {}).some((v) => v) ||
       Object.values(filters.floors || {}).some((v) => v)
     );
   }, [filters]);
@@ -175,6 +202,7 @@ export function useHomeFilters(initialFilters?: FilterState) {
     ...filters,
     roomStates: filters?.roomStates || defaultFilterState.roomStates,
     guests: filters?.guests || defaultFilterState.guests,
+    reservations: filters?.reservations || defaultFilterState.reservations,
     floors: filters?.floors || defaultFilterState.floors,
   };
 
@@ -183,6 +211,7 @@ export function useHomeFilters(initialFilters?: FilterState) {
     setFilters,
     toggleRoomState,
     toggleGuest,
+    toggleReservation,
     toggleFloor,
     resetFilters,
     calculateResultCount,
