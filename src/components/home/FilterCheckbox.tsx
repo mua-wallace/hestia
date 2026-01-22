@@ -17,8 +17,13 @@ export default function FilterCheckbox({
   onToggle,
   size = 20,
 }: FilterCheckboxProps) {
-  const checkboxSize = size * scaleX;
-  const borderWidth = 2 * scaleX;
+  // Use Figma dimensions: 25px width, 24px height, 1px border
+  // If custom size is provided, use it for both dimensions (backward compatibility)
+  const isDefaultSize = size === 20;
+  const checkboxWidth = isDefaultSize ? 25 * scaleX : size * scaleX;
+  const checkboxHeight = isDefaultSize ? 24 * scaleX : size * scaleX;
+  const borderWidth = 1 * scaleX; // 1px border
+  const checkmarkSize = isDefaultSize ? 18 * scaleX : checkboxWidth * 0.8;
 
   return (
     <TouchableOpacity
@@ -30,11 +35,11 @@ export default function FilterCheckbox({
         style={[
           styles.checkbox,
           {
-            width: checkboxSize,
-            height: checkboxSize,
+            width: checkboxWidth,
+            height: checkboxHeight,
             borderWidth: borderWidth,
             backgroundColor: checked ? '#1e1e1e' : 'transparent',
-            borderColor: checked ? '#1e1e1e' : '#A9A9A9',
+            borderColor: checked ? '#1e1e1e' : '#C6C5C5',
           },
         ]}
       >
@@ -42,7 +47,10 @@ export default function FilterCheckbox({
           <Text
             style={[
               styles.checkmark,
-              { fontSize: checkboxSize * 0.8, lineHeight: checkboxSize * 0.8 },
+              { 
+                fontSize: checkmarkSize, 
+                lineHeight: checkmarkSize 
+              },
             ]}
           >
             ✓

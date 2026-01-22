@@ -259,12 +259,36 @@ export default function HomeScreen() {
       guests.turnDown = 12; // Mock value
     });
 
+    // Calculate floor counts based on actual room numbers from mockAllRoomsData
+    // Room numbers: 1xx = 1st floor, 2xx = 2nd floor, 3xx = 3rd floor, 4xx = 4th floor
+    const floorCounts = {
+      first: 0,
+      second: 0,
+      third: 0,
+      fourth: 0,
+    };
+
+    mockAllRoomsData.rooms.forEach((room) => {
+      const roomNum = parseInt(room.roomNumber, 10);
+      if (!isNaN(roomNum)) {
+        if (roomNum >= 100 && roomNum < 200) {
+          floorCounts.first++;
+        } else if (roomNum >= 200 && roomNum < 300) {
+          floorCounts.second++;
+        } else if (roomNum >= 300 && roomNum < 400) {
+          floorCounts.third++;
+        } else if (roomNum >= 400 && roomNum < 500) {
+          floorCounts.fourth++;
+        }
+      }
+    });
+
     const floors = {
-      all: totalRooms,
-      first: totalRooms,
-      second: totalRooms,
-      third: totalRooms,
-      fourth: totalRooms,
+      all: floorCounts.first + floorCounts.second + floorCounts.third + floorCounts.fourth, // Sum of all floors
+      first: floorCounts.first,
+      second: floorCounts.second,
+      third: floorCounts.third,
+      fourth: floorCounts.fourth,
     };
 
     return { roomStates, guests, floors, totalRooms };
