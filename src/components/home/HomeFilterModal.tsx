@@ -39,6 +39,7 @@ interface HomeFilterModalProps {
   searchBarTop?: number; // Optional search bar top position (for AllRoomsScreen where search is inside header)
   onFilterIconPress?: () => void; // Callback for filter icon press
   selectedShift?: ShiftType; // Determine which variant of the filter to show
+  actualFilteredCount?: number; // Optional: actual count of filtered rooms (more accurate than estimation)
 }
 
 export default function HomeFilterModal({
@@ -54,6 +55,7 @@ export default function HomeFilterModal({
   searchBarTop,
   onFilterIconPress,
   selectedShift,
+  actualFilteredCount,
 }: HomeFilterModalProps) {
   // Ensure filterCounts is always defined with default values
   const safeFilterCounts: FilterCounts = filterCounts || {
@@ -118,6 +120,10 @@ export default function HomeFilterModal({
   } = useHomeFilters(initialFilters);
 
   const isAMShift = selectedShift === 'AM';
+  // For HomeScreen, always show AM-style filter (floors filter) regardless of shift
+  // HomeScreen doesn't provide onApplyFilters, AllRoomsScreen does
+  const isHomeScreen = !onApplyFilters;
+  const shouldShowAMStyle = isAMShift || isHomeScreen;
   const floorKeys: FloorFilter[] = ['all', 'first', 'second', 'third', 'fourth'];
 
   const derivedTotalRooms = useMemo(() => {
@@ -149,9 +155,14 @@ export default function HomeFilterModal({
   }, [visible, initialFilters, setFilters]);
 
   const resultCount = useMemo(() => {
+    // If actual filtered count is provided, use it (more accurate)
+    if (actualFilteredCount !== undefined) {
+      return actualFilteredCount;
+    }
+    // Otherwise, use the estimation from calculateResultCount
     if (!filters) return 0;
     return calculateResultCount(safeFilterCounts);
-  }, [filters, safeFilterCounts, calculateResultCount]);
+  }, [filters, safeFilterCounts, calculateResultCount, actualFilteredCount]);
 
   const floorOptions = useMemo(() => {
     const currentFloors =
@@ -462,7 +473,7 @@ export default function HomeFilterModal({
           pointerEvents="box-none"
         >
           <View style={styles.modalContent}>
-            {isAMShift ? (
+            {shouldShowAMStyle ? (
               <View style={styles.amContent}>
                 <View style={styles.amHeader}>
                   <Text style={styles.headerTitle}>Floors Filter</Text>

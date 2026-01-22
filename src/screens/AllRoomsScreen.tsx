@@ -481,6 +481,28 @@ export default function AllRoomsScreen() {
     if (activeFilters) {
       const hasRoomStateFilter = Object.values(activeFilters.roomStates).some(v => v);
       const hasGuestFilter = Object.values(activeFilters.guests).some(v => v);
+      const hasFloorFilter = Object.values(activeFilters.floors || {}).some(v => v);
+
+      // Apply floor filter first
+      if (hasFloorFilter) {
+        const floorFilters = activeFilters.floors || {};
+        const isAllSelected = floorFilters.all;
+        
+        if (!isAllSelected) {
+          // Filter by individual floors
+          rooms = rooms.filter((room) => {
+            const roomNum = parseInt(room.roomNumber, 10);
+            if (isNaN(roomNum)) return false;
+            
+            if (roomNum >= 100 && roomNum < 200) return floorFilters.first;
+            if (roomNum >= 200 && roomNum < 300) return floorFilters.second;
+            if (roomNum >= 300 && roomNum < 400) return floorFilters.third;
+            if (roomNum >= 400 && roomNum < 500) return floorFilters.fourth;
+            return false;
+          });
+        }
+        // If "All" is selected, include all floors (no filtering needed)
+      }
 
       if (hasRoomStateFilter || hasGuestFilter) {
         rooms = rooms.filter((room) => {
@@ -708,6 +730,7 @@ export default function AllRoomsScreen() {
         searchBarTop={undefined} // Don't pass searchBarTop when modal is open - use HomeScreen logic
         onFilterIconPress={handleFilterPress}
         selectedShift={allRoomsData.selectedShift}
+        actualFilteredCount={filteredRooms.length} // Pass actual filtered room count
       />
 
     </View>

@@ -47,13 +47,14 @@ export default function FilterRow({
           ],
         ]}
       >
-        {icon && (!isCircular || isPriority) && (
+        {icon && (
           <Image
             source={icon}
             style={[
-              styles.icon,
-              // Don't apply tintColor for priority - it has its own colors
-              iconColor && !isPriority && { tintColor: iconColor },
+              isCircular ? styles.circularIcon : styles.icon,
+              // For circular icons, use white tint; for priority, don't apply tint; otherwise use iconColor
+              isCircular && { tintColor: '#ffffff' },
+              !isCircular && iconColor && !isPriority && { tintColor: iconColor },
             ]}
             resizeMode="contain"
           />

@@ -185,18 +185,27 @@ export default function HomeScreen() {
   };
 
   const derivedCategories = useMemo(() => {
-    const rooms = filterRoomsByFloors(mockAllRoomsData.rooms, activeFilters);
+    let rooms = filterRoomsByFloors(mockAllRoomsData.rooms, activeFilters);
 
+    const categories: CategorySection[] = [];
+
+    // Always show Flagged, Arrivals, StayOvers cards with statistics
     const flaggedRooms = rooms.filter((r) => !!r.flagged);
     const arrivalRooms = rooms.filter((r) => r.category === 'Arrival' || r.category === 'Arrival/Departure');
     const stayOverRooms = rooms.filter((r) => r.category === 'Stayover');
 
-    return [
-      buildCategory('Flagged', 'flagged', '#6e1eee', flaggedRooms),
-      buildCategory('Arrivals', 'arrivals', '#41d541', arrivalRooms),
-      buildCategory('StayOvers', 'stayovers', '#8d908d', stayOverRooms),
-    ];
-  }, [activeFilters]);
+    categories.push(buildCategory('Flagged', 'flagged', '#6e1eee', flaggedRooms));
+    categories.push(buildCategory('Arrivals', 'arrivals', '#41d541', arrivalRooms));
+    categories.push(buildCategory('StayOvers', 'stayovers', '#8d908d', stayOverRooms));
+
+    // Only show Turndown card in PM mode
+    if (homeData.selectedShift === 'PM') {
+      const turndownRooms = rooms.filter((r) => r.category === 'Turndown');
+      categories.push(buildCategory('Turndown', 'turndown', '#4a91fc', turndownRooms));
+    }
+
+    return categories;
+  }, [activeFilters, homeData.selectedShift]);
 
   // Sync route filters -> local state
   useEffect(() => {
@@ -251,12 +260,16 @@ export default function HomeScreen() {
         guests.arrivals += category.total;
       } else if (category.name === 'StayOvers') {
         guests.stayOver += category.total;
+      } else if (category.name === 'Turndown') {
+        guests.turnDown += category.total;
       }
       totalRooms += category.total;
-      // Note: Departures and Turn Down would need additional data
-      // For now, using mock values
-      guests.departures = 18; // Mock value
-      guests.turnDown = 12; // Mock value
+      
+      // Calculate departures from actual room data
+      const departureRooms = mockAllRoomsData.rooms.filter(
+        (r) => r.category === 'Departure' || r.category === 'Arrival/Departure'
+      );
+      guests.departures = departureRooms.length;
     });
 
     // Calculate floor counts based on actual room numbers from mockAllRoomsData
@@ -295,13 +308,8 @@ export default function HomeScreen() {
   }, [homeData]);
 
   const handleGoToResults = (filters: FilterState) => {
-    // AM: apply filters to Home stats/cards
-    if (homeData.selectedShift === 'AM') {
-      setActiveFilters(filters);
-      return;
-    }
-    // PM: existing behavior (navigate to Rooms list with filters)
-    navigation.navigate('AllRooms', { filters, showBackButton: true } as any);
+    // Apply filters to Home stats/cards in both AM and PM modes
+    setActiveFilters(filters);
   };
 
   const handleAdvanceFilter = () => {

@@ -65,42 +65,98 @@ export function useHomeFilters(initialFilters?: FilterState) {
 
   const calculateResultCount = useCallback(
     (filterCounts: FilterCounts): number => {
-      let count = 0;
       let hasAnyFilter = false;
-
+      const floorSelections = filters.floors || defaultFilterState.floors;
+      
+      // Check if "All" floors is selected
+      const isAllFloorsSelected = floorSelections.all;
+      
       // Count room states
+      const selectedRoomStates: string[] = [];
       Object.entries(filters.roomStates).forEach(([key, selected]) => {
         if (selected) {
           hasAnyFilter = true;
-          count += filterCounts.roomStates[key as keyof FilterCounts['roomStates']] || 0;
+          selectedRoomStates.push(key);
         }
       });
 
       // Count guests
+      const selectedGuests: string[] = [];
       Object.entries(filters.guests).forEach(([key, selected]) => {
         if (selected) {
           hasAnyFilter = true;
-          count += filterCounts.guests[key as keyof FilterCounts['guests']] || 0;
+          selectedGuests.push(key);
         }
       });
 
-      // Count floors (if provided)
-      const floorSelections = filters.floors || defaultFilterState.floors;
+      // Count floors (exclude "all" since it's redundant when individual floors are selected)
+      const selectedFloors: FloorFilter[] = [];
       if (filterCounts.floors) {
         Object.entries(floorSelections).forEach(([key, selected]) => {
-          if (selected) {
+          if (selected && key !== 'all') {
             hasAnyFilter = true;
-            count += filterCounts.floors?.[key as FloorFilter] || 0;
+            selectedFloors.push(key as FloorFilter);
           }
         });
       }
 
-      // If no filters selected, return 0 (caller can provide a fallback total if needed)
+      // If no filters selected, return 0
       if (!hasAnyFilter) {
         return 0;
       }
 
-      return count;
+      // Calculate floor count
+      let floorCount = 0;
+      if (isAllFloorsSelected) {
+        // When "All" is selected, all individual floors are also selected, so use the total
+        // Don't add "all" count separately to avoid double-counting
+        floorCount = filterCounts.floors?.all || 0;
+      } else if (selectedFloors.length > 0) {
+        // Sum individual selected floors
+        selectedFloors.forEach((floor) => {
+          floorCount += filterCounts.floors?.[floor] || 0;
+        });
+      }
+      // If no floor filter selected, floorCount remains 0 (all floors included in other counts)
+
+      // Calculate room state count
+      let roomStateCount = 0;
+      selectedRoomStates.forEach((state) => {
+        roomStateCount += filterCounts.roomStates[state as keyof FilterCounts['roomStates']] || 0;
+      });
+
+      // Calculate guest count
+      let guestCount = 0;
+      selectedGuests.forEach((guest) => {
+        guestCount += filterCounts.guests[guest as keyof FilterCounts['guests']] || 0;
+      });
+
+      // If only one filter type is selected, return that count
+      const hasRoomStateFilter = selectedRoomStates.length > 0;
+      const hasGuestFilter = selectedGuests.length > 0;
+      const hasFloorFilter = isAllFloorsSelected || selectedFloors.length > 0;
+
+      if (hasRoomStateFilter && !hasGuestFilter && !hasFloorFilter) {
+        return roomStateCount;
+      }
+      if (hasGuestFilter && !hasRoomStateFilter && !hasFloorFilter) {
+        return guestCount;
+      }
+      if (hasFloorFilter && !hasRoomStateFilter && !hasGuestFilter) {
+        return floorCount;
+      }
+
+      // When multiple filter types are selected, we need to estimate the intersection
+      // Since we don't have the actual room data here, we use the minimum as a conservative estimate
+      // This is an approximation - the actual count would require filtering the rooms
+      const counts = [];
+      if (hasRoomStateFilter) counts.push(roomStateCount);
+      if (hasGuestFilter) counts.push(guestCount);
+      if (hasFloorFilter) counts.push(floorCount);
+      
+      // Return the minimum count as a conservative estimate of the intersection
+      // The actual implementation should filter rooms in the screen component
+      return counts.length > 0 ? Math.min(...counts) : 0;
     },
     [filters]
   );
