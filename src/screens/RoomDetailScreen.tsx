@@ -5,8 +5,8 @@
  * This screen dynamically adjusts layout based on room type configuration
  */
 
-import React, { useState, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, LayoutChangeEvent } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme';
@@ -19,7 +19,6 @@ import GuestInfoCard from '../components/roomDetail/GuestInfoCard';
 import NotesSection from '../components/roomDetail/NotesSection';
 import LostAndFoundSection from '../components/roomDetail/LostAndFoundSection';
 import AssignedToSection from '../components/roomDetail/AssignedToSection';
-import TaskSection from '../components/roomDetail/TaskSection';
 import ChecklistSection from '../components/roomDetail/ChecklistSection';
 import RoomTicketsSection from '../components/roomDetail/RoomTicketsSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
@@ -30,12 +29,15 @@ import ReassignModal from '../components/roomDetail/ReassignModal';
 import AddNoteModal from '../components/roomDetail/AddNoteModal';
 import AddTaskModal from '../components/roomDetail/AddTaskModal';
 import ViewTaskModal from '../components/roomDetail/ViewTaskModal';
+import HistorySection from '../components/roomDetail/HistorySection';
 import type { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import { STATUS_OPTIONS } from '../types/allRooms.types';
-import type { RoomDetailData, DetailTab, Note, Task, RoomType } from '../types/roomDetail.types';
+import type { RoomDetailData, DetailTab, Note, Task, RoomType, HistoryEvent, HistoryGroup } from '../types/roomDetail.types';
 import type { LostAndFoundItem } from '../types/lostAndFound.types';
 import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
+import { getMockHistoryEvents } from '../data/mockHistoryData';
+import { generateHistoryReport } from '../utils/generateHistoryReport';
 
 type RoomDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -122,6 +124,136 @@ export default function RoomDetailScreen() {
   
   // Track tasks in state
   const [tasks, setTasks] = useState<Task[]>([]);
+  
+  // Track history events in state
+  const [historyEvents, setHistoryEvents] = useState<HistoryEvent[]>(() => {
+    return getMockHistoryEvents(room.roomNumber);
+  });
+  
+  // Constants for "See More" functionality (matching ReturnLaterModal)
+  const MAX_LINES = 2; // Maximum lines to show before truncating
+  const LINE_HEIGHT = 18; // Line height in unscaled pixels
+  const dummyTaskText = 'Deep clean bathroom (heavy bath use). Change all linens + pillow protectors. Vacuum under bed. Restock all amenities. Light at entrance flickering report to maintenance.';
+  
+  // "See More" functionality state
+  const [showSeeMore, setShowSeeMore] = useState(false);
+  const [textHeight, setTextHeight] = useState<number>(0);
+  const fullTextRef = useRef<Text>(null);
+  
+  // Calculate if text needs truncation (rough estimate for initial render)
+  const charsPerLine = 50;
+  const maxChars = MAX_LINES * charsPerLine;
+  const estimatedNeedsTruncation = dummyTaskText.length > maxChars;
+  
+  // Measure full text height to determine if truncation is needed
+  const handleFullTextLayout = (event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    setTextHeight(height);
+    const maxHeight = MAX_LINES * LINE_HEIGHT * scaleX;
+    setShowSeeMore(height > maxHeight);
+  };
+  
+  // Initialize showSeeMore based on estimated length
+  useEffect(() => {
+    if (textHeight === 0) {
+      setShowSeeMore(estimatedNeedsTruncation);
+    }
+  }, [dummyTaskText, textHeight, estimatedNeedsTruncation]);
+  
+  // Get truncated text for display
+  const getDisplayText = () => {
+    if (!showSeeMore) {
+      return dummyTaskText;
+    }
+    // Truncate to approximately MAX_LINES
+    const truncated = dummyTaskText.substring(0, maxChars);
+    // Find last space to avoid cutting words
+    const lastSpace = truncated.lastIndexOf(' ');
+    return lastSpace > 0 ? truncated.substring(0, lastSpace) + '...' : truncated + '...';
+  };
+  
+  const handleSeeMorePress = () => {
+    setShowSeeMore(false);
+  };
+
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+  const handleDownloadReport = async () => {
+    if (isGeneratingReport) return; // Prevent multiple clicks
+    
+    try {
+      setIsGeneratingReport(true);
+      
+      // Group events for the report (same logic as HistorySection)
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const normalizeDate = (date: Date): Date => {
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      };
+
+      const sortedEvents = [...historyEvents].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      const dateMap = new Map<string, HistoryEvent[]>();
+
+      sortedEvents.forEach((event) => {
+        const eventDate = normalizeDate(event.timestamp);
+        const key = `${eventDate.getFullYear()}-${eventDate.getMonth()}-${eventDate.getDate()}`;
+        if (!dateMap.has(key)) {
+          dateMap.set(key, []);
+        }
+        dateMap.get(key)!.push(event);
+      });
+
+      const groupedEvents: HistoryGroup[] = [];
+      dateMap.forEach((events, key) => {
+        const [year, month, day] = key.split('-').map(Number);
+        const eventDate = new Date(year, month, day);
+        const todayNormalized = normalizeDate(today);
+        const yesterdayNormalized = normalizeDate(yesterday);
+        const eventDateNormalized = normalizeDate(eventDate);
+
+        let dateLabel: string;
+        if (eventDateNormalized.getTime() === todayNormalized.getTime()) {
+          dateLabel = 'Today';
+        } else if (eventDateNormalized.getTime() === yesterdayNormalized.getTime()) {
+          dateLabel = 'Yesterday';
+        } else {
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const monthName = monthNames[eventDate.getMonth()];
+          const yearNum = eventDate.getFullYear();
+          if (yearNum === now.getFullYear()) {
+            dateLabel = `${monthName} ${day}`;
+          } else {
+            dateLabel = `${monthName} ${day} ${yearNum}`;
+          }
+        }
+
+        groupedEvents.push({
+          dateLabel,
+          date: eventDate,
+          events: events.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
+        });
+      });
+
+      const sortedGroupedEvents = groupedEvents.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+      // Generate and download the PDF
+      await generateHistoryReport({
+        roomNumber: room.roomNumber,
+        roomCode: room.roomCode,
+        events: historyEvents,
+        groupedEvents: sortedGroupedEvents,
+      });
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      // TODO: Show error alert to user
+      alert('Failed to generate report. Please try again.');
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
   
   // Track paused time
   const [pausedAt, setPausedAt] = useState<string | undefined>(
@@ -542,12 +674,36 @@ export default function RoomDetailScreen() {
 
               <View style={styles.cardDivider} />
 
-              <TaskSection
-                tasks={roomDetail.tasks || []}
-                onAddPress={handleAddTask}
-                onSeeMorePress={handleSeeMoreTask}
-                cardHeight={positions.cardHeight}
-              />
+              {/* Task Section - Inline implementation matching ReturnLaterModal */}
+              <View style={styles.taskSection}>
+                <Text style={styles.taskTitle}>Task</Text>
+                {/* Hidden text to measure full height */}
+                <Text
+                  ref={fullTextRef}
+                  style={[styles.taskText, styles.hiddenText]}
+                  onLayout={handleFullTextLayout}
+                >
+                  {dummyTaskText}
+                </Text>
+                {/* Text with inline "see more" button */}
+                <Text
+                  style={styles.taskText}
+                  numberOfLines={!showSeeMore ? MAX_LINES : undefined}
+                >
+                  {getDisplayText()}
+                  {showSeeMore && (
+                    <>
+                      {' '}
+                      <Text
+                        style={styles.seeMoreText}
+                        onPress={handleSeeMorePress}
+                      >
+                        see more
+                      </Text>
+                    </>
+                  )}
+                </Text>
+              </View>
             </View>
 
             {/* Lost and Found Section */}
@@ -567,7 +723,16 @@ export default function RoomDetailScreen() {
           </>
         )}
 
-          {activeTab !== 'Overview' && (
+          {activeTab === 'History' && (
+            <HistorySection
+              events={historyEvents}
+              roomNumber={room.roomNumber}
+              roomCode={room.roomCode}
+              onDownloadReport={handleDownloadReport}
+              isGeneratingReport={isGeneratingReport}
+            />
+          )}
+          {activeTab !== 'Overview' && activeTab !== 'History' && (
             <View style={styles.placeholderContent}>
               <Text style={styles.placeholderText}>
                 {activeTab} content coming soon
@@ -758,5 +923,38 @@ const styles = StyleSheet.create({
     height: ASSIGNED_TASK_CARD.divider.height,
     backgroundColor: ASSIGNED_TASK_CARD.divider.backgroundColor,
     zIndex: 2,
+  },
+  taskSection: {
+    position: 'absolute',
+    left: 16 * scaleX, // Match card padding
+    right: 16 * scaleX, // Match card padding
+    top: 86 * scaleX, // Below divider (78px) + 8px spacing
+    paddingHorizontal: 0,
+  },
+  taskTitle: {
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700',
+    color: '#1e1e1e',
+    marginBottom: 8 * scaleX,
+  },
+  taskText: {
+    fontSize: 13 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '300',
+    color: '#000000',
+    lineHeight: 18 * scaleX,
+  },
+  hiddenText: {
+    position: 'absolute',
+    opacity: 0,
+    zIndex: -1,
+    width: '100%',
+  },
+  seeMoreText: {
+    fontSize: 13 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '500',
+    color: '#5a759d',
   },
 });

@@ -510,3 +510,96 @@ export const STAYOVER_TURNDOWN = {
     },
   },
 } as const;
+
+// History Section
+export const HISTORY_SECTION = {
+  container: {
+    paddingTop: 20 * scaleX,
+    paddingHorizontal: 20 * scaleX,
+    paddingBottom: 40 * scaleX,
+  },
+  downloadButton: {
+    width: 179 * scaleX,
+    height: 49 * scaleX,
+    borderRadius: 41 * scaleX,
+    backgroundColor: '#F1F6FC',
+    marginBottom: 24 * scaleX,
+    alignItems: 'center', // Center content inside button
+  },
+  downloadButtonText: {
+    fontSize: 14 * scaleX,
+    fontWeight: 'regular' as const,
+    color: '#000000',
+  },
+  dateSeparator: {
+    marginTop: 24 * scaleX,
+    marginBottom: 16 * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateLabel: {
+    fontSize: 14 * scaleX,
+    fontWeight: 'bold' as const,
+    color: '#1e1e1e',
+    paddingHorizontal: 12 * scaleX,
+  },
+  dateLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E0E0E0',
+  },
+  timelineContainer: {
+    position: 'relative',
+    paddingLeft: 20 * scaleX, // Space for timeline connector
+  },
+  timelineConnector: {
+    position: 'absolute',
+    left: 12 * scaleX, // Center of avatar circle (24px / 2)
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: '#5a759d', // Blue color
+  },
+  eventItem: {
+    flexDirection: 'row',
+    marginBottom: 20 * scaleX,
+    position: 'relative',
+  },
+  avatarContainer: {
+    width: 24 * scaleX,
+    height: 24 * scaleX,
+    borderRadius: 12 * scaleX,
+    marginRight: 12 * scaleX,
+    overflow: 'hidden',
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+  },
+  initialsCircle: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  initialsText: {
+    fontSize: 12 * scaleX,
+    fontWeight: 'bold' as const,
+    color: '#ffffff',
+  },
+  eventContent: {
+    flex: 1,
+  },
+  eventDescription: {
+    fontSize: 14 * scaleX,
+    fontWeight: 'regular' as const,
+    color: '#000000',
+    marginBottom: 4 * scaleX,
+  },
+  eventTimestamp: {
+    fontSize: 12 * scaleX,
+    fontWeight: 'light' as const,
+    color: '#999999',
+  },
+} as const;

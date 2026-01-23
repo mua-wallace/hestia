@@ -48,6 +48,26 @@ export interface RoomDetailData extends RoomCardData {
 
 export type DetailTab = 'Overview' | 'Tickets' | 'Checklist' | 'History';
 
+export interface HistoryEvent {
+  id: string;
+  action: string; // e.g., "clicked on in progress", "changed status to cleaned", "added note", etc.
+  staff: {
+    id: string;
+    name: string;
+    avatar?: any;
+    initials?: string;
+    avatarColor?: string;
+  };
+  timestamp: Date; // Full date/time for sorting
+  createdAt: string; // ISO string for storage
+}
+
+export interface HistoryGroup {
+  dateLabel: string; // "Today", "Yesterday", or formatted date
+  date: Date; // Actual date for comparison
+  events: HistoryEvent[];
+}
+
 
 
 
