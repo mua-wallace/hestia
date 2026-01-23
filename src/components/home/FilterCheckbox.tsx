@@ -63,7 +63,7 @@ export default function FilterCheckbox({
 
 const styles = StyleSheet.create({
   checkbox: {
-    borderRadius: 4 * scaleX,
+    borderRadius: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },

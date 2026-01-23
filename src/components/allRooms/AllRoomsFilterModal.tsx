@@ -131,24 +131,24 @@ export default function AllRoomsFilterModal({
     {
       id: 'paused',
       label: 'Paused',
-      icon: require('../../../assets/icons/pause-status.png'),
-      iconColor: '#f92424',
+      icon: require('../../../assets/icons/paused-filter-icon.png'),
+      iconColor: undefined,
       count: safeFilterCounts.roomStates?.paused || 0,
       selected: filters?.roomStates?.paused || false,
     },
     {
       id: 'refused',
       label: 'Refused',
-      icon: require('../../../assets/icons/refuse-service-status.png'),
-      iconColor: '#1e1e1e',
+      icon: require('../../../assets/icons/refused-filter-icon.png'),
+      iconColor: undefined,
       count: safeFilterCounts.roomStates?.refused || 0,
       selected: filters?.roomStates?.refused || false,
     },
     {
       id: 'returnLater',
       label: 'Return Later',
-      icon: require('../../../assets/icons/return-later-status.png'),
-      iconColor: '#1e1e1e',
+      icon: require('../../../assets/icons/return-later-filter-icon.png'),
+      iconColor: undefined,
       count: safeFilterCounts.roomStates?.returnLater || 0,
       selected: filters?.roomStates?.returnLater || false,
     },
@@ -175,64 +175,64 @@ export default function AllRoomsFilterModal({
     {
       id: 'stayOverWithLinen',
       label: 'Stayover with linen',
-      icon: require('../../../assets/icons/stayover-icon.png'),
-      iconColor: '#1e1e1e',
+      icon: require('../../../assets/icons/stayover-line-filter-icon.png'),
+      iconColor: undefined,
       count: safeFilterCounts.guests?.stayOverWithLinen || 0,
       selected: filters?.guests?.stayOverWithLinen || false,
     },
     {
       id: 'stayOverNoLinen',
       label: 'Stayover no linen',
-      icon: require('../../../assets/icons/stayover-icon.png'),
-      iconColor: '#1e1e1e',
+      icon: require('../../../assets/icons/stayover-no-line-filter-icon.png'),
+      iconColor: undefined,
       count: safeFilterCounts.guests?.stayOverNoLinen || 0,
       selected: filters?.guests?.stayOverNoLinen || false,
     },
     {
       id: 'turnDown',
       label: 'Turn Down',
-      icon: require('../../../assets/icons/turndown-icon.png'),
-      iconColor: '#4a91fc',
+      icon: require('../../../assets/icons/turndown-filter-icon.png'),
+      iconColor: undefined,
       count: safeFilterCounts.guests?.turnDown || 0,
       selected: filters?.guests?.turnDown || false,
     },
     {
       id: 'checkedIn',
       label: 'Checked In',
-      icon: require('../../../assets/icons/guest-icon.png'),
-      iconColor: '#41d541',
+      icon: require('../../../assets/icons/checked-in-filter-icon.png'),
+      iconColor: undefined,
       count: safeFilterCounts.guests?.checkedIn || 0,
       selected: filters?.guests?.checkedIn || false,
     },
     {
       id: 'checkedOut',
       label: 'Checked Out',
-      icon: require('../../../assets/icons/guest-icon.png'),
-      iconColor: '#f92424',
+      icon: require('../../../assets/icons/checked-out-filter-icon.png'),
+      iconColor: undefined,
       count: safeFilterCounts.guests?.checkedOut || 0,
       selected: filters?.guests?.checkedOut || false,
     },
     {
       id: 'checkedOutDueIn',
       label: 'Checked Out/Due In',
-      icon: require('../../../assets/icons/guest-icon.png'),
-      iconColor: '#1e1e1e',
+      icon: require('../../../assets/icons/checked-out-due-in-filter-icon.png'),
+      iconColor: undefined,
       count: safeFilterCounts.guests?.checkedOutDueIn || 0,
       selected: filters?.guests?.checkedOutDueIn || false,
     },
     {
       id: 'outOfOrder',
       label: 'Out of Order',
-      icon: require('../../../assets/icons/phone-icon.png'),
-      iconColor: '#1e1e1e',
+      icon: require('../../../assets/icons/out-of-order-filter-icon.png'),
+      iconColor: undefined,
       count: safeFilterCounts.guests?.outOfOrder || 0,
       selected: filters?.guests?.outOfOrder || false,
     },
     {
       id: 'outOfService',
       label: 'Out of Service',
-      icon: require('../../../assets/icons/setting-icon.png'),
-      iconColor: '#1e1e1e',
+      icon: require('../../../assets/icons/out-of-service-filter-icon.png'),
+      iconColor: undefined,
       count: safeFilterCounts.guests?.outOfService || 0,
       selected: filters?.guests?.outOfService || false,
     },
@@ -243,16 +243,16 @@ export default function AllRoomsFilterModal({
     {
       id: 'occupied',
       label: 'Occupied',
-      icon: require('../../../assets/icons/guest-icon.png'),
-      iconColor: '#1e1e1e',
+      icon: require('../../../assets/icons/occupied-filter-icon.png'),
+      iconColor: undefined,
       count: safeFilterCounts.reservations?.occupied || 0,
       selected: filters?.reservations?.occupied || false,
     },
     {
       id: 'vacant',
       label: 'Vacant',
-      icon: require('../../../assets/icons/vacant-chair.png'),
-      iconColor: '#1e1e1e',
+      icon: require('../../../assets/icons/vacant-filter-icon.png'),
+      iconColor: undefined,
       count: safeFilterCounts.reservations?.vacant || 0,
       selected: filters?.reservations?.vacant || false,
     },
@@ -441,6 +441,17 @@ function FilterRow({
 }: FilterRowProps) {
   const isCircular = iconColor !== undefined;
   const isPriority = label === 'Priority';
+  // Icons that should use the specific color #000001
+  const specificColorIcons = ['Paused', 'Refused', 'Return Later'];
+  const shouldUseSpecificColor = specificColorIcons.includes(label);
+  const shouldApplyTint = !specificColorIcons.includes(label);
+
+  // Use Math.round to ensure pixel-perfect rendering and prevent blurriness
+  const iconSize = Math.round(24 * scaleX);
+  const iconContainerSize = Math.round(24 * scaleX);
+  const iconMarginLeft = Math.round(12 * scaleX);
+  const circularIconSize = Math.round(16 * scaleX);
+  const circularBorderRadius = Math.round(12 * scaleX);
 
   return (
     <TouchableOpacity
@@ -453,8 +464,18 @@ function FilterRow({
       <View
         style={[
           styles.iconContainer,
+          {
+            width: iconContainerSize,
+            height: iconContainerSize,
+            marginLeft: iconMarginLeft,
+          },
           isCircular && [
             styles.circularIconContainer,
+            {
+              borderRadius: circularBorderRadius,
+              width: iconContainerSize,
+              height: iconContainerSize,
+            },
             iconColor && { backgroundColor: iconColor },
           ],
         ]}
@@ -463,9 +484,12 @@ function FilterRow({
           <Image
             source={icon}
             style={[
-              isCircular ? styles.circularIcon : styles.icon,
+              isCircular 
+                ? { ...styles.circularIcon, width: circularIconSize, height: circularIconSize }
+                : { ...styles.icon, width: iconSize, height: iconSize },
               isCircular && { tintColor: '#ffffff' },
-              !isCircular && iconColor && !isPriority && { tintColor: iconColor },
+              !isCircular && shouldUseSpecificColor && { tintColor: '#000001' },
+              !isCircular && iconColor && !isPriority && shouldApplyTint && { tintColor: iconColor },
             ]}
             resizeMode="contain"
           />
@@ -577,24 +601,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12 * scaleX,
   },
   iconContainer: {
-    width: 24 * scaleX,
-    height: 24 * scaleX,
-    marginLeft: 12 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
   },
   circularIconContainer: {
-    borderRadius: 12 * scaleX,
-    width: 24 * scaleX,
-    height: 24 * scaleX,
+    // Dimensions set inline in component
   },
   icon: {
-    width: 24 * scaleX,
-    height: 24 * scaleX,
+    // Dimensions set inline in component
   },
   circularIcon: {
-    width: 16 * scaleX,
-    height: 16 * scaleX,
+    // Dimensions set inline in component
   },
   filterLabel: {
     flex: 1,
