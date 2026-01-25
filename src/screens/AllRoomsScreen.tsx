@@ -18,7 +18,6 @@ import { MoreMenuItemId } from '../types/more.types';
 import type { RootStackParamList } from '../navigation/types';
 import { BlurView } from 'expo-blur';
 import { FilterState, FilterCounts } from '../types/filter.types';
-import HomeFilterModal from '../components/home/HomeFilterModal';
 import AllRoomsFilterModal from '../components/allRooms/AllRoomsFilterModal';
 import { CARD_DIMENSIONS, CARD_COLORS } from '../constants/allRoomsStyles';
 import { getShiftFromTime } from '../utils/shiftUtils';
@@ -756,35 +755,17 @@ export default function AllRoomsScreen() {
         headerHeight={217} // AllRoomsScreen header height
       />
 
-      {/* Filter Modal - Use AllRoomsFilterModal for AM shift, HomeFilterModal for PM shift */}
-      {allRoomsData.selectedShift === 'AM' ? (
-        <AllRoomsFilterModal
-          visible={showFilterModal}
-          onClose={() => setShowFilterModal(false)}
-          onApplyFilters={handleApplyFilters}
-          initialFilters={activeFilters || undefined}
-          filterCounts={filterCounts}
-          headerHeight={217}
-          onFilterIconPress={handleFilterPress}
-          actualFilteredCount={filteredRooms.length}
-        />
-      ) : (
-        <HomeFilterModal
-          visible={showFilterModal}
-          onClose={() => setShowFilterModal(false)}
-          onGoToResults={handleGoToResults}
-          onAdvanceFilter={handleAdvanceFilter}
-          onApplyFilters={handleApplyFilters}
-          initialFilters={activeFilters || undefined}
-          filterCounts={filterCounts}
-          headerHeight={153 * scaleX}
-          searchBarHeight={59 * scaleX}
-          searchBarTop={undefined}
-          onFilterIconPress={handleFilterPress}
-          selectedShift={allRoomsData.selectedShift}
-          actualFilteredCount={filteredRooms.length}
-        />
-      )}
+      {/* Filter Modal - Use AllRoomsFilterModal for both AM and PM shifts */}
+      <AllRoomsFilterModal
+        visible={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onApplyFilters={handleApplyFilters}
+        initialFilters={activeFilters || undefined}
+        filterCounts={filterCounts}
+        headerHeight={217}
+        onFilterIconPress={handleFilterPress}
+        actualFilteredCount={filteredRooms.length}
+      />
 
     </View>
   );
