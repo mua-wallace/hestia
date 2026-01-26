@@ -120,9 +120,9 @@ export default function CreateTicketScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          {/* Back Button */}
+          {/* Back Button with Text */}
           <TouchableOpacity
-            style={styles.backButton}
+            style={styles.backButtonContainer}
             onPress={handleBackPress}
             activeOpacity={0.7}
           >
@@ -131,12 +131,10 @@ export default function CreateTicketScreen() {
               style={styles.backArrow}
               resizeMode="contain"
             />
+            <Text style={styles.headerTitle}>
+              {CREATE_TICKET_HEADER.title.text}
+            </Text>
           </TouchableOpacity>
-
-          {/* Title */}
-          <Text style={styles.headerTitle}>
-            {CREATE_TICKET_HEADER.title.text}
-          </Text>
         </View>
 
         {/* Main Content */}
@@ -301,29 +299,26 @@ const styles = StyleSheet.create({
     height: CREATE_TICKET_HEADER.height * scaleX,
     position: 'relative',
   },
-  backButton: {
+  backButtonContainer: {
     position: 'absolute',
     left: CREATE_TICKET_HEADER.backButton.left * scaleX,
     top: CREATE_TICKET_HEADER.backButton.top * scaleX,
-    width: CREATE_TICKET_HEADER.backButton.width * scaleX,
-    height: CREATE_TICKET_HEADER.backButton.height * scaleX,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
     zIndex: 1,
   },
   backArrow: {
-    width: CREATE_TICKET_HEADER.backButton.width * scaleX,
-    height: CREATE_TICKET_HEADER.backButton.height * scaleX,
-    transform: [{ rotate: `${CREATE_TICKET_HEADER.backButton.rotation}deg` }],
+    width: 28 * scaleX, // From Figma: 28px
+    height: 28 * scaleX, // From Figma: 28px
+    tintColor: '#607AA1', // Match "Create Ticket" text color
   },
   headerTitle: {
-    position: 'absolute',
-    left: (SCREEN_WIDTH / 2) + (CREATE_TICKET_HEADER.title.leftOffset * scaleX), // Centered with offset from Figma
-    top: CREATE_TICKET_HEADER.title.top * scaleX,
-    fontSize: CREATE_TICKET_HEADER.title.fontSize * scaleX, // 24px from Figma
-    fontFamily: typography.fontFamily.primary, // Helvetica
-    fontWeight: '700', // Helvetica Bold
-    color: CREATE_TICKET_HEADER.title.color,
+    fontSize: 24 * scaleX, // From Figma: 24px
+    fontFamily: 'Helvetica', // From Figma: Helvetica
+    fontWeight: '700' as any, // From Figma: 700
+    color: '#607AA1', // From Figma: #607AA1
+    lineHeight: undefined, // From Figma: normal (undefined = normal in React Native)
+    marginLeft: 10 * scaleX, // Spacing between arrow and text (approximately 8-12px as per Figma)
   },
   heading: {
     position: 'absolute',

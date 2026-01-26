@@ -231,43 +231,104 @@ export default function RoomTicketsSection({
         <View style={styles.createTicketContent}>
           <Text style={styles.departmentSubtitle}>Select Department</Text>
 
-        {/* Department Icons - Horizontal Scrollable */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.departmentsContainer}
-        >
+        {/* Department Icons - 3-column Grid Layout */}
+        <View style={styles.departmentsGridContainer}>
           {ALL_DEPARTMENTS.map((deptId) => {
             const isSelected = deptId === selectedDepartment;
+            // Calculate grid position: 3 columns
+            const index = ALL_DEPARTMENTS.indexOf(deptId);
+            const row = Math.floor(index / 3);
+            const col = index % 3;
+            
+            // Department names for labels
+            const departmentLabels: Record<DepartmentId, string> = {
+              engineering: 'Engineering',
+              hskPortier: 'HSK Portier',
+              inRoomDining: 'In Room Dining',
+              laundry: 'Laundry',
+              concierge: 'Concierge',
+              reception: 'Reception',
+              it: 'IT',
+            };
+            
             return (
-              <TouchableOpacity
+              <View
                 key={deptId}
-                style={[styles.departmentIconContainer, isSelected && styles.departmentIconSelected]}
-                onPress={() => handleDepartmentPress(deptId)}
-                activeOpacity={0.7}
+                style={[
+                  styles.departmentGridItem,
+                  {
+                    marginRight: col < 2 ? 16 * scaleX : 0, // Margin between columns
+                    marginBottom: 24 * scaleX, // Margin between rows
+                  },
+                ]}
               >
-                <View
-                  style={[
-                    styles.departmentIconBackground,
-                    isSelected && styles.departmentIconBackgroundSelected,
-                  ]}
+                <TouchableOpacity
+                  style={styles.departmentIconContainer}
+                  onPress={() => handleDepartmentPress(deptId)}
+                  activeOpacity={0.7}
                 >
-                  <Image
-                    source={DEPARTMENT_ICONS[deptId]}
+                  <View
                     style={[
-                      styles.departmentIcon,
-                      // Some icons don't need tint (like hskPortier, inRoomDining)
-                      (deptId === 'hskPortier' || deptId === 'inRoomDining')
-                        ? {}
-                        : { tintColor: isSelected ? '#F92424' : '#F92424', opacity: isSelected ? 1 : 0.29 },
+                      styles.departmentIconBackground,
+                      isSelected && styles.departmentIconBackgroundSelected,
                     ]}
-                    resizeMode="contain"
-                  />
-                </View>
-              </TouchableOpacity>
+                  >
+                    <Image
+                      source={DEPARTMENT_ICONS[deptId]}
+                      style={[
+                        styles.departmentIcon,
+                        // Some icons don't need tint (like hskPortier, inRoomDining)
+                        (deptId === 'hskPortier' || deptId === 'inRoomDining')
+                          ? {}
+                          : { tintColor: '#F92424' },
+                      ]}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </TouchableOpacity>
+                {/* Department Label */}
+                <Text style={styles.departmentLabelText}>
+                  {departmentLabels[deptId]}
+                </Text>
+              </View>
             );
           })}
-        </ScrollView>
+        </View>
+
+        {/* Divider */}
+        <View style={styles.divider} />
+
+        {/* AI Create Ticket Button Section */}
+        <View style={styles.aiButtonSection}>
+          {/* Button Container */}
+          <TouchableOpacity
+            style={styles.aiButtonContainer}
+            onPress={() => {
+              // TODO: Implement AI ticket creation
+              console.log('AI Create Ticket pressed');
+            }}
+            activeOpacity={0.7}
+          >
+            {/* Button */}
+            <View style={styles.aiButton}>
+              {/* Button Text */}
+              <Text style={styles.aiButtonText}>Create Ticket</Text>
+
+              {/* AI Badge */}
+              <View style={styles.aiBadge}>
+                <Text style={styles.aiBadgeText}>AI</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          {/* Beta Label */}
+          <Text style={styles.betaLabel}>BETA</Text>
+
+          {/* Description */}
+          <Text style={styles.aiDescription}>
+            AI detects issues and auto-creates tickets for the right department no manual reporting needed.
+          </Text>
+        </View>
 
         {/* Issue Field */}
         <Text style={styles.label}>Issue</Text>
@@ -311,14 +372,17 @@ export default function RoomTicketsSection({
         ) : (
           <View style={styles.picturesContainer}>
             {pictures.map((uri, index) => {
-              // Single photo: full width, Multiple photos: two columns max
-              const isSinglePhoto = pictures.length === 1;
+              // Always use 2-column grid layout
+              const row = Math.floor(index / 2);
+              const col = index % 2;
               return (
                 <View 
                   key={index} 
                   style={[
-                    styles.pictureWrapper,
-                    isSinglePhoto ? styles.pictureWrapperSingle : styles.pictureWrapperMultiple
+                    styles.pictureWrapperGrid,
+                    {
+                      marginRight: col === 0 ? 12 * scaleX : 0, // Add margin only to left column
+                    }
                   ]}
                 >
                   <Image source={{ uri }} style={styles.picture} resizeMode="cover" />
@@ -335,8 +399,10 @@ export default function RoomTicketsSection({
             {pictures.length < 10 && (
               <TouchableOpacity
                 style={[
-                  styles.addMorePhotoButton,
-                  pictures.length === 1 ? styles.addMorePhotoButtonSingle : styles.addMorePhotoButtonMultiple
+                  styles.addMorePhotoButtonGrid,
+                  {
+                    marginRight: (pictures.length % 2) === 0 ? 12 * scaleX : 0, // Add margin only to left column
+                  }
                 ]}
                 onPress={handleAddPicture}
                 activeOpacity={0.7}
@@ -346,6 +412,7 @@ export default function RoomTicketsSection({
                   style={styles.addMorePhotoIcon}
                   resizeMode="contain"
                 />
+                <Text style={styles.addMorePhotoText}>Add more</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -494,37 +561,44 @@ const styles = StyleSheet.create({
     color: '#F92424',
     marginBottom: 16 * scaleX,
   },
-  departmentsContainer: {
+  departmentsGridContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 32 * scaleX,
+    justifyContent: 'flex-start',
+  },
+  departmentGridItem: {
+    width: (SCREEN_WIDTH - 40 * scaleX - 32 * scaleX) / 3, // Screen width - padding - margins / 3 columns
     alignItems: 'center',
-    paddingVertical: 12 * scaleX,
-    marginBottom: 24 * scaleX,
   },
   departmentIconContainer: {
-    marginRight: 16 * scaleX,
-  },
-  departmentIconSelected: {
-    // Selected state styling
+    marginBottom: 8 * scaleX,
   },
   departmentIconBackground: {
-    width: 56 * scaleX,
-    height: 56 * scaleX,
-    borderRadius: 28 * scaleX,
-    backgroundColor: '#ffffff',
+    width: 55.482 * scaleX, // From Figma: 55.482px
+    height: 55.482 * scaleX,
+    borderRadius: 37 * scaleX, // From Figma: 37px
+    backgroundColor: '#ffebeb', // Light pink/red background
+    borderWidth: 1 * scaleX,
+    borderColor: '#F92424', // Red outline
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#F92424',
-    opacity: 0.29,
   },
   departmentIconBackgroundSelected: {
-    backgroundColor: '#F92424',
-    opacity: 1,
-    borderColor: '#F92424',
+    backgroundColor: '#ffebeb', // Same background when selected
+    borderWidth: 2 * scaleX, // Thicker border when selected
   },
   departmentIcon: {
-    width: 28 * scaleX,
-    height: 28 * scaleX,
+    width: (55.482 * 0.65) * scaleX, // 65% of background circle size
+    height: (55.482 * 0.65) * scaleX,
+  },
+  departmentLabelText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.secondary, // Inter
+    fontWeight: '300' as any, // Inter Light
+    color: '#000000',
+    textAlign: 'center',
+    marginTop: 4 * scaleX,
   },
   label: {
     fontSize: 14 * scaleX,
@@ -577,21 +651,13 @@ const styles = StyleSheet.create({
     marginBottom: 12 * scaleX,
     justifyContent: 'flex-start',
   },
-  pictureWrapper: {
+  pictureWrapperGrid: {
     position: 'relative',
     aspectRatio: 1,
     borderRadius: 8 * scaleX,
     overflow: 'hidden',
     marginBottom: 12 * scaleX,
-  },
-  pictureWrapperSingle: {
-    width: '100%', // Full width for single photo
-  },
-  pictureWrapperMultiple: {
-    flex: 1,
-    minWidth: 100 * scaleX,
-    maxWidth: '48%', // Two columns max
-    marginRight: 12 * scaleX,
+    width: '48%', // Always 2-column grid
   },
   picture: {
     width: '100%',
@@ -613,7 +679,7 @@ const styles = StyleSheet.create({
     fontSize: 18 * scaleX,
     fontWeight: 'bold' as any,
   },
-  addMorePhotoButton: {
+  addMorePhotoButtonGrid: {
     aspectRatio: 1,
     borderRadius: 8 * scaleX,
     borderWidth: 1,
@@ -623,15 +689,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12 * scaleX,
+    width: '48%', // Always 2-column grid - appears in next grid position
+    paddingVertical: 16 * scaleX,
   },
-  addMorePhotoButtonSingle: {
-    width: '100%', // Full width when only one photo exists
-  },
-  addMorePhotoButtonMultiple: {
-    flex: 1,
-    minWidth: 100 * scaleX,
-    maxWidth: '48%', // Two columns max
-    marginRight: 12 * scaleX,
+  addMorePhotoText: {
+    marginTop: 8 * scaleX,
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: 'regular' as any,
+    color: '#666666',
+    textAlign: 'center',
   },
   addMorePhotoIcon: {
     width: 24 * scaleX,
@@ -738,5 +805,74 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: 'bold' as any,
     color: '#ffffff',
+  },
+  divider: {
+    width: '100%',
+    height: 1 * scaleX,
+    backgroundColor: '#e3e3e3',
+    marginVertical: 24 * scaleX,
+    marginLeft: -20 * scaleX, // Offset parent padding
+    marginRight: -20 * scaleX,
+  },
+  aiButtonSection: {
+    alignItems: 'center',
+    marginBottom: 32 * scaleX,
+  },
+  aiButtonContainer: {
+    alignItems: 'center',
+    marginBottom: 8 * scaleX,
+  },
+  aiButton: {
+    width: 152 * scaleX,
+    height: 60 * scaleX,
+    borderRadius: 45 * scaleX,
+    borderWidth: 1 * scaleX,
+    borderColor: '#ff4dd8', // Pink border
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingLeft: 24 * scaleX,
+    position: 'relative',
+  },
+  aiButtonText: {
+    fontSize: 16 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    color: '#5a759d',
+    marginTop: 22 * scaleX,
+  },
+  aiBadge: {
+    position: 'absolute',
+    left: 99 * scaleX,
+    top: 44 * scaleX,
+    width: 29 * scaleX,
+    height: 30 * scaleX,
+    borderRadius: 14.5 * scaleX,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  aiBadgeText: {
+    fontSize: 12 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    color: '#ff46a3', // Gradient start color (full gradient requires react-native-svg)
+  },
+  betaLabel: {
+    fontSize: 9 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    color: '#ff4dd8',
+    textAlign: 'center',
+    marginBottom: 16 * scaleX,
+  },
+  aiDescription: {
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '300' as any,
+    color: '#000000',
+    textAlign: 'center',
+    width: 318 * scaleX,
+    lineHeight: undefined, // Normal line height
   },
 });

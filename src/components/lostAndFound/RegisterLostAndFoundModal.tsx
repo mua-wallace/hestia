@@ -633,12 +633,8 @@ export default function RegisterLostAndFoundModal({
                     minHeight:
                       pictures.length === 0
                         ? REGISTER_FORM.pictures.image2.height * scaleX
-                        : pictures.length === 1
-                        ? REGISTER_FORM.pictures.image1.height * scaleX +
-                          12 * scaleX +
-                          REGISTER_FORM.pictures.image2.height * scaleX
                         : Math.ceil((pictures.length + 1) / 2) *
-                            (REGISTER_FORM.pictures.image1.height * scaleX + 12 * scaleX),
+                            (REGISTER_FORM.pictures.image1.height * scaleX + 12 * scaleX), // Always use grid calculation, +1 accounts for add button
                   },
                 ]}
               >
@@ -657,75 +653,80 @@ export default function RegisterLostAndFoundModal({
                       resizeMode="contain"
                     />
                   </TouchableOpacity>
-                ) : pictures.length === 1 ? (
-                  <TouchableOpacity
-                    style={styles.picture1FullWidth}
-                    activeOpacity={0.7}
-                    onPress={() => handleRemovePicture(0)}
-                  >
-                    <Image
-                      source={{ uri: pictures[0] }}
-                      style={styles.picture1FullWidth}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.pictureRemoveOverlay}>
-                      <Text style={styles.pictureRemoveText}>×</Text>
-                    </View>
-                  </TouchableOpacity>
                 ) : (
                   <>
-                    {pictures.map((uri, index) => {
-                      const row = Math.floor(index / 2);
-                      const col = index % 2;
-                      const pictureWidth = ((Dimensions.get('window').width - (27 * 2 * scaleX) - (12 * scaleX)) / 2);
-                      const left = 27 * scaleX + col * (pictureWidth + 12 * scaleX);
-                      const top = row * (REGISTER_FORM.pictures.image1.height * scaleX + 12 * scaleX);
+                    {/* Always use 2-column grid layout for all pictures - centered */}
+                    {(() => {
+                      const screenWidth = Dimensions.get('window').width;
+                      const containerPadding = 27 * scaleX;
+                      const gap = 12 * scaleX;
+                      const containerWidth = screenWidth - (containerPadding * 2);
+                      
+                      // Calculate picture width and total grid width
+                      const pictureWidth = (containerWidth - gap) / 2;
+                      const totalGridWidth = 2 * pictureWidth + gap;
+                      
+                      // Calculate center offset to ensure equal margins on both sides
+                      const centerOffset = (containerWidth - totalGridWidth) / 2;
+                      
+                      // Starting position: container padding + center offset
+                      const gridStartLeft = containerPadding + centerOffset;
+                      
                       return (
-                        <TouchableOpacity
-                          key={index}
-                          style={[
-                            styles.picture1Grid,
-                            {
-                              left,
-                              top,
-                            },
-                          ]}
-                          activeOpacity={0.7}
-                          onPress={() => handleRemovePicture(index)}
-                        >
-                          <Image
-                            source={{ uri }}
-                            style={styles.picture1Grid}
-                            resizeMode="cover"
-                          />
-                          <View style={styles.pictureRemoveOverlay}>
-                            <Text style={styles.pictureRemoveText}>×</Text>
-                          </View>
-                        </TouchableOpacity>
+                        <>
+                          {pictures.map((uri, index) => {
+                            const row = Math.floor(index / 2);
+                            const col = index % 2;
+                            const left = gridStartLeft + col * (pictureWidth + gap);
+                            const top = row * (REGISTER_FORM.pictures.image1.height * scaleX + gap);
+                            return (
+                              <TouchableOpacity
+                                key={index}
+                                style={[
+                                  styles.picture1Grid,
+                                  {
+                                    left,
+                                    top,
+                                    width: pictureWidth, // Use calculated width for centering
+                                  },
+                                ]}
+                                activeOpacity={0.7}
+                                onPress={() => handleRemovePicture(index)}
+                              >
+                                <Image
+                                  source={{ uri }}
+                                  style={[styles.picture1Grid, { width: pictureWidth }]}
+                                  resizeMode="cover"
+                                />
+                                <View style={styles.pictureRemoveOverlay}>
+                                  <Text style={styles.pictureRemoveText}>×</Text>
+                                </View>
+                              </TouchableOpacity>
+                            );
+                          })}
+                          {/* Add more button in next grid position - centered */}
+                          <TouchableOpacity
+                            style={[
+                              styles.picture2,
+                              {
+                                left: gridStartLeft + (pictures.length % 2) * (pictureWidth + gap),
+                                top: Math.floor(pictures.length / 2) * (REGISTER_FORM.pictures.image1.height * scaleX + gap),
+                                width: pictureWidth, // Use calculated width to match grid
+                              },
+                            ]}
+                            activeOpacity={0.7}
+                            onPress={handleAddPicture}
+                          >
+                            <Image
+                              source={require('../../../assets/icons/add-photos.png')}
+                              style={styles.addIcon}
+                              resizeMode="contain"
+                            />
+                          </TouchableOpacity>
+                        </>
                       );
-                    })}
+                    })()}
                   </>
-                )}
-                {pictures.length > 0 && (
-                  <TouchableOpacity
-                    style={[
-                      styles.picture2,
-                      pictures.length === 1
-                        ? styles.picture2BelowSingle
-                        : {
-                            left: 27 * scaleX + (pictures.length % 2) * (((Dimensions.get('window').width - (27 * 2 * scaleX) - (12 * scaleX)) / 2) + 12 * scaleX),
-                            top: Math.floor(pictures.length / 2) * (REGISTER_FORM.pictures.image1.height * scaleX + 12 * scaleX),
-                          },
-                    ]}
-                    activeOpacity={0.7}
-                    onPress={handleAddPicture}
-                  >
-                    <Image
-                      source={require('../../../assets/icons/add-photos.png')}
-                      style={styles.addIcon}
-                      resizeMode="contain"
-                    />
-                  </TouchableOpacity>
                 )}
               </View>
             </>
@@ -1551,13 +1552,6 @@ const styles = StyleSheet.create({
     borderRadius: REGISTER_FORM.pictures.image1.borderRadius * scaleX,
     overflow: 'hidden',
   },
-  picture1FullWidth: {
-    width: Dimensions.get('window').width - (27 * 2 * scaleX), // Full width when only one picture
-    height: REGISTER_FORM.pictures.image1.height * scaleX,
-    borderRadius: REGISTER_FORM.pictures.image1.borderRadius * scaleX,
-    position: 'relative',
-    overflow: 'hidden',
-  },
   picture2: {
     position: 'absolute',
     width: ((Dimensions.get('window').width - (27 * 2 * scaleX) - (12 * scaleX)) / 2), // Same width as picture1 for two-column layout
@@ -1578,11 +1572,6 @@ const styles = StyleSheet.create({
   picture2Error: {
     borderWidth: 2,
     borderColor: '#ff0000', // Red border for error
-  },
-  picture2BelowSingle: {
-    position: 'absolute',
-    left: 27 * scaleX,
-    top: REGISTER_FORM.pictures.image1.height * scaleX + 12 * scaleX,
   },
   addIcon: {
     width: REGISTER_FORM.pictures.addIcon.width * scaleX,
