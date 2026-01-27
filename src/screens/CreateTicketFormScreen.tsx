@@ -79,6 +79,20 @@ export default function CreateTicketFormScreen() {
   const [priority, setPriority] = useState<Priority | null>(null);
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [pictures, setPictures] = useState<string[]>([]);
+  const [showTicketTagDropdown, setShowTicketTagDropdown] = useState(false);
+  const [selectedTicketTag, setSelectedTicketTag] = useState<string>('');
+
+  // Ticket Tag options - can be customized based on requirements
+  const ticketTagOptions = [
+    'Broken Shower',
+    'No Hot Water',
+    'TV Not Working',
+    'WiFi Issue',
+    'Room Service',
+    'Cleaning Request',
+    'Maintenance',
+    'Other',
+  ];
 
   const handleBackPress = () => {
     navigation.goBack();
@@ -291,17 +305,68 @@ export default function CreateTicketFormScreen() {
         <View style={styles.curvedBackground} />
 
         {/* Form Fields - Using absolute positioning to match Figma */}
-        {/* Issue Field */}
-        <Text style={styles.issueLabel}>Issue</Text>
-        <View style={styles.issueInputContainer}>
-          <TextInput
-            style={styles.issueInput}
-            placeholder="What's the issue? (e.g., Broken Shower)"
-            placeholderTextColor="#5a759d"
-            value={issue}
-            onChangeText={setIssue}
-          />
-        </View>
+        {/* Ticket Tag Field - Dropdown */}
+        <Text style={styles.issueLabel}>Ticket Tag</Text>
+        <TouchableOpacity
+          style={styles.issueInputContainer}
+          onPress={() => setShowTicketTagDropdown(!showTicketTagDropdown)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.ticketTagContent}>
+            {selectedTicketTag ? (
+              <>
+                <Image
+                  source={require('../../assets/icons/flag.png')}
+                  style={styles.flagIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.ticketTagText}>{selectedTicketTag}</Text>
+              </>
+            ) : (
+              <Text style={styles.ticketTagPlaceholder}>Add ticket tag (e.g., Broken Shower)</Text>
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Ticket Tag Dropdown Menu */}
+        {showTicketTagDropdown && (
+          <>
+            {/* Backdrop to close dropdown when clicking outside */}
+            <TouchableOpacity
+              style={styles.dropdownBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowTicketTagDropdown(false)}
+            />
+            <View style={styles.ticketTagDropdownMenu}>
+              {ticketTagOptions.map((tag) => (
+                <TouchableOpacity
+                  key={tag}
+                  style={styles.ticketTagDropdownItem}
+                  onPress={() => {
+                    setSelectedTicketTag(tag);
+                    setIssue(tag); // Keep issue state for compatibility
+                    setShowTicketTagDropdown(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Image
+                    source={require('../../assets/icons/flag.png')}
+                    style={styles.flagIconSmall}
+                    resizeMode="contain"
+                  />
+                  <Text
+                    style={[
+                      styles.ticketTagDropdownText,
+                      selectedTicketTag === tag && styles.ticketTagDropdownTextSelected,
+                    ]}
+                  >
+                    {tag}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
 
         {/* Location Field */}
         <Text style={styles.locationLabel}>Location</Text>
@@ -667,24 +732,88 @@ const styles = StyleSheet.create({
   },
   issueInputContainer: {
     position: 'absolute',
-    left: (SCREEN_WIDTH / 2) - (194 * scaleX), // Centered: 388/2 = 194
+    left: (SCREEN_WIDTH / 2) - (220 * scaleX), // Centered: 440/2 = 220
     top: 215 * scaleX, // Reduced from 355 to bring closer (140px reduction)
-    width: 388 * scaleX,
-    height: 68 * scaleX,
+    width: 440 * scaleX,
+    height: 70 * scaleX, // From Figma: 70px (standard input height)
     borderWidth: 1,
     borderColor: '#afa9ad',
     borderRadius: 8 * scaleX,
     justifyContent: 'center',
     paddingHorizontal: 16 * scaleX,
+    backgroundColor: '#ffffff',
   },
-  issueInput: {
-    fontSize: 16 * scaleX,
+  ticketTagContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  flagIcon: {
+    width: 20 * scaleX,
+    height: 20 * scaleX,
+    marginRight: 8 * scaleX,
+  },
+  flagIconSmall: {
+    width: 16 * scaleX,
+    height: 16 * scaleX,
+    marginRight: 8 * scaleX,
+  },
+  ticketTagText: {
+    fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: '400' as any,
+    fontWeight: 'regular' as any,
+    color: '#000000',
+    flex: 1,
+  },
+  ticketTagPlaceholder: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: 'regular' as any,
     color: '#5a759d',
-    textAlign: 'left',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
+  },
+  dropdownBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 998,
+  },
+  ticketTagDropdownMenu: {
+    position: 'absolute',
+    left: (SCREEN_WIDTH / 2) - (220 * scaleX), // Centered: 440/2 = 220
+    top: (215 + 68) * scaleX, // Below the input container
+    width: 440 * scaleX,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#afa9ad', // Match input container border color
+    borderRadius: 8 * scaleX,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 999,
+    maxHeight: 2268 * scaleX, // From Figma: 2268px
+    overflow: 'hidden', // Ensure border radius is applied
+  },
+  ticketTagDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12 * scaleX,
+    paddingVertical: 12 * scaleX,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  ticketTagDropdownText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: 'regular' as any,
+    color: '#000000',
+    flex: 1,
+  },
+  ticketTagDropdownTextSelected: {
+    fontWeight: 'bold' as any,
+    color: '#5a759d',
   },
   // Location Field - Adjusted to account for reduced header spacing
   locationLabel: {
@@ -837,16 +966,6 @@ const styles = StyleSheet.create({
   addPhotoIcon: {
     width: 40 * scaleX,
     height: 40 * scaleX,
-  },
-  // Assign To Section - From Figma: label at x=26, y=967; button at x=33, y=1011; hint at x=68, y=1020
-  assignToLabel: {
-    position: 'absolute',
-    left: 26 * scaleX,
-    top: 967 * scaleX,
-    fontSize: 17 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '700' as any,
-    color: '#1e1e1e',
   },
   // Assign To Section - From Figma: label at x=26, y=967; button Group 328 at x=33, y=799.61, w=33, h=32.832; + text at x=33, y=1011, fontSize=25, color=white; hint at x=68, y=1020
   assignToLabel: {
