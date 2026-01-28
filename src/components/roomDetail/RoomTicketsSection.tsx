@@ -85,6 +85,12 @@ export default function RoomTicketsSection({
   const [pictures, setPictures] = useState<string[]>([]);
   const [showTicketTagDropdown, setShowTicketTagDropdown] = useState(false);
   const [selectedTicketTag, setSelectedTicketTag] = useState<string>('');
+  const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
+  const [selectedPriority, setSelectedPriority] = useState<string>('');
+  const [taggedStaff, setTaggedStaff] = useState<Array<{ id: string; name: string; avatar?: any }>>([
+    { id: '1', name: 'Dimotia. M' },
+    { id: '2', name: 'Dimotia. M' },
+  ]);
 
   // Ticket Tag options - can be customized based on requirements
   const ticketTagOptions = [
@@ -96,6 +102,13 @@ export default function RoomTicketsSection({
     'Cleaning Request',
     'Maintenance',
     'Other',
+  ];
+
+  // Priority options
+  const priorityOptions = [
+    { value: 'urgent', label: 'High Priority', flags: 3, flagColor: '#F92424', bgColor: '#FEE8EC' },
+    { value: 'medium', label: 'High Priority', flags: 3, flagColor: '#ffc107', bgColor: '#FFF8DD' },
+    { value: 'notUrgent', label: 'Low Priority', flags: 1, flagColor: '#999999', bgColor: '#F3F3F3' },
   ];
 
   const handleDepartmentPress = (departmentId: DepartmentId) => {
@@ -220,7 +233,9 @@ export default function RoomTicketsSection({
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Current Ticket Section */}
         <Text style={[styles.sectionTitle, styles.firstSectionTitle]}>Current Ticket</Text>
@@ -240,111 +255,10 @@ export default function RoomTicketsSection({
           </View>
         </View>
 
-        {/* Create a ticket Section */}
-        <Text style={styles.sectionTitle}>Create a ticket</Text>
-        <View style={styles.createTicketContent}>
-          <Text style={styles.departmentSubtitleFirst}>Select Department</Text>
-
-        {/* Department Icons - 3-column Grid Layout */}
-        <View style={styles.departmentsGridContainer}>
-          {ALL_DEPARTMENTS.map((deptId) => {
-            const isSelected = deptId === selectedDepartment;
-            // Calculate grid position: 3 columns
-            const index = ALL_DEPARTMENTS.indexOf(deptId);
-            const row = Math.floor(index / 3);
-            const col = index % 3;
-            
-            // Department names for labels
-            const departmentLabels: Record<DepartmentId, string> = {
-              engineering: 'Engineering',
-              hskPortier: 'HSK Portier',
-              inRoomDining: 'In Room Dining',
-              laundry: 'Laundry',
-              concierge: 'Concierge',
-              reception: 'Reception',
-              it: 'IT',
-            };
-            
-            return (
-              <View
-                key={deptId}
-                style={[
-                  styles.departmentGridItem,
-                  {
-                    marginRight: col < 2 ? 16 * scaleX : 0, // Margin between columns
-                    marginBottom: 24 * scaleX, // Margin between rows
-                  },
-                ]}
-              >
-                <TouchableOpacity
-                  style={styles.departmentIconContainer}
-                  onPress={() => handleDepartmentPress(deptId)}
-                  activeOpacity={0.7}
-                >
-                  <View
-                    style={[
-                      styles.departmentIconBackground,
-                      isSelected && styles.departmentIconBackgroundSelected,
-                    ]}
-                  >
-                    <Image
-                      source={DEPARTMENT_ICONS[deptId]}
-                      style={[
-                        styles.departmentIcon,
-                        // Some icons don't need tint (like hskPortier, inRoomDining)
-                        (deptId === 'hskPortier' || deptId === 'inRoomDining')
-                          ? {}
-                          : { tintColor: '#F92424' },
-                      ]}
-                      resizeMode="contain"
-                    />
-                  </View>
-                </TouchableOpacity>
-                {/* Department Label */}
-                <Text style={styles.departmentLabelText}>
-                  {departmentLabels[deptId]}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-
         {/* Divider */}
         <View style={styles.divider} />
 
-        {/* AI Create Ticket Button Section */}
-        <View style={styles.aiButtonSection}>
-          {/* Button Container */}
-          <TouchableOpacity
-            style={styles.aiButtonContainer}
-            onPress={() => {
-              // TODO: Implement AI ticket creation
-              console.log('AI Create Ticket pressed');
-            }}
-            activeOpacity={0.7}
-          >
-            {/* Button */}
-            <View style={styles.aiButton}>
-              {/* Button Text */}
-              <Text style={styles.aiButtonText}>Create Ticket</Text>
-
-              {/* AI Badge */}
-              <View style={styles.aiBadge}>
-                <Text style={styles.aiBadgeText}>AI</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          {/* Beta Label */}
-          <Text style={styles.betaLabel}>BETA</Text>
-
-          {/* Description */}
-          <Text style={styles.aiDescription}>
-            AI detects issues and auto-creates tickets for the right department no manual reporting needed.
-          </Text>
-        </View>
-
-        {/* Select Department Section - After AI Description */}
+        {/* Select Department Section */}
         <Text style={styles.departmentSubtitle}>Select Department</Text>
 
         {/* Department Icons - 3-column Grid Layout - Second Instance */}
@@ -423,7 +337,10 @@ export default function RoomTicketsSection({
         {/* Ticket Tag Field - Dropdown */}
         <Text style={styles.label}>Ticket Tag</Text>
         <TouchableOpacity
-          style={styles.inputContainer}
+          style={[
+            styles.inputContainer,
+            showTicketTagDropdown && styles.inputContainerFocused,
+          ]}
           onPress={() => setShowTicketTagDropdown(!showTicketTagDropdown)}
           activeOpacity={0.7}
         >
@@ -453,10 +370,13 @@ export default function RoomTicketsSection({
               onPress={() => setShowTicketTagDropdown(false)}
             />
             <View style={styles.ticketTagDropdownMenu}>
-              {ticketTagOptions.map((tag) => (
+              {ticketTagOptions.map((tag, index) => (
                 <TouchableOpacity
                   key={tag}
-                  style={styles.ticketTagDropdownItem}
+                  style={[
+                    styles.ticketTagDropdownItem,
+                    index === ticketTagOptions.length - 1 && styles.ticketTagDropdownItemLast, // Remove border from last item
+                  ]}
                   onPress={() => {
                     setSelectedTicketTag(tag);
                     setIssue(tag); // Keep issue state for compatibility
@@ -477,6 +397,13 @@ export default function RoomTicketsSection({
                   >
                     {tag}
                   </Text>
+                  {selectedTicketTag === tag && (
+                    <Image
+                      source={require('../../../assets/icons/tick.png')}
+                      style={styles.checkmarkIcon}
+                      resizeMode="contain"
+                    />
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
@@ -503,12 +430,22 @@ export default function RoomTicketsSection({
             onPress={handleAddPicture}
             activeOpacity={0.7}
           >
-            <Image
-              source={require('../../../assets/icons/add-photos.png')}
-              style={styles.addPhotoIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.addPhotoText}>Add photos</Text>
+            <View style={styles.addPhotoIconContainer}>
+              <Image
+                source={require('../../../assets/icons/add-photos.png')}
+                style={styles.addPhotoIcon}
+                resizeMode="contain"
+              />
+              <View style={styles.addPhotoPlusIcon}>
+                <Image
+                  source={require('../../../assets/icons/plus.png')}
+                  style={styles.addPhotoPlusIconImage}
+                  resizeMode="contain"
+                />
+              </View>
+            </View>
+            <Text style={styles.addPhotoText}>Add Photo</Text>
+            <Text style={styles.addPhotoSubtext}>Add photos of the item and our AI will do the rest.</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.picturesContainer}>
@@ -548,12 +485,21 @@ export default function RoomTicketsSection({
                 onPress={handleAddPicture}
                 activeOpacity={0.7}
               >
-                <Image
-                  source={require('../../../assets/icons/add-photos.png')}
-                  style={styles.addMorePhotoIcon}
-                  resizeMode="contain"
-                />
-                <Text style={styles.addMorePhotoText}>Add more</Text>
+                <View style={styles.addMorePhotoIconContainer}>
+                  <Image
+                    source={require('../../../assets/icons/add-photos.png')}
+                    style={styles.addMorePhotoIcon}
+                    resizeMode="contain"
+                  />
+                  <View style={styles.addMorePhotoPlusIcon}>
+                    <Image
+                      source={require('../../../assets/icons/plus.png')}
+                      style={styles.addMorePhotoPlusIconImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </View>
+                <Text style={styles.addMorePhotoText}>Add Photo</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -574,50 +520,144 @@ export default function RoomTicketsSection({
           />
         </View>
 
-        {/* Assign to (Optional) */}
-        <Text style={styles.assignToLabel}>Assign to (Optional)</Text>
+        {/* Tag Staff */}
+        <View style={styles.tagStaffSection}>
+          <View style={styles.tagStaffCardWrapper}>
+            <View style={styles.tagStaffCard}>
+              <Text style={styles.tagStaffLabel}>Tag Staff</Text>
+              <Text style={styles.tagStaffSubtitle}>Tag people to the ticket</Text>
+              <View style={styles.tagStaffDivider} />
+              <View style={styles.tagStaffContentContainer}>
+                <View style={styles.tagStaffMembersContainer}>
+                  {taggedStaff.map((staff) => (
+                    <View key={staff.id} style={styles.tagStaffMember}>
+                      <Image
+                        source={require('../../../assets/icons/profile-avatar.png')}
+                        style={styles.tagStaffAvatar}
+                        resizeMode="cover"
+                      />
+                      <Text style={styles.tagStaffMemberName} numberOfLines={1}>
+                        {staff.name}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+                <TouchableOpacity
+                  style={styles.tagStaffAddButton}
+                  onPress={() => {
+                    // TODO: Open tag staff modal
+                    console.log('Add staff pressed');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Image
+                    source={require('../../../assets/icons/plus.png')}
+                    style={styles.tagStaffAddIcon}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Priority Field - Dropdown */}
+        <Text style={styles.label}>Priority</Text>
         <TouchableOpacity
-          style={styles.assignToButton}
-          onPress={() => {
-            // TODO: Open assign to modal
-            console.log('Assign to pressed');
-          }}
+          style={[
+            styles.inputContainer,
+            showPriorityDropdown && styles.inputContainerFocused,
+          ]}
+          onPress={() => setShowPriorityDropdown(!showPriorityDropdown)}
           activeOpacity={0.7}
         >
-          <View style={styles.assignToIconContainer}>
-            <Text style={styles.assignToIconText}>+</Text>
+          <View style={styles.priorityInputContent}>
+            {selectedPriority ? (
+              <>
+                {(() => {
+                  const selectedOption = priorityOptions.find(opt => opt.value === selectedPriority);
+                  if (selectedOption) {
+                    return (
+                      <>
+                        <View style={styles.priorityFlagsContainer}>
+                          {Array.from({ length: selectedOption.flags }).map((_, index) => (
+                            <Image
+                              key={index}
+                              source={require('../../../assets/icons/flag.png')}
+                              style={[styles.priorityFlagIcon, { tintColor: selectedOption.flagColor }]}
+                              resizeMode="contain"
+                            />
+                          ))}
+                        </View>
+                        <Text style={styles.priorityInputText}>{selectedOption.label}</Text>
+                      </>
+                    );
+                  }
+                  return null;
+                })()}
+              </>
+            ) : (
+              <Text style={styles.priorityInputPlaceholder}>Select priority</Text>
+            )}
           </View>
-          <Text style={styles.assignToText}>Tag people to the ticket</Text>
         </TouchableOpacity>
 
-        {/* Priority */}
-        <Text style={styles.priorityLabel}>Priority</Text>
-        <View style={styles.priorityContainer}>
-          <TouchableOpacity
-            style={[styles.priorityOption, priority === 'urgent' && styles.priorityOptionSelected]}
-            onPress={() => handlePriorityPress('urgent')}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.priorityIndicator, styles.priorityUrgent]} />
-            <Text style={[styles.priorityText, priority === 'urgent' && styles.priorityTextSelected]}>Urgent</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.priorityOption, priority === 'medium' && styles.priorityOptionSelected]}
-            onPress={() => handlePriorityPress('medium')}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.priorityIndicator, styles.priorityMedium]} />
-            <Text style={[styles.priorityText, priority === 'medium' && styles.priorityTextSelected]}>Medium</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.priorityOption, priority === 'notUrgent' && styles.priorityOptionSelected]}
-            onPress={() => handlePriorityPress('notUrgent')}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.priorityIndicator, styles.priorityNotUrgent]} />
-            <Text style={[styles.priorityText, priority === 'notUrgent' && styles.priorityTextSelected]}>Not Urgent</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Priority Dropdown Menu */}
+        {showPriorityDropdown && (
+          <>
+            {/* Backdrop to close dropdown when clicking outside */}
+            <TouchableOpacity
+              style={styles.dropdownBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowPriorityDropdown(false)}
+            />
+            <View style={styles.priorityDropdownMenu}>
+              {priorityOptions.map((option, index) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.priorityDropdownItem,
+                    { backgroundColor: option.bgColor },
+                    selectedPriority === option.value && styles.priorityDropdownItemSelected,
+                    index === priorityOptions.length - 1 && styles.priorityDropdownItemLast, // Remove border from last item
+                  ]}
+                  onPress={() => {
+                    setSelectedPriority(option.value);
+                    setPriority(option.value as Priority);
+                    setShowPriorityDropdown(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.priorityFlagsContainer}>
+                    {Array.from({ length: option.flags }).map((_, flagIndex) => (
+                      <Image
+                        key={flagIndex}
+                        source={require('../../../assets/icons/flag.png')}
+                        style={[styles.priorityFlagIcon, { tintColor: option.flagColor }]}
+                        resizeMode="contain"
+                      />
+                    ))}
+                  </View>
+                  <Text
+                    style={[
+                      styles.priorityDropdownText,
+                      selectedPriority === option.value && styles.priorityDropdownTextSelected,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                  {selectedPriority === option.value && (
+                    <Image
+                      source={require('../../../assets/icons/tick.png')}
+                      style={styles.priorityCheckmark}
+                      resizeMode="contain"
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
 
         {/* Submit Button */}
         <TouchableOpacity
@@ -628,7 +668,6 @@ export default function RoomTicketsSection({
         >
           <Text style={styles.submitButtonText}>Submit</Text>
         </TouchableOpacity>
-        </View>
       </ScrollView>
     </View>
   );
@@ -646,6 +685,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20 * scaleX,
     paddingTop: 20 * scaleX,
     paddingBottom: 40 * scaleX,
+    flexGrow: 1, // Allow content to grow and be scrollable
   },
   sectionTitle: {
     fontSize: 20 * scaleX, // From Figma: 20px
@@ -778,15 +818,19 @@ const styles = StyleSheet.create({
     borderRadius: 8 * scaleX,
     borderWidth: 1,
     borderColor: '#afa9ad', // Match Figma border color
-    paddingHorizontal: 12 * scaleX,
-    paddingVertical: 12 * scaleX,
+    paddingHorizontal: 16 * scaleX,
+    paddingVertical: 16 * scaleX,
     height: 70 * scaleX, // From Figma: 70px (standard input height)
     justifyContent: 'center',
   },
+  inputContainerFocused: {
+    borderWidth: 2 * scaleX, // Prominent border when focused (from Figma: ~2px)
+    borderColor: '#5a759d', // Light blue border when focused
+  },
   input: {
     fontSize: 14 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: 'regular' as any,
+    fontFamily: typography.fontFamily.secondary, // Inter
+    fontWeight: '300' as any, // Inter Light
     color: '#000000',
   },
   ticketTagContent: {
@@ -803,17 +847,23 @@ const styles = StyleSheet.create({
     height: 16 * scaleX,
     marginRight: 8 * scaleX,
   },
+  checkmarkIcon: {
+    width: 16 * scaleX,
+    height: 16 * scaleX,
+    tintColor: '#5a759d', // Blue checkmark (same as Priority)
+    marginLeft: 'auto', // Push to the right
+  },
   ticketTagText: {
     fontSize: 14 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: 'regular' as any,
+    fontFamily: typography.fontFamily.secondary, // Inter
+    fontWeight: '300' as any, // Inter Light
     color: '#000000',
     flex: 1,
   },
   ticketTagPlaceholder: {
     fontSize: 14 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: 'regular' as any,
+    fontFamily: typography.fontFamily.secondary, // Inter
+    fontWeight: '300' as any, // Inter Light
     color: '#5a759d',
   },
   dropdownBackdrop: {
@@ -830,7 +880,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#afa9ad', // Match input container border color from Figma
+    borderColor: '#e3e3e3', // Light grey border (from Figma: thin, light grey border ~1px)
     borderRadius: 8 * scaleX,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -844,43 +894,79 @@ const styles = StyleSheet.create({
   ticketTagDropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12 * scaleX,
-    paddingVertical: 12 * scaleX,
+    paddingHorizontal: 16 * scaleX,
+    paddingVertical: 14 * scaleX,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#e3e3e3',
+    minHeight: 49 * scaleX, // Match Priority dropdown item height
+  },
+  ticketTagDropdownItemLast: {
+    borderBottomWidth: 0, // Remove border from last item
   },
   ticketTagDropdownText: {
     fontSize: 14 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: 'regular' as any,
-    color: '#000000',
+    fontFamily: typography.fontFamily.secondary, // Inter
+    fontWeight: '300' as any, // Inter Light
+    color: '#000000', // Dark grey for both selected and unselected (from Figma)
     flex: 1,
   },
   ticketTagDropdownTextSelected: {
-    fontWeight: 'bold' as any,
-    color: '#5a759d',
+    // Same styling as unselected - checkmark icon indicates selection
+    fontWeight: '300' as any,
+    color: '#000000',
   },
   addPhotoCard: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8 * scaleX,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    backgroundColor: '#F9FAFC', // From Figma: #F9FAFC
+    borderRadius: 12 * scaleX, // From Figma: 12px
+    borderWidth: 1 * scaleX,
+    borderColor: 'rgba(90, 117, 157, 0.23)', // From Figma: rgba(90, 117, 157, 0.23)
     borderStyle: 'dashed',
-    padding: 24 * scaleX,
+    padding: 32 * scaleX,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 120 * scaleX,
+    minHeight: 200 * scaleX, // Larger height for better visual
+    width: '100%',
+  },
+  addPhotoIconContainer: {
+    position: 'relative',
+    marginBottom: 16 * scaleX,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addPhotoIcon: {
+    width: 80 * scaleX, // Large icon size
+    height: 80 * scaleX,
+  },
+  addPhotoPlusIcon: {
+    position: 'absolute',
+    top: -8 * scaleX, // Position on top-right
+    right: -8 * scaleX,
     width: 32 * scaleX,
     height: 32 * scaleX,
-    marginBottom: 8 * scaleX,
+    borderRadius: 16 * scaleX,
+    backgroundColor: '#5a759d', // Blue background for plus
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addPhotoPlusIconImage: {
+    width: 20 * scaleX,
+    height: 20 * scaleX,
+    tintColor: '#ffffff', // White plus icon
   },
   addPhotoText: {
+    fontSize: 16 * scaleX, // Larger, bold text
+    fontFamily: typography.fontFamily.primary, // Helvetica
+    fontWeight: '700' as any, // Bold
+    color: '#5a759d', // Blue color
+    marginBottom: 8 * scaleX,
+  },
+  addPhotoSubtext: {
     fontSize: 12 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: 'regular' as any,
-    color: '#666666',
+    fontFamily: typography.fontFamily.secondary, // Inter
+    fontWeight: '300' as any, // Light
+    color: '#666666', // Grey color
+    textAlign: 'center',
+    maxWidth: 300 * scaleX,
   },
   picturesContainer: {
     flexDirection: 'row',
@@ -920,27 +1006,48 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 8 * scaleX,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: 'rgba(90, 117, 157, 0.23)', // Match card border color
     borderStyle: 'dashed',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F9FAFC', // Match card background
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12 * scaleX,
     width: '48%', // Always 2-column grid - appears in next grid position
     paddingVertical: 16 * scaleX,
   },
-  addMorePhotoText: {
-    marginTop: 8 * scaleX,
-    fontSize: 12 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: 'regular' as any,
-    color: '#666666',
-    textAlign: 'center',
+  addMorePhotoIconContainer: {
+    position: 'relative',
+    marginBottom: 8 * scaleX,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addMorePhotoIcon: {
+    width: 40 * scaleX, // Smaller icon for grid item
+    height: 40 * scaleX,
+  },
+  addMorePhotoPlusIcon: {
+    position: 'absolute',
+    top: -4 * scaleX, // Position on top-right
+    right: -4 * scaleX,
     width: 24 * scaleX,
     height: 24 * scaleX,
-    tintColor: '#5a759d',
+    borderRadius: 12 * scaleX,
+    backgroundColor: '#5a759d', // Blue background for plus
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addMorePhotoPlusIconImage: {
+    width: 16 * scaleX,
+    height: 16 * scaleX,
+    tintColor: '#ffffff', // White plus icon
+  },
+  addMorePhotoText: {
+    marginTop: 4 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary, // Helvetica
+    fontWeight: '700' as any, // Bold
+    color: '#5a759d', // Blue color
+    textAlign: 'center',
   },
   descriptionContainer: {
     backgroundColor: '#ffffff',
@@ -966,93 +1073,177 @@ const styles = StyleSheet.create({
     marginTop: 20 * scaleX,
     marginBottom: 8 * scaleX,
   },
-  assignToLabel: {
-    fontSize: 17 * scaleX, // From Figma: 17px
+  tagStaffSection: {
+    marginTop: 20 * scaleX,
+    marginBottom: 0,
+    width: '100%',
+    alignItems: 'center',
+  },
+  tagStaffCardWrapper: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -20 * scaleX, // Negative margin to offset parent padding (same as ticketCardWrapper)
+    marginRight: -20 * scaleX, // Negative margin to offset parent padding
+  },
+  tagStaffLabel: {
+    fontSize: 17 * scaleX, // From Figma: bold, dark grey
     fontFamily: typography.fontFamily.primary, // Helvetica
     fontWeight: '700' as any, // Bold
-    color: '#1e1e1e', // From Figma: #1e1e1e
-    marginTop: 20 * scaleX,
-    marginBottom: 8 * scaleX,
+    color: '#1e1e1e', // Dark grey
+    marginBottom: 4 * scaleX,
+    marginTop: 0, // Inside card, no top margin needed
   },
-  priorityLabel: {
-    fontSize: 17 * scaleX, // From Figma: 17px
-    fontFamily: typography.fontFamily.primary, // Helvetica
-    fontWeight: '700' as any, // Bold
-    color: '#1e1e1e', // From Figma: #1e1e1e
-    marginTop: 20 * scaleX,
-    marginBottom: 8 * scaleX,
+  tagStaffSubtitle: {
+    fontSize: 14 * scaleX, // From Figma: smaller, lighter grey
+    fontFamily: typography.fontFamily.secondary, // Inter
+    fontWeight: '300' as any, // Inter Light
+    color: '#666666', // Lighter grey
+    marginBottom: 16 * scaleX, // Spacing before staff avatars
   },
-  assignToButton: {
+  tagStaffCard: {
+    backgroundColor: '#F9FAFC', // From Figma: #F9FAFC
+    borderRadius: 12 * scaleX, // From Figma: 12px
+    borderWidth: 1 * scaleX,
+    borderColor: 'rgba(90, 117, 157, 0.23)', // From Figma: rgba(90, 117, 157, 0.23)
+    width: '100%', // Same as current ticket card
+    height: 183 * scaleX, // From Figma: 183px
+    paddingHorizontal: 16 * scaleX,
+    paddingTop: 16 * scaleX,
+    paddingBottom: 16 * scaleX,
+    position: 'relative',
+  },
+  tagStaffDivider: {
+    width: '100%',
+    height: 1 * scaleX,
+    backgroundColor: '#e3e3e3',
+    marginTop: 0,
+    marginBottom: 16 * scaleX,
+    marginLeft: -16 * scaleX, // Offset padding to span full width
+    marginRight: -16 * scaleX,
+  },
+  tagStaffContentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8 * scaleX,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    paddingHorizontal: 12 * scaleX,
-    paddingVertical: 12 * scaleX,
-    minHeight: 44 * scaleX,
+    justifyContent: 'space-between', // Staff members on left, add button on right
   },
-  assignToIconContainer: {
-    width: 24 * scaleX,
-    height: 24 * scaleX,
-    borderRadius: 12 * scaleX,
-    backgroundColor: '#e0e0e0',
+  tagStaffMembersContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1, // Take available space
+  },
+  tagStaffMember: {
+    flexDirection: 'row', // Horizontal layout: avatar next to name
+    alignItems: 'center',
+    marginRight: 20 * scaleX,
+    marginBottom: 0,
+  },
+  tagStaffAvatar: {
+    width: 30 * scaleX, // From Figma: 30px
+    height: 31 * scaleX, // From Figma: 31px
+    borderRadius: 15.5 * scaleX, // Half of height for circular shape
+    backgroundColor: '#ffffff',
+    marginRight: 8 * scaleX, // Spacing between avatar and name
+  },
+  tagStaffMemberName: {
+    fontSize: 18 * scaleX, // From Figma: 18px
+    fontFamily: typography.fontFamily.primary, // Helvetica
+    fontWeight: '300' as any, // Light (300)
+    color: '#5A759D', // From Figma: #5A759D
+    textAlign: 'left', // Left align when next to avatar
+    lineHeight: undefined, // Normal line height
+    maxWidth: 120 * scaleX,
+  },
+  tagStaffAddButton: {
+    width: 53 * scaleX, // From Figma: 53px
+    height: 49 * scaleX, // From Figma: 49px
+    borderRadius: 41 * scaleX, // From Figma: 41px
+    backgroundColor: '#F1F6FC', // From Figma: #F1F6FC (light blue)
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12 * scaleX,
+    marginTop: 0,
   },
-  assignToIconText: {
-    fontSize: 18 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: 'bold' as any,
-    color: '#666666',
+  tagStaffAddIcon: {
+    width: 20 * scaleX, // Proportionally sized
+    height: 20 * scaleX,
+    tintColor: '#5a759d', // Blue plus icon (to match text color)
   },
-  assignToText: {
-    fontSize: 14 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: 'regular' as any,
-    color: '#666666',
-  },
-  priorityContainer: {
-    flexDirection: 'row',
-    gap: 16 * scaleX,
-    marginBottom: 24 * scaleX,
-  },
-  priorityOption: {
+  priorityInputContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8 * scaleX,
   },
-  priorityOptionSelected: {
-    // Selected state styling
+  priorityInputText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.secondary, // Inter
+    fontWeight: '300' as any, // Inter Light
+    color: '#000000',
+    flex: 1,
   },
-  priorityIndicator: {
-    width: 24 * scaleX, // From Figma: 24px
-    height: 24 * scaleX, // From Figma: 24px
-    borderRadius: 12 * scaleX, // From Figma: 12px radius
+  priorityInputPlaceholder: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.secondary, // Inter
+    fontWeight: '300' as any, // Inter Light
+    color: '#5a759d',
+  },
+  priorityDropdownMenu: {
+    marginTop: 8 * scaleX,
+    marginBottom: 12 * scaleX,
+    width: '100%',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e3e3e3', // Light grey border
+    borderRadius: 8 * scaleX,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 999,
+    overflow: 'hidden',
+  },
+  priorityDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16 * scaleX,
+    paddingVertical: 14 * scaleX,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e3e3e3',
+    minHeight: 49 * scaleX, // From Figma: ~49px
+  },
+  priorityDropdownItemLast: {
+    borderBottomWidth: 0, // Remove border from last item
+  },
+  priorityDropdownItemSelected: {
+    borderWidth: 1 * scaleX,
+    borderColor: '#EB5757', // Red border when selected
+    borderRadius: 4 * scaleX,
+  },
+  priorityFlagsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginRight: 8 * scaleX,
+    gap: 4 * scaleX,
   },
-  priorityUrgent: {
-    backgroundColor: '#F92424',
+  priorityFlagIcon: {
+    width: 16 * scaleX,
+    height: 16 * scaleX,
   },
-  priorityMedium: {
-    backgroundColor: '#ffc107', // From Figma: Yellow/Amber
-  },
-  priorityNotUrgent: {
-    backgroundColor: '#d3d3d3', // From Figma: Light grey
-  },
-  priorityText: {
+  priorityDropdownText: {
     fontSize: 15 * scaleX, // From Figma: 15px
     fontFamily: typography.fontFamily.primary, // Helvetica
     fontWeight: '300' as any, // Light (300)
-    color: '#494747', // From Figma: #494747
+    color: '#000000', // Dark grey/black
+    flex: 1,
   },
-  priorityTextSelected: {
-    fontSize: 15 * scaleX, // From Figma: 15px
-    fontFamily: typography.fontFamily.primary, // Helvetica
-    fontWeight: '700' as any, // Bold when selected
-    color: '#f92424', // Red when selected
+  priorityDropdownTextSelected: {
+    fontWeight: '300' as any,
+    color: '#000000',
+  },
+  priorityCheckmark: {
+    width: 16 * scaleX,
+    height: 16 * scaleX,
+    tintColor: '#5a759d', // Blue checkmark
+    marginLeft: 'auto',
   },
   submitButton: {
     width: '100%',
@@ -1077,7 +1268,8 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 1 * scaleX,
     backgroundColor: '#e3e3e3',
-    marginVertical: 24 * scaleX,
+    marginTop: 24 * scaleX, // Same top padding
+    marginBottom: 24 * scaleX, // Same bottom padding
     marginLeft: -20 * scaleX, // Offset parent padding
     marginRight: -20 * scaleX,
   },

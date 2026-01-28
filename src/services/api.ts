@@ -52,14 +52,34 @@ class ApiService {
    * Handle API response
    */
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (error) {
+      // If response is not JSON, create error object
+      const text = await response.text();
+      throw {
+        message: `Invalid JSON response: ${text}`,
+        status: response.status,
+      } as ApiError;
+    }
 
     if (!response.ok) {
-      throw {
-        message: data.message || 'An error occurred',
+      const error: ApiError = {
+        message: data.message || `HTTP ${response.status}: ${response.statusText}`,
         status: response.status,
         errors: data.errors,
-      } as ApiError;
+      };
+      
+      // Log detailed error for debugging
+      console.error('API Error:', {
+        status: response.status,
+        message: error.message,
+        path: response.url,
+        errors: data.errors,
+      });
+      
+      throw error;
     }
 
     return {
@@ -70,10 +90,28 @@ class ApiService {
   }
 
   /**
+   * Build query string from parameters
+   */
+  private buildQueryString(params: Record<string, string | number | boolean | undefined | null>): string {
+    const queryParts: string[] = [];
+    
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+      }
+    }
+    
+    return queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+  }
+
+  /**
    * GET request
    */
-  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+  async get<T>(endpoint: string, params?: Record<string, string | number | boolean | undefined | null>): Promise<ApiResponse<T>> {
+    const queryString = params ? this.buildQueryString(params) : '';
+    const url = `${this.baseURL}${endpoint}${queryString}`;
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: this.getHeaders(),
     });
