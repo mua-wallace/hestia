@@ -322,6 +322,8 @@ export const STATUS_BUTTON = {
     height: 14,
     right: 12, // Relative to button
   },
+  // Gap between left icon and dropdown (matches Room Detail status indicator: 8px)
+  iconGap: 8,
   colors: {
     dirty: '#f92424',
     inProgress: '#ffc107',
@@ -334,6 +336,14 @@ export const STATUS_BUTTON = {
     departure: { left: 262, top: 81 }, // Room 202
     arrivalWithNotes: { left: 256, top: 74 }, // Room 203
     standard: { left: 270, top: 87 }, // Room 204/205
+  },
+  // Flagged state: same position/size/margins as status button; only background, borderRadius and icons differ
+  flagged: {
+    borderRadius: 45,
+    background: '#FFEBEB',
+    iconTint: '#F92424',
+    flagIcon: { width: 24, height: 24 },
+    dropdownArrow: { width: 12, height: 32 },
   },
 } as const;
 

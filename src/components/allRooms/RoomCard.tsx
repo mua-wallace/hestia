@@ -281,6 +281,7 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
           isPriority={room.isPriority}
           isArrivalDeparture={isArrivalDeparture}
           hasNotes={hasNotes}
+          flagged={room.flagged === true}
         />
       )}
 
