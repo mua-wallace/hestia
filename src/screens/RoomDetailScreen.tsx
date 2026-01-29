@@ -69,6 +69,8 @@ export default function RoomDetailScreen() {
   
   // Track current status to update header background color
   const [currentStatus, setCurrentStatus] = useState<RoomCardData['status']>(room.status);
+  // Track room data locally to allow updates (e.g., flagged status)
+  const [localRoom, setLocalRoom] = useState<RoomCardData>(room);
   // Track selected status option text to display in header
   const [selectedStatusText, setSelectedStatusText] = useState<string | undefined>(undefined);
   
@@ -318,6 +320,12 @@ export default function RoomDetailScreen() {
       });
       setShowStatusModal(true);
     }
+  };
+
+  const handleFlagToggle = (flagged: boolean) => {
+    setLocalRoom((prev) => ({ ...prev, flagged }));
+    // TODO: Save to backend/API
+    console.log('Flag toggled for room:', localRoom.roomNumber, 'flagged:', flagged);
   };
 
   const handleStatusSelect = (statusOption: StatusChangeOption) => {
@@ -750,8 +758,9 @@ export default function RoomDetailScreen() {
           setStatusButtonPosition(null);
         }}
         onStatusSelect={handleStatusSelect}
+        onFlagToggle={handleFlagToggle}
         currentStatus={currentStatus}
-        room={room}
+        room={localRoom}
         buttonPosition={statusButtonPosition}
         showTriangle={false}
       />

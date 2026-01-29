@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text, Animated, Platform } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text, Animated, Platform, Switch, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoomStatus, StatusChangeOption, STATUS_OPTIONS, RoomCardData } from '../../types/allRooms.types';
@@ -14,6 +14,7 @@ interface StatusChangeModalProps {
   visible: boolean;
   onClose: () => void;
   onStatusSelect: (status: StatusChangeOption) => void;
+  onFlagToggle?: (flagged: boolean) => void; // Callback when flag toggle is changed
   currentStatus: RoomStatus;
   room?: RoomCardData; // Room data
   buttonPosition?: { x: number; y: number; width: number; height: number } | null; // Status button position on screen
@@ -25,6 +26,7 @@ export default function StatusChangeModal({
   visible,
   onClose,
   onStatusSelect,
+  onFlagToggle,
   currentStatus,
   room,
   buttonPosition,
@@ -34,9 +36,13 @@ export default function StatusChangeModal({
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
+  // Local state for toggle to ensure immediate UI updates
+  const [isFlagged, setIsFlagged] = useState(room?.flagged === true);
 
   useEffect(() => {
     if (visible) {
+      // Reset toggle state when modal opens
+      setIsFlagged(room?.flagged === true);
       // Slide up animation
       Animated.parallel([
         Animated.timing(slideAnim, {
@@ -55,7 +61,7 @@ export default function StatusChangeModal({
       slideAnim.setValue(0);
       opacityAnim.setValue(0);
     }
-  }, [visible, slideAnim, opacityAnim]);
+  }, [visible, room?.flagged, slideAnim, opacityAnim]);
 
   const handleStatusSelect = (option: StatusChangeOption) => {
     // Animate out before closing
@@ -94,11 +100,43 @@ export default function StatusChangeModal({
     });
   };
 
+  const handleFlagToggle = (value: boolean) => {
+    // Update local state immediately for UI responsiveness
+    setIsFlagged(value);
+    
+    // Update the flagged state in parent component
+    if (onFlagToggle) {
+      onFlagToggle(value);
+    }
+
+    // If toggled to true (flagged), close the modal with animation
+    if (value === true) {
+      // Use requestAnimationFrame to ensure state update completes before closing
+      requestAnimationFrame(() => {
+        Animated.parallel([
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          onClose();
+        });
+      });
+    }
+    // If toggled to false (unflagged), modal stays open
+  };
+
   if (!room) return null;
 
   // Modal width (scaled) - full card width
   const modalWidth = CARD_DIMENSIONS.width * scaleX; // 426px scaled (full card width)
-  const modalHeight = 324.185 * scaleX; // Approximate modal height from Figma
+  const modalHeight = 380 * scaleX; // Updated modal height to accommodate divider and flag toggle
   
   let modalTopPosition: number;
   let modalLeft: number;
@@ -245,6 +283,32 @@ export default function StatusChangeModal({
                 />
               ))}
             </View>
+
+            {/* Divider */}
+            <View style={styles.divider} />
+
+            {/* Flag Room Toggle - matches Figma: icon in light red circle, label, toggle */}
+            <View style={styles.flagRoomContainer} pointerEvents="box-none">
+              <View style={styles.flagIconCircle}>
+                <Image
+                  source={require('../../../assets/icons/flag.png')}
+                  style={styles.flagIcon}
+                  resizeMode="contain"
+                  tintColor="#F92424"
+                />
+              </View>
+              <Text style={styles.flagRoomText}>Flag Room</Text>
+              <View pointerEvents="box-none">
+                <Switch
+                  value={isFlagged}
+                  onValueChange={handleFlagToggle}
+                  trackColor={{ false: '#e3e3e3', true: '#e3e3e3' }}
+                  thumbColor="#F92424"
+                  ios_backgroundColor="#e3e3e3"
+                  style={styles.toggleSwitch}
+                />
+              </View>
+            </View>
           </TouchableOpacity>
           </Animated.View>
         </BlurView>
@@ -346,5 +410,43 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
+  },
+  divider: {
+    height: 1 * scaleX,
+    backgroundColor: '#e3e3e3',
+    marginTop: 8 * scaleX,
+    marginBottom: 16 * scaleX,
+    width: '100%',
+  },
+  flagRoomContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4 * scaleX,
+  },
+  flagIconCircle: {
+    width: 51.007 * scaleX,
+    height: 51.007 * scaleX,
+    borderRadius: (51.007 / 2) * scaleX,
+    backgroundColor: 'rgba(249, 36, 36, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12 * scaleX,
+    padding: 8 * scaleX, // Add padding to ensure icon fits properly
+  },
+  flagIcon: {
+    width: 24 * scaleX, // Reduced icon size to fit properly in circle
+    height: 24 * scaleX,
+  },
+  flagRoomText: {
+    flex: 1,
+    fontSize: 13 * scaleX,
+    fontFamily: 'Inter',
+    fontWeight: '700' as any,
+    color: '#F92424',
+    textAlign: 'left',
+  },
+  toggleSwitch: {
+    transform: [{ scaleX: scaleX }, { scaleY: scaleX }],
+    // Ensure proper sizing to match Figma design
   },
 });
