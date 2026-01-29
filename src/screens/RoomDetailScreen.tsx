@@ -570,8 +570,8 @@ export default function RoomDetailScreen() {
 
       {/* Header */}
       <RoomDetailHeader
-        roomNumber={room.roomNumber}
-        roomCode={room.roomType}
+        roomNumber={localRoom.roomNumber}
+        roomCode={localRoom.roomType}
         status={currentStatus}
         onBackPress={handleBackPress}
         onStatusPress={handleStatusPress}
@@ -584,6 +584,7 @@ export default function RoomDetailScreen() {
             selectedStatusText
         }
         pausedAt={pausedAt}
+        flagged={localRoom.flagged === true}
       />
 
       {/* Tab Navigation */}

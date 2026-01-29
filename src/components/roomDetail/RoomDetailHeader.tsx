@@ -14,6 +14,7 @@ interface RoomDetailHeaderProps {
   statusButtonRef?: React.RefObject<any>;
   customStatusText?: string; // Custom status text to display (e.g., "Return Later", "Promise Time", "Refuse Service")
   pausedAt?: string; // Time when room was paused (e.g., "11:22")
+  flagged?: boolean; // When true, show Flagged variant (Figma 2333-646): light header, red text, Flagged pill
 }
 
 export default function RoomDetailHeader({
@@ -25,21 +26,27 @@ export default function RoomDetailHeader({
   statusButtonRef,
   customStatusText,
   pausedAt,
+  flagged = false,
 }: RoomDetailHeaderProps) {
   const statusConfig = STATUS_CONFIGS[status];
   
-  // Use custom status text if provided, otherwise use the status config label
-  const displayStatusText = customStatusText || statusConfig.label;
+  // Use custom status text if provided; when pausedAt is set show "Paused"
+  const displayStatusText = pausedAt ? 'Paused' : (customStatusText || statusConfig.label);
   
-  // Use #202A2F for specific status options, otherwise use the status color
-  const specialStatusColors = ['Return Later', 'Refuse Service', 'Pause', 'Promise Time', 'Promised Time'];
-  const headerBackgroundColor = customStatusText && specialStatusColors.includes(customStatusText)
-    ? '#202A2F'
-    : statusConfig.color;
+  // Flagged: light header + red (Figma 2333-646). Paused: light header + dark gray (Figma 2333-132). Other special: dark #202A2F
+  // Derive isPaused from pausedAt so header uses #FCF1CF when user selects Pause (we set pausedAt but clear selectedStatusText)
+  const isPaused = !!(customStatusText === 'Pause' || pausedAt);
+  const headerBackgroundColor = flagged
+    ? ROOM_DETAIL_HEADER.flagged.headerBackground
+    : isPaused
+      ? ROOM_DETAIL_HEADER.paused.headerBackground
+      : customStatusText && ['Return Later', 'Refuse Service', 'Promise Time', 'Promised Time'].includes(customStatusText)
+        ? '#202A2F'
+        : statusConfig.color;
 
-  // Determine which icon to use based on customStatusText or status
+  // Determine which icon to use based on customStatusText, pausedAt, or status
   const getStatusIcon = () => {
-    if (customStatusText === 'Pause') {
+    if (customStatusText === 'Pause' || pausedAt) {
       return require('../../../assets/icons/pause.png');
     }
     if (customStatusText === 'Refuse Service') {
@@ -82,41 +89,113 @@ export default function RoomDetailHeader({
         <Image
           source={require('../../../assets/icons/back-arrow.png')}
           style={styles.backArrow}
-          tintColor="#FFFFFF"
+          tintColor={
+            flagged
+              ? ROOM_DETAIL_HEADER.flagged.backArrowTint
+              : isPaused
+                ? ROOM_DETAIL_HEADER.paused.backArrowTint
+                : '#FFFFFF'
+          }
           resizeMode="contain"
         />
       </TouchableOpacity>
 
       {/* Room Number */}
-      <Text style={styles.roomNumber}>Room {roomNumber}</Text>
+      <Text
+        style={[
+          styles.roomNumber,
+          flagged && { color: ROOM_DETAIL_HEADER.flagged.roomNumberColor },
+          isPaused && { color: ROOM_DETAIL_HEADER.paused.roomNumberColor },
+        ]}
+      >
+        Room {roomNumber}
+      </Text>
 
       {/* Room Code */}
-      <Text style={styles.roomCode}>{roomCode}</Text>
+      <Text
+        style={[
+          styles.roomCode,
+          flagged && { color: ROOM_DETAIL_HEADER.flagged.roomCodeColor },
+          isPaused && { color: ROOM_DETAIL_HEADER.paused.roomCodeColor },
+        ]}
+      >
+        {roomCode}
+      </Text>
 
-      {/* Status Indicator */}
+      {/* Status Indicator: Flagged pill (Figma 2333-646) or default status pill */}
       <TouchableOpacity
         ref={statusButtonRef}
-        style={styles.statusIndicator}
+        style={[
+          styles.statusIndicator,
+          flagged && {
+            backgroundColor: ROOM_DETAIL_HEADER.flagged.pill.background,
+            borderRadius: ROOM_DETAIL_HEADER.flagged.pill.borderRadius * scaleX,
+            justifyContent: 'space-around',
+          },
+        ]}
         onPress={onStatusPress}
         activeOpacity={0.8}
       >
-        <Image
-          source={statusIconSource}
-          style={styles.statusIcon}
-          resizeMode="contain"
-          tintColor={shouldTintIcon ? "#FFFFFF" : undefined}
-        />
-        <Text style={styles.statusText}>{displayStatusText}</Text>
-        <Image
-          source={require('../../../assets/icons/dropdown-arrow.png')}
-          style={styles.dropdownArrow}
-          resizeMode="contain"
-        />
+        {flagged ? (
+          <>
+            <Image
+              source={require('../../../assets/icons/flag.png')}
+              style={[styles.flaggedFlagIcon]}
+              resizeMode="contain"
+              tintColor={ROOM_DETAIL_HEADER.flagged.pill.textAndIconTint}
+            />
+            <Text style={styles.flaggedPillText}>Flagged</Text>
+            <Image
+              source={require('../../../assets/icons/dropdown-arrow.png')}
+              style={[styles.flaggedDropdownArrow]}
+              resizeMode="contain"
+              tintColor={ROOM_DETAIL_HEADER.flagged.pill.textAndIconTint}
+            />
+          </>
+        ) : (
+          <>
+            <Image
+              source={statusIconSource}
+              style={styles.statusIcon}
+              resizeMode="contain"
+              tintColor={
+                isPaused
+                  ? ROOM_DETAIL_HEADER.paused.statusTextAndIconColor
+                  : shouldTintIcon
+                    ? '#FFFFFF'
+                    : undefined
+              }
+            />
+            <Text
+              style={[
+                styles.statusText,
+                isPaused && { color: ROOM_DETAIL_HEADER.paused.statusTextAndIconColor },
+              ]}
+            >
+              {displayStatusText}
+            </Text>
+            <Image
+              source={require('../../../assets/icons/dropdown-arrow.png')}
+              style={[
+                styles.dropdownArrow,
+                isPaused && { tintColor: ROOM_DETAIL_HEADER.paused.statusTextAndIconColor },
+              ]}
+              resizeMode="contain"
+            />
+          </>
+        )}
       </TouchableOpacity>
 
-      {/* Paused Time - show when paused */}
+      {/* Paused Time - show when paused (Figma 2333-132) */}
       {pausedAt && (
-        <Text style={styles.pausedTime}>Paused at {pausedAt}</Text>
+        <Text
+          style={[
+            styles.pausedTime,
+            isPaused && { color: ROOM_DETAIL_HEADER.paused.pausedTimeColor },
+          ]}
+        >
+          Paused at {pausedAt}
+        </Text>
       )}
     </View>
   );
@@ -179,6 +258,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  flaggedFlagIcon: {
+    width: ROOM_DETAIL_HEADER.flagged.pill.flagIcon.width * scaleX,
+    height: ROOM_DETAIL_HEADER.flagged.pill.flagIcon.height * scaleX,
+    marginRight: 8 * scaleX,
+  },
+  flaggedPillText: {
+    fontSize: 19 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '300' as any,
+    color: ROOM_DETAIL_HEADER.flagged.pill.textAndIconTint,
+  },
+  flaggedDropdownArrow: {
+    width: ROOM_DETAIL_HEADER.flagged.pill.dropdownArrow.width * scaleX,
+    height: ROOM_DETAIL_HEADER.flagged.pill.dropdownArrow.height * scaleX,
+    marginLeft: 8 * scaleX,
   },
   statusIcon: {
     width: 24.367 * scaleX,

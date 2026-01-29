@@ -48,6 +48,29 @@ export const ROOM_DETAIL_HEADER = {
     width: 54,
     height: 54,
   },
+  // Flagged state (Figma node 2333-646) - when user opens room detail from flagged card
+  flagged: {
+    headerBackground: '#FFEBEB',
+    roomNumberColor: '#F92424',
+    roomCodeColor: '#6C7D99',
+    backArrowTint: '#F92424',
+    pill: {
+      background: '#FFEBEB',
+      textAndIconTint: '#F92424',
+      borderRadius: 45,
+      flagIcon: { width: 24, height: 24 },
+      dropdownArrow: { width: 24.367, height: 25.434 },
+    },
+  },
+  // Paused state (Figma node 2333-132) - light header, black/dark text/icons, "Paused at" below
+  paused: {
+    headerBackground: '#FCF1CF',
+    roomNumberColor: '#334866',
+    roomCodeColor: '#6C7D99',
+    backArrowTint: '#6C7D99',
+    statusTextAndIconColor: '#000000',
+    pausedTimeColor: '#6C7D99',
+  },
 } as const;
 
 // Tab Navigation
