@@ -8,16 +8,16 @@ import { scaleX, STAFF_SECTION } from '../../constants/allRoomsStyles';
 interface StaffSectionProps {
   staff: StaffInfo;
   isPriority?: boolean;
-  category?: string; // To determine if it's Departure card
+  frontOfficeStatus?: string; // To determine if it's Departure card
   selectedShift?: ShiftType;
 }
 
-export default function StaffSection({ staff, isPriority = false, category = '', selectedShift }: StaffSectionProps) {
+export default function StaffSection({ staff, isPriority = false, frontOfficeStatus = '', selectedShift }: StaffSectionProps) {
   if (!staff) {
     return null;
   }
 
-  const isDeparture = category === 'Departure';
+  const isDeparture = frontOfficeStatus === 'Departure';
   const hasPromiseTime = !!staff.promiseTime;
 
   // Departure cards have different positioning due to promiseTime

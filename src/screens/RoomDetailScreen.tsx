@@ -244,7 +244,7 @@ export default function RoomDetailScreen() {
       // Generate and download the PDF
       await generateHistoryReport({
         roomNumber: room.roomNumber,
-        roomCode: `${room.roomType} - ${room.credit}`,
+        roomCode: `${room.roomCategory} - ${room.credit}`,
         events: historyEvents,
         groupedEvents: sortedGroupedEvents,
       });
@@ -571,7 +571,7 @@ export default function RoomDetailScreen() {
       {/* Header */}
       <RoomDetailHeader
         roomNumber={localRoom.roomNumber}
-        roomCode={`${localRoom.roomType} - ${localRoom.credit}`}
+        roomCode={`${localRoom.roomCategory} - ${localRoom.credit}`}
         status={currentStatus}
         onBackPress={handleBackPress}
         onStatusPress={handleStatusPress}
@@ -736,7 +736,7 @@ export default function RoomDetailScreen() {
             <HistorySection
               events={historyEvents}
               roomNumber={room.roomNumber}
-              roomCode={`${room.roomType} - ${room.credit}`}
+              roomCode={`${room.roomCategory} - ${room.credit}`}
               onDownloadReport={handleDownloadReport}
               isGeneratingReport={isGeneratingReport}
             />

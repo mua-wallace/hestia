@@ -21,6 +21,7 @@ import { FilterState, FilterCounts } from '../types/filter.types';
 import AllRoomsFilterModal from '../components/allRooms/AllRoomsFilterModal';
 import { CARD_DIMENSIONS, CARD_COLORS } from '../constants/allRoomsStyles';
 import { getShiftFromTime } from '../utils/shiftUtils';
+import { getStayoverWithLinen } from '../utils/stayoverLinen';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -152,20 +153,20 @@ export default function AllRoomsScreen() {
       if (room.isPriority) roomStates.priority++;
 
       // Guest counts based on category
-      if (room.category === 'Arrival' || room.category === 'Arrival/Departure') {
+      if (room.frontOfficeStatus === 'Arrival' || room.frontOfficeStatus === 'Arrival/Departure') {
         guests.arrivals++;
       }
-      if (room.category === 'Departure' || room.category === 'Arrival/Departure') {
+      if (room.frontOfficeStatus === 'Departure' || room.frontOfficeStatus === 'Arrival/Departure') {
         guests.departures++;
       }
-      if (room.category === 'Turndown') {
+      if (room.frontOfficeStatus === 'Turndown') {
         guests.turnDown++;
       }
-      if (room.category === 'Stayover') {
+      if (room.frontOfficeStatus === 'Stayover') {
         guests.stayOver++;
-        // TODO: Determine stayover with/without linen based on room data
-        // For now, split evenly or use a flag if available
-        guests.stayOverWithLinen++;
+        const withLinen = getStayoverWithLinen(room);
+        if (withLinen === true) guests.stayOverWithLinen++;
+        else if (withLinen === false) guests.stayOverNoLinen++;
       }
 
       // Reservation status counts
@@ -358,7 +359,7 @@ export default function AllRoomsScreen() {
       if (cardRef) {
         cardRef.measureInWindow((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
           // Estimate button position from card position
-          const isArrivalDeparture = room.category === 'Arrival/Departure';
+          const isArrivalDeparture = room.frontOfficeStatus === 'Arrival/Departure';
           let buttonLeft: number;
           let buttonTop: number;
           if (isArrivalDeparture) {
@@ -367,7 +368,7 @@ export default function AllRoomsScreen() {
           } else if (room.notes) {
             buttonLeft = 256;
             buttonTop = 74;
-          } else if (room.category === 'Departure') {
+          } else if (room.frontOfficeStatus === 'Departure') {
             buttonLeft = 262;
             buttonTop = 81;
           } else {
@@ -586,12 +587,12 @@ export default function AllRoomsScreen() {
           // Check guest filters
           if (hasGuestFilter) {
             const matchesGuest =
-              (activeFilters.guests.arrivals && (room.category === 'Arrival' || room.category === 'Arrival/Departure')) ||
-              (activeFilters.guests.departures && (room.category === 'Departure' || room.category === 'Arrival/Departure')) ||
-              (activeFilters.guests.turnDown && room.category === 'Turndown') ||
-              (activeFilters.guests.stayOver && room.category === 'Stayover') ||
-              (activeFilters.guests.stayOverWithLinen && room.category === 'Stayover') || // TODO: Add linen flag check
-              (activeFilters.guests.stayOverNoLinen && room.category === 'Stayover'); // TODO: Add linen flag check
+              (activeFilters.guests.arrivals && (room.frontOfficeStatus === 'Arrival' || room.frontOfficeStatus === 'Arrival/Departure')) ||
+              (activeFilters.guests.departures && (room.frontOfficeStatus === 'Departure' || room.frontOfficeStatus === 'Arrival/Departure')) ||
+              (activeFilters.guests.turnDown && room.frontOfficeStatus === 'Turndown') ||
+              (activeFilters.guests.stayOver && room.frontOfficeStatus === 'Stayover') ||
+              (activeFilters.guests.stayOverWithLinen && room.frontOfficeStatus === 'Stayover' && getStayoverWithLinen(room) === true) ||
+              (activeFilters.guests.stayOverNoLinen && room.frontOfficeStatus === 'Stayover' && getStayoverWithLinen(room) === false);
 
             if (!matchesGuest) {
               return false;
@@ -630,7 +631,7 @@ export default function AllRoomsScreen() {
       rooms = rooms.filter((room) => room.category === 'Turndown');
     } else {
       // AM mode: hide Turndown cards entirely
-      rooms = rooms.filter((room) => room.category !== 'Turndown');
+      rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');
     }
 
     return rooms;

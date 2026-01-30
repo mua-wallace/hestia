@@ -1,4 +1,5 @@
-export type RoomCategory = 'Arrival' | 'Departure' | 'Stayover' | 'Turndown' | 'Arrival/Departure';
+/** Front office status: Arrival/Departure, Arrival, Departure, Stayover, Turndown, No Task, Refresh */
+export type FrontOfficeStatus = 'Arrival/Departure' | 'Arrival' | 'Departure' | 'Stayover' | 'Turndown' | 'No Task' | 'Refresh';
 export type ReservationStatus = 'Vacant' | 'Occupied';
 
 export type RoomStatus = 'Dirty' | 'InProgress' | 'Cleaned' | 'Inspected';
@@ -12,6 +13,8 @@ export interface GuestInfo {
   guestCount: string; // "2/2"
   timeLabel: 'ETA' | 'EDT'; // To know if it's arrival or departure
   isVacant?: boolean; // For turndown vacant state
+  /** ISO date string (YYYY-MM-DD) of guest arrival; used for Stayover linen calculation (every 2nd day = linen change) */
+  arrivalDate?: string;
 }
 
 export interface StaffInfo {
@@ -31,9 +34,12 @@ export interface NotesInfo {
 export interface RoomCardData {
   id: string;
   roomNumber: string; // "201", "202", etc.
-  roomType: string; // Base type e.g. "ST2K", "R01K"
+  /** Room category code e.g. ST2K, R01K, R01KY, RO2KT, ST3K, JS2KT, RO1Q, JS1KT, PS1K */
+  roomCategory: string;
   credit: number; // Approximate time to clean room in minutes (45, 60, 90, etc.)
-  category: RoomCategory;
+  frontOfficeStatus: FrontOfficeStatus; // Arrival/Departure, Arrival, Departure, Stayover, Turndown, No Task, Refresh
+  /** When frontOfficeStatus is Stayover: true = Stayover with Linen (linen change day), false = Stayover no Linen. Computed from arrival date (every 2nd day of stay) if not set. */
+  withLinen?: boolean;
   status: RoomStatus;
   reservationStatus?: ReservationStatus; // For distinguishing vacant turndown rooms
   guests: GuestInfo[]; // Array to support Arrival/Departure rooms with 2 guests
@@ -79,12 +85,14 @@ export const STATUS_CONFIGS: Record<RoomStatus, StatusConfig> = {
   },
 };
 
-export const CATEGORY_ICONS: Record<RoomCategory, any> = {
+export const FRONT_OFFICE_STATUS_ICONS: Record<FrontOfficeStatus, any> = {
   'Arrival': require('../../assets/icons/arrival-icon.png'),
   'Departure': require('../../assets/icons/departure-icon.png'),
   'Stayover': require('../../assets/icons/stayover-icon.png'),
   'Turndown': require('../../assets/icons/turndown-icon.png'),
   'Arrival/Departure': require('../../assets/icons/arrival-departure-icon.png'),
+  'No Task': require('../../assets/icons/stayover-icon.png'), // fallback
+  'Refresh': require('../../assets/icons/done.png'), // fallback
 };
 
 export interface StatusOptionConfig {

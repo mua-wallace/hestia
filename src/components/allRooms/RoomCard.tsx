@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
 import { scaleX } from '../../constants/allRoomsStyles';
 import type { RoomCardData } from '../../types/allRooms.types';
-import { CATEGORY_ICONS, STATUS_CONFIGS } from '../../types/allRooms.types';
+import { FRONT_OFFICE_STATUS_ICONS, STATUS_CONFIGS } from '../../types/allRooms.types';
+import { getStayoverDisplayLabel } from '../../utils/stayoverLinen';
 import type { ShiftType } from '../../types/home.types';
 import {
   CARD_DIMENSIONS,
@@ -45,11 +46,11 @@ interface RoomCardProps {
 
 const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, onStatusPress, onLayout, statusButtonRef, selectedShift }, ref) => {
   // Card type detection
-  const isArrivalDeparture = room.category === 'Arrival/Departure';
-  const isDeparture = room.category === 'Departure';
-  const isArrival = room.category === 'Arrival';
-  const isStayover = room.category === 'Stayover';
-  const isTurndown = room.category === 'Turndown';
+  const isArrivalDeparture = room.frontOfficeStatus === 'Arrival/Departure';
+  const isDeparture = room.frontOfficeStatus === 'Departure';
+  const isArrival = room.frontOfficeStatus === 'Arrival';
+  const isStayover = room.frontOfficeStatus === 'Stayover';
+  const isTurndown = room.frontOfficeStatus === 'Turndown';
   const isVacant = room.guests?.[0]?.isVacant === true;
   const isVacantTurndown = isTurndown && isVacant;
   const hasNotes = !!room.notes;
@@ -136,7 +137,7 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
           isArrivalDeparture && styles.roomBadgeArrivalDeparture
         ]}>
           <Image
-            source={CATEGORY_ICONS[room.category]}
+            source={FRONT_OFFICE_STATUS_ICONS[room.frontOfficeStatus]}
             style={[
               styles.roomIcon,
               isArrivalDeparture && styles.roomIconArrivalDeparture
@@ -164,16 +165,16 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
           !room.isPriority && styles.roomTypeStandard,
           selectedShift === 'PM' && styles.roomTypePM
         ]}>
-          {`${room.roomType} - ${room.credit}`}
+          {`${room.roomCategory} - ${room.credit}`}
         </Text>
         
-        {/* Category Label (e.g., "Arrival", "Departure", etc.) */}
+        {/* Front Office Status Label (e.g., "Arrival", "Stayover (with Linen)", etc.) */}
         <Text style={[
           styles.categoryLabel,
           !room.isPriority && styles.categoryLabelStandard,
           selectedShift === 'PM' && styles.categoryLabelPM
         ]}>
-          {room.category}
+          {getStayoverDisplayLabel(room)}
         </Text>
       </View>
 
@@ -250,7 +251,7 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
               isFirstGuest={isFirstGuest}
               isSecondGuest={isSecondGuest}
               hasNotes={hasNotes}
-              category={room.category}
+              frontOfficeStatus={room.frontOfficeStatus}
               isArrivalDeparture={isArrivalDeparture}
               selectedShift={selectedShift}
             />
@@ -268,7 +269,7 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
       <StaffSection 
         staff={room.staff} 
         isPriority={room.isPriority} 
-        category={room.category}
+        frontOfficeStatus={room.frontOfficeStatus}
         selectedShift={selectedShift}
       />
 

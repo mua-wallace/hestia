@@ -10,7 +10,7 @@ interface GuestInfoSectionProps {
   isFirstGuest?: boolean;
   isSecondGuest?: boolean;
   hasNotes?: boolean;
-  category?: string; // To determine if it's Arrival vs Departure
+  frontOfficeStatus?: string; // To determine if it's Arrival vs Departure
   isArrivalDeparture?: boolean; // To know if this is an Arrival/Departure card
   selectedShift?: ShiftType;
 }
@@ -22,7 +22,7 @@ export default function GuestInfoSection({
   isFirstGuest = true,
   isSecondGuest = false,
   hasNotes = false,
-  category = '',
+  frontOfficeStatus = '',
   isArrivalDeparture = false,
   selectedShift,
 }: GuestInfoSectionProps) {
@@ -35,7 +35,7 @@ export default function GuestInfoSection({
       isFirstGuest={isFirstGuest}
       isSecondGuest={isSecondGuest}
       hasNotes={hasNotes}
-      category={category}
+      category={frontOfficeStatus}
       isArrivalDeparture={isArrivalDeparture}
       themeVariant={selectedShift === 'PM' ? 'pm' : 'am'}
     />
