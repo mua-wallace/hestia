@@ -31,7 +31,8 @@ export interface NotesInfo {
 export interface RoomCardData {
   id: string;
   roomNumber: string; // "201", "202", etc.
-  roomType: string; // "ST2K - 1.4"
+  roomType: string; // Base type e.g. "ST2K", "R01K"
+  credit: number; // Approximate time to clean room in minutes (45, 60, 90, etc.)
   category: RoomCategory;
   status: RoomStatus;
   reservationStatus?: ReservationStatus; // For distinguishing vacant turndown rooms

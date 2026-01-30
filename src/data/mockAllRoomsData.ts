@@ -1504,7 +1504,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-101',
       roomNumber: '101',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 60,
       category: 'Stayover',
       status: 'Dirty',
       isPriority: false,
@@ -1528,7 +1529,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-102',
       roomNumber: '102',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 45,
       category: 'Arrival',
       status: 'Cleaned',
       isPriority: true,
@@ -1557,7 +1559,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-201',
       roomNumber: '201',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 90,
       category: 'Arrival/Departure',
       status: 'InProgress',
       isPriority: true,
@@ -1594,7 +1597,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-202',
       roomNumber: '202',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 60,
       category: 'Departure',
       status: 'Dirty',
       isPriority: false,
@@ -1619,7 +1623,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-203',
       roomNumber: '203',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 45,
       category: 'Arrival',
       status: 'Cleaned',
       isPriority: false,
@@ -1648,7 +1653,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-204',
       roomNumber: '204',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 60,
       category: 'Stayover',
       status: 'Inspected',
       isPriority: false,
@@ -1672,7 +1678,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-206',
       roomNumber: '205',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 45,
       category: 'Turndown',
       reservationStatus: 'Occupied',
       status: 'Inspected',
@@ -1697,7 +1704,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-207',
       roomNumber: '206',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 60,
       category: 'Turndown',
       reservationStatus: 'Occupied',
       status: 'InProgress',
@@ -1722,7 +1730,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-208',
       roomNumber: '207',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 90,
       category: 'Turndown',
       reservationStatus: 'Vacant',
       status: 'Cleaned',
@@ -1748,7 +1757,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-209',
       roomNumber: '208',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 45,
       category: 'Turndown',
       reservationStatus: 'Vacant',
       status: 'Inspected',
@@ -1774,7 +1784,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-210',
       roomNumber: '209',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 60,
       category: 'Turndown',
       reservationStatus: 'Vacant',
       status: 'InProgress',
@@ -1800,7 +1811,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-211',
       roomNumber: '210',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 90,
       category: 'Turndown',
       reservationStatus: 'Vacant',
       status: 'Dirty',
@@ -1826,7 +1838,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-301',
       roomNumber: '301',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 60,
       category: 'Arrival',
       status: 'InProgress',
       isPriority: false,
@@ -1850,7 +1863,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
     {
       id: 'room-401',
       roomNumber: '401',
-      roomType: 'ST2K - 1.4',
+      roomType: 'ST2K',
+      credit: 45,
       category: 'Stayover',
       status: 'Cleaned',
       isPriority: true,

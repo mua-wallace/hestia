@@ -158,13 +158,13 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
           </Text>
         </View>
         
-        {/* Room Type (e.g., "ST2K - 1.4") */}
+        {/* Room Type + Credit display: "ST2K - 45", "ST2K - 60", etc. */}
         <Text style={[
           styles.roomType,
           !room.isPriority && styles.roomTypeStandard,
           selectedShift === 'PM' && styles.roomTypePM
         ]}>
-          {room.roomType}
+          {`${room.roomType} - ${room.credit}`}
         </Text>
         
         {/* Category Label (e.g., "Arrival", "Departure", etc.) */}

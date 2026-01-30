@@ -418,7 +418,7 @@ export default function ArrivalDepartureDetailScreen() {
       {/* Header - Yellow (0-232px) */}
       <RoomDetailHeader
         roomNumber={room.roomNumber}
-        roomCode={room.roomType}
+        roomCode={`${room.roomType} - ${room.credit}`}
         status={currentStatus}
         onBackPress={handleBackPress}
         onStatusPress={handleStatusPress}
