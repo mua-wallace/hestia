@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
 import { scaleX, ROOM_DETAIL_HEADER } from '../../constants/roomDetailStyles';
@@ -14,6 +14,8 @@ interface RoomDetailHeaderProps {
   statusButtonRef?: React.RefObject<any>;
   customStatusText?: string; // Custom status text to display (e.g., "Return Later", "Promise Time", "Refuse Service")
   pausedAt?: string; // Time when room was paused (e.g., "11:22")
+  returnLaterAt?: string; // Deprecated: use returnLaterAtTimestamp for time + remaining
+  returnLaterAtTimestamp?: number; // Epoch ms when user will return; header shows time only + "X mins Y s" countdown
   flagged?: boolean; // When true, show Flagged variant (Figma 2333-646): light header, red text, Flagged pill
 }
 
@@ -26,23 +28,56 @@ export default function RoomDetailHeader({
   statusButtonRef,
   customStatusText,
   pausedAt,
+  returnLaterAt,
+  returnLaterAtTimestamp,
   flagged = false,
 }: RoomDetailHeaderProps) {
   const statusConfig = STATUS_CONFIGS[status];
-  
+  const isReturnLater = customStatusText === 'Return Later';
+  const hasReturnLaterTime = isReturnLater && (returnLaterAtTimestamp != null || returnLaterAt);
+
+  // Remaining countdown "X mins Y s" for Return Later, updates every second
+  const [returnLaterRemaining, setReturnLaterRemaining] = useState<string>('');
+  useEffect(() => {
+    if (!hasReturnLaterTime || returnLaterAtTimestamp == null) {
+      setReturnLaterRemaining('');
+      return;
+    }
+    const tick = () => {
+      const now = Date.now();
+      const diff = returnLaterAtTimestamp - now;
+      if (diff <= 0) {
+        setReturnLaterRemaining('0 mins 0s');
+        return;
+      }
+      const mins = Math.floor(diff / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      setReturnLaterRemaining(`${mins} mins ${secs}s`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [hasReturnLaterTime, returnLaterAtTimestamp]);
+
   // Use custom status text if provided; when pausedAt is set show "Paused"
   const displayStatusText = pausedAt ? 'Paused' : (customStatusText || statusConfig.label);
-  
-  // Flagged: light header + red (Figma 2333-646). Paused: light header + dark gray (Figma 2333-132). Other special: dark #202A2F
-  // Derive isPaused from pausedAt so header uses #FCF1CF when user selects Pause (we set pausedAt but clear selectedStatusText)
+
+  // Flagged / Paused / Return Later: light #FCF1CF; Refuse / Promise: dark
   const isPaused = !!(customStatusText === 'Pause' || pausedAt);
   const headerBackgroundColor = flagged
     ? ROOM_DETAIL_HEADER.flagged.headerBackground
     : isPaused
       ? ROOM_DETAIL_HEADER.paused.headerBackground
-      : customStatusText && ['Return Later', 'Refuse Service', 'Promise Time', 'Promised Time'].includes(customStatusText)
-        ? '#202A2F'
-        : statusConfig.color;
+      : isReturnLater
+        ? ROOM_DETAIL_HEADER.returnLater.headerBackground
+        : customStatusText && ['Refuse Service', 'Promise Time', 'Promised Time'].includes(customStatusText)
+          ? ROOM_DETAIL_HEADER.specialDark.headerBackground
+          : statusConfig.color;
+
+  const isLightHeader = flagged || isPaused || isReturnLater;
+  const returnTimeOnly = returnLaterAtTimestamp != null
+    ? new Date(returnLaterAtTimestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    : '';
 
   // Determine which icon to use based on customStatusText, pausedAt, or status
   const getStatusIcon = () => {
@@ -94,7 +129,9 @@ export default function RoomDetailHeader({
               ? ROOM_DETAIL_HEADER.flagged.backArrowTint
               : isPaused
                 ? ROOM_DETAIL_HEADER.paused.backArrowTint
-                : '#FFFFFF'
+                : isReturnLater
+                  ? ROOM_DETAIL_HEADER.returnLater.backArrowTint
+                  : '#FFFFFF'
           }
           resizeMode="contain"
         />
@@ -106,6 +143,7 @@ export default function RoomDetailHeader({
           styles.roomNumber,
           flagged && { color: ROOM_DETAIL_HEADER.flagged.roomNumberColor },
           isPaused && { color: ROOM_DETAIL_HEADER.paused.roomNumberColor },
+          isReturnLater && { color: ROOM_DETAIL_HEADER.returnLater.roomNumberColor },
         ]}
       >
         Room {roomNumber}
@@ -117,6 +155,7 @@ export default function RoomDetailHeader({
           styles.roomCode,
           flagged && { color: ROOM_DETAIL_HEADER.flagged.roomCodeColor },
           isPaused && { color: ROOM_DETAIL_HEADER.paused.roomCodeColor },
+          isReturnLater && { color: ROOM_DETAIL_HEADER.returnLater.roomCodeColor },
         ]}
       >
         {roomCode}
@@ -161,15 +200,18 @@ export default function RoomDetailHeader({
               tintColor={
                 isPaused
                   ? ROOM_DETAIL_HEADER.paused.statusTextAndIconColor
-                  : shouldTintIcon
-                    ? '#FFFFFF'
-                    : undefined
+                  : isReturnLater
+                    ? ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor
+                    : shouldTintIcon
+                      ? '#FFFFFF'
+                      : undefined
               }
             />
             <Text
               style={[
                 styles.statusText,
                 isPaused && { color: ROOM_DETAIL_HEADER.paused.statusTextAndIconColor },
+                isReturnLater && { color: ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor },
               ]}
             >
               {displayStatusText}
@@ -179,6 +221,7 @@ export default function RoomDetailHeader({
               style={[
                 styles.dropdownArrow,
                 isPaused && { tintColor: ROOM_DETAIL_HEADER.paused.statusTextAndIconColor },
+                isReturnLater && { tintColor: ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor },
               ]}
               resizeMode="contain"
             />
@@ -197,6 +240,17 @@ export default function RoomDetailHeader({
           Paused at {pausedAt}
         </Text>
       )}
+
+      {/* Return Later: time only (no date) + remaining e.g. "2:30 PM · 30 mins 2s" */}
+      {hasReturnLaterTime && (returnLaterAtTimestamp != null ? (
+        <Text style={[styles.returnLaterAt, { color: ROOM_DETAIL_HEADER.returnLater.returnTimeColor }]}>
+          {returnTimeOnly}{returnLaterRemaining ? ` · ${returnLaterRemaining}` : ''}
+        </Text>
+      ) : returnLaterAt ? (
+        <Text style={[styles.returnLaterAt, { color: ROOM_DETAIL_HEADER.returnLater.returnTimeColor }]}>
+          Return at {returnLaterAt}
+        </Text>
+      ) : null)}
     </View>
   );
 }
@@ -300,6 +354,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: (ROOM_DETAIL_HEADER.statusIndicator.top + ROOM_DETAIL_HEADER.statusIndicator.height + 8) * scaleX, // Below status indicator with 8px spacing
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: 'light' as any,
+    color: '#ffffff',
+    textAlign: 'center',
+  },
+  returnLaterAt: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: (ROOM_DETAIL_HEADER.statusIndicator.top + ROOM_DETAIL_HEADER.statusIndicator.height + 8) * scaleX,
     fontSize: 14 * scaleX,
     fontFamily: 'Helvetica',
     fontWeight: 'light' as any,

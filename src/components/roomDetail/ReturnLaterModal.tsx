@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, LayoutChangeEvent } from 'react-native';
+import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, LayoutChangeEvent, Alert } from 'react-native';
 import { typography } from '../../theme';
 import { ShiftType } from '../../types/home.types';
 import TimeSuggestionButton from './TimeSuggestionButton';
@@ -8,8 +8,22 @@ import ViewTaskModal from './ViewTaskModal';
 import type { Task } from '../../types/roomDetail.types';
 
 const TIME_SUGGESTIONS = ['10 mins', '20 mins', '30 mins', '1 Hour'];
+const MIN_MINUTES_FROM_NOW = 5;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const scaleX = SCREEN_WIDTH / 430;
+
+function getMinAllowedTime() {
+  const now = new Date();
+  const min = new Date(now.getTime() + MIN_MINUTES_FROM_NOW * 60 * 1000);
+  const hour24 = min.getHours();
+  const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+  return {
+    date: new Date(min.getFullYear(), min.getMonth(), min.getDate()),
+    hour12,
+    minute: min.getMinutes(),
+    period: (hour24 >= 12 ? 'PM' : 'AM') as 'AM' | 'PM',
+  };
+}
 
 // Constants for "See More" functionality (reused from TaskItem)
 const MAX_LINES = 2; // Maximum lines to show before truncating
@@ -18,7 +32,7 @@ const LINE_HEIGHT = 18; // Line height in unscaled pixels
 interface ReturnLaterModalProps {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (returnTime: string, period: 'AM' | 'PM', taskDescription?: string) => void;
+  onConfirm: (returnTime: string, period: 'AM' | 'PM', taskDescription?: string, formattedDateTime?: string, returnAtTimestamp?: number) => void;
   roomNumber?: string;
   assignedTo?: {
     id: string;
@@ -52,18 +66,28 @@ export default function ReturnLaterModal({
   const [showViewTaskModal, setShowViewTaskModal] = useState(false);
   const fullTextRef = useRef<Text>(null);
   
-  // Date and Time picker state - Initialize with current date/time
+  // Date and Time picker state - default is current time + 5 minutes
   const [selectedDate, setSelectedDate] = useState(() => new Date());
-  const [selectedHour, setSelectedHour] = useState(() => {
-    const now = new Date();
-    const hour24 = now.getHours();
-    return hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
-  });
-  const [selectedMinute, setSelectedMinute] = useState(() => new Date().getMinutes());
-  const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>(() => {
-    const now = new Date();
-    return now.getHours() >= 12 ? 'PM' : 'AM';
-  });
+  const [selectedHour, setSelectedHour] = useState(() => 12);
+  const [selectedMinute, setSelectedMinute] = useState(() => 0);
+  const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>('AM');
+
+  // When modal opens, set default to now + 5 minutes and scroll picker to it
+  useEffect(() => {
+    if (visible) {
+      const min = getMinAllowedTime();
+      setSelectedDate(min.date);
+      setSelectedHour(min.hour12);
+      setSelectedMinute(min.minute);
+      setSelectedPeriod(min.period);
+      setTimeout(() => {
+        dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: false });
+        hourScrollRef.current?.scrollTo({ y: (min.hour12 - 1) * ITEM_HEIGHT, animated: false });
+        minuteScrollRef.current?.scrollTo({ y: min.minute * ITEM_HEIGHT, animated: false });
+        periodScrollRef.current?.scrollTo({ y: (min.period === 'AM' ? 0 : 1) * ITEM_HEIGHT, animated: false });
+      }, 100);
+    }
+  }, [visible]);
 
   // Refs for ScrollViews to control scrolling
   const dateScrollRef = useRef<ScrollView>(null);
@@ -116,25 +140,6 @@ export default function ReturnLaterModal({
     createdAt: new Date().toISOString(),
   };
 
-  // Scroll to selected items on mount
-  useEffect(() => {
-    if (visible) {
-      setTimeout(() => {
-        // Scroll date to index 6 (center of the 14-day range)
-        dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: false });
-        
-        // Scroll hour to selected hour (index is hour - 1)
-        hourScrollRef.current?.scrollTo({ y: (selectedHour - 1) * ITEM_HEIGHT, animated: false });
-        
-        // Scroll minute to selected minute
-        minuteScrollRef.current?.scrollTo({ y: selectedMinute * ITEM_HEIGHT, animated: false });
-        
-        // Scroll period to selected period (0 for AM, 1 for PM)
-        const periodIndex = selectedPeriod === 'AM' ? 0 : 1;
-        periodScrollRef.current?.scrollTo({ y: periodIndex * ITEM_HEIGHT, animated: false });
-      }, 100);
-    }
-  }, [visible]);
 
   const handleSuggestionPress = (suggestion: string) => {
     setSelectedSuggestion(suggestion);
@@ -233,6 +238,15 @@ export default function ReturnLaterModal({
   // Check if selected date/time is in the past
   const isSelectedDateTimeInPast = () => {
     return isDateTimeInPast(selectedDate, selectedHour, selectedMinute, selectedPeriod);
+  };
+
+  // Check if selected date/time is at least 5 minutes from now
+  const isAtLeast5MinFromNow = (date: Date, hour: number, minute: number, period: 'AM' | 'PM') => {
+    const check = new Date(date);
+    const hour24 = period === 'PM' ? (hour === 12 ? 12 : hour + 12) : (hour === 12 ? 0 : hour);
+    check.setHours(hour24, minute, 0, 0);
+    const minAllowed = Date.now() + MIN_MINUTES_FROM_NOW * 60 * 1000;
+    return check.getTime() >= minAllowed;
   };
 
   const changeDay = (direction: number) => {
@@ -369,33 +383,20 @@ export default function ReturnLaterModal({
     const offsetY = event.nativeEvent.contentOffset.y;
     const minute = Math.round(offsetY / ITEM_HEIGHT);
     if (minute >= 0 && minute <= 59) {
-      // Check if this minute is in the past (only when on current date and current hour)
-      let isPast = false;
-      if (isCurrentDate()) {
-        const now = new Date();
-        const currentHour24 = now.getHours();
-        const currentHour12 = currentHour24 === 0 ? 12 : currentHour24 > 12 ? currentHour24 - 12 : currentHour24;
-        const currentPeriod = currentHour24 >= 12 ? 'PM' : 'AM';
-        const currentMinute = now.getMinutes();
-        
-        if (selectedHour === currentHour12 && selectedPeriod === currentPeriod) {
-          isPast = minute < currentMinute;
-        } else if (selectedPeriod === 'AM' && currentPeriod === 'PM') {
-          isPast = true;
-        } else if (selectedPeriod === currentPeriod && selectedHour < currentHour12) {
-          isPast = true;
-        }
-      }
-      
-      if (!isPast) {
+      if (!isAtLeast5MinFromNow(selectedDate, selectedHour, minute, selectedPeriod)) {
+        const min = getMinAllowedTime();
+        setSelectedDate(min.date);
+        setSelectedHour(min.hour12);
+        setSelectedMinute(min.minute);
+        setSelectedPeriod(min.period);
+        setTimeout(() => {
+          minuteScrollRef.current?.scrollTo({ y: min.minute * ITEM_HEIGHT, animated: true });
+          hourScrollRef.current?.scrollTo({ y: (min.hour12 - 1) * ITEM_HEIGHT, animated: true });
+          periodScrollRef.current?.scrollTo({ y: (min.period === 'AM' ? 0 : 1) * ITEM_HEIGHT, animated: true });
+        }, 50);
+      } else {
         setSelectedMinute(minute);
         minuteScrollRef.current?.scrollTo({ y: minute * ITEM_HEIGHT, animated: true });
-      } else {
-        // Scroll back to current minute
-        const now = new Date();
-        const currentMinute = now.getMinutes();
-        setSelectedMinute(currentMinute);
-        minuteScrollRef.current?.scrollTo({ y: currentMinute * ITEM_HEIGHT, animated: true });
       }
     }
   };
@@ -434,19 +435,21 @@ export default function ReturnLaterModal({
     }
   };
 
-  const handleDone = () => {
-    // Format the selected date and time
-    const timeString = `${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')} ${selectedPeriod}`;
-    setReturnTime(timeString);
-    
-    // Update the displayed time in the header (you can add this to state if needed)
-    console.log('Return Later time set:', timeString, 'on', selectedDate.toDateString());
-  };
-
   const handleConfirm = () => {
-    // Use the selected time from the picker
+    if (!isAtLeast5MinFromNow(selectedDate, selectedHour, selectedMinute, selectedPeriod)) {
+      Alert.alert(
+        'Invalid time',
+        `Return time must be at least ${MIN_MINUTES_FROM_NOW} minutes from now.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
     const timeString = `${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')} ${selectedPeriod}`;
-    onConfirm(timeString, selectedPeriod, taskDescription);
+    const formattedDateTime = `${selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${timeString}`;
+    const returnAt = new Date(selectedDate);
+    const hour24 = selectedPeriod === 'PM' ? (selectedHour === 12 ? 12 : selectedHour + 12) : (selectedHour === 12 ? 0 : selectedHour);
+    returnAt.setHours(hour24, selectedMinute, 0, 0);
+    onConfirm(timeString, selectedPeriod, taskDescription, formattedDateTime, returnAt.getTime());
   };
 
   return (
@@ -492,9 +495,9 @@ export default function ReturnLaterModal({
               ))}
             </View>
 
-            {/* Date & Time Picker - Interactive Wheel Style */}
-            <View style={styles.dateTimePickerContainer}>
-              {/* Navigation Header */}
+            {/* Date & Time Picker (Figma) */}
+            <View style={styles.dateTimePickerWrapper}>
+              {/* Top row: date navigation arrows */}
               <View style={styles.pickerHeader}>
                 <View style={styles.navArrows}>
                   <TouchableOpacity 
@@ -517,9 +520,6 @@ export default function ReturnLaterModal({
                     ]}>›</Text>
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={handleDone}>
-                  <Text style={styles.doneButton}>Done</Text>
-                </TouchableOpacity>
               </View>
 
               {/* Wheel Picker - 4 Columns */}
@@ -904,24 +904,25 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   
-  // Date & Time Picker Container
-  dateTimePickerContainer: {
+  // Date & Time Picker container (Figma) - one rounded block
+  dateTimePickerWrapper: {
     marginTop: 32 * scaleX,
-    marginHorizontal: 35 * scaleX, // Same as confirm button
-    height: 302 * scaleX,
-    backgroundColor: '#FFFFFF',
+    marginHorizontal: 35 * scaleX,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10 * scaleX,
+    overflow: 'hidden',
   },
-  
-  // Picker Header
+  // Date & Time Picker inner height for layout
+  dateTimePickerContainer: {
+    height: 302 * scaleX,
+  },
+  // Picker Header (top row with date arrows)
   pickerHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16 * scaleX,
     paddingTop: 12 * scaleX,
     paddingBottom: 12 * scaleX,
-    backgroundColor: '#F2F2F7', // Light gray background for entire header
-    borderRadius: 10 * scaleX,
     marginBottom: 8 * scaleX,
   },
   
@@ -953,13 +954,6 @@ const styles = StyleSheet.create({
   navArrowDisabled: {
     color: '#E5E5EA', // Very light gray - disabled
     opacity: 0.5,
-  },
-  
-  doneButton: {
-    fontSize: 17 * scaleX,
-    color: '#007AFF', // iOS blue matching Figma
-    fontFamily: 'Helvetica',
-    fontWeight: '400',
   },
   
   // Wheel Picker Container

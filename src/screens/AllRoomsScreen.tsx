@@ -251,12 +251,14 @@ export default function AllRoomsScreen() {
           return 'Stayover';
         case 'Turndown':
           return 'Turndown';
+        case 'No Task':
+          return 'Stayover'; // Reuse Stayover layout for No Task
         default:
           return 'ArrivalDeparture'; // Default fallback
       }
     };
 
-    const roomType = mapCategoryToRoomType(room.category);
+    const roomType = mapCategoryToRoomType(room.frontOfficeStatus);
     
     // Navigate to the new reusable RoomDetail screen
     navigation.navigate('RoomDetail', { room, roomType } as any);
@@ -626,9 +628,14 @@ export default function AllRoomsScreen() {
       );
     }
 
-    // PM mode: show only Turndown cards (per Figma / requirements)
+    // PM mode: show Turndown, No Task, and Vacant cards
     if (allRoomsData.selectedShift === 'PM') {
-      rooms = rooms.filter((room) => room.category === 'Turndown');
+      rooms = rooms.filter(
+        (room) =>
+          room.frontOfficeStatus === 'Turndown' ||
+          room.frontOfficeStatus === 'No Task' ||
+          room.reservationStatus === 'Vacant'
+      );
     } else {
       // AM mode: hide Turndown cards entirely
       rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');

@@ -71,6 +71,19 @@ export const ROOM_DETAIL_HEADER = {
     statusTextAndIconColor: '#000000',
     pausedTimeColor: '#6C7D99',
   },
+  // Return Later state - light header #FCF1CF, time only + remaining countdown
+  returnLater: {
+    headerBackground: '#FCF1CF',
+    backArrowTint: '#6C7D99',
+    roomNumberColor: '#334866',
+    roomCodeColor: '#6C7D99',
+    statusTextAndIconColor: '#000000',
+    returnTimeColor: '#6C7D99',
+  },
+  // Refuse Service / Promise Time - dark header (white text)
+  specialDark: {
+    headerBackground: '#202A2F',
+  },
 } as const;
 
 // Tab Navigation

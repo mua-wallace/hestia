@@ -73,6 +73,8 @@ export default function RoomDetailScreen() {
   const [localRoom, setLocalRoom] = useState<RoomCardData>(room);
   // Track selected status option text to display in header
   const [selectedStatusText, setSelectedStatusText] = useState<string | undefined>(undefined);
+  // Track Return Later: timestamp for time-only display + remaining countdown (e.g. "2:30 PM · 30 mins 2s")
+  const [returnLaterAtTimestamp, setReturnLaterAtTimestamp] = useState<number | undefined>(undefined);
   
   // Track notes and assigned staff in state
   const [notes, setNotes] = useState<Note[]>(() => {
@@ -394,10 +396,9 @@ export default function RoomDetailScreen() {
     setStatusButtonPosition(null);
   };
 
-  const handleReturnLaterConfirm = (returnTime: string, period: 'AM' | 'PM', taskDescription?: string) => {
+  const handleReturnLaterConfirm = (returnTime: string, period: 'AM' | 'PM', taskDescription?: string, _formattedDateTime?: string, returnAtTimestamp?: number) => {
     console.log('Return Later confirmed for room:', room.roomNumber, 'at:', returnTime, period);
     
-    // Save task if provided
     if (taskDescription && taskDescription.trim()) {
       const newTask: Task = {
         id: Date.now().toString(),
@@ -407,8 +408,9 @@ export default function RoomDetailScreen() {
       setTasks(prev => [...prev, newTask]);
       console.log('Task saved from Return Later modal:', taskDescription);
     }
-    
-    // TODO: Call backend API to save return time
+    if (returnAtTimestamp != null) {
+      setReturnLaterAtTimestamp(returnAtTimestamp);
+    }
     setShowReturnLaterModal(false);
   };
 
@@ -584,6 +586,7 @@ export default function RoomDetailScreen() {
             selectedStatusText
         }
         pausedAt={pausedAt}
+        returnLaterAtTimestamp={returnLaterAtTimestamp}
         flagged={localRoom.flagged === true}
       />
 

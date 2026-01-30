@@ -53,6 +53,8 @@ export default function ArrivalDepartureDetailScreen() {
   const [currentStatus, setCurrentStatus] = useState<RoomCardData['status']>(room.status);
   // Track selected status option text to display in header
   const [selectedStatusText, setSelectedStatusText] = useState<string | undefined>(undefined);
+  // Track Return Later: timestamp for time-only + remaining countdown (e.g. "2:30 PM · 30 mins 2s")
+  const [returnLaterAtTimestamp, setReturnLaterAtTimestamp] = useState<number | undefined>(undefined);
   // Track room data locally to allow updates (e.g., flagged status)
   const [localRoom, setLocalRoom] = useState<RoomCardData>(room);
   // Track notes and assigned staff in state
@@ -249,12 +251,8 @@ export default function ArrivalDepartureDetailScreen() {
     setStatusButtonPosition(null);
   };
 
-  const handleReturnLaterConfirm = (returnTime: string, period: 'AM' | 'PM', taskDescription?: string) => {
-    // TODO: Save return time to backend/API
+  const handleReturnLaterConfirm = (returnTime: string, period: 'AM' | 'PM', taskDescription?: string, _formattedDateTime?: string, returnAtTimestamp?: number) => {
     console.log('Return Later confirmed for room:', room.roomNumber, 'at:', returnTime, period);
-    
-    
-    // Save task if provided
     if (taskDescription && taskDescription.trim()) {
       const newTask: Task = {
         id: Date.now().toString(),
@@ -263,10 +261,11 @@ export default function ArrivalDepartureDetailScreen() {
       };
       setTasks(prev => [...prev, newTask]);
       console.log('Task saved from Return Later modal:', taskDescription);
-    }    // Close modal but keep selected status text to show "Return Later" in header
+    }
+    if (returnAtTimestamp != null) {
+      setReturnLaterAtTimestamp(returnAtTimestamp);
+    }
     setShowReturnLaterModal(false);
-    
-    // TODO: Update room status or show success message
   };
 
   // TODO: Implement Promise Time modal
@@ -431,6 +430,7 @@ export default function ArrivalDepartureDetailScreen() {
             selectedStatusText
         }
         pausedAt={pausedAt}
+        returnLaterAtTimestamp={returnLaterAtTimestamp}
       />
 
       {/* Tab Navigation - Below header (252px) */}
