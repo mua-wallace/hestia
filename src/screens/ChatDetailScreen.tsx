@@ -8,18 +8,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   Text,
-  Keyboard,
   SafeAreaView,
-  Dimensions,
   Image,
   Alert,
   Modal,
   FlatList,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import { Audio } from 'expo-av';
 import { RootStackParamList } from '../navigation/types';
 import { ChatMessage } from '../types';
 import { mockChatMessages, CURRENT_USER_ID } from '../data/mockChatMessages';
@@ -28,7 +28,6 @@ import { mockStaffData } from '../data/mockStaffData';
 import MessageBubble from '../components/chat/MessageBubble';
 import ChatHeader from '../components/chat/ChatHeader';
 import { scaleX, CHAT_HEADER } from '../constants/chatStyles';
-import { colors } from '../theme';
 
 type ChatDetailScreenRouteProp = {
   params: {
@@ -52,11 +51,14 @@ export default function ChatDetailScreen() {
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [showTagModal, setShowTagModal] = useState(false);
   const [taggedUser, setTaggedUser] = useState<{ id: string; name: string } | null>(null);
-  
-  // Bottom navigation bar height
-  const BOTTOM_NAV_HEIGHT = 152 * scaleX;
+
+  const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+  const responsiveScale = screenWidth / 440;
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 8);
   
   // Get participants for tagging (mock data - in real app, get from chat participants)
   const getParticipants = () => {
@@ -82,6 +84,16 @@ export default function ChatDetailScreen() {
       scrollViewRef.current?.scrollToEnd({ animated: false });
     }, 100);
   }, [messages]);
+
+  // Recording timer - updates every second while recording
+  useEffect(() => {
+    if (!isRecording) return;
+    setRecordingSeconds(0);
+    const interval = setInterval(() => {
+      setRecordingSeconds((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isRecording]);
 
   const handleSend = () => {
     if ((inputText.trim() || selectedImage) && chat) {
@@ -112,7 +124,53 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const handleImagePicker = async () => {
+  const showImageSourceOptions = () => {
+    Alert.alert(
+      'Add Image',
+      'Choose how to add an image',
+      [
+        {
+          text: 'Take Photo',
+          onPress: handleTakePhoto,
+        },
+        {
+          text: 'Choose from Library',
+          onPress: handlePickFromLibrary,
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant camera permissions to take photos.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
+    }
+  };
+
+  const handlePickFromLibrary = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -136,32 +194,79 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const handleVoiceRecord = () => {
-    // Note: This requires expo-av package. For now, we'll show a placeholder.
-    // To implement fully, install: npm install expo-av
-    Alert.alert(
-      'Voice Recording',
-      'Voice recording requires expo-av package. Install it with: npm install expo-av',
-      [{ text: 'OK' }]
-    );
-    // TODO: Implement voice recording with expo-av
-    // For now, create a mock voice message
-    if (chat) {
-      const newMessage: ChatMessage = {
-        id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        chatId: chatId,
-        senderId: CURRENT_USER_ID,
-        senderName: 'You',
-        message: '🎤 Voice message',
-        timestamp: new Date().toISOString(),
-        type: 'voice',
-        voiceUri: 'mock-voice-uri',
-        voiceDuration: 5,
-        taggedUserId: taggedUser?.id,
-        taggedUserName: taggedUser?.name,
-      };
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
-      setTaggedUser(null);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+
+  const handleVoiceRecord = async () => {
+    if (!chat) return;
+
+    if (isRecording) {
+      // Stop recording and send
+      try {
+        if (recordingRef.current) {
+          const uri = recordingRef.current.getURI();
+          const status = await recordingRef.current.stopAndUnloadAsync();
+          const durationSec = status && 'durationMillis' in status && status.durationMillis != null
+            ? Math.round(status.durationMillis / 1000)
+            : 0;
+          recordingRef.current = null;
+          setIsRecording(false);
+          setRecordingSeconds(0);
+
+          if (uri && durationSec > 0) {
+            const newMessage: ChatMessage = {
+              id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              chatId: chatId,
+              senderId: CURRENT_USER_ID,
+              senderName: 'You',
+              message: '🎤 Voice message',
+              timestamp: new Date().toISOString(),
+              type: 'voice',
+              voiceUri: uri,
+              voiceDuration: durationSec,
+              taggedUserId: taggedUser?.id,
+              taggedUserName: taggedUser?.name,
+            };
+            setMessages((prev) => [...prev, newMessage]);
+            setTaggedUser(null);
+            scrollToBottom();
+          } else {
+            Alert.alert('Recording too short', 'Please record for at least 1 second.');
+          }
+        }
+      } catch (error) {
+        console.error('Error stopping recording:', error);
+        setIsRecording(false);
+        setRecordingSeconds(0);
+        recordingRef.current = null;
+        Alert.alert('Error', 'Failed to save voice message. Please try again.');
+      }
+      return;
+    }
+
+    // Start recording
+    try {
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant microphone permissions to record voice messages.');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      recordingRef.current = recording;
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      Alert.alert('Error', 'Failed to start recording. Please try again.');
     }
   };
 
@@ -227,12 +332,18 @@ export default function ChatDetailScreen() {
     );
   }
 
+  const keyboardBehavior = Platform.select({
+    ios: 'padding' as const,
+    android: 'padding' as const,
+    default: 'padding' as const,
+  });
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : Platform.OS === 'android' ? 0 : 0}
+        behavior={keyboardBehavior}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         {/* Header */}
         <ChatHeader
@@ -248,8 +359,8 @@ export default function ChatDetailScreen() {
         {/* Messages List */}
         <ScrollView
           ref={scrollViewRef}
-          style={styles.messagesContainer}
-          contentContainerStyle={styles.messagesContent}
+          style={[styles.messagesContainer, { marginTop: CHAT_HEADER.background.height * responsiveScale }]}
+          contentContainerStyle={[styles.messagesContent, { paddingVertical: 16 * responsiveScale, paddingBottom: 24 * responsiveScale }]}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => {
             scrollViewRef.current?.scrollToEnd({ animated: false });
@@ -281,9 +392,9 @@ export default function ChatDetailScreen() {
         })}
         </ScrollView>
 
-        {/* Input Area */}
-        <SafeAreaView style={styles.inputSafeArea} edges={['bottom']}>
-          <View style={styles.inputContainer}>
+        {/* Input Area - WhatsApp style: sits above home indicator / device nav */}
+        <View style={[styles.inputSafeArea, { paddingBottom: bottomPadding }]}>
+          <View style={[styles.inputContainer, { paddingHorizontal: 16 * responsiveScale, paddingTop: 12 * responsiveScale, paddingBottom: 12 * responsiveScale }]}>
             {/* Selected Image Preview */}
             {selectedImage && (
               <View style={styles.imagePreviewContainer}>
@@ -305,21 +416,30 @@ export default function ChatDetailScreen() {
             )}
 
             <View style={styles.inputWrapper}>
-              {/* Microphone Button - Left side next to input (WhatsApp style) */}
+              {/* Microphone Button - Tap to start/stop recording */}
               <TouchableOpacity
-                style={styles.micButton}
+                style={[styles.micButton, isRecording && styles.micButtonRecording]}
                 onPress={handleVoiceRecord}
                 activeOpacity={0.7}
               >
-                {/* Microphone Icon - WhatsApp style */}
                 <View style={styles.micIcon}>
-                  <View style={styles.micBody} />
-                  <View style={styles.micStand} />
+                  <View style={[styles.micBody, isRecording && styles.micBodyRecording]} />
+                  <View style={[styles.micStand, isRecording && styles.micStandRecording]} />
                 </View>
               </TouchableOpacity>
 
+              {/* Recording time - shown when recording */}
+              {isRecording ? (
+                <Text
+                  style={[styles.recordingTime, { fontSize: 14 * responsiveScale, marginLeft: 8 * responsiveScale }]}
+                  numberOfLines={1}
+                >
+                  {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}
+                </Text>
+              ) : null}
+
               {/* Tag Button - Only show if group chat or has participants */}
-              {(isGroup || getParticipants().length > 0) && (
+              {!isRecording && (isGroup || getParticipants().length > 0) && (
                 <TouchableOpacity
                   style={styles.tagButton}
                   onPress={handleTagUser}
@@ -329,6 +449,7 @@ export default function ChatDetailScreen() {
                 </TouchableOpacity>
               )}
 
+              {!isRecording && (
               <TextInput
                 style={styles.input}
                 placeholder="Type a message..."
@@ -344,11 +465,13 @@ export default function ChatDetailScreen() {
                 textAlignVertical={Platform.OS === 'android' ? 'center' : 'top'}
                 underlineColorAndroid="transparent"
               />
+              )}
 
-              {/* Camera Button - Right side next to send button (WhatsApp style) */}
+              {/* Camera/Image Button - Hidden when recording */}
+              {!isRecording && (
               <TouchableOpacity
                 style={styles.cameraButton}
-                onPress={handleImagePicker}
+                onPress={showImageSourceOptions}
                 activeOpacity={0.7}
               >
                 {/* Camera Icon - WhatsApp style */}
@@ -358,18 +481,19 @@ export default function ChatDetailScreen() {
                   <View style={styles.cameraFlash} />
                 </View>
               </TouchableOpacity>
+              )}
 
               <TouchableOpacity
-                style={[styles.sendButton, (!inputText.trim() && !selectedImage) && styles.sendButtonDisabled]}
-                onPress={handleSend}
-                disabled={!inputText.trim() && !selectedImage}
+                style={[styles.sendButton, (!inputText.trim() && !selectedImage && !isRecording) && styles.sendButtonDisabled]}
+                onPress={isRecording ? handleVoiceRecord : handleSend}
+                disabled={!inputText.trim() && !selectedImage && !isRecording}
                 activeOpacity={0.7}
               >
-                <Text style={styles.sendButtonText}>Send</Text>
+                <Text style={styles.sendButtonText}>{isRecording ? 'Stop' : 'Send'}</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </SafeAreaView>
+        </View>
 
         {/* Tag User Modal */}
         <Modal
@@ -377,9 +501,10 @@ export default function ChatDetailScreen() {
           transparent={true}
           animationType="slide"
           onRequestClose={() => setShowTagModal(false)}
+          statusBarTranslucent={Platform.OS === 'android'}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 24) }]}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Tag someone</Text>
                 <TouchableOpacity onPress={() => setShowTagModal(false)}>
@@ -419,24 +544,20 @@ const styles = StyleSheet.create({
   inputSafeArea: {
     backgroundColor: '#FFFFFF',
     paddingTop: 0,
+    borderTopWidth: 0,
   },
   messagesContainer: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    marginTop: CHAT_HEADER.background.height * scaleX, // Header background height (top section only, no search)
-    paddingBottom: 10 * scaleX, // Add padding at bottom to prevent overlap with input
+    paddingBottom: 10,
   },
   messagesContent: {
-    paddingVertical: 16 * scaleX,
-    paddingBottom: 20 * scaleX,
+    flexGrow: 1,
   },
   inputContainer: {
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E5E5',
-    paddingHorizontal: 16 * scaleX,
-    paddingTop: 0,
-    paddingBottom: Platform.OS === 'android' ? 8 * scaleX : 8 * scaleX,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -453,6 +574,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    minWidth: 0,
     fontSize: 14 * scaleX,
     fontFamily: 'Helvetica',
     color: '#1E1E1E',
@@ -460,7 +582,7 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === 'android' ? 10 * scaleX : 8 * scaleX,
     paddingRight: 8 * scaleX,
     textAlignVertical: Platform.OS === 'android' ? 'center' : 'top',
-    includeFontPadding: Platform.OS === 'android' ? false : false,
+    ...(Platform.OS === 'android' && { includeFontPadding: false }),
   },
   sendButton: {
     paddingHorizontal: 16 * scaleX,
@@ -565,6 +687,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8 * scaleX,
+  },
+  micButtonRecording: {
+    backgroundColor: '#ff6b6b',
+  },
+  recordingTime: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: 'Helvetica',
+    color: '#ff6b6b',
+    fontWeight: '600' as any,
+    ...(Platform.OS === 'android' && { includeFontPadding: false }),
+  },
+  micBodyRecording: {
+    borderColor: '#FFFFFF',
+  },
+  micStandRecording: {
+    borderColor: '#FFFFFF',
   },
   tagButton: {
     width: 32 * scaleX,
