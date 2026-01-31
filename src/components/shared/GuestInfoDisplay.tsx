@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
-import { GUEST_INFO, CARD_DIMENSIONS } from '../../constants/allRoomsStyles';
+import { GUEST_INFO, CARD_DIMENSIONS, GUEST_CONTAINER_BG } from '../../constants/allRoomsStyles';
 import { normalizedScaleX } from '../../utils/responsive';
 import type { GuestInfo } from '../../types/allRooms.types';
 
@@ -15,6 +15,7 @@ interface GuestInfoDisplayProps {
   hasNotes?: boolean;
   category?: string; // To determine if it's Arrival vs Departure
   isArrivalDeparture?: boolean; // To know if this is an Arrival/Departure card
+  themeVariant?: 'am' | 'pm';
   // Positioning props for flexible usage
   containerLeft?: number; // Override container left position
   nameTop?: number; // Override name top position
@@ -34,6 +35,7 @@ interface GuestInfoDisplayProps {
   // For absolute positioning contexts (like room detail)
   absolutePositioning?: boolean;
   absoluteTop?: number; // Absolute top position from parent
+  hideNameRow?: boolean; // Hide the name row (used when parent renders it)
 }
 
 /**
@@ -51,6 +53,7 @@ export default function GuestInfoDisplay({
   hasNotes = false,
   category = '',
   isArrivalDeparture = false,
+  themeVariant = 'am',
   containerLeft,
   nameTop,
   dateTop,
@@ -67,6 +70,7 @@ export default function GuestInfoDisplay({
   countTop,
   absolutePositioning = false,
   absoluteTop,
+  hideNameRow = false,
 }: GuestInfoDisplayProps) {
   // Determine card type characteristics
   const isArrival = category === 'Arrival';
@@ -75,8 +79,9 @@ export default function GuestInfoDisplay({
   const isTurndown = category === 'Turndown';
   
   // Determine which guest icon to use based on card category
+  // For individual guests in ArrivalDeparture rooms, check timeLabel to determine icon
   let guestIconSource;
-  if (isArrivalDeparture) {
+  if (isArrivalDeparture || category === 'ArrivalDeparture') {
     guestIconSource = guest.timeLabel === 'ETA' 
       ? require('../../../assets/icons/guest-arrival-icon.png')
       : require('../../../assets/icons/guest-departure-icon.png');
@@ -84,9 +89,11 @@ export default function GuestInfoDisplay({
     guestIconSource = require('../../../assets/icons/stayover-guest-icon.png');
   } else if (isTurndown) {
     guestIconSource = require('../../../assets/icons/turndown-guest-icon.png');
-  } else if (isArrival) {
+  } else if (isArrival || guest.timeLabel === 'ETA') {
+    // Use arrival icon if category is Arrival OR guest has ETA timeLabel
     guestIconSource = require('../../../assets/icons/guest-arrival-icon.png');
-  } else if (isDeparture) {
+  } else if (isDeparture || guest.timeLabel === 'EDT') {
+    // Use departure icon if category is Departure OR guest has EDT timeLabel
     guestIconSource = require('../../../assets/icons/guest-departure-icon.png');
   } else {
     guestIconSource = require('../../../assets/icons/guest-icon.png');
@@ -197,6 +204,11 @@ export default function GuestInfoDisplay({
       left: GUEST_INFO.iconStandardDeparture.left,
       top: GUEST_INFO.iconStandardDeparture.top,
     };
+  } else if (isArrival && !isPriority && !hasNotes) {
+    guestIconPos = {
+      left: GUEST_INFO.iconStandardArrival.left,
+      top: GUEST_INFO.iconStandardArrival.top,
+    };
   } else if (hasNotes || isTurndown || isStayover) {
     guestIconPos = {
       left: GUEST_INFO.iconWithNotes.left,
@@ -204,10 +216,15 @@ export default function GuestInfoDisplay({
     };
   }
 
+  const isPMTheme = themeVariant === 'pm';
+  const isVacantGuest = guest.isVacant === true;
+
   // Determine icon tint color
-  const iconTintColor: string | undefined = (isArrivalDeparture || isArrival || isDeparture || isStayover || isTurndown)
-    ? undefined // Preserve original icon colors
-    : '#334866'; // Default color for other icons
+  const iconTintColor: string | undefined = isPMTheme
+    ? '#ffffff'
+    : (isArrivalDeparture || isArrival || isDeparture || isStayover || isTurndown)
+      ? undefined // Preserve original icon colors
+      : '#334866'; // Default color for other icons
 
   // Use numberBadge if provided, otherwise use priorityCount
   const displayBadge = numberBadge || (priorityCount ? priorityCount.toString() : undefined);
@@ -218,28 +235,93 @@ export default function GuestInfoDisplay({
     : {};
 
   // Calculate guest count positions for Arrival, Stayover, Turndown (separate row below date)
-  const shouldShowGuestCountBelow = countPos && (isArrival || isStayover || isTurndown) && !(isArrivalDeparture && isPriority);
+  // Also show separately for Departure when custom positioning is provided (Room Detail screen)
+  const shouldShowGuestCountBelow = countPos && ((isArrival || isStayover || isTurndown) || (isDeparture && countIconLeft !== undefined && countTextLeft !== undefined)) && !(isArrivalDeparture && isPriority);
   const guestCountTop = shouldShowGuestCountBelow
-    ? (hasNotes
-        ? ((GUEST_INFO.guestCount.positions.withNotes.iconTop ?? 0)) * normalizedScaleX
-        : (calculatedDateTop + GUEST_INFO.dateRange.lineHeight + 2) * normalizedScaleX)
+    ? (countTop !== undefined
+        ? countTop * normalizedScaleX // Use custom position if provided (Room Detail screen)
+        : hasNotes
+          ? ((GUEST_INFO.guestCount.positions.withNotes.iconTop ?? 0)) * normalizedScaleX
+          : (calculatedDateTop + GUEST_INFO.dateRange.lineHeight + 2) * normalizedScaleX)
     : 0;
   const iconVerticalOffset = shouldShowGuestCountBelow
     ? (GUEST_INFO.guestCount.lineHeight * normalizedScaleX - GUEST_INFO.guestCount.icon.height * normalizedScaleX) / 2
     : 0;
   const guestCountIconLeft = shouldShowGuestCountBelow
-    ? (hasNotes 
-        ? ((GUEST_INFO.guestCount.positions.withNotes.iconLeft) - calculatedContainerLeft) * normalizedScaleX
-        : ((GUEST_INFO.guestCount.positions.standardArrival.iconLeft) - calculatedContainerLeft) * normalizedScaleX)
+    ? (countIconLeft !== undefined
+        ? countIconLeft * normalizedScaleX // Use custom position if provided (Room Detail screen)
+        : hasNotes 
+          ? ((GUEST_INFO.guestCount.positions.withNotes.iconLeft) - calculatedContainerLeft) * normalizedScaleX
+          : ((GUEST_INFO.guestCount.positions.standardArrival.iconLeft) - calculatedContainerLeft) * normalizedScaleX)
     : 0;
   const guestCountTextLeft = shouldShowGuestCountBelow
-    ? (hasNotes
-        ? ((GUEST_INFO.guestCount.positions.withNotes.textLeft) - calculatedContainerLeft) * normalizedScaleX
-        : ((GUEST_INFO.guestCount.positions.standardArrival.textLeft) - calculatedContainerLeft) * normalizedScaleX)
+    ? (countTextLeft !== undefined
+        ? countTextLeft * normalizedScaleX // Use custom position if provided (Room Detail screen)
+        : hasNotes
+          ? ((GUEST_INFO.guestCount.positions.withNotes.textLeft) - calculatedContainerLeft) * normalizedScaleX
+          : ((GUEST_INFO.guestCount.positions.standardArrival.textLeft) - calculatedContainerLeft) * normalizedScaleX)
     : 0;
 
   // Calculate container width: card width minus container left position to ensure content is visible
   const containerWidth = (CARD_DIMENSIONS.width - calculatedContainerLeft) * normalizedScaleX;
+
+  if (isVacantGuest) {
+    // For vacant turndown rooms, position at guest container top
+    // and center vertically within the container height
+    const vacantRowTop = isTurndown 
+      ? GUEST_CONTAINER_BG.positions.turndown.top 
+      : calculatedNameTop;
+    const vacantRowHeight = isTurndown
+      ? GUEST_CONTAINER_BG.positions.turndown.height
+      : 100;
+    // Align to the same left as standard guest rows inside the container
+    const vacantRowLeft = 0;
+    
+    return (
+      <View
+        style={[
+          styles.container,
+          {
+            left: calculatedContainerLeft * normalizedScaleX,
+            width: containerWidth,
+          },
+          containerStyle,
+        ]}
+      >
+        <View
+          style={[
+            styles.guestRow,
+            styles.guestRowVacant,
+            {
+              top: vacantRowTop * normalizedScaleX,
+              left: vacantRowLeft,
+              height: vacantRowHeight * normalizedScaleX,
+            },
+          ]}
+        >
+          <Image
+            source={require('../../../assets/icons/vacant-chair.png')}
+            style={[
+              styles.guestIconVacant,
+              isPMTheme ? styles.guestIconPM : styles.guestIconNoTint,
+            ]}
+            resizeMode="contain"
+          />
+          <Text
+            style={[
+              styles.guestName,
+              styles.guestVacantText,
+              isPMTheme && styles.guestNamePM,
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {guest.name || 'Vacant'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View 
@@ -253,7 +335,7 @@ export default function GuestInfoDisplay({
       ]}
     >
       {/* Guest Icon - positioned absolutely when needed */}
-      {guestIconPos !== null ? (
+      {!hideNameRow && guestIconPos !== null ? (
         <Image
           source={guestIconSource}
           style={[
@@ -269,47 +351,51 @@ export default function GuestInfoDisplay({
       ) : null}
       
       {/* Guest Name Row */}
-      <View style={[
-        styles.guestRow, 
-        { 
-          top: calculatedNameTop * normalizedScaleX,
-          left: nameLeft !== undefined ? nameLeft * normalizedScaleX : 0,
-        }
-      ]}>
-        {guestIconPos === null && (
-          <Image
-            source={guestIconSource}
-            style={[
-              styles.guestIcon,
-              (isArrival || isDeparture || isStayover || isTurndown) && styles.guestIconNoTint,
-            ]}
-            resizeMode="contain"
-          />
-        )}
-        <View style={[styles.guestNameContainer, guestIconPos !== null && styles.guestNameContainerNoIcon]}>
-          <Text 
-            style={styles.guestName} 
-            numberOfLines={1} 
-            ellipsizeMode="tail"
-          >
-            {guest.name}
-          </Text>
-          {/* Priority/Number Badge - positioned immediately after name text with consistent spacing */}
-          {displayBadge && (
-            <Text 
-              style={styles.priorityCountInline}
-              numberOfLines={1}
-            >
-              {displayBadge}
-            </Text>
+      {!hideNameRow && (
+        <View style={[
+          styles.guestRow, 
+          { 
+            top: calculatedNameTop * normalizedScaleX,
+            left: nameLeft !== undefined ? nameLeft * normalizedScaleX : 0,
+          }
+        ]}>
+          {guestIconPos === null && (
+            <Image
+              source={guestIconSource}
+              style={[
+                styles.guestIcon,
+                (isArrival || isDeparture || isStayover || isTurndown) && !isPMTheme && styles.guestIconNoTint,
+                isPMTheme && styles.guestIconPM,
+              ]}
+              resizeMode="contain"
+            />
           )}
+          <View style={[styles.guestNameContainer, guestIconPos !== null && styles.guestNameContainerNoIcon]}>
+            <Text 
+              style={[styles.guestName, isPMTheme && styles.guestNamePM]} 
+              numberOfLines={1} 
+              ellipsizeMode="tail"
+            >
+              {guest.name}
+            </Text>
+            {/* Priority/Number Badge - positioned immediately after name text with consistent spacing */}
+            {displayBadge && (
+              <Text 
+                style={[styles.priorityCountInline, isPMTheme && styles.priorityCountInlinePM]}
+                numberOfLines={1}
+              >
+                {displayBadge}
+              </Text>
+            )}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Date Range Row */}
       {/* For Arrival/Departure and Departure: date, icon, text on same row */}
       {/* For Arrival, Stayover, Turndown: date and ETA on same row, icon+text on separate row below */}
-      {(isArrivalDeparture && isPriority) || (isDeparture && !hasNotes) ? (
+      {/* Exception: If custom time positioning is provided (Room Detail screen), render time separately */}
+      {(isArrivalDeparture && isPriority) || (isDeparture && !hasNotes && !(timeLeft !== undefined && timeTop !== undefined)) ? (
         <View style={[
           styles.detailsRowWithCount, 
           { 
@@ -318,12 +404,12 @@ export default function GuestInfoDisplay({
             zIndex: 10, // Lower z-index so time can appear above
           }
         ]}>
-          <Text style={styles.dateRange}>{guest.dateRange}</Text>
+          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{guest.dateRange}</Text>
           {countPos && (
             <>
               <Image
                 source={require('../../../assets/icons/people-icon.png')}
-                style={styles.countIconInline}
+                style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM]}
                 resizeMode="contain"
               />
               <Text style={styles.countTextInline}>
@@ -332,7 +418,7 @@ export default function GuestInfoDisplay({
             </>
           )}
         </View>
-      ) : (isArrival || isStayover || isTurndown) && guest.timeLabel && guest.time ? (
+      ) : (isArrival || isStayover || isTurndown) && guest.timeLabel && guest.time && !(timeLeft !== undefined && timeTop !== undefined) ? (
         // For Arrival, Stayover, Turndown: date and ETA on same row
         <View style={[
           styles.detailsRowWithTime, 
@@ -342,8 +428,8 @@ export default function GuestInfoDisplay({
             zIndex: 10, // Lower z-index so time can appear above
           }
         ]}>
-          <Text style={styles.dateRange}>{guest.dateRange}</Text>
-          <Text style={styles.timeInline}>
+          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{guest.dateRange}</Text>
+          <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
             {guest.timeLabel}: {guest.time}
           </Text>
         </View>
@@ -356,7 +442,7 @@ export default function GuestInfoDisplay({
             zIndex: 10, // Lower z-index so time can appear above
           }
         ]}>
-          <Text style={styles.dateRange}>{guest.dateRange}</Text>
+          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{guest.dateRange}</Text>
         </View>
       )}
 
@@ -368,6 +454,7 @@ export default function GuestInfoDisplay({
             source={require('../../../assets/icons/people-icon.png')}
             style={[
               styles.countIcon,
+              isPMTheme && styles.countIconPM,
               {
                 left: guestCountIconLeft,
                 top: guestCountTop + iconVerticalOffset, // Center icon vertically with text
@@ -377,6 +464,7 @@ export default function GuestInfoDisplay({
           />
           <Text style={[
             styles.countText,
+            isPMTheme && styles.countTextPM,
             {
               left: guestCountTextLeft,
               top: guestCountTop, // Text top position
@@ -387,10 +475,12 @@ export default function GuestInfoDisplay({
         </>
       )}
 
-      {/* Time (ETA/EDT) - only for cards that don't show it inline (Arrival/Departure priority) - render LAST to ensure it's on top */}
-      {guest.timeLabel && guest.time && timePos && !(isArrival || isStayover || isTurndown) && (
+      {/* Time (ETA/EDT) - render separately when custom positioning is provided (Room Detail screen) or for Departure cards */}
+      {/* Render LAST to ensure it's on top */}
+      {guest.timeLabel && guest.time && timePos && (timeLeft !== undefined && timeTop !== undefined || !(isArrival || isStayover || isTurndown)) && (
         <Text style={[
           styles.time, 
+          isPMTheme && styles.timePM,
           { 
             left: ((timePos.left ?? 0) - calculatedContainerLeft) * normalizedScaleX,
             top: (timePos.top ?? 0) * normalizedScaleX,
@@ -415,19 +505,36 @@ const styles = StyleSheet.create({
   guestRow: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'center', // Vertically center all items including badge
-    alignContent: 'center',
+    alignItems: 'flex-start', // Default: prevent text clipping for regular guests
     left: 0,
     width: 300 * normalizedScaleX, // Fixed width - card is 426px, container starts at 73px, so 426-73=353px available, use 300px to leave space
     overflow: 'visible', // Ensure text is not clipped
     zIndex: 30, // Highest z-index to ensure guest name is above divider and all other elements on iOS
     elevation: 30, // Android elevation for proper layering
   },
+  guestRowVacant: {
+    alignItems: 'center', // Center icon and text vertically for vacant state
+    height: 100 * normalizedScaleX,
+    justifyContent: 'center',
+    paddingLeft: 0,
+  },
+  guestVacantText: {
+    marginLeft: 6 * normalizedScaleX,
+    lineHeight: GUEST_INFO.name.lineHeight * normalizedScaleX,
+  },
+  guestIconVacant: {
+    width: GUEST_INFO.icon.width * normalizedScaleX,
+    height: GUEST_INFO.icon.height * normalizedScaleX,
+    marginRight: 6 * normalizedScaleX,
+  },
   guestIcon: {
     width: GUEST_INFO.icon.width * normalizedScaleX,
     height: GUEST_INFO.icon.height * normalizedScaleX,
     marginRight: 4 * normalizedScaleX,
     tintColor: '#334866',
+  },
+  guestIconPM: {
+    tintColor: '#ffffff',
   },
   guestIconAbsolute: {
     position: 'absolute',
@@ -440,7 +547,7 @@ const styles = StyleSheet.create({
   },
   guestNameContainer: {
     flexDirection: 'row', // Horizontal layout for name and badge
-    alignItems: 'center', // Vertically center name and badge
+    alignItems: 'baseline', // Align name and badge by baseline so name is fully visible
     flexShrink: 1, // Allow shrinking but prefer to show full name
     flexGrow: 0, // Don't grow - let badge follow immediately after
     minWidth: 120 * normalizedScaleX, // Minimum width to ensure name starts showing
@@ -459,6 +566,11 @@ const styles = StyleSheet.create({
     color: GUEST_INFO.name.color,
     lineHeight: GUEST_INFO.name.lineHeight * normalizedScaleX,
     backgroundColor: 'transparent', // Ensure no background covers text
+    includeFontPadding: false, // Remove extra padding that clips text
+    textAlignVertical: 'top', // Align to top so bottom part is visible
+  },
+  guestNamePM: {
+    color: '#ffffff',
   },
   priorityCount: {
     position: 'absolute',
@@ -476,6 +588,11 @@ const styles = StyleSheet.create({
     lineHeight: GUEST_INFO.priorityBadge.lineHeight * normalizedScaleX,
     marginLeft: 4 * normalizedScaleX, // Consistent spacing after name text - matches Figma (4px)
     flexShrink: 0, // Prevent badge from shrinking
+    includeFontPadding: false, // Remove extra padding
+    textAlignVertical: 'top', // Align to top for consistent baseline
+  },
+  priorityCountInlinePM: {
+    color: '#ffffff',
   },
   priorityCountSmall: {
     fontSize: (GUEST_INFO.priorityBadge.fontSize * 0.85) * normalizedScaleX, // 85% of original size (12 * 0.85 = 10.2px)
@@ -484,32 +601,29 @@ const styles = StyleSheet.create({
   detailsRow: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Changed from 'center' to 'flex-start' to prevent clipping
     left: 0,
-    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Set explicit height for alignment - don't extend beyond
+    minHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Changed from fixed height to minHeight
     zIndex: 5, // Very low z-index so time appears above
     overflow: 'visible', // Ensure content is not clipped
-    maxHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Prevent container from extending
   },
   detailsRowWithCount: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center', // Keep 'center' for this row to align icon and count text properly on same line
     left: 0,
-    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Don't extend beyond this height
+    minHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Changed from fixed height to minHeight
     zIndex: 5, // Very low z-index so time appears above
     overflow: 'visible', // Ensure content is not clipped
-    maxHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Prevent container from extending
   },
   detailsRowWithTime: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Changed from 'center' to 'flex-start' to prevent clipping
     left: 0,
-    height: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Don't extend beyond this height
+    minHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Changed from fixed height to minHeight
     zIndex: 5, // Very low z-index so time appears above
     overflow: 'visible', // Ensure content is not clipped
-    maxHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Prevent container from extending
   },
   guestCountRow: {
     position: 'absolute',
@@ -528,11 +642,18 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center', // Center text vertically
     backgroundColor: 'transparent', // Ensure no background covers time
   },
+  dateRangePM: {
+    color: '#ffffff',
+  },
   countIconInline: {
     width: GUEST_INFO.guestCount.icon.width * normalizedScaleX,
     height: GUEST_INFO.guestCount.icon.height * normalizedScaleX,
     tintColor: '#334866',
     marginLeft: 8 * normalizedScaleX, // Spacing after date
+    alignSelf: 'center', // Vertically center icon with text on same row
+  },
+  countIconInlinePM: {
+    tintColor: '#ffffff',
   },
   countTextInline: {
     fontSize: GUEST_INFO.guestCount.fontSize * normalizedScaleX,
@@ -543,6 +664,8 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
     marginLeft: 4 * normalizedScaleX, // Spacing after icon
+    marginTop: 0, // Ensure no extra top margin
+    paddingTop: 0, // Ensure no extra top padding
   },
   time: {
     position: 'absolute',
@@ -557,6 +680,9 @@ const styles = StyleSheet.create({
     elevation: 30, // Android elevation for proper layering
     backgroundColor: 'transparent', // Ensure no background
   },
+  timePM: {
+    color: '#ffffff',
+  },
   timeInline: {
     fontSize: GUEST_INFO.time.fontSize * normalizedScaleX,
     fontFamily: typography.fontFamily.primary,
@@ -569,11 +695,17 @@ const styles = StyleSheet.create({
     zIndex: 25, // Highest z-index to ensure ETA/EDT are always visible above date
     elevation: 25, // Android elevation for proper layering
   },
+  timeInlinePM: {
+    color: '#ffffff',
+  },
   countIcon: {
     position: 'absolute',
     width: GUEST_INFO.guestCount.icon.width * normalizedScaleX,
     height: GUEST_INFO.guestCount.icon.height * normalizedScaleX,
     tintColor: '#334866',
+  },
+  countIconPM: {
+    tintColor: '#ffffff',
   },
   countText: {
     position: 'absolute',
@@ -584,6 +716,9 @@ const styles = StyleSheet.create({
     lineHeight: GUEST_INFO.guestCount.lineHeight * normalizedScaleX,
     includeFontPadding: false, // Remove extra padding for better alignment
     textAlignVertical: 'center', // Center text vertically
+  },
+  countTextPM: {
+    color: '#ffffff',
   },
 });
 

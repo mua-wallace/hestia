@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +14,8 @@ const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 import type { ShiftType } from '../types/home.types';
 import { mockHomeData } from '../data/mockHomeData';
+import { mockChatData } from '../data/mockChatData';
+import { mockAllRoomsData } from '../data/mockAllRoomsData';
 import type { MoreMenuItemId } from '../types/more.types';
 import type { RootStackParamList } from '../navigation/types';
 import HomeHeader from '../components/home/HomeHeader';
@@ -22,6 +24,9 @@ import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
 import HomeFilterModal from '../components/home/HomeFilterModal';
 import { FilterState, FilterCounts } from '../types/filter.types';
+import type { CategorySection } from '../types/home.types';
+import type { RoomCardData } from '../types/allRooms.types';
+import { getShiftFromTime } from '../utils/shiftUtils';
 
 import type { MainTabsParamList } from '../navigation/types';
 
@@ -32,11 +37,33 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  const [homeData, setHomeData] = useState(mockHomeData);
+  const route = useRoute();
+  const [homeData, setHomeData] = useState(() => ({
+    ...mockHomeData,
+    selectedShift: getShiftFromTime(),
+  }));
+  const [activeFilters, setActiveFilters] = useState<FilterState | undefined>(
+    (route.params as any)?.filters as FilterState | undefined
+  );
   const [activeTab, setActiveTab] = useState('Home');
   const [refreshing, setRefreshing] = useState(false);
   const [showMorePopup, setShowMorePopup] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
+
+  // Sync activeTab with current route
+  useFocusEffect(
+    React.useCallback(() => {
+      const routeName = route.name as string;
+      if (routeName === 'Home' || routeName === 'Rooms' || routeName === 'Chat' || routeName === 'Tickets') {
+        setActiveTab(routeName);
+      }
+    }, [route.name])
+  );
+
+  // Calculate total unread chat messages for badge
+  const chatBadgeCount = useMemo(() => {
+    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
+  }, []);
 
   const handleShiftToggle = (shift: ShiftType) => {
     setHomeData(prev => ({ ...prev, selectedShift: shift }));
@@ -57,17 +84,17 @@ export default function HomeScreen() {
   };
 
   const handleTabPress = (tab: string) => {
-    setActiveTab(tab);
+    setActiveTab(tab); // Update immediately
     setShowMorePopup(false); // Close popup when switching tabs
     // Navigate to the respective screen
     if (tab === 'Home') {
-      navigation.navigate('Home');
+      navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
-      navigation.navigate('Rooms');
+      navigation.navigate('Rooms' as any);
     } else if (tab === 'Chat') {
-      navigation.navigate('Chat');
+      navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
-      navigation.navigate('Tickets');
+      navigation.navigate('Tickets' as any);
     }
   };
 
@@ -98,8 +125,101 @@ export default function HomeScreen() {
 
   const handleCategoryPress = () => {
     // Navigate to All Rooms screen with back button
-    navigation.navigate('AllRooms', { showBackButton: true } as any);
+    navigation.navigate('AllRooms', { showBackButton: true, filters: activeFilters } as any);
   };
+
+  const getRoomFloor = (roomNumber: string): number | null => {
+    const firstChar = (roomNumber || '').trim()[0];
+    const floor = Number.parseInt(firstChar || '', 10);
+    return Number.isFinite(floor) ? floor : null;
+  };
+
+  const filterRoomsByFloors = (rooms: RoomCardData[], filters?: FilterState) => {
+    const floorFilters = filters?.floors;
+    if (!floorFilters) return rooms;
+
+    const anySelected = Object.values(floorFilters).some(Boolean);
+    if (!anySelected) return rooms;
+
+    if (floorFilters.all) return rooms;
+
+    const allowedFloors = new Set<number>();
+    if (floorFilters.first) allowedFloors.add(1);
+    if (floorFilters.second) allowedFloors.add(2);
+    if (floorFilters.third) allowedFloors.add(3);
+    if (floorFilters.fourth) allowedFloors.add(4);
+
+    if (allowedFloors.size === 0) return rooms;
+
+    return rooms.filter((r) => {
+      const floor = getRoomFloor(r.roomNumber);
+      return floor !== null && allowedFloors.has(floor);
+    });
+  };
+
+  const buildCategory = (name: CategorySection['name'], id: string, borderColor: string, rooms: RoomCardData[]): CategorySection => {
+    const status = {
+      dirty: 0,
+      inProgress: 0,
+      cleaned: 0,
+      inspected: 0,
+    };
+
+    rooms.forEach((room) => {
+      if (room.houseKeepingStatus === 'Dirty') status.dirty += 1;
+      if (room.houseKeepingStatus === 'InProgress') status.inProgress += 1;
+      if (room.houseKeepingStatus === 'Cleaned') status.cleaned += 1;
+      if (room.houseKeepingStatus === 'Inspected') status.inspected += 1;
+    });
+
+    const priority = rooms.reduce((sum, r) => sum + (r.isPriority ? 1 : 0), 0);
+
+    return {
+      id,
+      name,
+      total: rooms.length,
+      priority,
+      borderColor,
+      status,
+    };
+  };
+
+  const derivedCategories = useMemo(() => {
+    let rooms = filterRoomsByFloors(mockAllRoomsData.rooms, activeFilters);
+
+    const categories: CategorySection[] = [];
+
+    if (homeData.selectedShift === 'PM') {
+      // PM shift: show only Turndown, No Task, Vacant cards
+      const turndownRooms = rooms.filter((r) => r.frontOfficeStatus === 'Turndown');
+      const noTaskRooms = rooms.filter((r) => r.frontOfficeStatus === 'No Task');
+      const vacantRooms = rooms.filter((r) => r.reservationStatus === 'Vacant');
+      categories.push(buildCategory('Turndown', 'turndown', '#4a91fc', turndownRooms));
+      categories.push(buildCategory('No Task', 'noTask', '#8d908d', noTaskRooms));
+      categories.push(buildCategory('Vacant', 'vacant', '#41d541', vacantRooms));
+    } else {
+      // AM shift: Flagged, Arrivals, StayOvers
+      const flaggedRooms = rooms.filter((r) => !!r.flagged);
+      const arrivalRooms = rooms.filter((r) => r.frontOfficeStatus === 'Arrival' || r.frontOfficeStatus === 'Arrival/Departure');
+      const stayOverRooms = rooms.filter((r) => r.frontOfficeStatus === 'Stayover');
+      categories.push(buildCategory('Flagged', 'flagged', '#6e1eee', flaggedRooms));
+      categories.push(buildCategory('Arrivals', 'arrivals', '#41d541', arrivalRooms));
+      categories.push(buildCategory('StayOvers', 'stayovers', '#8d908d', stayOverRooms));
+    }
+
+    return categories;
+  }, [activeFilters, homeData.selectedShift]);
+
+  // Sync route filters -> local state
+  useEffect(() => {
+    const routeFilters = (route.params as any)?.filters as FilterState | undefined;
+    if (routeFilters) setActiveFilters(routeFilters);
+  }, [(route.params as any)?.filters]);
+
+  // Update visible home categories based on derived data
+  useEffect(() => {
+    setHomeData((prev) => ({ ...prev, categories: derivedCategories }));
+  }, [derivedCategories]);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -109,8 +229,10 @@ export default function HomeScreen() {
     }, 1000);
   }, []);
 
-  // Calculate filter counts from homeData
+  // Calculate filter counts from homeData (use derivedCategories when categories not yet synced for current shift)
   const filterCounts: FilterCounts = useMemo(() => {
+    const categoriesForCounts = homeData.categories.length > 0 ? homeData.categories : derivedCategories;
+
     // Aggregate counts from all categories
     const roomStates = {
       dirty: 0,
@@ -126,8 +248,9 @@ export default function HomeScreen() {
       turnDown: 0,
       stayOver: 0,
     };
+    let totalRooms = 0;
 
-    homeData.categories.forEach((category) => {
+    categoriesForCounts.forEach((category) => {
       // Room state counts
       roomStates.dirty += category.status.dirty;
       roomStates.inProgress += category.status.inProgress;
@@ -142,21 +265,74 @@ export default function HomeScreen() {
         guests.arrivals += category.total;
       } else if (category.name === 'StayOvers') {
         guests.stayOver += category.total;
+      } else if (category.name === 'Turndown') {
+        guests.turnDown += category.total;
       }
-      // Note: Departures and Turn Down would need additional data
-      // For now, using mock values
-      guests.departures = 18; // Mock value
-      guests.turnDown = 12; // Mock value
+      totalRooms += category.total;
     });
 
-    return { roomStates, guests };
-  }, [homeData]);
+    // Reservations (Vacant) - from categories when PM, or from room data
+    const reservations = {
+      occupied: 0,
+      vacant: 0,
+    };
+    if (homeData.selectedShift === 'PM') {
+      categoriesForCounts.forEach((category) => {
+        if (category.name === 'Vacant') {
+          reservations.vacant += category.total;
+        }
+      });
+    } else {
+      mockAllRoomsData.rooms.forEach((r) => {
+        if (r.reservationStatus === 'Vacant') reservations.vacant += 1;
+        else if (r.reservationStatus === 'Occupied') reservations.occupied += 1;
+      });
+    }
+
+    // Calculate departures from actual room data
+    const departureRooms = mockAllRoomsData.rooms.filter(
+      (r) => r.frontOfficeStatus === 'Departure' || r.frontOfficeStatus === 'Arrival/Departure'
+    );
+    guests.departures = departureRooms.length;
+
+    // Calculate floor counts based on actual room numbers from mockAllRoomsData
+    // Room numbers: 1xx = 1st floor, 2xx = 2nd floor, 3xx = 3rd floor, 4xx = 4th floor
+    const floorCounts = {
+      first: 0,
+      second: 0,
+      third: 0,
+      fourth: 0,
+    };
+
+    mockAllRoomsData.rooms.forEach((room) => {
+      const roomNum = parseInt(room.roomNumber, 10);
+      if (!isNaN(roomNum)) {
+        if (roomNum >= 100 && roomNum < 200) {
+          floorCounts.first++;
+        } else if (roomNum >= 200 && roomNum < 300) {
+          floorCounts.second++;
+        } else if (roomNum >= 300 && roomNum < 400) {
+          floorCounts.third++;
+        } else if (roomNum >= 400 && roomNum < 500) {
+          floorCounts.fourth++;
+        }
+      }
+    });
+
+    const floors = {
+      all: floorCounts.first + floorCounts.second + floorCounts.third + floorCounts.fourth, // Sum of all floors
+      first: floorCounts.first,
+      second: floorCounts.second,
+      third: floorCounts.third,
+      fourth: floorCounts.fourth,
+    };
+
+    return { roomStates, guests, floors, totalRooms, reservations };
+  }, [homeData, derivedCategories]);
 
   const handleGoToResults = (filters: FilterState) => {
-    navigation.navigate('AllRooms', {
-      filters,
-      showBackButton: true,
-    } as any);
+    // Apply filters to Home stats/cards in both AM and PM modes
+    setActiveFilters(filters);
   };
 
   const handleAdvanceFilter = () => {
@@ -165,86 +341,121 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Scrollable Content with conditional blur */}
-      <View style={styles.scrollContainer}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={!showMorePopup}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {homeData.categories.map((category) => (
-            <CategoryCard key={category.id} category={category} onPress={handleCategoryPress} />
-          ))}
-        </ScrollView>
-        
-        {/* Blur Overlay for content only */}
-        {showMorePopup && (
-          <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
-            <View style={styles.blurOverlayDarkener} />
-          </BlurView>
-        )}
-      </View>
+    <View style={[
+      styles.container,
+      homeData.selectedShift === 'PM' && styles.containerPM
+    ]}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        {/* Scrollable Content with conditional blur */}
+        <View style={styles.scrollContainer}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={!showMorePopup}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+          >
+            {derivedCategories.map((category) => (
+              <CategoryCard 
+                key={category.id} 
+                category={category} 
+                onPress={handleCategoryPress}
+                selectedShift={homeData.selectedShift}
+              />
+            ))}
+          </ScrollView>
+          
+          {/* Blur Overlay for content only */}
+          {showMorePopup && (
+            <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
+              <View style={styles.blurOverlayDarkener} />
+            </BlurView>
+          )}
+        </View>
 
-      {/* Header - Fixed at top (no blur) */}
-      <HomeHeader
-        user={homeData.user}
-        selectedShift={homeData.selectedShift}
-        date={homeData.date}
-        onShiftToggle={handleShiftToggle}
-        onBellPress={handleBellPress}
-      />
+        {/* Header - Fixed at top (no blur) */}
+        <HomeHeader
+          user={homeData.user}
+          selectedShift={homeData.selectedShift}
+          date={homeData.date}
+          onShiftToggle={handleShiftToggle}
+          onBellPress={handleBellPress}
+        />
 
-      {/* Search Bar and Filter - Fixed below header */}
-      {!showFilterModal && (
-        <View style={styles.searchSection}>
-          <View style={styles.searchBar}>
+        {/* Search Bar and Filter - Fixed below header */}
+        {!showFilterModal && (
+          <View style={styles.searchSection}>
+            <View style={[
+              styles.searchBar,
+              homeData.selectedShift === 'PM' && styles.searchBarPM
+            ]}>
+              <TouchableOpacity
+                style={styles.searchIconButton}
+                onPress={() => {/* Search action */}}
+                activeOpacity={0.7}
+              >
+                <Image
+                  source={require('../../assets/icons/search-icon.png')}
+                  style={[
+                    styles.searchIcon,
+                    homeData.selectedShift === 'PM' && styles.searchIconPM
+                  ]}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+              <SearchInput
+                placeholder={{ bold: 'Search ', normal: 'Rooms, Guests, Floors etc' }}
+                onSearch={handleSearch}
+                inputStyle={[
+                  styles.searchInput,
+                  homeData.selectedShift === 'PM' && styles.searchInputPM
+                ]}
+                placeholderStyle={[
+                  styles.placeholderText,
+                  homeData.selectedShift === 'PM' && styles.placeholderTextPM
+                ]}
+                placeholderBoldStyle={[
+                  styles.placeholderBold,
+                  homeData.selectedShift === 'PM' && styles.placeholderBoldPM
+                ]}
+                placeholderNormalStyle={[
+                  styles.placeholderNormal,
+                  homeData.selectedShift === 'PM' && styles.placeholderNormalPM
+                ]}
+                inputWrapperStyle={styles.searchInputContainer}
+              />
+            </View>
             <TouchableOpacity
-              style={styles.searchIconButton}
-              onPress={() => {/* Search action */}}
+              style={styles.filterButton}
+              onPress={handleFilterPress}
               activeOpacity={0.7}
             >
               <Image
-                source={require('../../assets/icons/search-icon.png')}
-                style={styles.searchIcon}
+                source={require('../../assets/icons/menu-icon.png')}
+                style={[
+                  styles.filterIcon,
+                  homeData.selectedShift === 'PM' && styles.filterIconPM
+                ]}
                 resizeMode="contain"
               />
             </TouchableOpacity>
-            <SearchInput
-              placeholder={{ bold: 'Search ', normal: 'Rooms, Guests, Floors etc' }}
-              onSearch={handleSearch}
-              inputStyle={styles.searchInput}
-              placeholderStyle={styles.placeholderText}
-              placeholderBoldStyle={styles.placeholderBold}
-              placeholderNormalStyle={styles.placeholderNormal}
-              inputWrapperStyle={styles.searchInputContainer}
-            />
           </View>
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={handleFilterPress}
-            activeOpacity={0.7}
-          >
-            <Image
-              source={require('../../assets/icons/menu-icon.png')}
-              style={styles.filterIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        </View>
-      )}
-      
+        )}
+      </KeyboardAvoidingView>
 
-      {/* Bottom Navigation (no blur) */}
+      {/* Bottom Navigation - Outside KeyboardAvoidingView to prevent movement */}
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
         onMorePress={handleMorePress}
-        chatBadgeCount={homeData.notifications.chat}
+        chatBadgeCount={chatBadgeCount}
       />
 
       {/* More Popup */}
@@ -262,6 +473,7 @@ export default function HomeScreen() {
         onAdvanceFilter={handleAdvanceFilter}
         filterCounts={filterCounts}
         onFilterIconPress={handleFilterPress}
+        selectedShift={homeData.selectedShift}
       />
     </View>
   );
@@ -271,6 +483,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
+  },
+  containerPM: {
+    backgroundColor: '#38414F', // Dark slate gray for PM mode
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   scrollContainer: {
     flex: 1,
@@ -301,11 +519,14 @@ const styles = StyleSheet.create({
   searchBar: {
     height: 59 * scaleX,
     width: 347 * scaleX,
-    backgroundColor: '#f1f6fc',
+    backgroundColor: '#F1F6FC',
     borderRadius: 82 * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20 * scaleX,
+  },
+  searchBarPM: {
+    backgroundColor: '#F1F6FC',
   },
   searchInputContainer: {
     height: '100%',
@@ -328,6 +549,18 @@ const styles = StyleSheet.create({
   placeholderNormal: {
     fontWeight: '400' as any, // Regular for rest of text
   },
+  searchInputPM: {
+    color: '#000000',
+  },
+  placeholderTextPM: {
+    color: 'rgba(0, 0, 0, 0.6)',
+  },
+  placeholderBoldPM: {
+    color: 'rgba(0, 0, 0, 0.6)',
+  },
+  placeholderNormalPM: {
+    color: 'rgba(0, 0, 0, 0.6)',
+  },
   searchIconButton: {
     width: 26 * scaleX,
     height: 26 * scaleX,
@@ -338,6 +571,9 @@ const styles = StyleSheet.create({
   searchIcon: {
     width: 19 * scaleX,
     height: 19 * scaleX,
+    tintColor: colors.primary.main,
+  },
+  searchIconPM: {
     tintColor: colors.primary.main,
   },
   filterButton: {
@@ -351,6 +587,9 @@ const styles = StyleSheet.create({
   filterIcon: {
     width: 32 * scaleX, // Increased from 26px for better visibility
     height: 16 * scaleX, // Increased from 12px for better visibility (maintaining aspect ratio)
+    tintColor: colors.primary.main,
+  },
+  filterIconPM: {
     tintColor: colors.primary.main,
   },
   blurOverlayDarkener: {

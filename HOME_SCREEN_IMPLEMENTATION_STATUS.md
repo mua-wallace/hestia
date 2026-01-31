@@ -16,7 +16,6 @@
 
 **Features:**
 - ✅ 5 navigation tabs (Home, Rooms, Chat, Tickets, More)
-- ✅ Chat badge with notification count (shows "3")
 - ✅ Active/inactive states
 - ✅ Proper icon sizing and spacing
 - ✅ Touch feedback (activeOpacity)
@@ -158,7 +157,6 @@
 - [x] Count badges show correctly
 - [x] Priority badges appear when needed
 - [x] Bottom navigation renders
-- [x] Chat badge shows notification count
 
 ### Functional Testing:
 - [ ] AM/PM toggle switches state
@@ -321,7 +319,7 @@ import HomeScreen from './src/screens/HomeScreen';
 // - AM/PM toggle
 // - Search functionality
 // - 3 category cards with room statuses
-// - Bottom navigation with badge
+// - Bottom navigation
 
 // To customize data, modify:
 import { mockHomeData } from './src/data/mockHomeData';

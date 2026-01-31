@@ -48,6 +48,42 @@ export const ROOM_DETAIL_HEADER = {
     width: 54,
     height: 54,
   },
+  // Flagged state (Figma node 2333-646) - when user opens room detail from flagged card
+  flagged: {
+    headerBackground: '#FFEBEB',
+    roomNumberColor: '#F92424',
+    roomCodeColor: '#6C7D99',
+    backArrowTint: '#F92424',
+    pill: {
+      background: '#FFEBEB',
+      textAndIconTint: '#F92424',
+      borderRadius: 45,
+      flagIcon: { width: 24, height: 24 },
+      dropdownArrow: { width: 24.367, height: 25.434 },
+    },
+  },
+  // Paused state (Figma node 2333-132) - light header, black/dark text/icons, "Paused at" below
+  paused: {
+    headerBackground: '#FCF1CF',
+    roomNumberColor: '#334866',
+    roomCodeColor: '#6C7D99',
+    backArrowTint: '#6C7D99',
+    statusTextAndIconColor: '#000000',
+    pausedTimeColor: '#6C7D99',
+  },
+  // Return Later state - light header #FCF1CF, time only + remaining countdown
+  returnLater: {
+    headerBackground: '#FCF1CF',
+    backArrowTint: '#6C7D99',
+    roomNumberColor: '#334866',
+    roomCodeColor: '#6C7D99',
+    statusTextAndIconColor: '#000000',
+    returnTimeColor: '#6C7D99',
+  },
+  // Refuse Service / Promise Time - dark header (white text)
+  specialDark: {
+    headerBackground: '#202A2F',
+  },
 } as const;
 
 // Tab Navigation
@@ -102,7 +138,7 @@ export const GUEST_INFO = {
     fontSize: 15,
     fontWeight: 'bold' as const,
     color: '#000000',
-    left: 15, // calc(50%-205px) = 220 - 205 = 15px (from Figma: left-[calc(50%-205px)])
+    left: 20, // From Figma: left: calc(50%-205px) = 220-205 = 15px, but actual visual shows ~20px
     top: 303, // Absolute position from top of screen
   },
   divider: {
@@ -140,6 +176,18 @@ export const GUEST_INFO = {
       fontWeight: 'light' as const,
       color: '#334866',
     },
+    categoryBadge: {
+      // Pill-shaped badge positioned after number badge
+      left: 209, // Positioned after number badge (189) with ~20px spacing
+      top: 349, // Same as name
+      backgroundColor: '#41d541', // Green for Arrival
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 6,
+      fontSize: 12,
+      fontWeight: 'bold' as const,
+      color: '#ffffff',
+    },
     dates: {
       left: 79,
       top: 377,
@@ -164,7 +212,7 @@ export const GUEST_INFO = {
     },
     specialInstructions: {
       title: {
-        left: 20, // calc(50%-200px) = 220 - 200 = 20px
+        left: 20, // From Figma: left: calc(50%-200px) = 20px (consistent with Guest Info)
         top: 417,
         fontSize: 13,
         fontWeight: 'bold' as const,
@@ -201,6 +249,18 @@ export const GUEST_INFO = {
       fontWeight: 'light' as const,
       color: '#334866',
     },
+    categoryBadge: {
+      // Pill-shaped badge positioned after number badge
+      left: 177, // Positioned after number badge (157) with ~20px spacing
+      top: 542, // Same as name
+      backgroundColor: '#f92424', // Red for Departure
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 6,
+      fontSize: 12,
+      fontWeight: 'bold' as const,
+      color: '#ffffff',
+    },
     dates: {
       left: 78,
       top: 568,
@@ -226,43 +286,39 @@ export const GUEST_INFO = {
   },
 } as const;
 
-// Notes Section
+// Notes Section - Positioned after Lost and Found section
 export const NOTES_SECTION = {
   icon: {
-    // Center-align icon with badge vertically
-    // Badge center: 646 + 20.455/2 = 646 + 10.2275 = 656.2275
-    // Icon center should be: 656.2275
-    // Icon top: 656.2275 - 31.974/2 = 656.2275 - 15.987 = 640.24
-    left: 25, // From Figma visual inspection
-    top: 640.24, // Center-aligned with badge
+    left: 32, // From Figma: icon left position (Group464)
+    top: 1105, // From Figma: icon top position (inset calculation)
     width: 31.974,
     height: 31.974,
   },
   badge: {
-    left: 52, // Figma: left-[52px]
-    top: 646, // Figma: top-[646px] - exact match
+    left: 59, // From Figma: left: 59px (absolute position) - overlays on icon
+    top: 1109, // From Figma: top: 1109px (absolute position)
     fontSize: 15,
     fontWeight: 'light' as any,
     color: '#ffffff',
-    backgroundColor: '#f92424', // Red badge
+    backgroundColor: '#f92424', // Red badge (Ellipse7 in Figma)
     width: 20.455,
     height: 20.455,
     borderRadius: 10.2275,
   },
   badgeText: {
-    left: 58.55, // Figma: left-[58.55px]
-    top: 647.45, // Figma: top-[647.45px] - exact match
+    left: 65.55, // From Figma: left: 65.55px (centered in badge)
+    top: 1110.45, // From Figma: top: 1110.45px (centered in badge)
   },
   title: {
-    left: 83, // Figma: calc(50%-137px) = 220-137 = 83px (title starts after badge)
-    top: 647, // Updated from 652 to match Figma
+    left: 90, // From Figma: left: calc(50%-130px) = 220 - 130 = 90px (not 32px!)
+    top: 1110, // From Figma: top: 1110px (absolute position)
     fontSize: 18,
     fontWeight: 'bold' as const,
     color: '#000000',
   },
   addButton: {
-    left: 331,
-    top: 646,
+    left: 335, // From Figma: left: 335px (absolute position)
+    top: 1098, // From Figma: top: 1098px (absolute position)
     width: 74,
     height: 39,
     borderRadius: 41,
@@ -274,107 +330,138 @@ export const NOTES_SECTION = {
   },
   divider: {
     left: 0,
-    top: 1171,
+    top: 1075.09, // From Figma: divider after Lost & Found box (940 + 97 = 1037, but Figma shows no visible divider)
     width: 448,
     height: 1,
     color: '#c6c5c5',
   },
   note: {
     text: {
-      left: 29, // calc(50%-192px) = 220-192 = 28px, rounded to 29px
-      top: 706, // First note text from Figma
+      left: 27, // From Figma: calc(50%-185px) = 220-185 = 35px, but visually ~27px for left padding
+      top: 1169, // From Figma: first note text at top: 1169px (absolute position)
       fontSize: 13,
       fontWeight: 'light' as const,
       color: '#000000',
       width: 353,
     },
     profilePicture: {
-      left: 29,
-      top: 767, // First profile picture from Figma
+      left: 36, // From Figma: left: 36px (absolute position for profile picture)
+      top: 1230, // From Figma: top: 1230px (absolute position for first profile picture)
       width: 25,
       height: 25,
     },
     staffName: {
-      left: 63,
-      top: 772, // First staff name from Figma
+      left: 70, // From Figma: left: 70px (absolute position for staff name)
+      top: 1235, // From Figma: top: 1235px (absolute position for first staff name)
       fontSize: 11,
       fontWeight: 'regular' as const,
       color: '#000000',
     },
     note2: {
-      textTop: 808, // Second note text from Figma
-      profileTop: 869, // Second profile picture from Figma
-      staffNameTop: 874, // Second staff name from Figma
+      textTop: 1265, // Second note text (if any - from visual spacing)
+      profileTop: 1326, // Second profile picture (if any)
+      staffNameTop: 1331, // Second staff name (if any)
     },
   },
 } as const;
 
-// Lost and Found Section
+// Lost and Found Section - Positioned after Assigned/Task card
 export const LOST_AND_FOUND = {
   title: {
     left: 32,
-    top: 934,
+    top: 906, // From Figma: top: 906px (updated from 856.09px to match Figma exactly)
     fontSize: 15,
     fontWeight: 'bold' as const,
     color: '#000000',
   },
   box: {
-    left: 32,
-    top: 973,
-    width: 384,
-    height: 180,
-    borderRadius: 7,
+    left: 20, // From Figma: left: 20px (updated from 25px)
+    top: 940, // From Figma: top: 940px (updated from 895.09px)
+    width: 390,
+    height: 97,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#cbc7c7',
-    borderStyle: 'dashed' as const,
+    borderColor: 'rgba(90, 117, 157, 0.23)', // rgba(90, 117, 157, 0.23)
+    borderStyle: 'solid' as const, // Changed from dashed to solid
+    backgroundColor: '#F9FAFC',
   },
   icon: {
-    left: 160,
-    top: 31.02, // Relative to box
+    left: 42, // From Figma absolute position (updated for correct horizontal centering)
+    top: 960, // From Figma: absolute top: 960px (icon starts here)
     width: 53.176,
     height: 58.008,
   },
   plusIcon: {
-    left: 213,
-    top: 23, // Relative to box
+    left: 95, // From Figma: left: 95px (absolute position)
+    top: 952, // From Figma: absolute top position
     fontSize: 42,
     fontWeight: 'light' as const,
     color: '#5a759d',
   },
   addPhotosText: {
-    left: 160, // Centered in box
-    top: 99, // Relative to box
+    left: 51, // From Figma: calc(50%-51px) centered position for text
+    top: 970, // From Figma: absolute top position
     fontSize: 19,
     fontWeight: 'bold' as const,
     color: '#5a759d',
   },
 } as const;
 
-// Assigned to Section
+// Card container for Assigned to and Task sections
+export const ASSIGNED_TASK_CARD = {
+  left: 20, // From Figma: left: 20px (updated from 25px to match Figma exactly)
+  top: 674, // From Figma: top: 674px (updated from 650px to match Figma exactly)
+  width: 390, // Card width from Figma
+  height: 206.09, // From Figma: height: 206.09px (reverted to original Figma value)
+  borderRadius: 9,
+  backgroundColor: '#f9fafc',
+  borderWidth: 1,
+  borderColor: '#e3e3e3',
+  paddingHorizontal: 16, // Padding inside card
+  paddingVertical: 16, // Padding inside card
+  divider: {
+    // Divider between Assigned to and Task sections
+    // Positioned with equal left and right padding matching card padding
+    left: 0, // Relative to card content area (starts at content area edge)
+    top: 80, // Reduced from 90px to bring divider closer to Assigned to section
+    width: 358, // Full width minus padding (390 - 16*2 = 358) - ensures equal left and right padding
+    height: 1,
+    backgroundColor: '#e3e3e3', // Same as card border color
+  },
+} as const;
+
+// Assigned to Section - Title is outside card, content is inside card
 export const ASSIGNED_TO = {
   title: {
-    left: 32, // calc(50%-192px) ≈ 32px
-    top: 1190,
+    left: 32, // From Figma: left: calc(50%-193px) = 32px (absolute position from screen left)
+    top: 644, // From Figma: top: 644px (updated from 630px to match Figma exactly)
     fontSize: 15,
     fontWeight: 'bold' as const,
     color: '#000000',
   },
   profilePicture: {
-    left: 31,
-    top: 1239,
+    left: 15, // Relative to card content area (31 - 16 = 15)
+    top: 17, // Relative to card content area top (33 - 16 padding = 17px)
     width: 35,
     height: 35,
   },
   staffName: {
-    left: 85,
-    top: 1240,
+    left: 69, // Relative to card content area (85 - 16 = 69)
+    top: 18, // Relative to card content area top (aligned with profile picture top)
     fontSize: 13,
     fontWeight: 'bold' as const,
     color: '#1e1e1e',
   },
+  department: {
+    left: 69, // Same as staffName
+    top: 34, // Below staff name (18 + 13 + 3 spacing = 34)
+    fontSize: 11,
+    fontWeight: 'light' as const,
+    color: '#5a759d', // Lighter grey color
+  },
   reassignButton: {
-    left: 291,
-    top: 1231,
+    left: 236, // Relative to card content area (390 - 16 - 122 - 16 = 236px from content area left)
+    top: 9, // Relative to card content area top (25 - 16 padding = 9px)
     width: 122,
     height: 49,
     borderRadius: 41,
@@ -382,6 +469,37 @@ export const ASSIGNED_TO = {
     fontSize: 18,
     fontWeight: 'regular' as const,
     color: '#5a759d',
+  },
+} as const;
+
+// Task Section - Inside card container, positioned below Assigned to
+// Based on Figma design: Task text and Add button are horizontally aligned within the card
+export const TASK_SECTION = {
+  title: {
+    left: 36, // From Figma: absolute left: 36px (will be used as relative to card)
+    top: 777, // From Figma: absolute top: 777px (will be converted to relative to card)
+    fontSize: 14, // From Figma: text-[14px] (updated from 15px)
+    fontWeight: 'bold' as const,
+    color: '#000000',
+  },
+  addButton: {
+    left: 335, // From Figma: absolute left: 335px (will be converted to relative to card)
+    top: 1098, // From Figma: absolute top: 1098px (note: this is for Notes section, Task button at 761px)
+    width: 74,
+    height: 39,
+    borderRadius: 41,
+    borderWidth: 1,
+    borderColor: '#000000',
+    fontSize: 14,
+    fontWeight: 'light' as const,
+    color: '#000000',
+  },
+  // Add button for Task section specifically
+  taskAddButton: {
+    left: 311, // From Figma: left: 311px (absolute position)
+    top: 761, // From Figma: top: 761px (absolute position for Task Add button)
+    width: 74,
+    height: 39,
   },
 } as const;
 
@@ -395,3 +513,129 @@ export const URGENT_BADGE = {
   backgroundColor: '#f92424', // Red
 } as const;
 
+// Stayover/Turndown Specific Constants
+// These room types have smaller card height (183px vs 206.09px)
+// and display actual lost & found items instead of empty box
+export const STAYOVER_TURNDOWN = {
+  cardHeight: 183, // Smaller card height for Stayover/Turndown
+  lostAndFoundItem: {
+    image: {
+      width: 76,
+      height: 80,
+      borderRadius: 10,
+    },
+    name: {
+      fontSize: 19,
+      fontWeight: 'bold' as const,
+      color: '#5a759d',
+    },
+    description: {
+      fontSize: 11,
+      fontWeight: 'light' as const,
+      color: '#000000',
+    },
+    status: {
+      fontSize: 12,
+      fontWeight: 'bold' as const,
+      color: '#ffffff',
+    },
+    location: {
+      fontSize: 12,
+      fontWeight: 'regular' as const,
+      color: '#000000',
+    },
+  },
+} as const;
+
+// History Section
+export const HISTORY_SECTION = {
+  container: {
+    paddingTop: 20 * scaleX,
+    paddingHorizontal: 20 * scaleX,
+    paddingBottom: 40 * scaleX,
+  },
+  downloadButton: {
+    width: 179 * scaleX,
+    height: 49 * scaleX,
+    borderRadius: 41 * scaleX,
+    backgroundColor: '#F1F6FC',
+    marginBottom: 24 * scaleX,
+    alignItems: 'center', // Center content inside button
+  },
+  downloadButtonText: {
+    fontSize: 14 * scaleX,
+    fontWeight: 'regular' as const,
+    color: '#000000',
+  },
+  dateSeparator: {
+    marginTop: 24 * scaleX,
+    marginBottom: 16 * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateLabel: {
+    fontSize: 14 * scaleX,
+    fontWeight: 'bold' as const,
+    color: '#1e1e1e',
+    paddingHorizontal: 12 * scaleX,
+  },
+  dateLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E0E0E0',
+  },
+  timelineContainer: {
+    position: 'relative',
+    paddingLeft: 20 * scaleX, // Space for timeline connector
+  },
+  timelineConnector: {
+    position: 'absolute',
+    left: 12 * scaleX, // Center of avatar circle (24px / 2)
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: '#5a759d', // Blue color
+  },
+  eventItem: {
+    flexDirection: 'row',
+    marginBottom: 20 * scaleX,
+    position: 'relative',
+  },
+  avatarContainer: {
+    width: 24 * scaleX,
+    height: 24 * scaleX,
+    borderRadius: 12 * scaleX,
+    marginRight: 12 * scaleX,
+    overflow: 'hidden',
+  },
+  avatar: {
+    width: '100%',
+    height: '100%',
+  },
+  initialsCircle: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  initialsText: {
+    fontSize: 12 * scaleX,
+    fontWeight: 'bold' as const,
+    color: '#ffffff',
+  },
+  eventContent: {
+    flex: 1,
+  },
+  eventDescription: {
+    fontSize: 14 * scaleX,
+    fontWeight: 'regular' as const,
+    color: '#000000',
+    marginBottom: 4 * scaleX,
+  },
+  eventTimestamp: {
+    fontSize: 12 * scaleX,
+    fontWeight: 'light' as const,
+    color: '#999999',
+  },
+} as const;

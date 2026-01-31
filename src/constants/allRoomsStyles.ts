@@ -125,6 +125,10 @@ export const GUEST_INFO = {
     left: 17, // Room 202 (Departure): icon at x=24 from screen, x=24-7=17px from card
     top: 93, // Room 202: icon at y=656 from screen, y=656-563=93px from card
   },
+  iconStandardArrival: {
+    left: 17, // Room 204/301 (Arrival): icon should align with name row, similar to Departure positioning
+    top: 87, // Room 204: name at top: 87px, icon should align with name
+  },
   iconWithNotes: {
     left: 14, // Room 203 (with notes): icon at x=21 from screen, card at x=7, so 21-7=14px from card
     top: 89, // Room 203: icon at y=860 from screen, card at y=771, so 860-771=89px from card
@@ -134,7 +138,7 @@ export const GUEST_INFO = {
     fontSize: 14,
     fontWeight: 'bold' as const,
     color: '#000000',
-    lineHeight: 10, // Figma shows h-[10px]
+    lineHeight: 18, // Increased from 10px to 18px to prevent text clipping (font size 14px needs at least 18px line height)
     top: 87, // Room 201 first guest: top-[87px]
   },
   nameSecond: {
@@ -174,7 +178,7 @@ export const GUEST_INFO = {
     fontSize: 14,
     fontWeight: 'regular' as const,
     color: '#000000',
-    lineHeight: 11, // Figma shows h-[11px]
+    lineHeight: 18, // Increased from 11px to 18px to prevent text clipping (font size 14px needs at least 18px line height)
     positions: {
       priorityFirst: { left: 75, top: 130 }, // Room 201 first guest: left-[75px] top-[130px] ETA: 17:00 (exact from Figma)
       prioritySecond: { left: 73, top: 204 }, // Room 201 second guest: left-[73px] top-[204px] EDT: 12:00 (exact from Figma)
@@ -188,7 +192,7 @@ export const GUEST_INFO = {
     fontSize: 14,
     fontWeight: 'light' as const,
     color: '#000000',
-    lineHeight: 13, // Figma shows h-[13px]
+    lineHeight: 18, // Increased from 13px to 18px to prevent text clipping (font size 14px needs at least 18px line height)
     icon: {
       width: 13, // Person icon size for guest count
       height: 12,
@@ -318,6 +322,8 @@ export const STATUS_BUTTON = {
     height: 14,
     right: 12, // Relative to button
   },
+  // Gap between left icon and dropdown (matches Room Detail status indicator: 8px)
+  iconGap: 8,
   colors: {
     dirty: '#f92424',
     inProgress: '#ffc107',
@@ -330,6 +336,14 @@ export const STATUS_BUTTON = {
     departure: { left: 262, top: 81 }, // Room 202
     arrivalWithNotes: { left: 256, top: 74 }, // Room 203
     standard: { left: 270, top: 87 }, // Room 204/205
+  },
+  // Flagged state: same position/size/margins as status button; only background, borderRadius and icons differ
+  flagged: {
+    borderRadius: 45,
+    background: '#FFEBEB',
+    iconTint: '#F92424',
+    flagIcon: { width: 24, height: 24 },
+    dropdownArrow: { width: 12, height: 32 },
   },
 } as const;
 

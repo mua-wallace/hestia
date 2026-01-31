@@ -11,6 +11,7 @@ import StaffScreen from '../screens/StaffScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import AllRoomsScreen from '../screens/AllRoomsScreen';
 import ArrivalDepartureDetailScreen from '../screens/ArrivalDepartureDetailScreen';
+import RoomDetailScreen from '../screens/RoomDetailScreen';
 import CreateTicketScreen from '../screens/CreateTicketScreen';
 import CreateTicketFormScreen from '../screens/CreateTicketFormScreen';
 import ChatDetailScreen from '../screens/ChatDetailScreen';
@@ -94,6 +95,15 @@ export default function AppNavigator() {
         component={AllRoomsScreen}
         options={{
           animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="RoomDetail" 
+        component={RoomDetailScreen}
+        options={{
+          animation: 'slide_from_right',
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
         }}
       />
       <Stack.Screen 

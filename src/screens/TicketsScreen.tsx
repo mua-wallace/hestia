@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -12,6 +12,7 @@ import TicketsTabs from '../components/tickets/TicketsTabs';
 import TicketCard from '../components/tickets/TicketCard';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockTicketsData } from '../data/mockTicketsData';
+import { mockChatData } from '../data/mockChatData';
 import { MoreMenuItemId } from '../types/more.types';
 import { TicketTab, TicketData } from '../types/tickets.types';
 import {
@@ -39,23 +40,39 @@ type StackNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 export default function TicketsScreen() {
   const navigation = useNavigation<TicketsScreenNavigationProp>();
   const stackNavigation = useNavigation<StackNavigationProp>();
+  const route = useRoute();
   const [activeTab, setActiveTab] = useState('Tickets');
   const [showMorePopup, setShowMorePopup] = useState(false);
   const [selectedTab, setSelectedTab] = useState<TicketTab>('myTickets');
   const [tickets] = useState<TicketData[]>(mockTicketsData.tickets);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Sync activeTab with current route
+  useFocusEffect(
+    React.useCallback(() => {
+      const routeName = route.name as string;
+      if (routeName === 'Home' || routeName === 'Rooms' || routeName === 'Chat' || routeName === 'Tickets') {
+        setActiveTab(routeName);
+      }
+    }, [route.name])
+  );
+
+  // Calculate total unread chat messages for badge
+  const chatBadgeCount = React.useMemo(() => {
+    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
+  }, []);
+
   const handleTabPress = (tab: string) => {
-    setActiveTab(tab);
+    setActiveTab(tab); // Update immediately
     setShowMorePopup(false);
     if (tab === 'Home') {
-      navigation.navigate('Home');
+      navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
-      navigation.navigate('Rooms');
+      navigation.navigate('Rooms' as any);
     } else if (tab === 'Chat') {
-      navigation.navigate('Chat');
+      navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
-      navigation.navigate('Tickets');
+      navigation.navigate('Tickets' as any);
     }
   };
 
@@ -179,7 +196,7 @@ export default function TicketsScreen() {
         activeTab={activeTab}
         onTabPress={handleTabPress}
         onMorePress={handleMorePress}
-        chatBadgeCount={mockHomeData.notifications.chat}
+        chatBadgeCount={chatBadgeCount}
       />
 
       {/* More Popup */}

@@ -10,6 +10,7 @@ interface AssignedToSectionProps {
     avatar?: any;
     initials?: string;
     avatarColor?: string;
+    department?: string; // Department/role (e.g., "HSK")
   };
   onReassignPress?: () => void;
 }
@@ -30,28 +31,35 @@ export default function AssignedToSection({
 
   return (
     <View style={styles.container}>
-      {/* Section Title */}
-      <Text style={styles.title}>Assigned to</Text>
-
-      {/* Staff Info - Avatar or Initials */}
-      {staff.avatar ? (
-        <Image
-          key={staff.id} // Force re-render when staff changes
-          source={staff.avatar}
-          style={styles.profilePicture}
-          resizeMode="cover"
-        />
-      ) : (
-        <View 
-          key={staff.id} // Force re-render when staff changes
-          style={[styles.initialsCircle, { backgroundColor: staff.avatarColor || getInitialColor(staff.name) }]}
-        >
-          <Text style={styles.initialsText}>{initial}</Text>
+      {/* Left Column: Profile Picture, Name, Department */}
+      <View style={styles.leftColumn}>
+        {/* Staff Info - Avatar or Initials */}
+        {staff.avatar ? (
+          <Image
+            key={staff.id} // Force re-render when staff changes
+            source={staff.avatar}
+            style={styles.profilePicture}
+            resizeMode="cover"
+          />
+        ) : (
+          <View 
+            key={staff.id} // Force re-render when staff changes
+            style={[styles.initialsCircle, { backgroundColor: staff.avatarColor || getInitialColor(staff.name) }]}
+          >
+            <Text style={styles.initialsText}>{initial}</Text>
+          </View>
+        )}
+        {/* Name and Department Column */}
+        <View style={styles.nameColumn}>
+          <Text style={styles.staffName}>{staff.name}</Text>
+          {/* Department/Role - show if available */}
+          {staff.department && (
+            <Text style={styles.department}>{staff.department}</Text>
+          )}
         </View>
-      )}
-      <Text style={styles.staffName}>{staff.name}</Text>
+      </View>
 
-      {/* Reassign Button */}
+      {/* Right Column: Reassign Button */}
       <TouchableOpacity
         style={styles.reassignButton}
         onPress={onReassignPress}
@@ -65,41 +73,48 @@ export default function AssignedToSection({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
-    width: '100%',
-    minHeight: (1280 - 1190 + 50) * scaleX, // From Assigned to start (1190) to button end (~1280) + padding = 90px + 50px
-    marginTop: (1190 - 1171) * scaleX, // Position after divider (1171px): 1190 - 1171 = 19px
-  },
-  title: {
     position: 'absolute',
-    left: ASSIGNED_TO.title.left * scaleX,
-    top: 0, // At top of container
-    fontSize: ASSIGNED_TO.title.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold as any,
-    color: ASSIGNED_TO.title.color,
+    top: 0, // Start at top of card content area
+    left: 0,
+    width: '100%',
+    height: 80 * scaleX, // Height up to divider (80px from card content top per Figma)
+    zIndex: 1, // Below divider, above Task section
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    overflow: 'hidden', // Ensure content doesn't extend beyond container
+  },
+  leftColumn: {
+    flexDirection: 'row', // Change to row to position name next to picture
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    marginTop: ASSIGNED_TO.profilePicture.top * scaleX,
   },
   profilePicture: {
-    position: 'absolute',
-    left: ASSIGNED_TO.profilePicture.left * scaleX,
-    top: (ASSIGNED_TO.profilePicture.top - ASSIGNED_TO.title.top) * scaleX, // Relative to title (49px below title)
     width: ASSIGNED_TO.profilePicture.width * scaleX,
     height: ASSIGNED_TO.profilePicture.height * scaleX,
     borderRadius: (ASSIGNED_TO.profilePicture.width / 2) * scaleX,
+    marginLeft: ASSIGNED_TO.profilePicture.left * scaleX,
+    marginRight: (ASSIGNED_TO.staffName.left - ASSIGNED_TO.profilePicture.left - ASSIGNED_TO.profilePicture.width) * scaleX, // Space between picture and name
   },
   staffName: {
-    position: 'absolute',
-    left: ASSIGNED_TO.staffName.left * scaleX,
-    top: (ASSIGNED_TO.staffName.top - ASSIGNED_TO.title.top) * scaleX, // Relative to title (50px below title)
     fontSize: ASSIGNED_TO.staffName.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: ASSIGNED_TO.staffName.color,
+    marginTop: (ASSIGNED_TO.staffName.top - ASSIGNED_TO.profilePicture.top) * scaleX, // Align with picture top (18 - 17 = 1px)
+  },
+  department: {
+    fontSize: ASSIGNED_TO.department.fontSize * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.light as any,
+    color: ASSIGNED_TO.department.color,
+    marginTop: (ASSIGNED_TO.department.top - ASSIGNED_TO.staffName.top - ASSIGNED_TO.staffName.fontSize) * scaleX, // Space between name and department (34 - 18 - 13 = 3px)
   },
   reassignButton: {
     position: 'absolute',
-    left: ASSIGNED_TO.reassignButton.left * scaleX,
-    top: (ASSIGNED_TO.reassignButton.top - ASSIGNED_TO.title.top) * scaleX, // Relative to title (41px below title)
+    right: 16 * scaleX, // 16px padding from card edge
+    top: ASSIGNED_TO.reassignButton.top * scaleX, // Relative to card content area
     width: ASSIGNED_TO.reassignButton.width * scaleX,
     height: ASSIGNED_TO.reassignButton.height * scaleX,
     borderRadius: ASSIGNED_TO.reassignButton.borderRadius * scaleX,
@@ -113,15 +128,19 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.regular as any,
     color: ASSIGNED_TO.reassignButton.color,
   },
+  nameColumn: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+  },
   initialsCircle: {
-    position: 'absolute',
-    left: ASSIGNED_TO.profilePicture.left * scaleX,
-    top: (ASSIGNED_TO.profilePicture.top - ASSIGNED_TO.title.top) * scaleX,
     width: ASSIGNED_TO.profilePicture.width * scaleX,
     height: ASSIGNED_TO.profilePicture.height * scaleX,
     borderRadius: (ASSIGNED_TO.profilePicture.width / 2) * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: ASSIGNED_TO.profilePicture.left * scaleX,
+    marginRight: (ASSIGNED_TO.staffName.left - ASSIGNED_TO.profilePicture.left - ASSIGNED_TO.profilePicture.width) * scaleX, // Space between picture and name
   },
   initialsText: {
     fontSize: 16 * scaleX,

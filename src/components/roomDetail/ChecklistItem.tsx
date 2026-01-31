@@ -46,10 +46,10 @@ export default function ChecklistItem({
           style={styles.itemImage}
           resizeMode="contain"
         />
-        {/* Initial Stock Badge (for mini bar items) */}
-        {item.initialStock !== undefined && (
+        {/* Quantity Badge - show for all products when quantity is 1 or above */}
+        {item.quantity >= 1 && (
           <View style={styles.initialStockBadge}>
-            <Text style={styles.initialStockText}>{item.initialStock}</Text>
+            <Text style={styles.initialStockText}>{item.quantity}</Text>
           </View>
         )}
       </View>
@@ -85,6 +85,10 @@ export default function ChecklistItem({
           onChangeText={handleQuantityInput}
           keyboardType="numeric"
           selectTextOnFocus
+          scrollEnabled={false}
+          editable={true}
+          multiline={false}
+          numberOfLines={1}
         />
 
         <TouchableOpacity
@@ -200,14 +204,22 @@ const styles = StyleSheet.create({
     color: '#999999',
   },
   quantityInput: {
-    width: 40 * scaleX,
-    height: 32 * scaleX,
+    width: 50 * scaleX,
+    height: 36 * scaleX, // Increased height to ensure text is fully visible
     textAlign: 'center',
     fontSize: 14 * scaleX,
+    lineHeight: 18 * scaleX, // Add line height for proper text display
     fontFamily: typography.fontFamily.primary,
     fontWeight: 'regular' as any,
     color: '#000000',
     backgroundColor: '#ffffff',
+    paddingHorizontal: 4 * scaleX,
+    paddingVertical: 0, // Remove vertical padding to allow proper centering
+    paddingTop: 0,
+    paddingBottom: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    overflow: 'hidden',
     // No border as per Figma design
     marginHorizontal: 1 * scaleX,
   },

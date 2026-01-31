@@ -1,24 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
-import { typography } from '../../theme';
-import { scaleX, ROOM_DETAIL_HEADER, ASSIGNED_TO } from '../../constants/roomDetailStyles';
-import { PROMISE_TIME_MODAL } from '../../constants/promiseTimeModalStyles';
-import { ShiftType } from '../../types/home.types';
-import AMPMToggle from '../home/AMPMToggle';
-import PromiseTimePickerContainer from './PromiseTimePickerContainer';
-import DatePickerContainer from './DatePickerContainer';
+import React, { useState, useEffect, useRef } from 'react';
+import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { RETURN_LATER_MODAL } from '../../constants/returnLaterModalStyles';
+import TimeSuggestionButton from './TimeSuggestionButton';
+
+const TIME_SUGGESTIONS = ['10 mins', '20 mins', '30 mins', '1 Hour'];
+const MIN_MINUTES_FROM_NOW = 5;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const scaleX = SCREEN_WIDTH / 430;
+
+function getMinAllowedTime() {
+  const now = new Date();
+  const min = new Date(now.getTime() + MIN_MINUTES_FROM_NOW * 60 * 1000);
+  const hour24 = min.getHours();
+  const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+  return {
+    date: new Date(min.getFullYear(), min.getMonth(), min.getDate()),
+    hour12,
+    minute: min.getMinutes(),
+    period: (hour24 >= 12 ? 'PM' : 'AM') as 'AM' | 'PM',
+  };
+}
 
 interface PromiseTimeModalProps {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (date: Date, time: string, period: 'AM' | 'PM') => void;
+  onConfirm: (promiseTime: string, period: 'AM' | 'PM', formattedDateTime?: string, promiseAtTimestamp?: number) => void;
   roomNumber?: string;
-  assignedTo?: {
-    id: string;
-    name: string;
-    avatar?: any;
-  };
-  onReassignPress?: () => void;
 }
 
 export default function PromiseTimeModal({
@@ -26,47 +33,253 @@ export default function PromiseTimeModal({
   onClose,
   onConfirm,
   roomNumber,
-  assignedTo,
-  onReassignPress,
 }: PromiseTimeModalProps) {
-  // Get current date and time
-  const getCurrentDateTime = () => {
-    const now = new Date();
-    const hour24 = now.getHours();
-    const minute = now.getMinutes();
-    const period: ShiftType = hour24 >= 12 ? 'PM' : 'AM';
-    return { date: now, hour24, minute, period };
-  };
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [selectedHour, setSelectedHour] = useState(() => 12);
+  const [selectedMinute, setSelectedMinute] = useState(() => 0);
+  const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>('AM');
+  const [selectedSuggestion, setSelectedSuggestion] = useState<string | null>(null);
 
-  const currentDateTime = getCurrentDateTime();
-  
-  const [selectedDate, setSelectedDate] = useState<Date>(currentDateTime.date);
-  const [selectedHour, setSelectedHour] = useState(currentDateTime.hour24);
-  const [selectedMinute, setSelectedMinute] = useState(currentDateTime.minute);
-  const [selectedPeriod, setSelectedPeriod] = useState<ShiftType>(currentDateTime.period);
+  const dateScrollRef = useRef<ScrollView>(null);
+  const hourScrollRef = useRef<ScrollView>(null);
+  const minuteScrollRef = useRef<ScrollView>(null);
+  const periodScrollRef = useRef<ScrollView>(null);
 
-  // Update to current date/time when modal opens
+  const ITEM_HEIGHT = RETURN_LATER_MODAL.timePicker.itemHeight * scaleX;
+
   useEffect(() => {
     if (visible) {
-      const { date, hour24, minute, period } = getCurrentDateTime();
-      setSelectedDate(date);
-      setSelectedHour(hour24);
-      setSelectedMinute(minute);
-      setSelectedPeriod(period);
+      const min = getMinAllowedTime();
+      setSelectedDate(min.date);
+      setSelectedHour(min.hour12);
+      setSelectedMinute(min.minute);
+      setSelectedPeriod(min.period);
+      setTimeout(() => {
+        dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: false });
+        hourScrollRef.current?.scrollTo({ y: (min.hour12 - 1) * ITEM_HEIGHT, animated: false });
+        minuteScrollRef.current?.scrollTo({ y: min.minute * ITEM_HEIGHT, animated: false });
+        periodScrollRef.current?.scrollTo({ y: (min.period === 'AM' ? 0 : 1) * ITEM_HEIGHT, animated: false });
+      }, 100);
     }
   }, [visible]);
 
-  const handleConfirm = () => {
-    const hour12 = selectedHour === 0 ? 12 : selectedHour > 12 ? selectedHour - 12 : selectedHour;
-    const timeString = `${hour12.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')} ${selectedPeriod}`;
-    onConfirm(selectedDate, timeString, selectedPeriod);
+  const getDayName = (date: Date) => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return days[date.getDay()];
+  };
+
+  // Check if we're at the current date
+  const isCurrentDate = () => {
+    const now = new Date();
+    const selected = new Date(selectedDate);
+    return now.toDateString() === selected.toDateString();
+  };
+
+  const isAtLeast5MinFromNow = (date: Date, hour: number, minute: number, period: 'AM' | 'PM') => {
+    const check = new Date(date);
+    const hour24 = period === 'PM' ? (hour === 12 ? 12 : hour + 12) : (hour === 12 ? 0 : hour);
+    check.setHours(hour24, minute, 0, 0);
+    const minAllowed = Date.now() + MIN_MINUTES_FROM_NOW * 60 * 1000;
+    return check.getTime() >= minAllowed;
+  };
+
+  const handleSuggestionPress = (suggestion: string) => {
+    setSelectedSuggestion(suggestion);
+    let minutesToAdd = suggestion === '1 Hour' ? 60 : parseInt(suggestion.replace(' mins', ''), 10);
+    const currentDate = new Date(selectedDate);
+    const hour24 = selectedPeriod === 'PM' ? (selectedHour === 12 ? 12 : selectedHour + 12) : (selectedHour === 12 ? 0 : selectedHour);
+    currentDate.setHours(hour24, selectedMinute, 0, 0);
+    const newTime = new Date(currentDate.getTime() + minutesToAdd * 60 * 1000);
+    const newHour24 = newTime.getHours();
+    const newMinute = newTime.getMinutes();
+    const newPeriod: 'AM' | 'PM' = newHour24 >= 12 ? 'PM' : 'AM';
+    const newHour12 = newHour24 === 0 ? 12 : newHour24 > 12 ? newHour24 - 12 : newHour24;
+    const newDate = new Date(newTime.getFullYear(), newTime.getMonth(), newTime.getDate());
+    setSelectedDate(newDate);
+    setSelectedHour(newHour12);
+    setSelectedMinute(newMinute);
+    setSelectedPeriod(newPeriod);
+    setTimeout(() => {
+      dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: true });
+      hourScrollRef.current?.scrollTo({ y: (newHour12 - 1) * ITEM_HEIGHT, animated: true });
+      minuteScrollRef.current?.scrollTo({ y: newMinute * ITEM_HEIGHT, animated: true });
+      periodScrollRef.current?.scrollTo({ y: (newPeriod === 'AM' ? 0 : 1) * ITEM_HEIGHT, animated: true });
+    }, 100);
+  };
+
+  // Handle scroll events
+  const handleDateScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    // Index 6 is the center (selected date), calculate the actual date relative to current selectedDate
+    const date = new Date(selectedDate);
+    date.setDate(selectedDate.getDate() + index - 6);
     
-    // Reset state to current date/time
-    const { date, hour24, minute, period } = getCurrentDateTime();
-    setSelectedDate(date);
-    setSelectedHour(hour24);
-    setSelectedMinute(minute);
-    setSelectedPeriod(period);
+    // Check if date is in the past
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    const isPast = checkDate.getTime() < now.getTime();
+    
+    // Only update if the date actually changed and is not in the past
+    if (date.toDateString() !== selectedDate.toDateString() && !isPast) {
+      setSelectedDate(date);
+    }
+  };
+  
+  const handleDateScrollEnd = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    // Ensure we're at index 6 (center) and update selectedDate
+    const date = new Date(selectedDate);
+    date.setDate(selectedDate.getDate() + index - 6);
+    
+    // Check if date is in the past
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    const isPast = checkDate.getTime() < now.getTime();
+    
+    if (!isPast) {
+      setSelectedDate(date);
+      // Scroll to center to ensure selected date is always between dividers
+      dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: true });
+    } else {
+      // If scrolled to past date, scroll back to current date
+      const currentDate = new Date();
+      const selected = new Date(selectedDate);
+      const daysDiff = Math.floor((currentDate.getTime() - selected.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff !== 0) {
+        setSelectedDate(currentDate);
+        dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: true });
+      }
+    }
+  };
+
+  const handleHourScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const hour = index + 1;
+    if (hour >= 1 && hour <= 12) {
+      setSelectedHour(hour);
+    }
+  };
+
+  const handleHourScrollEnd = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const hour = index + 1;
+    if (hour >= 1 && hour <= 12) {
+      // Check if this hour is in the past (only when on current date)
+      let isPast = false;
+      if (isCurrentDate()) {
+        const now = new Date();
+        const currentHour24 = now.getHours();
+        const currentHour12 = currentHour24 === 0 ? 12 : currentHour24 > 12 ? currentHour24 - 12 : currentHour24;
+        const currentPeriod = currentHour24 >= 12 ? 'PM' : 'AM';
+        
+        if (selectedPeriod === currentPeriod) {
+          isPast = hour < currentHour12;
+        } else if (selectedPeriod === 'AM' && currentPeriod === 'PM') {
+          isPast = true;
+        }
+      }
+      
+      if (!isPast) {
+        setSelectedHour(hour);
+        hourScrollRef.current?.scrollTo({ y: (hour - 1) * ITEM_HEIGHT, animated: true });
+      } else {
+        // Scroll back to current hour
+        const now = new Date();
+        const currentHour24 = now.getHours();
+        const currentHour12 = currentHour24 === 0 ? 12 : currentHour24 > 12 ? currentHour24 - 12 : currentHour24;
+        setSelectedHour(currentHour12);
+        hourScrollRef.current?.scrollTo({ y: (currentHour12 - 1) * ITEM_HEIGHT, animated: true });
+      }
+    }
+  };
+
+  const handleMinuteScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const minute = Math.round(offsetY / ITEM_HEIGHT);
+    if (minute >= 0 && minute <= 59) {
+      setSelectedMinute(minute);
+    }
+  };
+
+  const handleMinuteScrollEnd = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const minute = Math.round(offsetY / ITEM_HEIGHT);
+    if (minute >= 0 && minute <= 59) {
+      if (!isAtLeast5MinFromNow(selectedDate, selectedHour, minute, selectedPeriod)) {
+        const min = getMinAllowedTime();
+        setSelectedDate(min.date);
+        setSelectedHour(min.hour12);
+        setSelectedMinute(min.minute);
+        setSelectedPeriod(min.period);
+        setTimeout(() => {
+          minuteScrollRef.current?.scrollTo({ y: min.minute * ITEM_HEIGHT, animated: true });
+          hourScrollRef.current?.scrollTo({ y: (min.hour12 - 1) * ITEM_HEIGHT, animated: true });
+          periodScrollRef.current?.scrollTo({ y: (min.period === 'AM' ? 0 : 1) * ITEM_HEIGHT, animated: true });
+        }, 50);
+      } else {
+        setSelectedMinute(minute);
+        minuteScrollRef.current?.scrollTo({ y: minute * ITEM_HEIGHT, animated: true });
+      }
+    }
+  };
+
+  const handlePeriodScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    setSelectedPeriod(index === 0 ? 'AM' : 'PM');
+  };
+
+  const handlePeriodScrollEnd = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const period = index === 0 ? 'AM' : 'PM';
+    
+    // Check if AM is in the past (only when on current date and we're in PM)
+    let isPast = false;
+    if (isCurrentDate() && period === 'AM') {
+      const now = new Date();
+      const currentPeriod = now.getHours() >= 12 ? 'PM' : 'AM';
+      if (currentPeriod === 'PM') {
+        isPast = true;
+      }
+    }
+    
+    if (!isPast) {
+      setSelectedPeriod(period);
+      periodScrollRef.current?.scrollTo({ y: index * ITEM_HEIGHT, animated: true });
+    } else {
+      // Scroll back to current period
+      const now = new Date();
+      const currentPeriod = now.getHours() >= 12 ? 'PM' : 'AM';
+      setSelectedPeriod(currentPeriod);
+      const periodIndex = currentPeriod === 'AM' ? 0 : 1;
+      periodScrollRef.current?.scrollTo({ y: periodIndex * ITEM_HEIGHT, animated: true });
+    }
+  };
+
+  const handleConfirm = () => {
+    if (!isAtLeast5MinFromNow(selectedDate, selectedHour, selectedMinute, selectedPeriod)) {
+      Alert.alert(
+        'Invalid time',
+        `Promise time must be at least ${MIN_MINUTES_FROM_NOW} minutes from now.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    const timeString = `${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')} ${selectedPeriod}`;
+    const formattedDateTime = `${selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${timeString}`;
+    const promiseAt = new Date(selectedDate);
+    const hour24 = selectedPeriod === 'PM' ? (selectedHour === 12 ? 12 : selectedHour + 12) : (selectedHour === 12 ? 0 : selectedHour);
+    promiseAt.setHours(hour24, selectedMinute, 0, 0);
+    onConfirm(timeString, selectedPeriod, formattedDateTime, promiseAt.getTime());
   };
 
   return (
@@ -77,101 +290,268 @@ export default function PromiseTimeModal({
       onRequestClose={onClose}
     >
       <View style={styles.container}>
-        {/* Modal Overlay - Full screen white background starting after header */}
+        {/* Modal Overlay - White background */}
         <View style={styles.modalOverlay}>
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {/* Title */}
+            {/* Title - Figma 1121-825 */}
             <Text style={styles.title}>Promise time</Text>
-
-            {/* Instruction */}
-            <Text style={styles.instruction}>
-              Add time for when the room will be ready
-            </Text>
 
             {/* Divider */}
             <View style={styles.divider} />
 
-            {/* Date and Time Labels */}
-            <View style={styles.labelsContainer}>
-              <Text style={styles.dateLabel}>Date</Text>
-              <Text style={styles.timeLabel}>Time</Text>
+            {/* Suggestions */}
+            <Text style={styles.suggestionsLabel}>Suggestions</Text>
+            <View style={styles.suggestionsButtons}>
+              {TIME_SUGGESTIONS.map((suggestion) => (
+                <TimeSuggestionButton
+                  key={suggestion}
+                  label={suggestion}
+                  isSelected={selectedSuggestion === suggestion}
+                  onPress={() => handleSuggestionPress(suggestion)}
+                />
+              ))}
             </View>
 
-            {/* AM/PM Toggle */}
-            <View style={styles.toggleContainer}>
-              <AMPMToggle
-                selected={selectedPeriod}
-                onToggle={(period: ShiftType) => setSelectedPeriod(period)}
-              />
-            </View>
+            {/* Date & Time Picker - 4 columns (Figma) */}
+            <View style={styles.dateTimePickerWrapper}>
+              <View style={styles.wheelPickerContainer}>
+                {/* Selection Dividers */}
+                <View style={styles.selectionDividerTop} />
+                <View style={styles.selectionDividerBottom} />
+                
+                {/* Date Column */}
+                <View style={styles.wheelColumn}>
+                  <ScrollView 
+                    ref={dateScrollRef}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.wheelScrollContent}
+                    snapToInterval={ITEM_HEIGHT}
+                    decelerationRate="fast"
+                    onScroll={handleDateScroll}
+                    onMomentumScrollEnd={handleDateScrollEnd}
+                    scrollEventThrottle={16}
+                  >
+                    {[...Array(14)].map((_, i) => {
+                      const date = new Date(selectedDate);
+                      date.setDate(selectedDate.getDate() + i - 6); // Show 6 days before and 7 days after selected date
+                      const isSelected = date.toDateString() === selectedDate.toDateString();
+                      
+                      // Check if date is in the past
+                      const now = new Date();
+                      now.setHours(0, 0, 0, 0);
+                      const checkDate = new Date(date);
+                      checkDate.setHours(0, 0, 0, 0);
+                      const isPast = checkDate.getTime() < now.getTime();
+                      
+                      const dayName = getDayName(date);
+                      const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+                      const dayNum = date.getDate();
+                      
+                      return (
+                        <TouchableOpacity
+                          key={date.toDateString()}
+                          onPress={() => {
+                            if (!isPast) {
+                              setSelectedDate(date);
+                            }
+                          }}
+                          style={styles.wheelItem}
+                          disabled={isPast}
+                        >
+                          <Text 
+                            numberOfLines={1}
+                            ellipsizeMode="clip"
+                            style={[
+                              styles.wheelDateText,
+                              isSelected && styles.wheelSelectedDateText,
+                              isPast && styles.wheelDateTextDisabled
+                            ]}
+                          >
+                            {dayName} {monthName} {dayNum}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
 
-            {/* Date and Time Pickers */}
-            <View style={styles.pickersContainer}>
-              {/* Date Picker */}
-              <View style={styles.datePickerContainer}>
-                <DatePickerContainer
-                  selectedDate={selectedDate}
-                  onDateChange={setSelectedDate}
-                />
-              </View>
+                {/* Hour Column */}
+                <View style={styles.wheelColumn}>
+                  <ScrollView 
+                    ref={hourScrollRef}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.wheelScrollContent}
+                    snapToInterval={ITEM_HEIGHT}
+                    decelerationRate="fast"
+                    onScroll={handleHourScroll}
+                    onMomentumScrollEnd={handleHourScrollEnd}
+                    scrollEventThrottle={16}
+                  >
+                    {[...Array(12)].map((_, i) => {
+                      const hour = i + 1;
+                      const isSelected = selectedHour === hour;
+                      
+                      // Check if this hour is in the past (only when on current date)
+                      let isPast = false;
+                      if (isCurrentDate()) {
+                        const now = new Date();
+                        const currentHour24 = now.getHours();
+                        const currentHour12 = currentHour24 === 0 ? 12 : currentHour24 > 12 ? currentHour24 - 12 : currentHour24;
+                        const currentPeriod = currentHour24 >= 12 ? 'PM' : 'AM';
+                        
+                        // Check if this hour is before current hour (same period) or in previous period
+                        if (selectedPeriod === currentPeriod) {
+                          isPast = hour < currentHour12;
+                        } else if (selectedPeriod === 'AM' && currentPeriod === 'PM') {
+                          isPast = true; // All AM hours are in the past if we're in PM
+                        }
+                      }
+                      
+                      return (
+                        <TouchableOpacity
+                          key={`hour-${hour}`}
+                          onPress={() => {
+                            if (!isPast) {
+                              setSelectedHour(hour);
+                            }
+                          }}
+                          style={styles.wheelItem}
+                          disabled={isPast}
+                        >
+                          <Text style={[
+                            styles.wheelNumberText,
+                            isSelected && styles.wheelSelectedNumberText,
+                            isPast && styles.wheelNumberTextDisabled
+                          ]}>
+                            {hour}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
 
-              {/* Time Picker */}
-              <View style={styles.timePickerContainer}>
-                <PromiseTimePickerContainer
-                  selectedHour={selectedHour}
-                  selectedMinute={selectedMinute}
-                  selectedPeriod={selectedPeriod}
-                  onHourChange={setSelectedHour}
-                  onMinuteChange={setSelectedMinute}
-                />
+                {/* Minute Column */}
+                <View style={styles.wheelColumn}>
+                  <ScrollView 
+                    ref={minuteScrollRef}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.wheelScrollContent}
+                    snapToInterval={ITEM_HEIGHT}
+                    decelerationRate="fast"
+                    onScroll={handleMinuteScroll}
+                    onMomentumScrollEnd={handleMinuteScrollEnd}
+                    scrollEventThrottle={16}
+                  >
+                    {[...Array(60)].map((_, i) => {
+                      const isSelected = selectedMinute === i;
+                      
+                      // Check if this minute is in the past (only when on current date and current hour)
+                      let isPast = false;
+                      if (isCurrentDate()) {
+                        const now = new Date();
+                        const currentHour24 = now.getHours();
+                        const currentHour12 = currentHour24 === 0 ? 12 : currentHour24 > 12 ? currentHour24 - 12 : currentHour24;
+                        const currentPeriod = currentHour24 >= 12 ? 'PM' : 'AM';
+                        const currentMinute = now.getMinutes();
+                        
+                        // Check if we're in the same hour and period
+                        if (selectedHour === currentHour12 && selectedPeriod === currentPeriod) {
+                          isPast = i < currentMinute;
+                        } else if (selectedPeriod === 'AM' && currentPeriod === 'PM') {
+                          isPast = true; // All AM minutes are in the past if we're in PM
+                        } else if (selectedPeriod === currentPeriod && selectedHour < currentHour12) {
+                          isPast = true; // Past hour in same period
+                        }
+                      }
+                      
+                      return (
+                        <TouchableOpacity
+                          key={`minute-${i}`}
+                          onPress={() => {
+                            if (!isPast) {
+                              setSelectedMinute(i);
+                            }
+                          }}
+                          style={styles.wheelItem}
+                          disabled={isPast}
+                        >
+                          <Text style={[
+                            styles.wheelNumberText,
+                            isSelected && styles.wheelSelectedNumberText,
+                            isPast && styles.wheelNumberTextDisabled
+                          ]}>
+                            {i.toString().padStart(2, '0')}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+
+                {/* AM/PM Column */}
+                <View style={styles.wheelColumn}>
+                  <ScrollView 
+                    ref={periodScrollRef}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.wheelScrollContent}
+                    snapToInterval={ITEM_HEIGHT}
+                    decelerationRate="fast"
+                    onScroll={handlePeriodScroll}
+                    onMomentumScrollEnd={handlePeriodScrollEnd}
+                    scrollEventThrottle={16}
+                  >
+                    {['AM', 'PM'].map((period) => {
+                      const isSelected = selectedPeriod === period;
+                      
+                      // Check if AM is in the past (only when on current date and we're in PM)
+                      let isPast = false;
+                      if (isCurrentDate() && period === 'AM') {
+                        const now = new Date();
+                        const currentPeriod = now.getHours() >= 12 ? 'PM' : 'AM';
+                        if (currentPeriod === 'PM') {
+                          isPast = true; // AM is in the past if we're in PM
+                        }
+                      }
+                      
+                      return (
+                        <TouchableOpacity
+                          key={period}
+                          onPress={() => {
+                            if (!isPast) {
+                              setSelectedPeriod(period as 'AM' | 'PM');
+                            }
+                          }}
+                          style={styles.wheelItem}
+                          disabled={isPast}
+                        >
+                          <Text style={[
+                            styles.wheelNumberText,
+                            isSelected && styles.wheelSelectedNumberText,
+                            isPast && styles.wheelNumberTextDisabled
+                          ]}>
+                            {period}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
               </View>
             </View>
 
             {/* Confirm Button */}
-            <View style={styles.confirmButtonContainer}>
-              <TouchableOpacity
-                style={styles.confirmButton}
-                onPress={handleConfirm}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.confirmButtonText}>Confirm</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Assigned to Section - At the bottom */}
-            {assignedTo && (
-              <View style={styles.assignedToSection}>
-                <Text style={styles.assignedToTitle}>Assigned to</Text>
-                <Image
-                  source={assignedTo.avatar || require('../../../assets/icons/profile-avatar.png')}
-                  style={styles.assignedToAvatar}
-                  resizeMode="cover"
-                />
-                <Text style={styles.assignedToName}>{assignedTo.name}</Text>
-                {onReassignPress && (
-                  <TouchableOpacity
-                    style={styles.reassignButton}
-                    onPress={() => {
-                      console.log('Reassign button pressed in PromiseTimeModal');
-                      onClose(); // Close this modal first
-                      requestAnimationFrame(() => {
-                        setTimeout(() => {
-                          console.log('Calling onReassignPress');
-                          onReassignPress();
-                        }, 100);
-                      });
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.reassignButtonText}>Reassign</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={handleConfirm}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.confirmButtonText}>Confirm</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </View>
@@ -180,163 +560,133 @@ export default function PromiseTimeModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'transparent', // No backdrop - header should remain visible
-  },
+  container: { flex: 1, backgroundColor: 'transparent' },
   modalOverlay: {
     position: 'absolute',
-    top: ROOM_DETAIL_HEADER.height * scaleX, // Start at 232px (header bottom) with 0px gap
+    top: 232 * scaleX,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 100 * scaleX, // Extra padding at bottom for scrolling
-  },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: 80 * scaleX },
   title: {
-    marginTop: (PROMISE_TIME_MODAL.title.top - ROOM_DETAIL_HEADER.height) * scaleX,
-    marginLeft: PROMISE_TIME_MODAL.title.left * scaleX,
-    marginBottom: (PROMISE_TIME_MODAL.instruction.top - PROMISE_TIME_MODAL.title.top - 20) * scaleX,
-    fontSize: PROMISE_TIME_MODAL.title.fontSize * scaleX,
+    marginTop: 21 * scaleX,
+    marginLeft: 24 * scaleX,
+    fontSize: 20 * scaleX,
     fontFamily: 'Helvetica',
-    fontWeight: '700' as any,
-    color: PROMISE_TIME_MODAL.title.color,
-  },
-  instruction: {
-    marginLeft: PROMISE_TIME_MODAL.instruction.left * scaleX,
-    marginBottom: ((PROMISE_TIME_MODAL.divider.top - PROMISE_TIME_MODAL.instruction.top - 14) * 0.7) * scaleX, // Reduced spacing
-    fontSize: PROMISE_TIME_MODAL.instruction.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
-    color: PROMISE_TIME_MODAL.instruction.color,
-    width: PROMISE_TIME_MODAL.instruction.width * scaleX,
+    fontWeight: '700',
+    color: '#607aa1',
   },
   divider: {
-    marginLeft: PROMISE_TIME_MODAL.divider.left * scaleX,
-    marginBottom: ((PROMISE_TIME_MODAL.dateLabel.top - PROMISE_TIME_MODAL.divider.top - 1) * 0.7) * scaleX, // Reduced spacing
-    width: PROMISE_TIME_MODAL.divider.width * scaleX,
-    height: PROMISE_TIME_MODAL.divider.height,
-    backgroundColor: PROMISE_TIME_MODAL.divider.color,
+    marginTop: 17 * scaleX,
+    marginHorizontal: 12 * scaleX,
+    height: 1,
+    backgroundColor: RETURN_LATER_MODAL.divider.backgroundColor,
   },
-  labelsContainer: {
+  suggestionsLabel: {
+    marginTop: 24 * scaleX,
+    marginLeft: 24 * scaleX,
+    fontSize: RETURN_LATER_MODAL.suggestions.labelFontSize * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: RETURN_LATER_MODAL.suggestions.labelFontWeight as any,
+    color: RETURN_LATER_MODAL.suggestions.labelColor,
+  },
+  suggestionsButtons: {
+    marginTop: 12 * scaleX,
+    marginLeft: 32 * scaleX,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginLeft: PROMISE_TIME_MODAL.dateLabel.left * scaleX,
-    marginRight: (440 - PROMISE_TIME_MODAL.timeLabel.left - 84) * scaleX,
-    marginBottom: ((PROMISE_TIME_MODAL.toggleContainer.top - PROMISE_TIME_MODAL.dateLabel.top - 16) * 0.4) * scaleX, // Further reduced spacing
+    gap: 13 * scaleX,
+    flexWrap: 'wrap',
   },
-  dateLabel: {
-    fontSize: PROMISE_TIME_MODAL.dateLabel.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
-    color: PROMISE_TIME_MODAL.dateLabel.color,
+  dateTimePickerWrapper: {
+    marginTop: 32 * scaleX,
+    marginHorizontal: 24 * scaleX,
   },
-  timeLabel: {
-    fontSize: PROMISE_TIME_MODAL.timeLabel.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
-    color: PROMISE_TIME_MODAL.timeLabel.color,
-  },
-  toggleContainer: {
-    marginLeft: PROMISE_TIME_MODAL.toggleContainer.left * scaleX,
-    marginBottom: (PROMISE_TIME_MODAL.datePicker.top - PROMISE_TIME_MODAL.toggleContainer.top - 35.243) * scaleX, // Direct calculation based on actual positions
-    alignItems: 'flex-start',
-  },
-  pickersContainer: {
+  wheelPickerContainer: {
+    flexDirection: 'row',
+    height: RETURN_LATER_MODAL.timePicker.height * scaleX,
     position: 'relative',
-    width: '100%',
-    height: PROMISE_TIME_MODAL.datePicker.height * scaleX,
-    marginTop: (PROMISE_TIME_MODAL.datePicker.top - ROOM_DETAIL_HEADER.height) * scaleX,
-    marginBottom: ((PROMISE_TIME_MODAL.confirmButton.top - PROMISE_TIME_MODAL.datePicker.top - PROMISE_TIME_MODAL.datePicker.height) * 0.5) * scaleX, // Further reduced spacing
+    alignItems: 'center',
   },
-  datePickerContainer: {
-    position: 'absolute',
-    left: PROMISE_TIME_MODAL.datePicker.left * scaleX,
-    top: 0,
-    height: PROMISE_TIME_MODAL.datePicker.height * scaleX,
-    width: PROMISE_TIME_MODAL.datePicker.width * scaleX,
-  },
-  timePickerContainer: {
+  selectionDividerTop: {
     position: 'absolute',
     left: 0,
-    top: 0, // Both pickers start at the same vertical position
-    height: PROMISE_TIME_MODAL.timePicker.height * scaleX,
-    width: '100%', // Full width to allow absolute positioning of columns
+    right: 0,
+    top: RETURN_LATER_MODAL.timePicker.height * 0.4 * scaleX,
+    height: 1,
+    backgroundColor: RETURN_LATER_MODAL.divider.backgroundColor,
+    zIndex: 10,
   },
-  confirmButtonContainer: {
-    marginLeft: PROMISE_TIME_MODAL.confirmButton.left * scaleX,
-    marginRight: -PROMISE_TIME_MODAL.confirmButton.left * scaleX,
-    marginBottom: ((PROMISE_TIME_MODAL.assignedTo.top - PROMISE_TIME_MODAL.confirmButton.top - PROMISE_TIME_MODAL.confirmButton.height) * 0.5) * scaleX, // Reduced spacing by 50%
-    width: PROMISE_TIME_MODAL.confirmButton.width * scaleX,
-    height: PROMISE_TIME_MODAL.confirmButton.height * scaleX,
+  selectionDividerBottom: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: RETURN_LATER_MODAL.timePicker.height * 0.6 * scaleX,
+    height: 1,
+    backgroundColor: RETURN_LATER_MODAL.divider.backgroundColor,
+    zIndex: 10,
+  },
+  wheelColumn: { flex: 1, height: '100%' },
+  wheelScrollContent: {
+    paddingTop: (RETURN_LATER_MODAL.timePicker.height - RETURN_LATER_MODAL.timePicker.itemHeight) / 2 * scaleX,
+    paddingBottom: (RETURN_LATER_MODAL.timePicker.height - RETURN_LATER_MODAL.timePicker.itemHeight) / 2 * scaleX,
+  },
+  wheelItem: {
+    height: RETURN_LATER_MODAL.timePicker.itemHeight * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4 * scaleX,
+  },
+  wheelDateText: {
+    fontSize: RETURN_LATER_MODAL.timePicker.unselectedFontSize * scaleX,
+    color: RETURN_LATER_MODAL.timePicker.unselectedColor,
+    fontFamily: 'Helvetica',
+    fontWeight: RETURN_LATER_MODAL.timePicker.unselectedFontWeight as any,
+    textAlign: 'center',
+  },
+  wheelSelectedDateText: {
+    fontSize: RETURN_LATER_MODAL.timePicker.selectedFontSize * scaleX,
+    color: RETURN_LATER_MODAL.timePicker.selectedColor,
+    fontFamily: 'Helvetica',
+    fontWeight: RETURN_LATER_MODAL.timePicker.selectedFontWeight as any,
+    textAlign: 'center',
+  },
+  wheelDateTextDisabled: {
+    color: RETURN_LATER_MODAL.timePicker.unselectedColor,
+    opacity: 0.5,
+  },
+  wheelNumberText: {
+    fontSize: RETURN_LATER_MODAL.timePicker.unselectedFontSize * scaleX,
+    color: RETURN_LATER_MODAL.timePicker.unselectedColor,
+    fontFamily: 'Helvetica',
+    fontWeight: RETURN_LATER_MODAL.timePicker.unselectedFontWeight as any,
+    textAlign: 'center',
+  },
+  wheelSelectedNumberText: {
+    fontSize: RETURN_LATER_MODAL.timePicker.selectedFontSize * scaleX,
+    color: RETURN_LATER_MODAL.timePicker.selectedColor,
+    fontFamily: 'Helvetica',
+    fontWeight: RETURN_LATER_MODAL.timePicker.selectedFontWeight as any,
+    textAlign: 'center',
+  },
+  wheelNumberTextDisabled: {
+    color: RETURN_LATER_MODAL.timePicker.unselectedColor,
+    opacity: 0.5,
   },
   confirmButton: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: PROMISE_TIME_MODAL.confirmButton.backgroundColor,
+    marginTop: 40 * scaleX,
+    marginHorizontal: 35 * scaleX,
+    height: 70 * scaleX,
+    backgroundColor: '#5a759d',
     justifyContent: 'center',
     alignItems: 'center',
   },
   confirmButtonText: {
-    fontSize: PROMISE_TIME_MODAL.confirmButton.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular as any,
-    color: PROMISE_TIME_MODAL.confirmButton.color,
-  },
-  assignedToSection: {
-    width: '100%',
-    minHeight: 100 * scaleX,
-    paddingHorizontal: 20 * scaleX,
-    marginBottom: 50 * scaleX,
-    position: 'relative',
-  },
-  assignedToTitle: {
-    position: 'absolute',
-    left: (PROMISE_TIME_MODAL.assignedTo.titleLeft - 20) * scaleX,
-    top: 0,
-    fontSize: PROMISE_TIME_MODAL.assignedTo.titleFontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold as any,
-    color: '#000000',
-  },
-  assignedToAvatar: {
-    position: 'absolute',
-    left: (ASSIGNED_TO.profilePicture.left - 20) * scaleX,
-    top: (ASSIGNED_TO.profilePicture.top - PROMISE_TIME_MODAL.assignedTo.top) * scaleX,
-    width: ASSIGNED_TO.profilePicture.width * scaleX,
-    height: ASSIGNED_TO.profilePicture.height * scaleX,
-    borderRadius: (ASSIGNED_TO.profilePicture.width / 2) * scaleX,
-  },
-  assignedToName: {
-    position: 'absolute',
-    left: (ASSIGNED_TO.staffName.left - 20) * scaleX,
-    top: (ASSIGNED_TO.staffName.top - PROMISE_TIME_MODAL.assignedTo.top) * scaleX,
-    fontSize: ASSIGNED_TO.staffName.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold as any,
-    color: ASSIGNED_TO.staffName.color,
-  },
-  reassignButton: {
-    position: 'absolute',
-    left: (ASSIGNED_TO.reassignButton.left - 20) * scaleX,
-    top: (ASSIGNED_TO.reassignButton.top - PROMISE_TIME_MODAL.assignedTo.top) * scaleX,
-    width: ASSIGNED_TO.reassignButton.width * scaleX,
-    height: ASSIGNED_TO.reassignButton.height * scaleX,
-    borderRadius: ASSIGNED_TO.reassignButton.borderRadius * scaleX,
-    backgroundColor: ASSIGNED_TO.reassignButton.backgroundColor,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  reassignButtonText: {
-    fontSize: ASSIGNED_TO.reassignButton.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular as any,
-    color: ASSIGNED_TO.reassignButton.color,
+    fontSize: 18 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '400',
+    color: '#FFFFFF',
   },
 });
-

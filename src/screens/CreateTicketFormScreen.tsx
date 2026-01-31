@@ -79,6 +79,20 @@ export default function CreateTicketFormScreen() {
   const [priority, setPriority] = useState<Priority | null>(null);
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [pictures, setPictures] = useState<string[]>([]);
+  const [showTicketTagDropdown, setShowTicketTagDropdown] = useState(false);
+  const [selectedTicketTag, setSelectedTicketTag] = useState<string>('');
+
+  // Ticket Tag options - can be customized based on requirements
+  const ticketTagOptions = [
+    'Broken Shower',
+    'No Hot Water',
+    'TV Not Working',
+    'WiFi Issue',
+    'Room Service',
+    'Cleaning Request',
+    'Maintenance',
+    'Other',
+  ];
 
   const handleBackPress = () => {
     navigation.goBack();
@@ -187,15 +201,13 @@ export default function CreateTicketFormScreen() {
       // No pictures: description starts at 656 (after add-photo card at 480 + 156 + 20 margin)
       descriptionTop = 656;
     } else {
-      // With pictures: calculate based on pictures section
-      // For single picture: picture at 480, height 156, add-photo button at 480+156+30, button height ~40, then 20px margin
-      // For multiple: grid ends at 480 + rows*(156+14), add-photo at that + 30, button height ~40, then 20px margin
-      const addPhotoButtonTop = pictures.length === 1
-        ? 480 + 156 + 30 // Single picture: 480 + 156 + 30
-        : 480 + Math.ceil(pictures.length / 2) * (156 + 14) + 30; // Grid: rows * (height + gap) + margin
-      const addPhotoButtonHeight = 40; // Approximate height of add-photo button with text
-      const picturesBottom = addPhotoButtonTop + addPhotoButtonHeight;
-      descriptionTop = Math.max(656, picturesBottom + 40); // Increased margin from 20px to 40px after add-photo button
+      // With pictures: always use 2-column grid calculation
+      // Grid row calculation: if pictures.length is odd, add-photo is in same row (row = floor(length/2))
+      // If even, add-photo is in next row (row = length/2)
+      // Total rows = ceil((length + 1) / 2) to account for add-photo button
+      const totalRows = Math.ceil((pictures.length + 1) / 2);
+      const gridBottom = 480 + totalRows * (156 + 14); // Grid ends at this position
+      descriptionTop = Math.max(656, gridBottom + 40); // 40px margin after grid
     }
     
     // Description label is at descriptionTop, text container is at descriptionTop + 26
@@ -211,6 +223,9 @@ export default function CreateTicketFormScreen() {
   const assignHintTop = assignToTop + 53; // Hint text (1020 - 967 = 53)
   const priorityTop = assignToTop + 110; // 110px after Assign to label (1077 - 967 = 110)
   const priorityOptionsTop = priorityTop + 41; // Options below label (1118 - 1077 = 41)
+  const submitButtonTop = priorityOptionsTop + 60; // Button below priority options with spacing
+  const submitButtonBottom = submitButtonTop + 60; // Button height is 60px
+  const minScrollHeight = submitButtonBottom + 100; // Add extra padding for comfortable scrolling
 
   return (
     <View style={styles.container}>
@@ -219,9 +234,9 @@ export default function CreateTicketFormScreen() {
 
       {/* Fixed Header */}
       <View style={styles.header}>
-        {/* Back Button */}
+        {/* Back Button with Text */}
         <TouchableOpacity
-          style={styles.backButton}
+          style={styles.backButtonContainer}
           onPress={handleBackPress}
           activeOpacity={0.7}
         >
@@ -230,15 +245,16 @@ export default function CreateTicketFormScreen() {
             style={styles.backArrow}
             resizeMode="contain"
           />
+          <Text style={styles.headerTitle}>Back</Text>
         </TouchableOpacity>
-
-        {/* Title */}
-        <Text style={styles.headerTitle}>Back</Text>
       </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { minHeight: minScrollHeight * scaleX }, // Ensure enough height for all content including submit button
+        ]}
         showsVerticalScrollIndicator={false}
       >
 
@@ -289,17 +305,68 @@ export default function CreateTicketFormScreen() {
         <View style={styles.curvedBackground} />
 
         {/* Form Fields - Using absolute positioning to match Figma */}
-        {/* Issue Field */}
-        <Text style={styles.issueLabel}>Issue</Text>
-        <View style={styles.issueInputContainer}>
-          <TextInput
-            style={styles.issueInput}
-            placeholder="What's the issue? (e.g., Broken Shower)"
-            placeholderTextColor="#5a759d"
-            value={issue}
-            onChangeText={setIssue}
-          />
-        </View>
+        {/* Ticket Tag Field - Dropdown */}
+        <Text style={styles.issueLabel}>Ticket Tag</Text>
+        <TouchableOpacity
+          style={styles.issueInputContainer}
+          onPress={() => setShowTicketTagDropdown(!showTicketTagDropdown)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.ticketTagContent}>
+            {selectedTicketTag ? (
+              <>
+                <Image
+                  source={require('../../assets/icons/flag.png')}
+                  style={styles.flagIcon}
+                  resizeMode="contain"
+                />
+                <Text style={styles.ticketTagText}>{selectedTicketTag}</Text>
+              </>
+            ) : (
+              <Text style={styles.ticketTagPlaceholder}>Add ticket tag (e.g., Broken Shower)</Text>
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Ticket Tag Dropdown Menu */}
+        {showTicketTagDropdown && (
+          <>
+            {/* Backdrop to close dropdown when clicking outside */}
+            <TouchableOpacity
+              style={styles.dropdownBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowTicketTagDropdown(false)}
+            />
+            <View style={styles.ticketTagDropdownMenu}>
+              {ticketTagOptions.map((tag) => (
+                <TouchableOpacity
+                  key={tag}
+                  style={styles.ticketTagDropdownItem}
+                  onPress={() => {
+                    setSelectedTicketTag(tag);
+                    setIssue(tag); // Keep issue state for compatibility
+                    setShowTicketTagDropdown(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Image
+                    source={require('../../assets/icons/flag.png')}
+                    style={styles.flagIconSmall}
+                    resizeMode="contain"
+                  />
+                  <Text
+                    style={[
+                      styles.ticketTagDropdownText,
+                      selectedTicketTag === tag && styles.ticketTagDropdownTextSelected,
+                    ]}
+                  >
+                    {tag}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
 
         {/* Location Field */}
         <Text style={styles.locationLabel}>Location</Text>
@@ -310,58 +377,6 @@ export default function CreateTicketFormScreen() {
             placeholderTextColor="#5a759d"
             value={location}
             onChangeText={setLocation}
-          />
-        </View>
-
-        {/* Description Field */}
-        <Text
-          style={[
-            styles.descriptionLabel,
-            {
-              top: (() => {
-                if (pictures.length === 0) {
-                  return 656 * scaleX; // After add-photo card (480 + 156 + 20)
-                }
-                // Calculate based on add-photo button position
-                const addPhotoButtonTop = pictures.length === 1
-                  ? 480 + 156 + 30 // Single picture: 480 + 156 + 30
-                  : 480 + Math.ceil(pictures.length / 2) * (156 + 14) + 30; // Grid: rows * (height + gap) + margin
-                const addPhotoButtonHeight = 40; // Approximate height of add-photo button with text
-                const picturesBottom = addPhotoButtonTop + addPhotoButtonHeight;
-                return Math.max(656, picturesBottom + 40) * scaleX; // Increased margin from 20px to 40px after add-photo button
-              })(),
-            },
-          ]}
-        >
-          Description
-        </Text>
-        <View
-          style={[
-            styles.descriptionTextContainer,
-            {
-              top: (() => {
-                if (pictures.length === 0) {
-                  return 682 * scaleX; // 656 + 26
-                }
-                // Calculate based on add-photo button position
-                const addPhotoButtonTop = pictures.length === 1
-                  ? 480 + 156 + 30 // Single picture: 480 + 156 + 30
-                  : 480 + Math.ceil(pictures.length / 2) * (156 + 14) + 30; // Grid: rows * (height + gap) + margin
-                const addPhotoButtonHeight = 40; // Approximate height of add-photo button with text
-                const picturesBottom = addPhotoButtonTop + addPhotoButtonHeight;
-                return (Math.max(656, picturesBottom + 40) + 26) * scaleX; // Increased margin from 20px to 40px + 26px for label spacing
-              })(),
-            },
-          ]}
-        >
-          <TextInput
-            style={styles.descriptionText}
-            placeholder="Add more details about the issue... (e.g., Guest unable to use shower normally)"
-            placeholderTextColor="#494747"
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
           />
         </View>
 
@@ -383,25 +398,13 @@ export default function CreateTicketFormScreen() {
               Tap to add photos from camera or gallery
             </Text>
           </TouchableOpacity>
-        ) : pictures.length === 1 ? (
-          // One picture - full width
-          <View style={styles.pictureSingleContainer}>
-            <Image source={{ uri: pictures[0] }} style={styles.pictureImageFull} resizeMode="cover" />
-            <TouchableOpacity
-              style={styles.removePictureButton}
-              onPress={() => handleRemovePicture(0)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.removePictureText}>×</Text>
-            </TouchableOpacity>
-          </View>
         ) : (
-          // Two or more pictures - 2-column grid
+          // Always use 2-column grid layout for all pictures
           <>
             {pictures.map((picture, index) => {
               const row = Math.floor(index / 2);
               const col = index % 2;
-              const top = 480 * scaleX + row * (156 + 14) * scaleX; // Reduced from 620 (140px reduction)
+              const top = 480 * scaleX + row * (156 + 14) * scaleX;
               const left = 26 * scaleX + col * (183 + 14) * scaleX; // 183px width + 14px gap
               return (
                 <View key={index} style={[styles.pictureGridContainer, { top, left }]}>
@@ -418,18 +421,14 @@ export default function CreateTicketFormScreen() {
             })}
           </>
         )}
-        {/* Add photo button below pictures when there are pictures */}
+        {/* Add photo button in next grid position when there are pictures */}
         {pictures.length > 0 && (
           <TouchableOpacity
             style={[
-              styles.addPhotoButtonBelow,
+              styles.addPhotoButtonGrid,
               {
-                top: (() => {
-                  // Calculate position below pictures with 30px margin
-                  return (pictures.length === 1
-                    ? 480 + 156 + 30 // Below single full-width picture with margin (30px) - using 480 not 620
-                    : 480 + Math.ceil(pictures.length / 2) * (156 + 14) + 30) * scaleX;
-                })(),
+                top: (480 + Math.floor(pictures.length / 2) * (156 + 14)) * scaleX, // Position in grid based on row
+                left: (26 + (pictures.length % 2) * (183 + 14)) * scaleX, // Position in grid based on column
               },
             ]}
             onPress={handleAddPicture}
@@ -443,6 +442,52 @@ export default function CreateTicketFormScreen() {
             <Text style={styles.addMorePhotosText}>Add more pictures/photos</Text>
           </TouchableOpacity>
         )}
+
+        {/* Description Field */}
+        <Text
+          style={[
+            styles.descriptionLabel,
+            {
+              top: (() => {
+                if (pictures.length === 0) {
+                  return 656 * scaleX; // After add-photo card (480 + 156 + 20)
+                }
+                // Calculate based on grid - add-photo button is now part of the grid
+                const totalRows = Math.ceil((pictures.length + 1) / 2); // Account for add-photo button in grid
+                const gridBottom = 480 + totalRows * (156 + 14);
+                return Math.max(656, gridBottom + 40) * scaleX; // 40px margin after grid
+              })(),
+            },
+          ]}
+        >
+          Description
+        </Text>
+        <View
+          style={[
+            styles.descriptionTextContainer,
+            {
+              top: (() => {
+                if (pictures.length === 0) {
+                  return 682 * scaleX; // 656 + 26
+                }
+                // Calculate based on grid - add-photo button is now part of the grid
+                const totalRows = Math.ceil((pictures.length + 1) / 2); // Account for add-photo button in grid
+                const gridBottom = 480 + totalRows * (156 + 14);
+                return (Math.max(656, gridBottom + 40) + 26) * scaleX; // 40px margin + 26px for label spacing
+              })(),
+            },
+          ]}
+        >
+          <TextInput
+            style={styles.descriptionText}
+            placeholder="Add more details about the issue... (e.g., Guest unable to use shower normally)"
+            placeholderTextColor="#494747"
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            numberOfLines={4}
+          />
+        </View>
 
         {/* Assign To Section - Dynamically positioned after description */}
         <Text
@@ -539,6 +584,20 @@ export default function CreateTicketFormScreen() {
             Not Urgent
           </Text>
         </TouchableOpacity>
+
+        {/* Submit Ticket Button */}
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+            {
+              top: submitButtonTop * scaleX, // Position below priority options with spacing
+            },
+          ]}
+          onPress={handleSubmit}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.submitButtonText}>Submit Ticket</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -573,31 +632,28 @@ const styles = StyleSheet.create({
     marginTop: 127 * scaleX, // Reduced margin - account for fixed header height (133 - 6 for background offset)
   },
   scrollContent: {
-    paddingBottom: 1500 * scaleX, // Increased to accommodate dynamic picture layouts
+    paddingBottom: 100 * scaleX, // Base padding, minHeight will ensure proper spacing
   },
-  backButton: {
+  backButtonContainer: {
     position: 'absolute',
     left: 28 * scaleX,
     top: 63 * scaleX,
-    width: 28 * scaleX,
-    height: 28 * scaleX,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
     zIndex: 1,
   },
   backArrow: {
-    width: 32 * scaleX, // Match Create Ticket screen: 32px × 32px
-    height: 32 * scaleX, // Match Create Ticket screen: 32px × 32px
-    transform: [{ rotate: '270deg' }],
+    width: 28 * scaleX, // From Figma: 28px
+    height: 28 * scaleX, // From Figma: 28px
+    tintColor: '#607aa1', // Match "Back" text color
   },
   headerTitle: {
-    position: 'absolute',
-    left: (SCREEN_WIDTH / 2) - (158 * scaleX),
-    top: 63 * scaleX,
     fontSize: 24 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '700' as any,
-    color: '#607aa1',
+    fontFamily: 'Helvetica', // From Figma: Helvetica
+    fontWeight: '700' as any, // From Figma: 700
+    color: '#607AA1', // From Figma: #607AA1
+    lineHeight: undefined, // From Figma: normal (undefined = normal in React Native)
+    marginLeft: 10 * scaleX, // Spacing between arrow and text (approximately 8-12px as per Figma)
   },
   departmentTitle: {
     position: 'absolute',
@@ -615,7 +671,9 @@ const styles = StyleSheet.create({
     width: 55.482 * scaleX,
     height: 55.482 * scaleX,
     borderRadius: 37 * scaleX,
-    backgroundColor: '#ffebeb',
+    backgroundColor: '#ffebeb', // Red background fill
+    borderWidth: 1 * scaleX,
+    borderColor: '#F92424', // Red outline
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -637,8 +695,9 @@ const styles = StyleSheet.create({
     width: 55.482 * scaleX,
     height: 55.482 * scaleX,
     borderRadius: 37 * scaleX,
-    backgroundColor: '#ffebeb',
-    opacity: 0.29,
+    backgroundColor: '#ffffff', // White background
+    borderWidth: 1 * scaleX,
+    borderColor: 'rgba(249, 36, 36, 0.29)', // Faint red outline using rgba for opacity
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -673,24 +732,88 @@ const styles = StyleSheet.create({
   },
   issueInputContainer: {
     position: 'absolute',
-    left: (SCREEN_WIDTH / 2) - (194 * scaleX), // Centered: 388/2 = 194
+    left: (SCREEN_WIDTH / 2) - (220 * scaleX), // Centered: 440/2 = 220
     top: 215 * scaleX, // Reduced from 355 to bring closer (140px reduction)
-    width: 388 * scaleX,
-    height: 68 * scaleX,
+    width: 440 * scaleX,
+    height: 70 * scaleX, // From Figma: 70px (standard input height)
     borderWidth: 1,
     borderColor: '#afa9ad',
     borderRadius: 8 * scaleX,
     justifyContent: 'center',
     paddingHorizontal: 16 * scaleX,
+    backgroundColor: '#ffffff',
   },
-  issueInput: {
-    fontSize: 16 * scaleX,
+  ticketTagContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  flagIcon: {
+    width: 20 * scaleX,
+    height: 20 * scaleX,
+    marginRight: 8 * scaleX,
+  },
+  flagIconSmall: {
+    width: 16 * scaleX,
+    height: 16 * scaleX,
+    marginRight: 8 * scaleX,
+  },
+  ticketTagText: {
+    fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: '400' as any,
+    fontWeight: 'regular' as any,
+    color: '#000000',
+    flex: 1,
+  },
+  ticketTagPlaceholder: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: 'regular' as any,
     color: '#5a759d',
-    textAlign: 'left',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
+  },
+  dropdownBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 998,
+  },
+  ticketTagDropdownMenu: {
+    position: 'absolute',
+    left: (SCREEN_WIDTH / 2) - (220 * scaleX), // Centered: 440/2 = 220
+    top: (215 + 68) * scaleX, // Below the input container
+    width: 440 * scaleX,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#afa9ad', // Match input container border color
+    borderRadius: 8 * scaleX,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 999,
+    maxHeight: 2268 * scaleX, // From Figma: 2268px
+    overflow: 'hidden', // Ensure border radius is applied
+  },
+  ticketTagDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12 * scaleX,
+    paddingVertical: 12 * scaleX,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  ticketTagDropdownText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: 'regular' as any,
+    color: '#000000',
+    flex: 1,
+  },
+  ticketTagDropdownTextSelected: {
+    fontWeight: 'bold' as any,
+    color: '#5a759d',
   },
   // Location Field - Adjusted to account for reduced header spacing
   locationLabel: {
@@ -821,13 +944,16 @@ const styles = StyleSheet.create({
     fontWeight: '700' as any,
     lineHeight: 20 * scaleX,
   },
-  addPhotoButtonBelow: {
+  addPhotoButtonGrid: {
     position: 'absolute',
-    left: 26 * scaleX,
-    width: 200 * scaleX, // Wider to accommodate text
+    width: 183 * scaleX, // Same width as grid items
+    height: 156 * scaleX, // Same height as grid items
+    borderRadius: 11 * scaleX,
+    backgroundColor: '#e3e3e3', // Same background as empty photo card
     justifyContent: 'center',
     alignItems: 'center',
-    // No background, just the icon and text
+    paddingVertical: 16 * scaleX,
+    paddingHorizontal: 12 * scaleX,
   },
   addMorePhotosText: {
     marginTop: 8 * scaleX,
@@ -840,16 +966,6 @@ const styles = StyleSheet.create({
   addPhotoIcon: {
     width: 40 * scaleX,
     height: 40 * scaleX,
-  },
-  // Assign To Section - From Figma: label at x=26, y=967; button at x=33, y=1011; hint at x=68, y=1020
-  assignToLabel: {
-    position: 'absolute',
-    left: 26 * scaleX,
-    top: 967 * scaleX,
-    fontSize: 17 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '700' as any,
-    color: '#1e1e1e',
   },
   // Assign To Section - From Figma: label at x=26, y=967; button Group 328 at x=33, y=799.61, w=33, h=32.832; + text at x=33, y=1011, fontSize=25, color=white; hint at x=68, y=1020
   assignToLabel: {
@@ -946,6 +1062,23 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700' as any,
     color: '#f92424',
+  },
+  // Submit Ticket Button - Dark blue background with white text
+  submitButton: {
+    position: 'absolute',
+    left: (SCREEN_WIDTH / 2) - (194 * scaleX), // Centered: 388/2 = 194
+    width: 388 * scaleX,
+    height: 60 * scaleX,
+    backgroundColor: '#5a759d', // Dark blue background
+    borderRadius: 8 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  submitButtonText: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700' as any,
+    color: '#ffffff', // White text
   },
 });
 

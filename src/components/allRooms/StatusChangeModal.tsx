@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text, Animated, Platform } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text, Animated, Platform, Switch, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoomStatus, StatusChangeOption, STATUS_OPTIONS, RoomCardData } from '../../types/allRooms.types';
@@ -14,29 +14,35 @@ interface StatusChangeModalProps {
   visible: boolean;
   onClose: () => void;
   onStatusSelect: (status: StatusChangeOption) => void;
+  onFlagToggle?: (flagged: boolean) => void; // Callback when flag toggle is changed
   currentStatus: RoomStatus;
   room?: RoomCardData; // Room data
   buttonPosition?: { x: number; y: number; width: number; height: number } | null; // Status button position on screen
   showTriangle?: boolean; // Whether to show the triangle pointer (default: true)
-  headerHeight?: number; // Header height in design pixels (default: 232 for ArrivalDepartureDetailScreen, use 217 for AllRoomsScreen)
+  headerHeight?: number; // Header height in design pixels (default: 232, use 217 for AllRoomsScreen)
 }
 
 export default function StatusChangeModal({
   visible,
   onClose,
   onStatusSelect,
+  onFlagToggle,
   currentStatus,
   room,
   buttonPosition,
   showTriangle = true,
-  headerHeight = 232, // Default to 232px for ArrivalDepartureDetailScreen
+  headerHeight = 232, // Default to 232px
 }: StatusChangeModalProps) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
+  // Local state for toggle to ensure immediate UI updates
+  const [isFlagged, setIsFlagged] = useState(room?.flagged === true);
 
   useEffect(() => {
     if (visible) {
+      // Reset toggle state when modal opens
+      setIsFlagged(room?.flagged === true);
       // Slide up animation
       Animated.parallel([
         Animated.timing(slideAnim, {
@@ -55,7 +61,7 @@ export default function StatusChangeModal({
       slideAnim.setValue(0);
       opacityAnim.setValue(0);
     }
-  }, [visible, slideAnim, opacityAnim]);
+  }, [visible, room?.flagged, slideAnim, opacityAnim]);
 
   const handleStatusSelect = (option: StatusChangeOption) => {
     // Animate out before closing
@@ -94,19 +100,54 @@ export default function StatusChangeModal({
     });
   };
 
+  const handleFlagToggle = (value: boolean) => {
+    // Update local state immediately for UI responsiveness
+    setIsFlagged(value);
+    
+    // Update the flagged state in parent component
+    if (onFlagToggle) {
+      onFlagToggle(value);
+    }
+
+    // If toggled to true (flagged), close the modal with animation
+    if (value === true) {
+      // Use requestAnimationFrame to ensure state update completes before closing
+      requestAnimationFrame(() => {
+        Animated.parallel([
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          onClose();
+        });
+      });
+    }
+    // If toggled to false (unflagged), modal stays open
+  };
+
   if (!room) return null;
 
   // Modal width (scaled) - full card width
   const modalWidth = CARD_DIMENSIONS.width * scaleX; // 426px scaled (full card width)
+  const modalHeight = 380 * scaleX; // Updated modal height to accommodate divider and flag toggle
   
   let modalTopPosition: number;
   let modalLeft: number;
   let triangleLeft: number;
-  const triangleTopOffset = -10 * scaleX; // Position triangle above modal top to point upward to button
+  const triangleTopOffset = -6 * scaleX; // Position triangle just above modal top to touch the button
+  const triangleBottomOffset = modalHeight - 1 * scaleX; // Bottom pointer position (overlap slightly)
+  let trianglePlacement: 'top' | 'bottom' = 'top';
 
   // Use provided headerHeight or default based on showTriangle
   // When showTriangle=true (AllRoomsScreen), header is 217px
-  // When showTriangle=false (ArrivalDepartureDetailScreen), header is 232px
+  // When showTriangle=false, header is 232px
   const HEADER_HEIGHT_PX = headerHeight || (showTriangle ? 217 : 232);
   const HEADER_HEIGHT = HEADER_HEIGHT_PX * scaleX;
 
@@ -117,11 +158,28 @@ export default function StatusChangeModal({
     // So buttonPosition.y + buttonPosition.height gives us the bottom of the button
     // The modal is positioned relative to BlurView which starts at HEADER_HEIGHT from window top
     // So we need to subtract HEADER_HEIGHT to convert absolute position to BlurView-relative position
-    // Increased spacing to move modal further down from status button
-    const spacing = 50 * scaleX; // Margin between button bottom and modal top
-    // Convert button bottom position from window coordinates to BlurView-relative coordinates
-    const buttonBottomAbsolute = buttonPosition.y + buttonPosition.height;
-    modalTopPosition = buttonBottomAbsolute - HEADER_HEIGHT + spacing;
+    // Desired gap between button and modal
+    const spacing = 70 * scaleX;
+    const buttonTopRelative = buttonPosition.y - HEADER_HEIGHT;
+    const buttonBottomRelative = buttonTopRelative + buttonPosition.height;
+
+    // Prefer opening below; if it would overflow, flip above.
+    const desiredBelowTop = buttonBottomRelative + spacing;
+    const desiredAboveTop = buttonTopRelative - spacing - modalHeight;
+
+    const maxTop =
+      Math.max(0, SCREEN_HEIGHT - HEADER_HEIGHT - modalHeight - insets.bottom - 12 * scaleX);
+
+    if (desiredBelowTop <= maxTop) {
+      modalTopPosition = desiredBelowTop;
+      trianglePlacement = 'top';
+    } else if (desiredAboveTop >= 0) {
+      modalTopPosition = desiredAboveTop;
+      trianglePlacement = 'bottom';
+    } else {
+      modalTopPosition = Math.min(Math.max(0, desiredBelowTop), maxTop);
+      trianglePlacement = 'top';
+    }
     
     // Status button center X position on screen (already in screen pixels, scaled)
     const buttonCenterX = buttonPosition.x + buttonPosition.width / 2;
@@ -144,9 +202,8 @@ export default function StatusChangeModal({
     triangleLeft = 0; // Not used when triangle is hidden
   }
 
-  // Calculate translateY for slide animation
-  // Start from below screen (translateY = modal height + some extra) and slide to 0
-  const modalHeight = 324.185 * scaleX; // Approximate modal height from Figma
+  // Safety clamp
+  modalTopPosition = Math.max(0, modalTopPosition);
   const translateY = slideAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [modalHeight + 50, 0], // Start below screen, end at position
@@ -190,14 +247,15 @@ export default function StatusChangeModal({
             ]} 
             pointerEvents="box-none"
           >
-          {/* Triangle Pointer - pointing up to status button */}
+          {/* Triangle Pointer - points to status button */}
           {showTriangle && (
             <View
               style={[
                 styles.trianglePointer,
                 { 
                   left: triangleLeft * scaleX, // triangleLeft is in design pixels, scale it
-                  top: triangleTopOffset,
+                  top: trianglePlacement === 'top' ? triangleTopOffset : triangleBottomOffset,
+                  transform: [{ rotate: trianglePlacement === 'top' ? '0deg' : '180deg' }],
                 },
               ]}
               pointerEvents="none"
@@ -224,6 +282,32 @@ export default function StatusChangeModal({
                   onPress={() => handleStatusSelect(option.id)}
                 />
               ))}
+            </View>
+
+            {/* Divider */}
+            <View style={styles.divider} />
+
+            {/* Flag Room Toggle - matches Figma: icon in light red circle, label, toggle */}
+            <View style={styles.flagRoomContainer} pointerEvents="box-none">
+              <View style={styles.flagIconCircle}>
+                <Image
+                  source={require('../../../assets/icons/flag.png')}
+                  style={styles.flagIcon}
+                  resizeMode="contain"
+                  tintColor="#F92424"
+                />
+              </View>
+              <Text style={styles.flagRoomText}>Flag Room</Text>
+              <View pointerEvents="box-none">
+                <Switch
+                  value={isFlagged}
+                  onValueChange={handleFlagToggle}
+                  trackColor={{ false: '#e3e3e3', true: '#e3e3e3' }}
+                  thumbColor="#F92424"
+                  ios_backgroundColor="#e3e3e3"
+                  style={styles.toggleSwitch}
+                />
+              </View>
             </View>
           </TouchableOpacity>
           </Animated.View>
@@ -326,5 +410,43 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
+  },
+  divider: {
+    height: 1 * scaleX,
+    backgroundColor: '#e3e3e3',
+    marginTop: 8 * scaleX,
+    marginBottom: 16 * scaleX,
+    width: '100%',
+  },
+  flagRoomContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4 * scaleX,
+  },
+  flagIconCircle: {
+    width: 51.007 * scaleX,
+    height: 51.007 * scaleX,
+    borderRadius: (51.007 / 2) * scaleX,
+    backgroundColor: 'rgba(249, 36, 36, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12 * scaleX,
+    padding: 8 * scaleX, // Add padding to ensure icon fits properly
+  },
+  flagIcon: {
+    width: 24 * scaleX, // Reduced icon size to fit properly in circle
+    height: 24 * scaleX,
+  },
+  flagRoomText: {
+    flex: 1,
+    fontSize: 13 * scaleX,
+    fontFamily: 'Inter',
+    fontWeight: '700' as any,
+    color: '#F92424',
+    textAlign: 'left',
+  },
+  toggleSwitch: {
+    transform: [{ scaleX: scaleX }, { scaleY: scaleX }],
+    // Ensure proper sizing to match Figma design
   },
 });

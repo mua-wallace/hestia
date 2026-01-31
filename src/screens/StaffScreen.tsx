@@ -6,13 +6,14 @@ import {
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
 import { colors, typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
 import { mockHomeData } from '../data/mockHomeData';
+import { mockChatData } from '../data/mockChatData';
 import { MoreMenuItemId } from '../types/more.types';
 import StaffHeader from '../components/staff/StaffHeader';
 import StaffTabs from '../components/staff/StaffTabs';
@@ -85,6 +86,7 @@ const mockStaffData: StaffMember[] = [
 
 export default function StaffScreen() {
   const navigation = useNavigation<StaffScreenNavigationProp>();
+  const route = useRoute();
   const { width: SCREEN_WIDTH } = useWindowDimensions();
   const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
   
@@ -102,8 +104,23 @@ export default function StaffScreen() {
     year: 'numeric',
   });
 
+  // Sync activeTab with current route
+  useFocusEffect(
+    React.useCallback(() => {
+      const routeName = route.name as string;
+      if (routeName === 'Home' || routeName === 'Rooms' || routeName === 'Chat' || routeName === 'Tickets') {
+        setActiveTab(routeName);
+      }
+    }, [route.name])
+  );
+
+  // Calculate total unread chat messages for badge
+  const chatBadgeCount = React.useMemo(() => {
+    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
+  }, []);
+
   const handleTabPress = (tab: string) => {
-    setActiveTab(tab);
+    setActiveTab(tab); // Update immediately
     setShowMorePopup(false);
     navigation.navigate(tab as keyof MainTabsParamList);
   };
@@ -222,7 +239,7 @@ export default function StaffScreen() {
         activeTab={activeTab}
         onTabPress={handleTabPress}
         onMorePress={handleMorePress}
-        chatBadgeCount={mockHomeData.notifications.chat}
+        chatBadgeCount={chatBadgeCount}
       />
 
       <MorePopup

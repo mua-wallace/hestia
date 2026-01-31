@@ -37,28 +37,29 @@ export default function TimeSuggestionButton({
 
 const styles = StyleSheet.create({
   button: {
-    borderWidth: 1,
-    borderColor: '#000000',
-    borderRadius: RETURN_LATER_MODAL.suggestions.borderRadius * scaleX,
-    paddingHorizontal: RETURN_LATER_MODAL.suggestions.buttonPaddingH * scaleX,
-    paddingVertical: RETURN_LATER_MODAL.suggestions.buttonPaddingV * scaleX,
-    minWidth: RETURN_LATER_MODAL.suggestions.buttonMinWidth * scaleX,
     height: RETURN_LATER_MODAL.suggestions.buttonHeight * scaleX,
-    alignItems: 'center',
+    minWidth: RETURN_LATER_MODAL.suggestions.buttonMinWidth * scaleX,
+    paddingHorizontal: RETURN_LATER_MODAL.suggestions.buttonPaddingHorizontal * scaleX,
+    paddingVertical: RETURN_LATER_MODAL.suggestions.buttonPaddingVertical * scaleX,
+    borderRadius: RETURN_LATER_MODAL.suggestions.buttonBorderRadius * scaleX,
+    borderWidth: RETURN_LATER_MODAL.suggestions.buttonBorderWidth,
+    borderColor: RETURN_LATER_MODAL.suggestions.buttonBorderColor,
+    backgroundColor: RETURN_LATER_MODAL.suggestions.buttonBackgroundUnselected,
     justifyContent: 'center',
-    backgroundColor: '#ffffff',
+    alignItems: 'center',
   },
   buttonSelected: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: RETURN_LATER_MODAL.suggestions.buttonBackgroundSelected,
   },
   text: {
-    fontSize: RETURN_LATER_MODAL.suggestions.fontSize * scaleX,
+    fontSize: RETURN_LATER_MODAL.suggestions.buttonFontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
-    color: '#000000',
+    fontWeight: RETURN_LATER_MODAL.suggestions.buttonTextWeightUnselected,
+    color: RETURN_LATER_MODAL.suggestions.buttonTextColorUnselected,
+    lineHeight: RETURN_LATER_MODAL.suggestions.buttonLineHeight * scaleX,
   },
   textSelected: {
-    fontWeight: typography.fontWeights.bold as any,
+    fontWeight: RETURN_LATER_MODAL.suggestions.buttonTextWeightSelected,
+    color: RETURN_LATER_MODAL.suggestions.buttonTextColorSelected,
   },
 });
-

@@ -1081,7 +1081,6 @@ export default function StaffScreen() {
         activeTab={activeTab}
         onTabPress={handleTabPress}
         onMorePress={handleMorePress}
-        chatBadgeCount={mockHomeData.notifications.chat}
       />
 
       <MorePopup

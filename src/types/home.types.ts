@@ -9,7 +9,7 @@ export interface RoomStatus {
   inspected: number;
 }
 
-export type CategoryName = 'Flagged' | 'Arrivals' | 'StayOvers';
+export type CategoryName = 'Flagged' | 'Arrivals' | 'StayOvers' | 'Turndown' | 'No Task' | 'Vacant';
 
 export interface CategorySection {
   id: string;
