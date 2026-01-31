@@ -47,12 +47,18 @@ export default function RoomDetailHeader({
       const now = Date.now();
       const diff = returnLaterAtTimestamp - now;
       if (diff <= 0) {
-        setReturnLaterRemaining('0 mins 0s');
+        setReturnLaterRemaining('0h 0 min 0s');
         return;
       }
-      const mins = Math.floor(diff / 60000);
+      const totalMins = Math.floor(diff / 60000);
       const secs = Math.floor((diff % 60000) / 1000);
-      setReturnLaterRemaining(`${mins} mins ${secs}s`);
+      if (totalMins >= 60) {
+        const hours = Math.floor(diff / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        setReturnLaterRemaining(`${hours}h ${mins} min ${secs}s`);
+      } else {
+        setReturnLaterRemaining(`${totalMins} mins ${secs}s`);
+      }
     };
     tick();
     const id = setInterval(tick, 1000);

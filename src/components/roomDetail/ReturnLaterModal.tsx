@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, LayoutChangeEvent, Alert } from 'react-native';
 import { typography } from '../../theme';
 import { ShiftType } from '../../types/home.types';
+import { RETURN_LATER_MODAL } from '../../constants/returnLaterModalStyles';
 import TimeSuggestionButton from './TimeSuggestionButton';
 import AssignedToSection from './AssignedToSection';
 import ViewTaskModal from './ViewTaskModal';
@@ -95,7 +96,7 @@ export default function ReturnLaterModal({
   const minuteScrollRef = useRef<ScrollView>(null);
   const periodScrollRef = useRef<ScrollView>(null);
 
-  const ITEM_HEIGHT = 50 * scaleX;
+  const ITEM_HEIGHT = RETURN_LATER_MODAL.timePicker.itemHeight * scaleX;
 
   // Calculate if text needs truncation (rough estimate for initial render)
   const charsPerLine = 50;
@@ -247,34 +248,6 @@ export default function ReturnLaterModal({
     check.setHours(hour24, minute, 0, 0);
     const minAllowed = Date.now() + MIN_MINUTES_FROM_NOW * 60 * 1000;
     return check.getTime() >= minAllowed;
-  };
-
-  const changeDay = (direction: number) => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + direction);
-    
-    // Don't allow going to past dates
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const checkDate = new Date(newDate);
-    checkDate.setHours(0, 0, 0, 0);
-    
-    if (checkDate.getTime() < now.getTime()) {
-      return; // Don't allow past dates
-    }
-    
-    setSelectedDate(newDate);
-    
-    // Scroll to center the selected date (always at index 6 in the 14-day range)
-    setTimeout(() => {
-      dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: true });
-    }, 100);
-  };
-  
-  const selectDay = (day: number) => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(day);
-    setSelectedDate(newDate);
   };
 
   // Handle scroll events to update selected values
@@ -470,13 +443,6 @@ export default function ReturnLaterModal({
             {/* Title */}
             <Text style={styles.title}>Return Later</Text>
 
-            {/* Selected Time Display */}
-            {returnTime && (
-              <Text style={styles.selectedTimeDisplay}>
-                {selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at {returnTime}
-              </Text>
-            )}
-
             {/* Divider */}
             <View style={styles.divider} />
 
@@ -495,34 +461,9 @@ export default function ReturnLaterModal({
               ))}
             </View>
 
-            {/* Date & Time Picker (Figma) */}
+            {/* Date & Time Picker - 4 columns (Figma 1121-328) */}
             <View style={styles.dateTimePickerWrapper}>
-              {/* Top row: date navigation arrows */}
-              <View style={styles.pickerHeader}>
-                <View style={styles.navArrows}>
-                  <TouchableOpacity 
-                    onPress={() => changeDay(-1)} 
-                    style={styles.navButton}
-                    disabled={isCurrentDate()}
-                  >
-                    <Text style={[
-                      styles.navArrow,
-                      isCurrentDate() && styles.navArrowDisabled
-                    ]}>‹</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={() => changeDay(1)} 
-                    style={styles.navButton}
-                  >
-                    <Text style={[
-                      styles.navArrow,
-                      styles.navArrowActive
-                    ]}>›</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Wheel Picker - 4 Columns */}
+              {/* Wheel Picker - Date | Hour | Minute | AM/PM */}
               <View style={styles.wheelPickerContainer}>
                 {/* Selection Dividers */}
                 <View style={styles.selectionDividerTop} />
@@ -534,7 +475,7 @@ export default function ReturnLaterModal({
                     ref={dateScrollRef}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.wheelScrollContent}
-                    snapToInterval={50 * scaleX}
+                    snapToInterval={ITEM_HEIGHT}
                     decelerationRate="fast"
                     onScroll={handleDateScroll}
                     onMomentumScrollEnd={handleDateScrollEnd}
@@ -590,7 +531,7 @@ export default function ReturnLaterModal({
                     ref={hourScrollRef}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.wheelScrollContent}
-                    snapToInterval={50 * scaleX}
+                    snapToInterval={ITEM_HEIGHT}
                     decelerationRate="fast"
                     onScroll={handleHourScroll}
                     onMomentumScrollEnd={handleHourScrollEnd}
@@ -646,7 +587,7 @@ export default function ReturnLaterModal({
                     ref={minuteScrollRef}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.wheelScrollContent}
-                    snapToInterval={50 * scaleX}
+                    snapToInterval={ITEM_HEIGHT}
                     decelerationRate="fast"
                     onScroll={handleMinuteScroll}
                     onMomentumScrollEnd={handleMinuteScrollEnd}
@@ -704,7 +645,7 @@ export default function ReturnLaterModal({
                     ref={periodScrollRef}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.wheelScrollContent}
-                    snapToInterval={50 * scaleX}
+                    snapToInterval={ITEM_HEIGHT}
                     decelerationRate="fast"
                     onScroll={handlePeriodScroll}
                     onMomentumScrollEnd={handlePeriodScrollEnd}
@@ -856,43 +797,20 @@ const styles = StyleSheet.create({
     color: '#607aa1',
   },
 
-  selectedTimeDisplay: {
-    marginTop: 8 * scaleX,
-    marginLeft: 24 * scaleX,
-    fontSize: 16 * scaleX,
-    fontFamily: 'Helvetica',
-    fontWeight: '400',
-    color: '#5a759d',
-  },
-  
-  // Instruction
-  instruction: {
-    marginTop: 7 * scaleX,
-    marginLeft: 24 * scaleX,
-    marginRight: 24 * scaleX,
-    fontSize: 14 * scaleX,
-    fontFamily: 'Inter',
-    fontWeight: '300',
-    color: '#000000',
-    lineHeight: 15 * scaleX,
-  },
-  
-  // Divider
   divider: {
     marginTop: 17 * scaleX,
     marginHorizontal: 12 * scaleX,
     height: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: RETURN_LATER_MODAL.divider.backgroundColor,
   },
   
-  // Suggestions Label
   suggestionsLabel: {
     marginTop: 24 * scaleX,
     marginLeft: 24 * scaleX,
-    fontSize: 14 * scaleX,
+    fontSize: RETURN_LATER_MODAL.suggestions.labelFontSize * scaleX,
     fontFamily: 'Helvetica',
-    fontWeight: '300',
-    color: '#000000',
+    fontWeight: RETURN_LATER_MODAL.suggestions.labelFontWeight as any,
+    color: RETURN_LATER_MODAL.suggestions.labelColor,
   },
   
   // Suggestions Buttons Container
@@ -903,146 +821,80 @@ const styles = StyleSheet.create({
     gap: 13 * scaleX,
     flexWrap: 'wrap',
   },
-  
-  // Date & Time Picker container (Figma) - one rounded block
+  // Date & Time Picker container - Figma 1121-328
   dateTimePickerWrapper: {
     marginTop: 32 * scaleX,
-    marginHorizontal: 35 * scaleX,
-    backgroundColor: '#F2F2F7',
-    borderRadius: 10 * scaleX,
-    overflow: 'hidden',
+    marginHorizontal: 24 * scaleX,
   },
-  // Date & Time Picker inner height for layout
-  dateTimePickerContainer: {
-    height: 302 * scaleX,
-  },
-  // Picker Header (top row with date arrows)
-  pickerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16 * scaleX,
-    paddingTop: 12 * scaleX,
-    paddingBottom: 12 * scaleX,
-    marginBottom: 8 * scaleX,
-  },
-  
-  navArrows: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 20 * scaleX,
-  },
-  
-  navButton: {
-    width: 40 * scaleX,
-    height: 40 * scaleX,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  
-  navArrow: {
-    fontSize: 36 * scaleX,
-    color: '#C7C7CC', // Light gray matching iOS style in Figma
-    fontFamily: 'Helvetica',
-    fontWeight: '300',
-    lineHeight: 36 * scaleX,
-  },
-  
-  navArrowActive: {
-    color: '#007AFF', // iOS blue - active color
-  },
-  
-  navArrowDisabled: {
-    color: '#E5E5EA', // Very light gray - disabled
-    opacity: 0.5,
-  },
-  
-  // Wheel Picker Container
   wheelPickerContainer: {
     flexDirection: 'row',
-    height: 250 * scaleX,
+    height: RETURN_LATER_MODAL.timePicker.height * scaleX,
     position: 'relative',
     alignItems: 'center',
   },
-  
-  // Selection Dividers (above and below selected item)
   selectionDividerTop: {
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 100 * scaleX, // 40% of 250px = 100px
+    top: RETURN_LATER_MODAL.timePicker.height * 0.4 * scaleX,
     height: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: RETURN_LATER_MODAL.divider.backgroundColor,
     zIndex: 10,
   },
-  
   selectionDividerBottom: {
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 150 * scaleX, // 60% of 250px = 150px
+    top: RETURN_LATER_MODAL.timePicker.height * 0.6 * scaleX,
     height: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: RETURN_LATER_MODAL.divider.backgroundColor,
     zIndex: 10,
   },
-  
   wheelColumn: {
     flex: 1,
     height: '100%',
   },
-  
   wheelScrollContent: {
-    paddingTop: 100 * scaleX, // Padding to center first item between dividers
-    paddingBottom: 100 * scaleX, // Padding to center last item between dividers
+    paddingTop: (RETURN_LATER_MODAL.timePicker.height - RETURN_LATER_MODAL.timePicker.itemHeight) / 2 * scaleX,
+    paddingBottom: (RETURN_LATER_MODAL.timePicker.height - RETURN_LATER_MODAL.timePicker.itemHeight) / 2 * scaleX,
   },
-  
   wheelItem: {
-    height: 50 * scaleX, // Exact height between dividers (150 - 100 = 50px)
+    height: RETURN_LATER_MODAL.timePicker.itemHeight * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 2 * scaleX,
+    paddingHorizontal: 4 * scaleX,
   },
-  
-  // Date text styles (matching Figma)
   wheelDateText: {
-    fontSize: 16 * scaleX,
-    color: '#CCCCCC',
+    fontSize: RETURN_LATER_MODAL.timePicker.unselectedFontSize * scaleX,
+    color: RETURN_LATER_MODAL.timePicker.unselectedColor,
     fontFamily: 'Helvetica',
-    fontWeight: '300',
+    fontWeight: RETURN_LATER_MODAL.timePicker.unselectedFontWeight as any,
     textAlign: 'center',
-    textAlignVertical: 'center',
   },
-  
   wheelSelectedDateText: {
-    fontSize: 16 * scaleX,
-    color: '#000000',
+    fontSize: RETURN_LATER_MODAL.timePicker.selectedFontSize * scaleX,
+    color: RETURN_LATER_MODAL.timePicker.selectedColor,
     fontFamily: 'Helvetica',
-    fontWeight: '700',
+    fontWeight: RETURN_LATER_MODAL.timePicker.selectedFontWeight as any,
     textAlign: 'center',
-    textAlignVertical: 'center',
   },
-  
   wheelDateTextDisabled: {
-    color: '#E5E5EA',
+    color: RETURN_LATER_MODAL.timePicker.unselectedColor,
     opacity: 0.5,
   },
-  
-  // Number text styles (hour, minute, AM/PM - matching Figma)
   wheelNumberText: {
-    fontSize: 20 * scaleX,
-    color: '#CCCCCC',
+    fontSize: RETURN_LATER_MODAL.timePicker.unselectedFontSize * scaleX,
+    color: RETURN_LATER_MODAL.timePicker.unselectedColor,
     fontFamily: 'Helvetica',
-    fontWeight: '300',
+    fontWeight: RETURN_LATER_MODAL.timePicker.unselectedFontWeight as any,
     textAlign: 'center',
-    textAlignVertical: 'center',
   },
-  
   wheelSelectedNumberText: {
-    fontSize: 20 * scaleX,
-    color: '#000000',
+    fontSize: RETURN_LATER_MODAL.timePicker.selectedFontSize * scaleX,
+    color: RETURN_LATER_MODAL.timePicker.selectedColor,
     fontFamily: 'Helvetica',
-    fontWeight: '700',
+    fontWeight: RETURN_LATER_MODAL.timePicker.selectedFontWeight as any,
     textAlign: 'center',
-    textAlignVertical: 'center',
   },
   
   // Confirm Button
