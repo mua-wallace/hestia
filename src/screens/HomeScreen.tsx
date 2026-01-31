@@ -166,10 +166,10 @@ export default function HomeScreen() {
     };
 
     rooms.forEach((room) => {
-      if (room.status === 'Dirty') status.dirty += 1;
-      if (room.status === 'InProgress') status.inProgress += 1;
-      if (room.status === 'Cleaned') status.cleaned += 1;
-      if (room.status === 'Inspected') status.inspected += 1;
+      if (room.houseKeepingStatus === 'Dirty') status.dirty += 1;
+      if (room.houseKeepingStatus === 'InProgress') status.inProgress += 1;
+      if (room.houseKeepingStatus === 'Cleaned') status.cleaned += 1;
+      if (room.houseKeepingStatus === 'Inspected') status.inspected += 1;
     });
 
     const priority = rooms.reduce((sum, r) => sum + (r.isPriority ? 1 : 0), 0);

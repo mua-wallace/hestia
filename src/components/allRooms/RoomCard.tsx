@@ -73,7 +73,7 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
 
   // Determine card background and border - based on status and PM mode
   const getCardStyles = () => {
-    const isInProgress = room.status === 'InProgress';
+    const isInProgress = room.houseKeepingStatus === 'InProgress';
     const isPM = selectedShift === 'PM';
     
     if (isPM) {
@@ -218,14 +218,14 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
               Vacant
             </Text>
           </View>
-          {STATUS_CONFIGS[room.status]?.icon && (
+          {STATUS_CONFIGS[room.houseKeepingStatus]?.icon && (
             <TouchableOpacity
               onPress={onStatusPress}
               activeOpacity={0.8}
               style={styles.vacantStatusButton}
             >
               <Image
-                source={STATUS_CONFIGS[room.status].icon}
+                source={STATUS_CONFIGS[room.houseKeepingStatus].icon}
                 style={styles.vacantStatusIcon}
                 resizeMode="contain"
               />
@@ -277,7 +277,7 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
       {!isVacantTurndown && (
         <StatusButton 
           ref={statusButtonRef}
-          status={room.status} 
+          status={room.houseKeepingStatus} 
           onPress={onStatusPress}
           isPriority={room.isPriority}
           isArrivalDeparture={isArrivalDeparture}

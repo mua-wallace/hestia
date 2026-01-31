@@ -1508,7 +1508,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       credit: 60,
       frontOfficeStatus: 'Stayover',
       withLinen: true, // Stayover with Linen (linen change day)
-      status: 'Dirty',
+      houseKeepingStatus: 'Dirty',
       isPriority: false,
       flagged: true,
       guests: [
@@ -1535,7 +1535,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       credit: 45,
       frontOfficeStatus: 'Arrival',
       withLinen: false,
-      status: 'Cleaned',
+      houseKeepingStatus: 'Cleaned',
       isPriority: true,
       flagged: false,
       priorityCount: 11,
@@ -1566,7 +1566,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       credit: 90,
       frontOfficeStatus: 'Arrival/Departure',
       withLinen: false,
-      status: 'InProgress',
+      houseKeepingStatus: 'InProgress',
       isPriority: true,
       flagged: true,
       priorityCount: 11, // First guest has 11
@@ -1605,7 +1605,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       credit: 60,
       frontOfficeStatus: 'Departure',
       withLinen: false,
-      status: 'Dirty',
+      houseKeepingStatus: 'Dirty',
       isPriority: false,
       flagged: false,
       guests: [
@@ -1632,7 +1632,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       credit: 45,
       frontOfficeStatus: 'Arrival',
       withLinen: false,
-      status: 'Cleaned',
+      houseKeepingStatus: 'Cleaned',
       isPriority: false,
       flagged: false,
       priorityCount: 11,
@@ -1663,7 +1663,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       credit: 60,
       frontOfficeStatus: 'Stayover',
       withLinen: false, // Stayover no Linen
-      status: 'Inspected',
+      houseKeepingStatus: 'Inspected',
       isPriority: false,
       flagged: true,
       guests: [
@@ -1691,7 +1691,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       frontOfficeStatus: 'Turndown',
       withLinen: false,
       reservationStatus: 'Occupied',
-      status: 'Inspected',
+      houseKeepingStatus: 'Inspected',
       isPriority: false,
       flagged: false,
       guests: [
@@ -1718,7 +1718,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       frontOfficeStatus: 'Turndown',
       withLinen: false,
       reservationStatus: 'Occupied',
-      status: 'InProgress',
+      houseKeepingStatus: 'InProgress',
       isPriority: false,
       flagged: false,
       guests: [
@@ -1745,7 +1745,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       frontOfficeStatus: 'Turndown',
       withLinen: false,
       reservationStatus: 'Vacant',
-      status: 'Cleaned',
+      houseKeepingStatus: 'Cleaned',
       isPriority: false,
       flagged: false,
       guests: [
@@ -1773,7 +1773,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       frontOfficeStatus: 'Turndown',
       withLinen: false,
       reservationStatus: 'Vacant',
-      status: 'Inspected',
+      houseKeepingStatus: 'Inspected',
       isPriority: false,
       flagged: false,
       guests: [
@@ -1801,7 +1801,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       frontOfficeStatus: 'Turndown',
       withLinen: false,
       reservationStatus: 'Vacant',
-      status: 'InProgress',
+      houseKeepingStatus: 'InProgress',
       isPriority: false,
       flagged: false,
       guests: [
@@ -1828,7 +1828,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       credit: 90,
       frontOfficeStatus: 'Turndown',
       reservationStatus: 'Vacant',
-      status: 'Dirty',
+      houseKeepingStatus: 'Dirty',
       isPriority: false,
       flagged: false,
       guests: [
@@ -1856,7 +1856,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       frontOfficeStatus: 'No Task',
       withLinen: false,
       reservationStatus: 'Occupied',
-      status: 'Inspected',
+      houseKeepingStatus: 'Inspected',
       isPriority: false,
       flagged: false,
       guests: [
@@ -1883,7 +1883,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       frontOfficeStatus: 'No Task',
       withLinen: false,
       reservationStatus: 'Occupied',
-      status: 'Cleaned',
+      houseKeepingStatus: 'Cleaned',
       isPriority: false,
       flagged: false,
       guests: [
@@ -1909,7 +1909,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       credit: 60,
       frontOfficeStatus: 'Arrival',
       withLinen: false,
-      status: 'InProgress',
+      houseKeepingStatus: 'InProgress',
       isPriority: false,
       flagged: false,
       guests: [
@@ -1935,7 +1935,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       credit: 45,
       frontOfficeStatus: 'Stayover',
       withLinen: true, // Stayover with Linen
-      status: 'Cleaned',
+      houseKeepingStatus: 'Cleaned',
       isPriority: true,
       flagged: false,
       priorityCount: 4,

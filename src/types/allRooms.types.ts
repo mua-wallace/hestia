@@ -40,7 +40,7 @@ export interface RoomCardData {
   frontOfficeStatus: FrontOfficeStatus; // Arrival/Departure, Arrival, Departure, Stayover, Turndown, No Task, Refresh
   /** When frontOfficeStatus is Stayover: true = Stayover with Linen (linen change day), false = Stayover no Linen. Computed from arrival date (every 2nd day of stay) if not set. */
   withLinen?: boolean;
-  status: RoomStatus;
+  houseKeepingStatus: RoomStatus;
   reservationStatus?: ReservationStatus; // For distinguishing vacant turndown rooms
   guests: GuestInfo[]; // Array to support Arrival/Departure rooms with 2 guests
   staff: StaffInfo;

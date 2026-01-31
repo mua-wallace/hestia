@@ -146,10 +146,10 @@ export default function AllRoomsScreen() {
 
     allRoomsData.rooms.forEach((room) => {
       // Room state counts
-      if (room.status === 'Dirty') roomStates.dirty++;
-      if (room.status === 'InProgress') roomStates.inProgress++;
-      if (room.status === 'Cleaned') roomStates.cleaned++;
-      if (room.status === 'Inspected') roomStates.inspected++;
+      if (room.houseKeepingStatus === 'Dirty') roomStates.dirty++;
+      if (room.houseKeepingStatus === 'InProgress') roomStates.inProgress++;
+      if (room.houseKeepingStatus === 'Cleaned') roomStates.cleaned++;
+      if (room.houseKeepingStatus === 'Inspected') roomStates.inspected++;
       if (room.isPriority) roomStates.priority++;
 
       // Guest counts based on category
@@ -427,7 +427,7 @@ export default function AllRoomsScreen() {
       ...prev,
       rooms: prev.rooms.map((room) =>
         room.id === selectedRoomForStatusChange.id
-          ? { ...room, status: newStatus }
+          ? { ...room, houseKeepingStatus: newStatus }
           : room
       ),
     }));
@@ -575,10 +575,10 @@ export default function AllRoomsScreen() {
           // Check room state filters
           if (hasRoomStateFilter) {
             const matchesRoomState =
-              (activeFilters.roomStates.dirty && room.status === 'Dirty') ||
-              (activeFilters.roomStates.inProgress && room.status === 'InProgress') ||
-              (activeFilters.roomStates.cleaned && room.status === 'Cleaned') ||
-              (activeFilters.roomStates.inspected && room.status === 'Inspected') ||
+              (activeFilters.roomStates.dirty && room.houseKeepingStatus === 'Dirty') ||
+              (activeFilters.roomStates.inProgress && room.houseKeepingStatus === 'InProgress') ||
+              (activeFilters.roomStates.cleaned && room.houseKeepingStatus === 'Cleaned') ||
+              (activeFilters.roomStates.inspected && room.houseKeepingStatus === 'Inspected') ||
               (activeFilters.roomStates.priority && room.isPriority);
 
             if (!matchesRoomState) {

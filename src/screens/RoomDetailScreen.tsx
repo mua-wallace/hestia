@@ -68,7 +68,7 @@ export default function RoomDetailScreen() {
   const statusButtonRef = useRef<TouchableOpacity>(null);
   
   // Track current status to update header background color
-  const [currentStatus, setCurrentStatus] = useState<RoomCardData['status']>(room.status);
+  const [currentStatus, setCurrentStatus] = useState<RoomCardData['houseKeepingStatus']>(room.houseKeepingStatus);
   // Track room data locally to allow updates (e.g., flagged status)
   const [localRoom, setLocalRoom] = useState<RoomCardData>(room);
   // Track selected status option text to display in header
@@ -78,7 +78,7 @@ export default function RoomDetailScreen() {
   
   // Track notes and assigned staff in state
   const [notes, setNotes] = useState<Note[]>(() => {
-    if (room.status === 'InProgress') {
+    if (room.houseKeepingStatus === 'InProgress') {
       return [
         {
           id: '1',

@@ -50,7 +50,7 @@ export default function ArrivalDepartureDetailScreen() {
   const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const statusButtonRef = useRef<TouchableOpacity>(null);
   // Track current status to update header background color
-  const [currentStatus, setCurrentStatus] = useState<RoomCardData['status']>(room.status);
+  const [currentStatus, setCurrentStatus] = useState<RoomCardData['houseKeepingStatus']>(room.houseKeepingStatus);
   // Track selected status option text to display in header
   const [selectedStatusText, setSelectedStatusText] = useState<string | undefined>(undefined);
   // Track Return Later: timestamp for time-only + remaining countdown (e.g. "2:30 PM · 30 mins 2s")
@@ -61,7 +61,7 @@ export default function ArrivalDepartureDetailScreen() {
   // Initialize notes based on room status - show default notes for InProgress, empty for others
   const [notes, setNotes] = useState<Note[]>(() => {
     // For InProgress status, show default notes; for other statuses (Cleaned, Dirty, Inspected), start with empty or room notes
-    if (room.status === 'InProgress') {
+    if (room.houseKeepingStatus === 'InProgress') {
       return [
         {
           id: '1',
