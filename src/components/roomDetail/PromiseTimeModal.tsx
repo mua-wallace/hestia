@@ -1,14 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
-import { typography } from '../../theme';
+import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { RETURN_LATER_MODAL } from '../../constants/returnLaterModalStyles';
 
+const MIN_MINUTES_FROM_NOW = 5;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const scaleX = SCREEN_WIDTH / 430;
+
+function getMinAllowedTime() {
+  const now = new Date();
+  const min = new Date(now.getTime() + MIN_MINUTES_FROM_NOW * 60 * 1000);
+  const hour24 = min.getHours();
+  const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+  return {
+    date: new Date(min.getFullYear(), min.getMonth(), min.getDate()),
+    hour12,
+    minute: min.getMinutes(),
+    period: (hour24 >= 12 ? 'PM' : 'AM') as 'AM' | 'PM',
+  };
+}
 
 interface PromiseTimeModalProps {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (promiseTime: string, period: 'AM' | 'PM') => void;
+  onConfirm: (promiseTime: string, period: 'AM' | 'PM', formattedDateTime?: string, promiseAtTimestamp?: number) => void;
   roomNumber?: string;
 }
 
@@ -18,58 +32,30 @@ export default function PromiseTimeModal({
   onConfirm,
   roomNumber,
 }: PromiseTimeModalProps) {
-  // Date and Time picker state - Initialize with current date/time
   const [selectedDate, setSelectedDate] = useState(() => new Date());
-  const [selectedHour, setSelectedHour] = useState(() => {
-    const now = new Date();
-    const hour24 = now.getHours();
-    return hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
-  });
-  const [selectedMinute, setSelectedMinute] = useState(() => new Date().getMinutes());
-  const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>(() => {
-    const now = new Date();
-    return now.getHours() >= 12 ? 'PM' : 'AM';
-  });
+  const [selectedHour, setSelectedHour] = useState(() => 12);
+  const [selectedMinute, setSelectedMinute] = useState(() => 0);
+  const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>('AM');
 
-  // State to track if time has been set
-  const [promiseTime, setPromiseTime] = useState<string>('');
-
-  // Refs for ScrollViews to control scrolling
   const dateScrollRef = useRef<ScrollView>(null);
   const hourScrollRef = useRef<ScrollView>(null);
   const minuteScrollRef = useRef<ScrollView>(null);
   const periodScrollRef = useRef<ScrollView>(null);
 
-  const ITEM_HEIGHT = 50 * scaleX;
+  const ITEM_HEIGHT = RETURN_LATER_MODAL.timePicker.itemHeight * scaleX;
 
-  // Reset to current time and scroll to selected items when modal opens
   useEffect(() => {
     if (visible) {
-      // Reset to current date/time
-      const now = new Date();
-      setSelectedDate(now);
-      
-      const hour24 = now.getHours();
-      const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
-      setSelectedHour(hour12);
-      setSelectedMinute(now.getMinutes());
-      setSelectedPeriod(now.getHours() >= 12 ? 'PM' : 'AM');
-      
-      setPromiseTime(''); // Reset when modal opens
-      
+      const min = getMinAllowedTime();
+      setSelectedDate(min.date);
+      setSelectedHour(min.hour12);
+      setSelectedMinute(min.minute);
+      setSelectedPeriod(min.period);
       setTimeout(() => {
-        // Scroll date to index 6 (center of the 14-day range)
         dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: false });
-        
-        // Scroll hour to current hour (index is hour - 1)
-        hourScrollRef.current?.scrollTo({ y: (hour12 - 1) * ITEM_HEIGHT, animated: false });
-        
-        // Scroll minute to current minute
-        minuteScrollRef.current?.scrollTo({ y: now.getMinutes() * ITEM_HEIGHT, animated: false });
-        
-        // Scroll period to current period (0 for AM, 1 for PM)
-        const periodIndex = now.getHours() >= 12 ? 1 : 0;
-        periodScrollRef.current?.scrollTo({ y: periodIndex * ITEM_HEIGHT, animated: false });
+        hourScrollRef.current?.scrollTo({ y: (min.hour12 - 1) * ITEM_HEIGHT, animated: false });
+        minuteScrollRef.current?.scrollTo({ y: min.minute * ITEM_HEIGHT, animated: false });
+        periodScrollRef.current?.scrollTo({ y: (min.period === 'AM' ? 0 : 1) * ITEM_HEIGHT, animated: false });
       }, 100);
     }
   }, [visible]);
@@ -86,29 +72,15 @@ export default function PromiseTimeModal({
     return now.toDateString() === selected.toDateString();
   };
 
-  const changeDay = (direction: number) => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + direction);
-    
-    // Don't allow going to past dates
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const checkDate = new Date(newDate);
-    checkDate.setHours(0, 0, 0, 0);
-    
-    if (checkDate.getTime() < now.getTime()) {
-      return; // Don't allow past dates
-    }
-    
-    setSelectedDate(newDate);
-    
-    // Scroll to center the selected date (always at index 6 in the 14-day range)
-    setTimeout(() => {
-      dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: true });
-    }, 100);
+  const isAtLeast5MinFromNow = (date: Date, hour: number, minute: number, period: 'AM' | 'PM') => {
+    const check = new Date(date);
+    const hour24 = period === 'PM' ? (hour === 12 ? 12 : hour + 12) : (hour === 12 ? 0 : hour);
+    check.setHours(hour24, minute, 0, 0);
+    const minAllowed = Date.now() + MIN_MINUTES_FROM_NOW * 60 * 1000;
+    return check.getTime() >= minAllowed;
   };
 
-  // Handle scroll events to update selected values
+  // Handle scroll events
   const handleDateScroll = (event: any) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     const index = Math.round(offsetY / ITEM_HEIGHT);
@@ -214,33 +186,20 @@ export default function PromiseTimeModal({
     const offsetY = event.nativeEvent.contentOffset.y;
     const minute = Math.round(offsetY / ITEM_HEIGHT);
     if (minute >= 0 && minute <= 59) {
-      // Check if this minute is in the past (only when on current date and current hour)
-      let isPast = false;
-      if (isCurrentDate()) {
-        const now = new Date();
-        const currentHour24 = now.getHours();
-        const currentHour12 = currentHour24 === 0 ? 12 : currentHour24 > 12 ? currentHour24 - 12 : currentHour24;
-        const currentPeriod = currentHour24 >= 12 ? 'PM' : 'AM';
-        const currentMinute = now.getMinutes();
-        
-        if (selectedHour === currentHour12 && selectedPeriod === currentPeriod) {
-          isPast = minute < currentMinute;
-        } else if (selectedPeriod === 'AM' && currentPeriod === 'PM') {
-          isPast = true;
-        } else if (selectedPeriod === currentPeriod && selectedHour < currentHour12) {
-          isPast = true;
-        }
-      }
-      
-      if (!isPast) {
+      if (!isAtLeast5MinFromNow(selectedDate, selectedHour, minute, selectedPeriod)) {
+        const min = getMinAllowedTime();
+        setSelectedDate(min.date);
+        setSelectedHour(min.hour12);
+        setSelectedMinute(min.minute);
+        setSelectedPeriod(min.period);
+        setTimeout(() => {
+          minuteScrollRef.current?.scrollTo({ y: min.minute * ITEM_HEIGHT, animated: true });
+          hourScrollRef.current?.scrollTo({ y: (min.hour12 - 1) * ITEM_HEIGHT, animated: true });
+          periodScrollRef.current?.scrollTo({ y: (min.period === 'AM' ? 0 : 1) * ITEM_HEIGHT, animated: true });
+        }, 50);
+      } else {
         setSelectedMinute(minute);
         minuteScrollRef.current?.scrollTo({ y: minute * ITEM_HEIGHT, animated: true });
-      } else {
-        // Scroll back to current minute
-        const now = new Date();
-        const currentMinute = now.getMinutes();
-        setSelectedMinute(currentMinute);
-        minuteScrollRef.current?.scrollTo({ y: currentMinute * ITEM_HEIGHT, animated: true });
       }
     }
   };
@@ -279,15 +238,21 @@ export default function PromiseTimeModal({
     }
   };
 
-  const handleDone = () => {
-    // Format the selected date and time
+  const handleConfirm = () => {
+    if (!isAtLeast5MinFromNow(selectedDate, selectedHour, selectedMinute, selectedPeriod)) {
+      Alert.alert(
+        'Invalid time',
+        `Promise time must be at least ${MIN_MINUTES_FROM_NOW} minutes from now.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
     const timeString = `${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')} ${selectedPeriod}`;
-    const dateTimeString = `${selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${timeString}`;
-    setPromiseTime(dateTimeString);
-    
-    // Confirm and close modal
-    onConfirm(timeString, selectedPeriod);
-    onClose();
+    const formattedDateTime = `${selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} at ${timeString}`;
+    const promiseAt = new Date(selectedDate);
+    const hour24 = selectedPeriod === 'PM' ? (selectedHour === 12 ? 12 : selectedHour + 12) : (selectedHour === 12 ? 0 : selectedHour);
+    promiseAt.setHours(hour24, selectedMinute, 0, 0);
+    onConfirm(timeString, selectedPeriod, formattedDateTime, promiseAt.getTime());
   };
 
   return (
@@ -305,50 +270,14 @@ export default function PromiseTimeModal({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {/* Title */}
+            {/* Title - Figma 1121-825 */}
             <Text style={styles.title}>Promise time</Text>
-
-            {/* Selected Time Display */}
-            {promiseTime && (
-              <Text style={styles.selectedTimeDisplay}>
-                {promiseTime}
-              </Text>
-            )}
 
             {/* Divider */}
             <View style={styles.divider} />
 
-            {/* Date & Time Picker - Interactive Wheel Style */}
-            <View style={styles.dateTimePickerContainer}>
-              {/* Navigation Header */}
-              <View style={styles.pickerHeader}>
-                <View style={styles.navArrows}>
-                  <TouchableOpacity 
-                    onPress={() => changeDay(-1)} 
-                    style={styles.navButton}
-                    disabled={isCurrentDate()}
-                  >
-                    <Text style={[
-                      styles.navArrow,
-                      isCurrentDate() && styles.navArrowDisabled
-                    ]}>‹</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={() => changeDay(1)} 
-                    style={styles.navButton}
-                  >
-                    <Text style={[
-                      styles.navArrow,
-                      styles.navArrowActive
-                    ]}>›</Text>
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity onPress={handleDone}>
-                  <Text style={styles.doneButton}>Done</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Wheel Picker - 4 Columns */}
+            {/* Date & Time Picker - 4 columns (Figma) */}
+            <View style={styles.dateTimePickerWrapper}>
               <View style={styles.wheelPickerContainer}>
                 {/* Selection Dividers */}
                 <View style={styles.selectionDividerTop} />
@@ -360,7 +289,7 @@ export default function PromiseTimeModal({
                     ref={dateScrollRef}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.wheelScrollContent}
-                    snapToInterval={50 * scaleX}
+                    snapToInterval={ITEM_HEIGHT}
                     decelerationRate="fast"
                     onScroll={handleDateScroll}
                     onMomentumScrollEnd={handleDateScrollEnd}
@@ -416,7 +345,7 @@ export default function PromiseTimeModal({
                     ref={hourScrollRef}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.wheelScrollContent}
-                    snapToInterval={50 * scaleX}
+                    snapToInterval={ITEM_HEIGHT}
                     decelerationRate="fast"
                     onScroll={handleHourScroll}
                     onMomentumScrollEnd={handleHourScrollEnd}
@@ -472,7 +401,7 @@ export default function PromiseTimeModal({
                     ref={minuteScrollRef}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.wheelScrollContent}
-                    snapToInterval={50 * scaleX}
+                    snapToInterval={ITEM_HEIGHT}
                     decelerationRate="fast"
                     onScroll={handleMinuteScroll}
                     onMomentumScrollEnd={handleMinuteScrollEnd}
@@ -530,7 +459,7 @@ export default function PromiseTimeModal({
                     ref={periodScrollRef}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.wheelScrollContent}
-                    snapToInterval={50 * scaleX}
+                    snapToInterval={ITEM_HEIGHT}
                     decelerationRate="fast"
                     onScroll={handlePeriodScroll}
                     onMomentumScrollEnd={handlePeriodScrollEnd}
@@ -574,6 +503,15 @@ export default function PromiseTimeModal({
                 </View>
               </View>
             </View>
+
+            {/* Confirm Button */}
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={handleConfirm}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.confirmButtonText}>Confirm</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </View>
@@ -582,179 +520,118 @@ export default function PromiseTimeModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
+  container: { flex: 1, backgroundColor: 'transparent' },
   modalOverlay: {
     position: 'absolute',
-    top: 232 * scaleX, // Start after header (same as Return Later modal)
+    top: 232 * scaleX,
     left: 0,
     right: 0,
     bottom: 0,
     backgroundColor: '#FFFFFF',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40 * scaleX,
-  },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: 80 * scaleX },
   title: {
-    marginTop: 12,
+    marginTop: 21 * scaleX,
     marginLeft: 24 * scaleX,
     fontSize: 20 * scaleX,
     fontFamily: 'Helvetica',
     fontWeight: '700',
     color: '#607aa1',
   },
-  instruction: {
-    marginTop: 7 * scaleX, // Same as Return Later modal
-    marginLeft: 24 * scaleX, // Same as Return Later modal
-    fontSize: 14 * scaleX,
-    fontFamily: 'Inter',
-    fontWeight: '300',
-    color: '#000000',
-    lineHeight: 15 * scaleX,
-  },
-  selectedTimeDisplay: {
-    marginTop: 7 * scaleX,
-    marginLeft: 24 * scaleX,
-    fontSize: 14 * scaleX,
-    fontFamily: 'Helvetica',
-    fontWeight: '400',
-    color: '#5a759d',
-  },
   divider: {
-    marginTop: 17 * scaleX, // Same as Return Later modal
-    marginHorizontal: 12 * scaleX, // Same as Return Later modal
+    marginTop: 17 * scaleX,
+    marginHorizontal: 12 * scaleX,
     height: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: RETURN_LATER_MODAL.divider.backgroundColor,
   },
-  dateTimePickerContainer: {
-    marginTop: 32 * scaleX, // Same as Return Later modal
-    marginHorizontal: 35 * scaleX, // Same as Return Later modal
-    height: 302 * scaleX,
-    backgroundColor: '#FFFFFF',
-  },
-  pickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16 * scaleX,
-    paddingTop: 12 * scaleX,
-    paddingBottom: 12 * scaleX,
-    backgroundColor: '#F2F2F7', // Light gray background for entire header
-    borderRadius: 10 * scaleX,
-    marginBottom: 8 * scaleX,
-  },
-  navArrows: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 20 * scaleX,
-  },
-  navButton: {
-    width: 40 * scaleX,
-    height: 40 * scaleX,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  navArrow: {
-    fontSize: 36 * scaleX,
-    color: '#C7C7CC', // Light gray color
-    fontFamily: 'Helvetica',
-    fontWeight: '300',
-    lineHeight: 36 * scaleX,
-  },
-  navArrowActive: {
-    color: '#007AFF', // iOS blue - active color
-  },
-  navArrowDisabled: {
-    color: '#E5E5EA', // Very light gray - disabled
-    opacity: 0.5,
-  },
-  doneButton: {
-    fontSize: 17 * scaleX,
-    color: '#007AFF', // iOS blue matching Figma
-    fontFamily: 'Helvetica',
-    fontWeight: '400',
+  dateTimePickerWrapper: {
+    marginTop: 32 * scaleX,
+    marginHorizontal: 24 * scaleX,
   },
   wheelPickerContainer: {
     flexDirection: 'row',
-    height: 250 * scaleX,
+    height: RETURN_LATER_MODAL.timePicker.height * scaleX,
     position: 'relative',
     alignItems: 'center',
   },
   selectionDividerTop: {
     position: 'absolute',
-    top: 100 * scaleX, // Center of picker (250 / 2 - 25 = 100)
     left: 0,
     right: 0,
+    top: RETURN_LATER_MODAL.timePicker.height * 0.4 * scaleX,
     height: 1,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: RETURN_LATER_MODAL.divider.backgroundColor,
     zIndex: 10,
   },
   selectionDividerBottom: {
     position: 'absolute',
-    top: 150 * scaleX, // Center + item height (100 + 50 = 150)
     left: 0,
     right: 0,
+    top: RETURN_LATER_MODAL.timePicker.height * 0.6 * scaleX,
     height: 1,
-    backgroundColor: '#E5E5EA',
+    backgroundColor: RETURN_LATER_MODAL.divider.backgroundColor,
     zIndex: 10,
   },
-  wheelColumn: {
-    flex: 1,
-    height: '100%',
-  },
+  wheelColumn: { flex: 1, height: '100%' },
   wheelScrollContent: {
-    paddingTop: 100 * scaleX, // Padding to center first item between dividers
-    paddingBottom: 100 * scaleX, // Padding to center last item between dividers
+    paddingTop: (RETURN_LATER_MODAL.timePicker.height - RETURN_LATER_MODAL.timePicker.itemHeight) / 2 * scaleX,
+    paddingBottom: (RETURN_LATER_MODAL.timePicker.height - RETURN_LATER_MODAL.timePicker.itemHeight) / 2 * scaleX,
   },
   wheelItem: {
-    height: 50 * scaleX, // Exact height between dividers (150 - 100 = 50px)
+    height: RETURN_LATER_MODAL.timePicker.itemHeight * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 2 * scaleX,
+    paddingHorizontal: 4 * scaleX,
   },
   wheelDateText: {
-    fontSize: 16 * scaleX,
-    color: '#CCCCCC',
+    fontSize: RETURN_LATER_MODAL.timePicker.unselectedFontSize * scaleX,
+    color: RETURN_LATER_MODAL.timePicker.unselectedColor,
     fontFamily: 'Helvetica',
-    fontWeight: '300',
+    fontWeight: RETURN_LATER_MODAL.timePicker.unselectedFontWeight as any,
     textAlign: 'center',
-    textAlignVertical: 'center',
   },
   wheelSelectedDateText: {
-    fontSize: 16 * scaleX,
-    color: '#000000',
+    fontSize: RETURN_LATER_MODAL.timePicker.selectedFontSize * scaleX,
+    color: RETURN_LATER_MODAL.timePicker.selectedColor,
     fontFamily: 'Helvetica',
-    fontWeight: '700',
+    fontWeight: RETURN_LATER_MODAL.timePicker.selectedFontWeight as any,
     textAlign: 'center',
-    textAlignVertical: 'center',
   },
   wheelDateTextDisabled: {
-    color: '#E5E5EA',
+    color: RETURN_LATER_MODAL.timePicker.unselectedColor,
     opacity: 0.5,
   },
   wheelNumberText: {
-    fontSize: 20 * scaleX,
-    color: '#CCCCCC',
+    fontSize: RETURN_LATER_MODAL.timePicker.unselectedFontSize * scaleX,
+    color: RETURN_LATER_MODAL.timePicker.unselectedColor,
     fontFamily: 'Helvetica',
-    fontWeight: '300',
+    fontWeight: RETURN_LATER_MODAL.timePicker.unselectedFontWeight as any,
     textAlign: 'center',
-    textAlignVertical: 'center',
   },
   wheelSelectedNumberText: {
-    fontSize: 20 * scaleX,
-    color: '#000000',
+    fontSize: RETURN_LATER_MODAL.timePicker.selectedFontSize * scaleX,
+    color: RETURN_LATER_MODAL.timePicker.selectedColor,
     fontFamily: 'Helvetica',
-    fontWeight: '700',
+    fontWeight: RETURN_LATER_MODAL.timePicker.selectedFontWeight as any,
     textAlign: 'center',
-    textAlignVertical: 'center',
   },
   wheelNumberTextDisabled: {
-    color: '#E5E5EA',
+    color: RETURN_LATER_MODAL.timePicker.unselectedColor,
     opacity: 0.5,
+  },
+  confirmButton: {
+    marginTop: 40 * scaleX,
+    marginHorizontal: 35 * scaleX,
+    height: 70 * scaleX,
+    backgroundColor: '#5a759d',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    fontSize: 18 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '400',
+    color: '#FFFFFF',
   },
 });

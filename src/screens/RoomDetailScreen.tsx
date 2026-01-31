@@ -75,6 +75,8 @@ export default function RoomDetailScreen() {
   const [selectedStatusText, setSelectedStatusText] = useState<string | undefined>(undefined);
   // Track Return Later: timestamp for time-only display + remaining countdown (e.g. "2:30 PM · 30 mins 2s")
   const [returnLaterAtTimestamp, setReturnLaterAtTimestamp] = useState<number | undefined>(undefined);
+  // Track Promise Time: timestamp for time + countdown in header
+  const [promiseTimeAtTimestamp, setPromiseTimeAtTimestamp] = useState<number | undefined>(undefined);
   
   // Track notes and assigned staff in state
   const [notes, setNotes] = useState<Note[]>(() => {
@@ -414,11 +416,12 @@ export default function RoomDetailScreen() {
     setShowReturnLaterModal(false);
   };
 
-  const handlePromiseTimeConfirm = (promiseTime: string, period: 'AM' | 'PM') => {
+  const handlePromiseTimeConfirm = (promiseTime: string, period: 'AM' | 'PM', _formattedDateTime?: string, promiseAtTimestamp?: number) => {
     console.log('Promise Time confirmed for room:', room.roomNumber, 'at:', promiseTime, period);
-    // TODO: Save promise time to backend/API
+    if (promiseAtTimestamp != null) {
+      setPromiseTimeAtTimestamp(promiseAtTimestamp);
+    }
     setShowPromiseTimeModal(false);
-    // Keep selectedStatusText to show "Promise Time" in header
   };
 
   // TODO: Implement Refuse Service modal
@@ -587,6 +590,7 @@ export default function RoomDetailScreen() {
         }
         pausedAt={pausedAt}
         returnLaterAtTimestamp={returnLaterAtTimestamp}
+        promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         flagged={localRoom.flagged === true}
       />
 

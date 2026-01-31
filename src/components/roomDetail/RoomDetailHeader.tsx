@@ -15,7 +15,8 @@ interface RoomDetailHeaderProps {
   customStatusText?: string; // Custom status text to display (e.g., "Return Later", "Promise Time", "Refuse Service")
   pausedAt?: string; // Time when room was paused (e.g., "11:22")
   returnLaterAt?: string; // Deprecated: use returnLaterAtTimestamp for time + remaining
-  returnLaterAtTimestamp?: number; // Epoch ms when user will return; header shows time only + "X mins Y s" countdown
+  returnLaterAtTimestamp?: number; // Epoch ms when user will return; header shows time only + countdown
+  promiseTimeAtTimestamp?: number; // Epoch ms when room will be ready; header shows time + countdown
   flagged?: boolean; // When true, show Flagged variant (Figma 2333-646): light header, red text, Flagged pill
 }
 
@@ -30,11 +31,14 @@ export default function RoomDetailHeader({
   pausedAt,
   returnLaterAt,
   returnLaterAtTimestamp,
+  promiseTimeAtTimestamp,
   flagged = false,
 }: RoomDetailHeaderProps) {
   const statusConfig = STATUS_CONFIGS[status];
   const isReturnLater = customStatusText === 'Return Later';
+  const isPromiseTime = customStatusText === 'Promise Time' || customStatusText === 'Promised Time';
   const hasReturnLaterTime = isReturnLater && (returnLaterAtTimestamp != null || returnLaterAt);
+  const hasPromiseTimeTime = isPromiseTime && promiseTimeAtTimestamp != null;
 
   // Remaining countdown "X mins Y s" for Return Later, updates every second
   const [returnLaterRemaining, setReturnLaterRemaining] = useState<string>('');
@@ -76,13 +80,47 @@ export default function RoomDetailHeader({
       ? ROOM_DETAIL_HEADER.paused.headerBackground
       : isReturnLater
         ? ROOM_DETAIL_HEADER.returnLater.headerBackground
-        : customStatusText && ['Refuse Service', 'Promise Time', 'Promised Time'].includes(customStatusText)
-          ? ROOM_DETAIL_HEADER.specialDark.headerBackground
-          : statusConfig.color;
+        : isPromiseTime
+          ? ROOM_DETAIL_HEADER.returnLater.headerBackground
+          : customStatusText === 'Refuse Service'
+            ? ROOM_DETAIL_HEADER.specialDark.headerBackground
+            : statusConfig.color;
 
-  const isLightHeader = flagged || isPaused || isReturnLater;
+  // Promise Time countdown (same format as Return Later: "2:30 PM · 30 mins 2s" or "1h 30 min 2s")
+  const [promiseTimeRemaining, setPromiseTimeRemaining] = useState<string>('');
+  useEffect(() => {
+    if (!hasPromiseTimeTime || promiseTimeAtTimestamp == null) {
+      setPromiseTimeRemaining('');
+      return;
+    }
+    const tick = () => {
+      const now = Date.now();
+      const diff = promiseTimeAtTimestamp - now;
+      if (diff <= 0) {
+        setPromiseTimeRemaining('0h 0 min 0s');
+        return;
+      }
+      const totalMins = Math.floor(diff / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      if (totalMins >= 60) {
+        const hours = Math.floor(diff / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        setPromiseTimeRemaining(`${hours}h ${mins} min ${secs}s`);
+      } else {
+        setPromiseTimeRemaining(`${totalMins} mins ${secs}s`);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [hasPromiseTimeTime, promiseTimeAtTimestamp]);
+
+  const isLightHeader = flagged || isPaused || isReturnLater || isPromiseTime;
   const returnTimeOnly = returnLaterAtTimestamp != null
     ? new Date(returnLaterAtTimestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    : '';
+  const promiseTimeOnly = promiseTimeAtTimestamp != null
+    ? new Date(promiseTimeAtTimestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
     : '';
 
   // Determine which icon to use based on customStatusText, pausedAt, or status
@@ -95,6 +133,9 @@ export default function RoomDetailHeader({
     }
     if (customStatusText === 'Return Later') {
       return require('../../../assets/icons/return-later.png');
+    }
+    if (customStatusText === 'Promise Time' || customStatusText === 'Promised Time') {
+      return require('../../../assets/icons/promised-time-status.png');
     }
     // Default to status-based icons
     if (status === 'InProgress') {
@@ -115,7 +156,7 @@ export default function RoomDetailHeader({
   const statusIconSource = getStatusIcon();
   
   // These icons have colored backgrounds, so don't apply tintColor
-  const iconsWithColor = ['Pause', 'Refuse Service', 'Return Later'];
+  const iconsWithColor = ['Pause', 'Refuse Service', 'Return Later', 'Promise Time', 'Promised Time'];
   const shouldTintIcon = !customStatusText || !iconsWithColor.includes(customStatusText);
 
   return (
@@ -135,7 +176,7 @@ export default function RoomDetailHeader({
               ? ROOM_DETAIL_HEADER.flagged.backArrowTint
               : isPaused
                 ? ROOM_DETAIL_HEADER.paused.backArrowTint
-                : isReturnLater
+                : isReturnLater || isPromiseTime
                   ? ROOM_DETAIL_HEADER.returnLater.backArrowTint
                   : '#FFFFFF'
           }
@@ -149,7 +190,7 @@ export default function RoomDetailHeader({
           styles.roomNumber,
           flagged && { color: ROOM_DETAIL_HEADER.flagged.roomNumberColor },
           isPaused && { color: ROOM_DETAIL_HEADER.paused.roomNumberColor },
-          isReturnLater && { color: ROOM_DETAIL_HEADER.returnLater.roomNumberColor },
+          (isReturnLater || isPromiseTime) && { color: ROOM_DETAIL_HEADER.returnLater.roomNumberColor },
         ]}
       >
         Room {roomNumber}
@@ -161,7 +202,7 @@ export default function RoomDetailHeader({
           styles.roomCode,
           flagged && { color: ROOM_DETAIL_HEADER.flagged.roomCodeColor },
           isPaused && { color: ROOM_DETAIL_HEADER.paused.roomCodeColor },
-          isReturnLater && { color: ROOM_DETAIL_HEADER.returnLater.roomCodeColor },
+          (isReturnLater || isPromiseTime) && { color: ROOM_DETAIL_HEADER.returnLater.roomCodeColor },
         ]}
       >
         {roomCode}
@@ -206,7 +247,7 @@ export default function RoomDetailHeader({
               tintColor={
                 isPaused
                   ? ROOM_DETAIL_HEADER.paused.statusTextAndIconColor
-                  : isReturnLater
+                  : (isReturnLater || isPromiseTime)
                     ? ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor
                     : shouldTintIcon
                       ? '#FFFFFF'
@@ -217,7 +258,7 @@ export default function RoomDetailHeader({
               style={[
                 styles.statusText,
                 isPaused && { color: ROOM_DETAIL_HEADER.paused.statusTextAndIconColor },
-                isReturnLater && { color: ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor },
+                (isReturnLater || isPromiseTime) && { color: ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor },
               ]}
             >
               {displayStatusText}
@@ -227,7 +268,7 @@ export default function RoomDetailHeader({
               style={[
                 styles.dropdownArrow,
                 isPaused && { tintColor: ROOM_DETAIL_HEADER.paused.statusTextAndIconColor },
-                isReturnLater && { tintColor: ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor },
+                (isReturnLater || isPromiseTime) && { tintColor: ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor },
               ]}
               resizeMode="contain"
             />
@@ -257,6 +298,13 @@ export default function RoomDetailHeader({
           Return at {returnLaterAt}
         </Text>
       ) : null)}
+
+      {/* Promise Time: time only + remaining e.g. "2:30 PM · 30 mins 2s" */}
+      {hasPromiseTimeTime && (
+        <Text style={[styles.returnLaterAt, { color: ROOM_DETAIL_HEADER.returnLater.returnTimeColor }]}>
+          {promiseTimeOnly}{promiseTimeRemaining ? ` · ${promiseTimeRemaining}` : ''}
+        </Text>
+      )}
     </View>
   );
 }

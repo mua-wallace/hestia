@@ -55,6 +55,8 @@ export default function ArrivalDepartureDetailScreen() {
   const [selectedStatusText, setSelectedStatusText] = useState<string | undefined>(undefined);
   // Track Return Later: timestamp for time-only + remaining countdown (e.g. "2:30 PM · 30 mins 2s")
   const [returnLaterAtTimestamp, setReturnLaterAtTimestamp] = useState<number | undefined>(undefined);
+  // Track Promise Time: timestamp for time + countdown in header
+  const [promiseTimeAtTimestamp, setPromiseTimeAtTimestamp] = useState<number | undefined>(undefined);
   // Track room data locally to allow updates (e.g., flagged status)
   const [localRoom, setLocalRoom] = useState<RoomCardData>(room);
   // Track notes and assigned staff in state
@@ -268,13 +270,12 @@ export default function ArrivalDepartureDetailScreen() {
     setShowReturnLaterModal(false);
   };
 
-  // TODO: Implement Promise Time modal
-  const handlePromiseTimeConfirm = (promiseTime: string, period: 'AM' | 'PM') => {
-    // TODO: Save promise time to backend/API
+  const handlePromiseTimeConfirm = (promiseTime: string, period: 'AM' | 'PM', _formattedDateTime?: string, promiseAtTimestamp?: number) => {
     console.log('Promise Time confirmed for room:', room.roomNumber, 'at:', promiseTime, period);
-    // Close modal but keep selected status text to show "Promised Time" in header
+    if (promiseAtTimestamp != null) {
+      setPromiseTimeAtTimestamp(promiseAtTimestamp);
+    }
     setShowPromiseTimeModal(false);
-    // TODO: Update room status or show success message
   };
 
   // TODO: Implement Refuse Service modal
@@ -431,6 +432,7 @@ export default function ArrivalDepartureDetailScreen() {
         }
         pausedAt={pausedAt}
         returnLaterAtTimestamp={returnLaterAtTimestamp}
+        promiseTimeAtTimestamp={promiseTimeAtTimestamp}
       />
 
       {/* Tab Navigation - Below header (252px) */}
