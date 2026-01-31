@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { RETURN_LATER_MODAL } from '../../constants/returnLaterModalStyles';
+import TimeSuggestionButton from './TimeSuggestionButton';
 
+const TIME_SUGGESTIONS = ['10 mins', '20 mins', '30 mins', '1 Hour'];
 const MIN_MINUTES_FROM_NOW = 5;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const scaleX = SCREEN_WIDTH / 430;
@@ -36,6 +38,7 @@ export default function PromiseTimeModal({
   const [selectedHour, setSelectedHour] = useState(() => 12);
   const [selectedMinute, setSelectedMinute] = useState(() => 0);
   const [selectedPeriod, setSelectedPeriod] = useState<'AM' | 'PM'>('AM');
+  const [selectedSuggestion, setSelectedSuggestion] = useState<string | null>(null);
 
   const dateScrollRef = useRef<ScrollView>(null);
   const hourScrollRef = useRef<ScrollView>(null);
@@ -78,6 +81,30 @@ export default function PromiseTimeModal({
     check.setHours(hour24, minute, 0, 0);
     const minAllowed = Date.now() + MIN_MINUTES_FROM_NOW * 60 * 1000;
     return check.getTime() >= minAllowed;
+  };
+
+  const handleSuggestionPress = (suggestion: string) => {
+    setSelectedSuggestion(suggestion);
+    let minutesToAdd = suggestion === '1 Hour' ? 60 : parseInt(suggestion.replace(' mins', ''), 10);
+    const currentDate = new Date(selectedDate);
+    const hour24 = selectedPeriod === 'PM' ? (selectedHour === 12 ? 12 : selectedHour + 12) : (selectedHour === 12 ? 0 : selectedHour);
+    currentDate.setHours(hour24, selectedMinute, 0, 0);
+    const newTime = new Date(currentDate.getTime() + minutesToAdd * 60 * 1000);
+    const newHour24 = newTime.getHours();
+    const newMinute = newTime.getMinutes();
+    const newPeriod: 'AM' | 'PM' = newHour24 >= 12 ? 'PM' : 'AM';
+    const newHour12 = newHour24 === 0 ? 12 : newHour24 > 12 ? newHour24 - 12 : newHour24;
+    const newDate = new Date(newTime.getFullYear(), newTime.getMonth(), newTime.getDate());
+    setSelectedDate(newDate);
+    setSelectedHour(newHour12);
+    setSelectedMinute(newMinute);
+    setSelectedPeriod(newPeriod);
+    setTimeout(() => {
+      dateScrollRef.current?.scrollTo({ y: 6 * ITEM_HEIGHT, animated: true });
+      hourScrollRef.current?.scrollTo({ y: (newHour12 - 1) * ITEM_HEIGHT, animated: true });
+      minuteScrollRef.current?.scrollTo({ y: newMinute * ITEM_HEIGHT, animated: true });
+      periodScrollRef.current?.scrollTo({ y: (newPeriod === 'AM' ? 0 : 1) * ITEM_HEIGHT, animated: true });
+    }, 100);
   };
 
   // Handle scroll events
@@ -275,6 +302,19 @@ export default function PromiseTimeModal({
 
             {/* Divider */}
             <View style={styles.divider} />
+
+            {/* Suggestions */}
+            <Text style={styles.suggestionsLabel}>Suggestions</Text>
+            <View style={styles.suggestionsButtons}>
+              {TIME_SUGGESTIONS.map((suggestion) => (
+                <TimeSuggestionButton
+                  key={suggestion}
+                  label={suggestion}
+                  isSelected={selectedSuggestion === suggestion}
+                  onPress={() => handleSuggestionPress(suggestion)}
+                />
+              ))}
+            </View>
 
             {/* Date & Time Picker - 4 columns (Figma) */}
             <View style={styles.dateTimePickerWrapper}>
@@ -544,6 +584,21 @@ const styles = StyleSheet.create({
     marginHorizontal: 12 * scaleX,
     height: 1,
     backgroundColor: RETURN_LATER_MODAL.divider.backgroundColor,
+  },
+  suggestionsLabel: {
+    marginTop: 24 * scaleX,
+    marginLeft: 24 * scaleX,
+    fontSize: RETURN_LATER_MODAL.suggestions.labelFontSize * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: RETURN_LATER_MODAL.suggestions.labelFontWeight as any,
+    color: RETURN_LATER_MODAL.suggestions.labelColor,
+  },
+  suggestionsButtons: {
+    marginTop: 12 * scaleX,
+    marginLeft: 32 * scaleX,
+    flexDirection: 'row',
+    gap: 13 * scaleX,
+    flexWrap: 'wrap',
   },
   dateTimePickerWrapper: {
     marginTop: 32 * scaleX,

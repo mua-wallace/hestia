@@ -16,7 +16,7 @@ import RoomTicketsSection from '../components/roomDetail/RoomTicketsSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
 import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
-// import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal'; // TODO: Implement Refuse Service modal
+import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal';
 import ReassignModal from '../components/roomDetail/ReassignModal';
 import AddNoteModal from '../components/roomDetail/AddNoteModal';
 import AddTaskModal from '../components/roomDetail/AddTaskModal';
@@ -41,7 +41,7 @@ export default function ArrivalDepartureDetailScreen() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
   const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
-  // const [showRefuseServiceModal, setShowRefuseServiceModal] = useState(false); // TODO: Implement Refuse Service modal
+  const [showRefuseServiceModal, setShowRefuseServiceModal] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -57,6 +57,8 @@ export default function ArrivalDepartureDetailScreen() {
   const [returnLaterAtTimestamp, setReturnLaterAtTimestamp] = useState<number | undefined>(undefined);
   // Track Promise Time: timestamp for time + countdown in header
   const [promiseTimeAtTimestamp, setPromiseTimeAtTimestamp] = useState<number | undefined>(undefined);
+  // Track Refuse Service: selected reason or custom reason to show in header
+  const [refuseServiceReason, setRefuseServiceReason] = useState<string | undefined>(undefined);
   // Track room data locally to allow updates (e.g., flagged status)
   const [localRoom, setLocalRoom] = useState<RoomCardData>(room);
   // Track notes and assigned staff in state
@@ -196,9 +198,8 @@ export default function ArrivalDepartureDetailScreen() {
 
     // If RefuseService is selected, show the Refuse Service modal
     if (statusOption === 'RefuseService') {
-      console.log('RefuseService selected - modal not yet implemented');
       setShowStatusModal(false);
-      // setShowRefuseServiceModal(true); // TODO: Implement Refuse Service modal
+      setShowRefuseServiceModal(true);
       setSelectedStatusText(statusLabel);
       return;
     }
@@ -278,16 +279,10 @@ export default function ArrivalDepartureDetailScreen() {
     setShowPromiseTimeModal(false);
   };
 
-  // TODO: Implement Refuse Service modal
-  // const handleRefuseServiceConfirm = (selectedReasons: string[], customReason?: string) => {
-  //   // TODO: Save refuse service reasons to backend/API
-  //   console.log('Refuse Service confirmed for room:', room.roomNumber, 'reasons:', selectedReasons, 'custom:', customReason);
-  //
-  //   // Close modal but keep selected status text to show "Refuse Service" in header
-  //   setShowRefuseServiceModal(false);
-  //
-  //   // TODO: Update room status or show success message
-  // };
+  const handleRefuseServiceConfirm = (reason: string) => {
+    setRefuseServiceReason(reason);
+    setShowRefuseServiceModal(false);
+  };
 
   const handleTabPress = (tab: DetailTab) => {
     setActiveTab(tab);
@@ -427,12 +422,13 @@ export default function ArrivalDepartureDetailScreen() {
           showReturnLaterModal
             ? 'Return Later'
             : showPromiseTimeModal ? 'Promise Time' :
-            // showRefuseServiceModal ? 'Refuse Service' : // TODO: Implement Refuse Service modal
+            showRefuseServiceModal ? 'Refuse Service' :
             selectedStatusText
         }
         pausedAt={pausedAt}
         returnLaterAtTimestamp={returnLaterAtTimestamp}
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
+        refuseServiceReason={refuseServiceReason}
       />
 
       {/* Tab Navigation - Below header (252px) */}
@@ -609,19 +605,18 @@ export default function ArrivalDepartureDetailScreen() {
         roomNumber={room.roomNumber}
       />
 
-      {/* TODO: Implement Refuse Service modal */}
-      {/* <RefuseServiceModal
+      <RefuseServiceModal
         visible={showRefuseServiceModal}
         onClose={() => {
           setShowRefuseServiceModal(false);
-          // Clear selected status text when modal is closed without confirmation
           setSelectedStatusText(undefined);
+          setRefuseServiceReason(undefined);
         }}
         onConfirm={handleRefuseServiceConfirm}
         roomNumber={room.roomNumber}
         assignedTo={roomDetail.assignedTo}
         onReassignPress={handleReassign}
-      /> */}
+      />
 
       {/* Reassign Modal */}
       <ReassignModal

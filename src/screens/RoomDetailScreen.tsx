@@ -24,7 +24,7 @@ import RoomTicketsSection from '../components/roomDetail/RoomTicketsSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
 import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
-// import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal'; // TODO: Implement Refuse Service modal
+import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal';
 import ReassignModal from '../components/roomDetail/ReassignModal';
 import AddNoteModal from '../components/roomDetail/AddNoteModal';
 import AddTaskModal from '../components/roomDetail/AddTaskModal';
@@ -58,7 +58,7 @@ export default function RoomDetailScreen() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
   const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
-  // const [showRefuseServiceModal, setShowRefuseServiceModal] = useState(false); // TODO: Implement Refuse Service modal
+  const [showRefuseServiceModal, setShowRefuseServiceModal] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -77,7 +77,9 @@ export default function RoomDetailScreen() {
   const [returnLaterAtTimestamp, setReturnLaterAtTimestamp] = useState<number | undefined>(undefined);
   // Track Promise Time: timestamp for time + countdown in header
   const [promiseTimeAtTimestamp, setPromiseTimeAtTimestamp] = useState<number | undefined>(undefined);
-  
+  // Track Refuse Service: selected reason or custom reason to show in header
+  const [refuseServiceReason, setRefuseServiceReason] = useState<string | undefined>(undefined);
+
   // Track notes and assigned staff in state
   const [notes, setNotes] = useState<Note[]>(() => {
     if (room.houseKeepingStatus === 'InProgress') {
@@ -354,9 +356,8 @@ export default function RoomDetailScreen() {
 
     if (statusOption === 'RefuseService') {
       setShowStatusModal(false);
-      // setShowRefuseServiceModal(true); // TODO: Implement Refuse Service modal
+      setShowRefuseServiceModal(true);
       setSelectedStatusText(statusLabel);
-      console.log('Refuse Service selected - modal not yet implemented');
       return;
     }
 
@@ -424,11 +425,10 @@ export default function RoomDetailScreen() {
     setShowPromiseTimeModal(false);
   };
 
-  // TODO: Implement Refuse Service modal
-  // const handleRefuseServiceConfirm = (selectedReasons: string[], customReason?: string) => {
-  //   console.log('Refuse Service confirmed for room:', room.roomNumber, 'reasons:', selectedReasons, 'custom:', customReason);
-  //   setShowRefuseServiceModal(false);
-  // };
+  const handleRefuseServiceConfirm = (reason: string) => {
+    setRefuseServiceReason(reason);
+    setShowRefuseServiceModal(false);
+  };
 
   const handleTabPress = (tab: DetailTab) => {
     setActiveTab(tab);
@@ -585,12 +585,13 @@ export default function RoomDetailScreen() {
           showReturnLaterModal
             ? 'Return Later'
             : showPromiseTimeModal ? 'Promise Time' :
-            // showRefuseServiceModal ? 'Refuse Service' : // TODO: Implement Refuse Service modal
+            showRefuseServiceModal ? 'Refuse Service' :
             selectedStatusText
         }
         pausedAt={pausedAt}
         returnLaterAtTimestamp={returnLaterAtTimestamp}
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
+        refuseServiceReason={refuseServiceReason}
         flagged={localRoom.flagged === true}
       />
 
@@ -796,18 +797,18 @@ export default function RoomDetailScreen() {
         roomNumber={room.roomNumber}
       />
 
-      {/* TODO: Implement Refuse Service modal */}
-      {/* <RefuseServiceModal
+      <RefuseServiceModal
         visible={showRefuseServiceModal}
         onClose={() => {
           setShowRefuseServiceModal(false);
           setSelectedStatusText(undefined);
+          setRefuseServiceReason(undefined);
         }}
         onConfirm={handleRefuseServiceConfirm}
         roomNumber={room.roomNumber}
         assignedTo={roomDetail.assignedTo}
         onReassignPress={handleReassign}
-      /> */}
+      />
 
       <ReassignModal
         visible={showReassignModal}
