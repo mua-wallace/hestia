@@ -104,7 +104,7 @@ export function getStayoverWithLinen(
 }
 
 /**
- * Label for Stayover display: "Stayover (with Linen)" or "Stayover (no Linen)".
+ * Label for Stayover display: "Stayover (with linen)" when with linen, "Stayover" when no linen.
  */
 export function getStayoverDisplayLabel(
   room: RoomCardData,
@@ -114,7 +114,7 @@ export function getStayoverDisplayLabel(
     return room.frontOfficeStatus;
   }
   const withLinen = getStayoverWithLinen(room, referenceDate);
-  if (withLinen === true) return 'Stayover (with Linen)';
-  if (withLinen === false) return 'Stayover (no Linen)';
+  if (withLinen === true) return 'Stayover (with linen)';
+  if (withLinen === false) return 'Stayover';
   return 'Stayover';
 }

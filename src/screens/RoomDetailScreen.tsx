@@ -38,6 +38,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
 import { getMockHistoryEvents } from '../data/mockHistoryData';
 import { generateHistoryReport } from '../utils/generateHistoryReport';
+import { getStayoverDisplayLabel } from '../utils/stayoverLinen';
 
 type RoomDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -646,6 +647,7 @@ export default function RoomDetailScreen() {
                     specialInstructionsTitleTop={positions.specialInstructionsTitle}
                     specialInstructionsTextTop={positions.specialInstructionsText}
                     roomCategory={firstGuest.timeLabel === 'ETA' ? 'Arrival' : roomType}
+                    categoryDisplayLabel={roomType === 'Stayover' ? getStayoverDisplayLabel(localRoom) : undefined}
                   />
                 )}
 

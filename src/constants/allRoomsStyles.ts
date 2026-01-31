@@ -133,6 +133,11 @@ export const GUEST_INFO = {
     left: 14, // Room 203 (with notes): icon at x=21 from screen, card at x=7, so 21-7=14px from card
     top: 89, // Room 203: icon at y=860 from screen, card at y=771, so 860-771=89px from card
   },
+  // No Task / Stayover without notes: icon left of name/date, spaced to prevent overlap
+  iconNoTask: {
+    left: 14,
+    top: 78, // Above name row, clears date at 98
+  },
   // Guest name styles and positions
   name: {
     fontSize: 14,
@@ -153,6 +158,9 @@ export const GUEST_INFO = {
   nameWithNotes: {
     top: 80, // Room 203: top-[851px] relative (851-771=80px)
   },
+  nameNoTask: {
+    top: 87, // Align with icon, clear spacing from date
+  },
   // Date range styles and positions
   dateRange: {
     fontSize: 14,
@@ -172,6 +180,9 @@ export const GUEST_INFO = {
   },
   dateRangeWithNotes: {
     top: 102, // Room 203: top-[873px] relative (873-771=102px)
+  },
+  dateRangeNoTask: {
+    top: 108, // Below icon (78+30=108), no overlap
   },
   // Time (ETA/EDT) positions - Exact from Figma
   time: {
@@ -203,6 +214,7 @@ export const GUEST_INFO = {
       standardDeparture: { iconLeft: 151, textLeft: 177, iconTop: 116, textTop: 116 }, // Room 202 (Departure): count at left-[184px] absolute, card at left-[7px], so textLeft=177px relative to card. Icon at left-[158px] absolute, so iconLeft=151px relative to card. Top: 679-563=116px relative to card
       standardArrival: { iconLeft: 73, textLeft: 92, iconTop: 109, textTop: 109 }, // Room 204 (Arrival): icon at left-[80px] absolute, card at left-[7px], so iconLeft=73px relative to card. Text at left-[99px] absolute, so textLeft=92px relative to card. Positioned at top 109px (same as date range) to align with date range row
       withNotes: { iconLeft: 70, textLeft: 89, iconTop: 125, textTop: 124 }, // Room 203: icon at x=77, y=896 (screen) = x=70, y=125 (card). Text at x=96, y=895 (screen) = x=89, y=124 (card). Container at x=70, so icon at 70-70=0, text at 89-70=19 relative to container
+      noTask: { iconLeft: 70, textLeft: 89, iconTop: 129, textTop: 129 }, // No Task: below date (108+17+4), no overlap with icon/date
     },
   },
   priorityBadge: {

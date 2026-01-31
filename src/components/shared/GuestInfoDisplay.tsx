@@ -77,6 +77,9 @@ export default function GuestInfoDisplay({
   const isDeparture = category === 'Departure';
   const isStayover = category === 'Stayover';
   const isTurndown = category === 'Turndown';
+  const isNoTask = category === 'No Task';
+  // No Task uses same layout as Stayover (icon left, name, date+time, guest count)
+  const isNoTaskOrStayoverOrTurndown = isNoTask || isStayover || isTurndown;
   
   // Determine which guest icon to use based on card category
   // For individual guests in ArrivalDeparture rooms, check timeLabel to determine icon
@@ -85,7 +88,7 @@ export default function GuestInfoDisplay({
     guestIconSource = guest.timeLabel === 'ETA' 
       ? require('../../../assets/icons/guest-arrival-icon.png')
       : require('../../../assets/icons/guest-departure-icon.png');
-  } else if (isStayover) {
+  } else if (isStayover || isNoTask) {
     guestIconSource = require('../../../assets/icons/stayover-guest-icon.png');
   } else if (isTurndown) {
     guestIconSource = require('../../../assets/icons/turndown-guest-icon.png');
@@ -104,7 +107,7 @@ export default function GuestInfoDisplay({
     ? containerLeft
     : isPriority 
       ? GUEST_INFO.container.left 
-      : hasNotes || isTurndown || isStayover
+      : hasNotes || isNoTaskOrStayoverOrTurndown
         ? GUEST_INFO.containerWithNotes.left 
         : GUEST_INFO.containerStandard.left;
 
@@ -113,22 +116,26 @@ export default function GuestInfoDisplay({
     ? nameTop
     : isPriority
       ? (isSecondGuest ? GUEST_INFO.nameSecond.top : GUEST_INFO.name.top)
-      : hasNotes || isTurndown || isStayover
-        ? GUEST_INFO.nameWithNotes.top
-        : isArrival
-          ? GUEST_INFO.nameStandardArrival.top
-          : GUEST_INFO.nameStandard.top;
+      : isNoTask && !hasNotes
+        ? GUEST_INFO.nameNoTask.top
+        : hasNotes || isNoTaskOrStayoverOrTurndown
+          ? GUEST_INFO.nameWithNotes.top
+          : isArrival
+            ? GUEST_INFO.nameStandardArrival.top
+            : GUEST_INFO.nameStandard.top;
 
   // Determine date range top position - use override if provided, otherwise calculate
   const calculatedDateTop = dateTop !== undefined
     ? dateTop
     : isPriority
       ? (isSecondGuest ? GUEST_INFO.dateRangeSecond.top : GUEST_INFO.dateRange.top)
-      : hasNotes || isTurndown || isStayover
-        ? GUEST_INFO.dateRangeWithNotes.top
-        : isArrival
-          ? GUEST_INFO.dateRangeStandardArrival.top
-          : GUEST_INFO.dateRangeStandard.top;
+      : isNoTask && !hasNotes
+        ? GUEST_INFO.dateRangeNoTask.top
+        : hasNotes || isNoTaskOrStayoverOrTurndown
+          ? GUEST_INFO.dateRangeWithNotes.top
+          : isArrival
+            ? GUEST_INFO.dateRangeStandardArrival.top
+            : GUEST_INFO.dateRangeStandard.top;
 
   // Determine time (ETA/EDT) position - use override if provided
   // For Arrival/Stayover/Turndown cards, align time with date range row
@@ -136,15 +143,16 @@ export default function GuestInfoDisplay({
     ? { left: timeLeft, top: timeTop }
     : isPriority
       ? (isSecondGuest ? GUEST_INFO.time.positions.prioritySecond : GUEST_INFO.time.positions.priorityFirst)
-      : hasNotes || isTurndown || isStayover
-        ? GUEST_INFO.time.positions.withNotes
-        : isArrival || isStayover || isTurndown
-          ? {
-              // Align time with date range row (top 109px) for proper alignment
-              left: GUEST_INFO.time.positions.standardArrival.left,
-              top: calculatedDateTop, // Use same top as date range for alignment
-            }
-          : null; // Departure cards don't show time
+      : isNoTask && !hasNotes
+        ? { left: GUEST_INFO.time.positions.standardArrival.left, top: calculatedDateTop }
+        : hasNotes || isNoTaskOrStayoverOrTurndown
+          ? GUEST_INFO.time.positions.withNotes
+          : isArrival || isNoTaskOrStayoverOrTurndown
+            ? {
+                left: GUEST_INFO.time.positions.standardArrival.left,
+                top: calculatedDateTop,
+              }
+            : null;
 
   // Determine guest count position - use override if provided
   // Note: For Arrival/Departure cards, guest count should align with date range (same top position)
@@ -167,11 +175,13 @@ export default function GuestInfoDisplay({
           }
         : isPriority
           ? (isSecondGuest ? GUEST_INFO.guestCount.positions.prioritySecond : GUEST_INFO.guestCount.positions.priorityFirst)
-          : hasNotes || isTurndown || isStayover
-            ? GUEST_INFO.guestCount.positions.withNotes
-            : isArrival || isStayover || isTurndown
-              ? GUEST_INFO.guestCount.positions.standardArrival // Use constants directly - already positioned correctly at top 109px
-              : GUEST_INFO.guestCount.positions.standardDeparture;
+          : isNoTask && !hasNotes
+            ? GUEST_INFO.guestCount.positions.noTask
+            : hasNotes || isNoTaskOrStayoverOrTurndown
+              ? GUEST_INFO.guestCount.positions.withNotes
+              : isArrival || isNoTaskOrStayoverOrTurndown
+                ? GUEST_INFO.guestCount.positions.standardArrival
+                : GUEST_INFO.guestCount.positions.standardDeparture;
 
   // Priority badge positioning - use override if provided
   // Note: For Arrival/Departure cards, badge is now inline with name using flexbox, so absolute positioning is not used
@@ -209,7 +219,12 @@ export default function GuestInfoDisplay({
       left: GUEST_INFO.iconStandardArrival.left,
       top: GUEST_INFO.iconStandardArrival.top,
     };
-  } else if (hasNotes || isTurndown || isStayover) {
+  } else if (isNoTask && !hasNotes) {
+    guestIconPos = {
+      left: GUEST_INFO.iconNoTask.left,
+      top: GUEST_INFO.iconNoTask.top,
+    };
+  } else if (hasNotes || isNoTaskOrStayoverOrTurndown) {
     guestIconPos = {
       left: GUEST_INFO.iconWithNotes.left,
       top: GUEST_INFO.iconWithNotes.top,
@@ -222,7 +237,7 @@ export default function GuestInfoDisplay({
   // Determine icon tint color
   const iconTintColor: string | undefined = isPMTheme
     ? '#ffffff'
-    : (isArrivalDeparture || isArrival || isDeparture || isStayover || isTurndown)
+    : (isArrivalDeparture || isArrival || isDeparture || isNoTaskOrStayoverOrTurndown)
       ? undefined // Preserve original icon colors
       : '#334866'; // Default color for other icons
 
@@ -236,30 +251,36 @@ export default function GuestInfoDisplay({
 
   // Calculate guest count positions for Arrival, Stayover, Turndown (separate row below date)
   // Also show separately for Departure when custom positioning is provided (Room Detail screen)
-  const shouldShowGuestCountBelow = countPos && ((isArrival || isStayover || isTurndown) || (isDeparture && countIconLeft !== undefined && countTextLeft !== undefined)) && !(isArrivalDeparture && isPriority);
+  const shouldShowGuestCountBelow = countPos && ((isArrival || isNoTaskOrStayoverOrTurndown) || (isDeparture && countIconLeft !== undefined && countTextLeft !== undefined)) && !(isArrivalDeparture && isPriority);
   const guestCountTop = shouldShowGuestCountBelow
     ? (countTop !== undefined
-        ? countTop * normalizedScaleX // Use custom position if provided (Room Detail screen)
-        : hasNotes
-          ? ((GUEST_INFO.guestCount.positions.withNotes.iconTop ?? 0)) * normalizedScaleX
-          : (calculatedDateTop + GUEST_INFO.dateRange.lineHeight + 2) * normalizedScaleX)
+        ? countTop * normalizedScaleX
+        : isNoTask && !hasNotes
+          ? ((GUEST_INFO.guestCount.positions.noTask.iconTop ?? 0)) * normalizedScaleX
+          : hasNotes
+            ? ((GUEST_INFO.guestCount.positions.withNotes.iconTop ?? 0)) * normalizedScaleX
+            : (calculatedDateTop + GUEST_INFO.dateRange.lineHeight + 2) * normalizedScaleX)
     : 0;
   const iconVerticalOffset = shouldShowGuestCountBelow
     ? (GUEST_INFO.guestCount.lineHeight * normalizedScaleX - GUEST_INFO.guestCount.icon.height * normalizedScaleX) / 2
     : 0;
   const guestCountIconLeft = shouldShowGuestCountBelow
     ? (countIconLeft !== undefined
-        ? countIconLeft * normalizedScaleX // Use custom position if provided (Room Detail screen)
-        : hasNotes 
-          ? ((GUEST_INFO.guestCount.positions.withNotes.iconLeft) - calculatedContainerLeft) * normalizedScaleX
-          : ((GUEST_INFO.guestCount.positions.standardArrival.iconLeft) - calculatedContainerLeft) * normalizedScaleX)
+        ? countIconLeft * normalizedScaleX
+        : isNoTask && !hasNotes
+          ? ((GUEST_INFO.guestCount.positions.noTask.iconLeft) - calculatedContainerLeft) * normalizedScaleX
+          : hasNotes 
+            ? ((GUEST_INFO.guestCount.positions.withNotes.iconLeft) - calculatedContainerLeft) * normalizedScaleX
+            : ((GUEST_INFO.guestCount.positions.standardArrival.iconLeft) - calculatedContainerLeft) * normalizedScaleX)
     : 0;
   const guestCountTextLeft = shouldShowGuestCountBelow
     ? (countTextLeft !== undefined
-        ? countTextLeft * normalizedScaleX // Use custom position if provided (Room Detail screen)
-        : hasNotes
-          ? ((GUEST_INFO.guestCount.positions.withNotes.textLeft) - calculatedContainerLeft) * normalizedScaleX
-          : ((GUEST_INFO.guestCount.positions.standardArrival.textLeft) - calculatedContainerLeft) * normalizedScaleX)
+        ? countTextLeft * normalizedScaleX
+        : isNoTask && !hasNotes
+          ? ((GUEST_INFO.guestCount.positions.noTask.textLeft) - calculatedContainerLeft) * normalizedScaleX
+          : hasNotes
+            ? ((GUEST_INFO.guestCount.positions.withNotes.textLeft) - calculatedContainerLeft) * normalizedScaleX
+            : ((GUEST_INFO.guestCount.positions.standardArrival.textLeft) - calculatedContainerLeft) * normalizedScaleX)
     : 0;
 
   // Calculate container width: card width minus container left position to ensure content is visible
@@ -364,7 +385,7 @@ export default function GuestInfoDisplay({
               source={guestIconSource}
               style={[
                 styles.guestIcon,
-                (isArrival || isDeparture || isStayover || isTurndown) && !isPMTheme && styles.guestIconNoTint,
+                (isArrival || isDeparture || isNoTaskOrStayoverOrTurndown) && !isPMTheme && styles.guestIconNoTint,
                 isPMTheme && styles.guestIconPM,
               ]}
               resizeMode="contain"
@@ -418,7 +439,7 @@ export default function GuestInfoDisplay({
             </>
           )}
         </View>
-      ) : (isArrival || isStayover || isTurndown) && guest.timeLabel && guest.time && !(timeLeft !== undefined && timeTop !== undefined) ? (
+      ) : (isArrival || isNoTaskOrStayoverOrTurndown) && guest.timeLabel && guest.time && !(timeLeft !== undefined && timeTop !== undefined) ? (
         // For Arrival, Stayover, Turndown: date and ETA on same row
         <View style={[
           styles.detailsRowWithTime, 
@@ -477,7 +498,7 @@ export default function GuestInfoDisplay({
 
       {/* Time (ETA/EDT) - render separately when custom positioning is provided (Room Detail screen) or for Departure cards */}
       {/* Render LAST to ensure it's on top */}
-      {guest.timeLabel && guest.time && timePos && (timeLeft !== undefined && timeTop !== undefined || !(isArrival || isStayover || isTurndown)) && (
+      {guest.timeLabel && guest.time && timePos && (timeLeft !== undefined && timeTop !== undefined || !(isArrival || isNoTaskOrStayoverOrTurndown)) && (
         <Text style={[
           styles.time, 
           isPMTheme && styles.timePM,

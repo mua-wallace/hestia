@@ -16,6 +16,7 @@ interface GuestInfoCardProps {
   specialInstructionsTitleTop?: number; // Absolute position for special instructions title
   specialInstructionsTextTop?: number; // Absolute position for special instructions text
   roomCategory?: string; // Room category (Arrival, Departure, Stayover, Turndown) for proper styling
+  categoryDisplayLabel?: string; // Override for badge text (e.g. "Stayover (with linen)" vs "Stayover")
 }
 
 export default function GuestInfoCard({
@@ -29,6 +30,7 @@ export default function GuestInfoCard({
   specialInstructionsTitleTop,
   specialInstructionsTextTop,
   roomCategory,
+  categoryDisplayLabel,
 }: GuestInfoCardProps) {
   // Calculate relative position from content area start
   const containerTop = absoluteTop - contentAreaTop;
@@ -172,7 +174,7 @@ export default function GuestInfoCard({
                 },
               ]}
             >
-              {category}
+              {categoryDisplayLabel ?? category}
             </Text>
           </View>
         )}
