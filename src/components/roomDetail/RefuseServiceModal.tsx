@@ -153,10 +153,7 @@ export default function RefuseServiceModal({
                   </Text>
                   <TouchableOpacity
                     style={styles.reassignButton}
-                    onPress={() => {
-                      onClose();
-                      setTimeout(() => onReassignPress?.(), 100);
-                    }}
+                    onPress={() => onReassignPress?.()}
                     activeOpacity={0.7}
                   >
                     <Text style={styles.reassignButtonText}>Reassign</Text>

@@ -710,12 +710,7 @@ export default function ReturnLaterModal({
               {assignedTo && (
                 <AssignedToSection
                   staff={assignedTo}
-                  onReassignPress={() => {
-                    onClose();
-                    setTimeout(() => {
-                      onReassignPress?.();
-                    }, 100);
-                  }}
+                  onReassignPress={() => onReassignPress?.()}
                 />
               )}
 
