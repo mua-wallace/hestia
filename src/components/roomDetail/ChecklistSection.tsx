@@ -1,16 +1,19 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
 import { typography } from '../../theme';
 import { CHECKLIST_SECTION, scaleX } from '../../constants/checklistStyles';
 import { CONTENT_AREA } from '../../constants/roomDetailStyles';
 import ChecklistCategory from './ChecklistCategory';
 import ChecklistFooter from './ChecklistFooter';
+import DownloadReportButton from './DownloadReportButton';
 import type { ChecklistData, ChecklistSubmissionData } from '../../types/checklist.types';
 import { getDefaultChecklist } from '../../data/mockChecklistData';
 import { mockStaffData } from '../../data/mockStaffData';
+import { generateChecklistReport } from '../../utils/generateChecklistReport';
 
 interface ChecklistSectionProps {
   roomNumber: string;
+  roomCode?: string;
   roomStatus?: string;
   onSubmit?: (data: ChecklistSubmissionData) => void;
   onCancel?: () => void;
@@ -19,6 +22,7 @@ interface ChecklistSectionProps {
 
 export default function ChecklistSection({
   roomNumber,
+  roomCode,
   roomStatus,
   onSubmit,
   onCancel,
@@ -69,6 +73,33 @@ export default function ChecklistSection({
 
   const [checklistData, setChecklistData] = useState<ChecklistData>(getInitialData);
   const [initialChecklistData] = useState<ChecklistData>(getInitialData);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+  // At least one product consumed (quantity > 0) - download only enabled in that case
+  const hasConsumedProducts = useMemo(
+    () =>
+      checklistData.categories.some((cat) =>
+        cat.items.some((item) => item.quantity > 0)
+      ),
+    [checklistData]
+  );
+
+  const handleDownloadReport = useCallback(async () => {
+    if (!hasConsumedProducts || isGeneratingReport) return;
+    try {
+      setIsGeneratingReport(true);
+      await generateChecklistReport({
+        roomNumber,
+        roomCode,
+        checklistData,
+      });
+    } catch (error) {
+      console.error('Error downloading checklist report:', error);
+      Alert.alert('Error', 'Failed to generate report. Please try again.');
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  }, [roomNumber, roomCode, checklistData, hasConsumedProducts, isGeneratingReport]);
 
   // Check if there are any changes
   const hasChanges = useCallback(() => {
@@ -161,6 +192,14 @@ export default function ChecklistSection({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Download Report Button - only when at least one product consumed */}
+        {hasConsumedProducts && (
+          <DownloadReportButton
+            onPress={handleDownloadReport}
+            isLoading={isGeneratingReport}
+          />
+        )}
+
         {/* Title */}
         <Text style={styles.title}>Room Checklist</Text>
 

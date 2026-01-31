@@ -442,6 +442,7 @@ export default function ArrivalDepartureDetailScreen() {
       {activeTab === 'Checklist' ? (
         <ChecklistSection
           roomNumber={room.roomNumber}
+          roomCode={`${room.roomCategory} - ${room.credit}`}
           roomStatus={currentStatus}
           onSubmit={(data) => {
             // TODO: Handle checklist submission

@@ -605,6 +605,7 @@ export default function RoomDetailScreen() {
       {activeTab === 'Checklist' ? (
         <ChecklistSection
           roomNumber={room.roomNumber}
+          roomCode={`${room.roomCategory} - ${room.credit}`}
           roomStatus={currentStatus}
           onSubmit={(data) => {
             console.log('Checklist submitted:', data);
