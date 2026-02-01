@@ -642,7 +642,7 @@ export default function RoomDetailScreen() {
                   <GuestInfoCard
                     guest={firstGuest}
                     isArrival={firstGuest.timeLabel === 'ETA'}
-                    numberBadge={room.priorityCount?.toString()}
+                    numberBadge={room.vipCode?.toString()}
                     specialInstructions={roomDetail.specialInstructions}
                     absoluteTop={positions.firstGuestTop}
                     contentAreaTop={CONTENT_AREA.top}
@@ -660,7 +660,7 @@ export default function RoomDetailScreen() {
                   <GuestInfoCard
                     guest={secondGuest}
                     isArrival={false}
-                    numberBadge={room.secondGuestPriorityCount?.toString() || room.priorityCount?.toString()}
+                    numberBadge={room.secondGuestVipCode?.toString() || room.vipCode?.toString()}
                     specialInstructions={undefined}
                     isSecondGuest={!!firstGuest}
                     absoluteTop={positions.secondGuestTop!}

@@ -1,3 +1,4 @@
+// NOTE: Guest dates use datesOfStay: { from: "YYYY-MM-DD", to: "YYYY-MM-DD" } (ISO format)
 // export const mockAllRoomsData = {
 //   "selectedShift": "AM",
 //   "rooms": [
@@ -1515,11 +1516,11 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       guests: [
         {
           name: 'Mr Mohamed. B',
-          dateRange: '07/10-15/10',
+          datesOfStay: { from: '2025-01-26', to: '2025-02-03' },
           time: '17:00',
           timeLabel: 'ETA',
-          guestCount: '2/2',
-          arrivalDate: '2026-01-05', // For automatic linen calc: every 2nd day = linen
+          guestCount: { adults: 2, kids: 2 },
+          arrivalDate: '2025-01-26', // For automatic linen calc: every 2nd day = linen
         },
       ],
       staff: {
@@ -1540,14 +1541,14 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       isPriority: true,
       promisedTime: '12:00',
       flagged: false,
-      priorityCount: 11,
+      vipCode: 11,
       guests: [
         {
           name: 'Mr Felix. K',
-          dateRange: '07/10-15/10',
+          datesOfStay: { from: '2025-01-31', to: '2025-02-05' },
           time: '17:00',
           timeLabel: 'ETA',
-          guestCount: '2/2',
+          guestCount: { adults: 2, kids: 2 },
         },
       ],
       staff: {
@@ -1572,21 +1573,21 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       isPriority: true,
       promisedTime: '13:00',
       flagged: true,
-      priorityCount: 11, // First guest has 11
+      vipCode: 11, // First guest has 11
       guests: [
         {
           name: 'Mr Mohamed. B',
-          dateRange: '07/10-15/10',
+          datesOfStay: { from: '2025-01-31', to: '2025-02-05' },
           time: '17:00',
           timeLabel: 'ETA',
-          guestCount: '2/2',
+          guestCount: { adults: 2, kids: 2 },
         },
         {
           name: 'Mr Felix. K',
-          dateRange: '07/10-15/10',
+          datesOfStay: { from: '2025-01-25', to: '2025-01-31' },
           time: '12:00',
           timeLabel: 'EDT',
-          guestCount: '2/2',
+          guestCount: { adults: 2, kids: 2 },
         },
       ],
       staff: {
@@ -1599,7 +1600,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         count: 3,
         hasRushed: true,
       },
-      secondGuestPriorityCount: 22, // Second guest has 22
+      secondGuestVipCode: 22, // Second guest has 22
     },
     {
       id: 'room-202',
@@ -1615,10 +1616,10 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       guests: [
         {
           name: 'Mr Mohamed. B',
-          dateRange: '07/10-15/10',
+          datesOfStay: { from: '2025-01-28', to: '2025-01-31' },
           time: '12:00',
           timeLabel: 'EDT', // Departure cards should have EDT, not ETA
-          guestCount: '2/2',
+          guestCount: { adults: 2, kids: 2 },
         },
       ],
       staff: {
@@ -1640,14 +1641,14 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       isPriority: false,
       promisedTime: null,
       flagged: false,
-      priorityCount: 11,
+      vipCode: 11,
       guests: [
         {
           name: 'Mr Mohamed. B',
-          dateRange: '07/10-15/10',
+          datesOfStay: { from: '2025-01-31', to: '2025-02-08' },
           time: '17:00',
           timeLabel: 'ETA',
-          guestCount: '2/2',
+          guestCount: { adults: 2, kids: 2 },
         },
       ],
       staff: {
@@ -1675,11 +1676,11 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       guests: [
         {
           name: 'Mr Mohamed. B',
-          dateRange: '07/10-15/10',
+          datesOfStay: { from: '2025-01-29', to: '2025-02-05' },
           time: '17:00',
           timeLabel: 'ETA',
-          guestCount: '2/2',
-          arrivalDate: '2026-01-06',
+          guestCount: { adults: 2, kids: 2 },
+          arrivalDate: '2025-01-29',
         },
       ],
       staff: {
@@ -1704,10 +1705,10 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       guests: [
         {
           name: 'Mr Mohamed. B',
-          dateRange: '07/10-15/10',
+          datesOfStay: { from: '2025-01-28', to: '2025-02-05' },
           time: '17:00',
           timeLabel: 'ETA',
-          guestCount: '2/2',
+          guestCount: { adults: 2, kids: 2 },
         },
       ],
       staff: {
@@ -1732,10 +1733,10 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       guests: [
         {
           name: 'Mr Mohamed. B',
-          dateRange: '07/10-15/10',
+          datesOfStay: { from: '2025-01-29', to: '2025-02-06' },
           time: '17:00',
           timeLabel: 'ETA',
-          guestCount: '2/2',
+          guestCount: { adults: 2, kids: 2 },
         },
       ],
       staff: {
@@ -1760,10 +1761,10 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       guests: [
         {
           name: 'Vacant',
-          dateRange: '',
+          datesOfStay: { from: '', to: '' },
           time: '',
           timeLabel: 'ETA',
-          guestCount: '',
+          guestCount: { adults: 0, kids: 0 },
           isVacant: true,
         },
       ],
@@ -1789,10 +1790,10 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       guests: [
         {
           name: 'Vacant',
-          dateRange: '',
+          datesOfStay: { from: '', to: '' },
           time: '',
           timeLabel: 'ETA',
-          guestCount: '',
+          guestCount: { adults: 0, kids: 0 },
           isVacant: true,
         },
       ],
@@ -1818,10 +1819,10 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       guests: [
         {
           name: 'Vacant',
-          dateRange: '',
+          datesOfStay: { from: '', to: '' },
           time: '',
           timeLabel: 'ETA',
-          guestCount: '',
+          guestCount: { adults: 0, kids: 0 },
           isVacant: true,
         },
       ],
@@ -1846,10 +1847,10 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       guests: [
         {
           name: 'Vacant',
-          dateRange: '',
+          datesOfStay: { from: '', to: '' },
           time: '',
           timeLabel: 'ETA',
-          guestCount: '',
+          guestCount: { adults: 0, kids: 0 },
           isVacant: true,
         },
       ],
@@ -1875,10 +1876,10 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       guests: [
         {
           name: 'Mr Mohamed. B',
-          dateRange: '07/10-15/10',
+          datesOfStay: { from: '2025-01-28', to: '2025-02-05' },
           time: '17:00',
           timeLabel: 'ETA',
-          guestCount: '2/2',
+          guestCount: { adults: 2, kids: 2 },
         },
       ],
       staff: {
@@ -1903,10 +1904,10 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       guests: [
         {
           name: 'Ms Jane Doe',
-          dateRange: '08/10-16/10',
+          datesOfStay: { from: '2025-01-30', to: '2025-02-07' },
           time: '18:00',
           timeLabel: 'ETA',
-          guestCount: '1/1',
+          guestCount: { adults: 1, kids: 1 },
         },
       ],
       staff: {
@@ -1930,10 +1931,10 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       guests: [
         {
           name: 'Mr Mohamed. B',
-          dateRange: '07/10-15/10',
+          datesOfStay: { from: '2025-01-31', to: '2025-02-08' },
           time: '17:00',
           timeLabel: 'ETA',
-          guestCount: '2/2',
+          guestCount: { adults: 2, kids: 2 },
         },
       ],
       staff: {
@@ -1954,15 +1955,15 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       isPriority: true,
       promisedTime: '13:00',
       flagged: false,
-      priorityCount: 4,
+      vipCode: 4,
       guests: [
         {
           name: 'Mr Felix. K',
-          dateRange: '07/10-15/10',
+          datesOfStay: { from: '2025-01-28', to: '2025-02-05' },
           time: '17:00',
           timeLabel: 'ETA',
-          guestCount: '2/2',
-          arrivalDate: '2026-01-04',
+          guestCount: { adults: 2, kids: 2 },
+          arrivalDate: '2025-01-28',
         },
       ],
       staff: {

@@ -486,7 +486,7 @@ export default function ArrivalDepartureDetailScreen() {
                   <GuestInfoCard
                     guest={arrivalGuest}
                     isArrival={true}
-                    numberBadge={room.priorityCount?.toString()}
+                    numberBadge={room.vipCode?.toString()}
                     specialInstructions={roomDetail.specialInstructions}
                     absoluteTop={GUEST_INFO.arrival.name.top}
                     contentAreaTop={CONTENT_AREA.top}
@@ -501,7 +501,7 @@ export default function ArrivalDepartureDetailScreen() {
                   <GuestInfoCard
                     guest={departureGuest}
                     isArrival={false}
-                    numberBadge={room.secondGuestPriorityCount?.toString() || room.priorityCount?.toString()}
+                    numberBadge={room.secondGuestVipCode?.toString() || room.vipCode?.toString()}
                     specialInstructions={undefined} // Departure guests don't have special instructions
                     isSecondGuest={!!arrivalGuest} // Second guest if there's an arrival guest
                     absoluteTop={GUEST_INFO.departure.name.top}

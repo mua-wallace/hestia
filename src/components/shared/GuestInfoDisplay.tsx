@@ -3,12 +3,13 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
 import { GUEST_INFO, CARD_DIMENSIONS, GUEST_CONTAINER_BG } from '../../constants/allRoomsStyles';
 import { normalizedScaleX } from '../../utils/responsive';
+import { formatGuestCount, formatDatesOfStay } from '../../utils/formatting';
 import type { GuestInfo } from '../../types/allRooms.types';
 
 interface GuestInfoDisplayProps {
   guest: GuestInfo;
-  priorityCount?: number;
-  numberBadge?: string; // Alternative to priorityCount (for room detail screen)
+  vipCode?: number;
+  numberBadge?: string; // Alternative to vipCode (for room detail screen)
   isPriority?: boolean;
   isFirstGuest?: boolean;
   isSecondGuest?: boolean;
@@ -45,7 +46,7 @@ interface GuestInfoDisplayProps {
  */
 export default function GuestInfoDisplay({ 
   guest, 
-  priorityCount,
+  vipCode,
   numberBadge,
   isPriority = false,
   isFirstGuest = true,
@@ -232,8 +233,8 @@ export default function GuestInfoDisplay({
       ? undefined // Preserve original icon colors
       : '#334866'; // Default color for other icons
 
-  // Use numberBadge if provided, otherwise use priorityCount
-  const displayBadge = numberBadge || (priorityCount ? priorityCount.toString() : undefined);
+  // Use numberBadge if provided, otherwise use vipCode
+  const displayBadge = numberBadge || (vipCode ? vipCode.toString() : undefined);
 
   // Calculate positions for absolute positioning mode
   const containerStyle = absolutePositioning && absoluteTop !== undefined
@@ -410,7 +411,7 @@ export default function GuestInfoDisplay({
             zIndex: 10, // Lower z-index so time can appear above
           }
         ]}>
-          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{guest.dateRange}</Text>
+          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
           {countPos && (
             <>
               <Image
@@ -419,7 +420,7 @@ export default function GuestInfoDisplay({
                 resizeMode="contain"
               />
               <Text style={styles.countTextInline}>
-                {guest.guestCount || ''}
+                {formatGuestCount(guest.guestCount)}
               </Text>
             </>
           )}
@@ -434,7 +435,7 @@ export default function GuestInfoDisplay({
             zIndex: 10, // Lower z-index so time can appear above
           }
         ]}>
-          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{guest.dateRange}</Text>
+          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
           <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
             {guest.timeLabel}: {guest.time}
           </Text>
@@ -448,7 +449,7 @@ export default function GuestInfoDisplay({
             zIndex: 10, // Lower z-index so time can appear above
           }
         ]}>
-          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{guest.dateRange}</Text>
+          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
         </View>
       )}
 
@@ -476,7 +477,7 @@ export default function GuestInfoDisplay({
               top: guestCountTop, // Text top position
             }
           ]}>
-            {guest.guestCount || ''}
+            {formatGuestCount(guest.guestCount)}
           </Text>
         </>
       )}

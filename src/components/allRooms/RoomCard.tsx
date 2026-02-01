@@ -257,14 +257,14 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
           
           // Determine priority count for each guest
           const guestPriorityCount = isArrivalDeparture
-            ? (isFirstGuest ? room.priorityCount : room.secondGuestPriorityCount)
-            : (isFirstGuest ? room.priorityCount : undefined);
+            ? (isFirstGuest ? room.vipCode : room.secondGuestVipCode)
+            : (isFirstGuest ? room.vipCode : undefined);
           
           return (
             <GuestInfoSection 
               key={`guest-${index}`}
               guest={guest} 
-              priorityCount={guestPriorityCount}
+              vipCode={guestPriorityCount}
               isPriority={room.isPriority}
               isFirstGuest={isFirstGuest}
               isSecondGuest={isSecondGuest}

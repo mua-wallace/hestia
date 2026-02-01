@@ -60,7 +60,7 @@ function isLinenChangeDay(dayOfStay: number): boolean {
 }
 
 /**
- * Resolve arrival date from room (first guest's arrivalDate or first part of dateRange).
+ * Resolve arrival date from room (first guest's arrivalDate or datesOfStay.from).
  */
 function getArrivalDate(room: RoomCardData, referenceYear?: number): Date | null {
   const guest = room.guests?.[0];
@@ -70,13 +70,12 @@ function getArrivalDate(room: RoomCardData, referenceYear?: number): Date | null
     return parseDate(guest.arrivalDate, referenceYear);
   }
 
-  // dateRange often "07/10-15/10" (check-in - check-out); first part = arrival
-  const dateRange = guest.dateRange?.trim();
-  if (!dateRange) return null;
-  const firstPart = dateRange.split('-')[0]?.trim();
-  if (!firstPart) return null;
+  // datesOfStay.from is ISO YYYY-MM-DD
+  if (guest.datesOfStay?.from) {
+    return parseDate(guest.datesOfStay.from, referenceYear);
+  }
 
-  return parseDate(firstPart, referenceYear);
+  return null;
 }
 
 /**

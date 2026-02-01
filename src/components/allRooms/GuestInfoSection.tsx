@@ -5,7 +5,7 @@ import type { ShiftType } from '../../types/home.types';
 
 interface GuestInfoSectionProps {
   guest: GuestInfo;
-  priorityCount?: number;
+  vipCode?: number;
   isPriority?: boolean;
   isFirstGuest?: boolean;
   isSecondGuest?: boolean;
@@ -17,7 +17,7 @@ interface GuestInfoSectionProps {
 
 export default function GuestInfoSection({ 
   guest, 
-  priorityCount, 
+  vipCode, 
   isPriority = false,
   isFirstGuest = true,
   isSecondGuest = false,
@@ -30,7 +30,7 @@ export default function GuestInfoSection({
   return (
     <GuestInfoDisplay
       guest={guest}
-      priorityCount={priorityCount}
+      vipCode={vipCode}
       isPriority={isPriority}
       isFirstGuest={isFirstGuest}
       isSecondGuest={isSecondGuest}

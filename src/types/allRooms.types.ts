@@ -19,11 +19,24 @@ export type PromisedTime = '12:00' | '13:00' | null;
 
 export type StatusChangeOption = 'Priority' | 'Dirty' | 'Cleaned' | 'Inspected' | 'Pause' | 'ReturnLater' | 'RefuseService' | 'PromisedTime';
 
+/** Guest count: adults/kids. For ETA (arrival) = checking in; for EDT (departure) = checking out */
+export interface GuestCount {
+  adults: number;
+  kids: number;
+}
+
+/** Dates of stay. For ETA guest = checking in; for EDT guest = checking out. ISO format for parsing. */
+export interface DatesOfStay {
+  from: string; // ISO YYYY-MM-DD
+  to: string;   // ISO YYYY-MM-DD
+}
+
 export interface GuestInfo {
   name: string;
-  dateRange: string;
+  /** Dates of stay. For ETA = checking in; for EDT = checking out. Display: DD.MM.YYYY - DD.MM.YYYY */
+  datesOfStay: DatesOfStay;
   time: string; // ETA: 17:00 or EDT: 12:00
-  guestCount: string; // "2/2"
+  guestCount: GuestCount; // Display: adults/kids (e.g. 2/2)
   timeLabel: 'ETA' | 'EDT'; // To know if it's arrival or departure
   isVacant?: boolean; // For turndown vacant state
   /** ISO date string (YYYY-MM-DD) of guest arrival; used for Stayover linen calculation (every 2nd day = linen change) */
@@ -61,8 +74,8 @@ export interface RoomCardData {
   isPriority: boolean; // Must be true or false; red border for priority rooms when true
   flagged?: boolean; // If true, room contributes to "Flagged" category on Home
   notes?: NotesInfo;
-  priorityCount?: number; // Number badge for priority (e.g., 11 for first guest)
-  secondGuestPriorityCount?: number; // For Arrival/Departure rooms with 2 guests (e.g., 22)
+  vipCode?: number; // VIP code badge (e.g., 11 for first guest)
+  secondGuestVipCode?: number; // For Arrival/Departure rooms with 2 guests (e.g., 22)
 }
 
 export interface AllRoomsScreenData {
