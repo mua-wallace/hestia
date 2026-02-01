@@ -38,6 +38,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
 import { getMockHistoryEvents } from '../data/mockHistoryData';
 import { generateHistoryReport } from '../utils/generateHistoryReport';
+import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
 
 type RoomDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -593,6 +594,8 @@ export default function RoomDetailScreen() {
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceReason={refuseServiceReason}
         flagged={localRoom.flagged === true}
+        frontOfficeLabel={room.frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}
+        showWithLinenBadge={room.frontOfficeStatus === 'Stayover' && showStayoverWithLinenBadge(localRoom)}
       />
 
       {/* Tab Navigation */}

@@ -4,7 +4,7 @@ import { colors, typography } from '../../theme';
 import { scaleX } from '../../constants/allRoomsStyles';
 import type { RoomCardData } from '../../types/allRooms.types';
 import { FRONT_OFFICE_STATUS_ICONS, STATUS_CONFIGS } from '../../types/allRooms.types';
-import { getStayoverDisplayLabel } from '../../utils/stayoverLinen';
+import { getStayoverDisplayLabel, showStayoverWithLinenBadge } from '../../utils/stayoverLinen';
 import type { ShiftType } from '../../types/home.types';
 import {
   CARD_DIMENSIONS,
@@ -168,14 +168,32 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
           {`${room.roomCategory} - ${room.credit}`}
         </Text>
         
-        {/* Front Office Status Label (e.g., "Arrival", "Stayover (with Linen)", etc.) */}
-        <Text style={[
-          styles.categoryLabel,
-          !room.isPriority && styles.categoryLabelStandard,
-          selectedShift === 'PM' && styles.categoryLabelPM
+        {/* Front Office Status Label: "Stayover" + "with Linen" badge when applicable, or other status */}
+        <View style={[
+          styles.categoryLabelRow,
+          !room.isPriority && styles.categoryLabelRowStandard
         ]}>
-          {getStayoverDisplayLabel(room)}
-        </Text>
+          <Text style={[
+            styles.categoryLabel,
+            selectedShift === 'PM' && styles.categoryLabelPM
+          ]}>
+            {getStayoverDisplayLabel(room)}
+          </Text>
+          {isStayover && showStayoverWithLinenBadge(room) && (
+            <View style={[
+              styles.withLinenBadge,
+              room.isPriority && styles.withLinenBadgePriority,
+              selectedShift === 'PM' && styles.withLinenBadgePM
+            ]}>
+              <Text style={[
+                styles.withLinenBadgeText,
+                selectedShift === 'PM' && styles.withLinenBadgeTextPM
+              ]}>
+                with Linen
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {/* Guest Container Background - for standard cards without notes */}
@@ -386,18 +404,49 @@ const styles = StyleSheet.create({
     color: ROOM_HEADER.priorityBadge.color,
     lineHeight: ROOM_HEADER.roomType.lineHeight * scaleX,
   },
-  categoryLabel: {
+  categoryLabelRow: {
     position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    left: ROOM_HEADER.category.left * scaleX,
+    top: ROOM_HEADER.category.top * scaleX,
+    gap: 6 * scaleX,
+  },
+  categoryLabelRowStandard: {
+    left: ROOM_HEADER.categoryStandard.left * scaleX,
+  },
+  categoryLabel: {
     fontSize: ROOM_HEADER.category.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: ROOM_HEADER.category.color,
-    left: ROOM_HEADER.category.left * scaleX,
-    top: ROOM_HEADER.category.top * scaleX,
     lineHeight: ROOM_HEADER.category.lineHeight * scaleX,
   },
-  categoryLabelStandard: {
-    left: ROOM_HEADER.categoryStandard.left * scaleX,
+  withLinenBadge: {
+    paddingHorizontal: 8 * scaleX,
+    paddingVertical: 2 * scaleX,
+    borderRadius: 6 * scaleX,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(123, 31, 162, 0.5)',
+  },
+  withLinenBadgePriority: {
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderColor: 'rgba(123, 31, 162, 0.6)',
+  },
+  withLinenBadgePM: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(179, 136, 255, 0.7)',
+  },
+  withLinenBadgeText: {
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.bold as any,
+    color: '#334866',
+  },
+  withLinenBadgeTextPM: {
+    color: '#FFFFFF',
   },
   guestContainerBg: {
     position: 'absolute',

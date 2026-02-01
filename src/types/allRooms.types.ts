@@ -1,8 +1,21 @@
 /** Front office status: Arrival/Departure, Arrival, Departure, Stayover, Turndown, No Task, Refresh */
 export type FrontOfficeStatus = 'Arrival/Departure' | 'Arrival' | 'Departure' | 'Stayover' | 'Turndown' | 'No Task' | 'Refresh';
-export type ReservationStatus = 'Vacant' | 'Occupied';
+export type ReservationStatus =
+  | 'Due in / Due out'
+  | 'Occupied'
+  | 'Checked out / Due in'
+  | 'Checked in'
+  | 'Checked out'
+  | 'Due out'
+  | 'Vacant'
+  | 'Out Of Order'
+  | 'Due Out / Out Of Order'
+  | 'Checked out / Out Of Order';
 
 export type RoomStatus = 'Dirty' | 'InProgress' | 'Cleaned' | 'Inspected';
+
+/** Promised ready time for the room: 12:00, 13:00, or null */
+export type PromisedTime = '12:00' | '13:00' | null;
 
 export type StatusChangeOption = 'Priority' | 'Dirty' | 'Cleaned' | 'Inspected' | 'Pause' | 'ReturnLater' | 'RefuseService' | 'PromisedTime';
 
@@ -41,10 +54,11 @@ export interface RoomCardData {
   /** When frontOfficeStatus is Stayover: true = Stayover with Linen (linen change day), false = Stayover no Linen. Computed from arrival date (every 2nd day of stay) if not set. */
   withLinen?: boolean;
   houseKeepingStatus: RoomStatus;
-  reservationStatus?: ReservationStatus; // For distinguishing vacant turndown rooms
+  reservationStatus?: ReservationStatus; // Due in / Due out, Occupied, Checked out / Due in, Checked in, Checked out, Due out, Vacant, Out Of Order, Due Out / Out Of Order, Checked out / Out Of Order
+  promisedTime?: PromisedTime; // 12:00, 13:00, or null
   guests: GuestInfo[]; // Array to support Arrival/Departure rooms with 2 guests
   staff: StaffInfo;
-  isPriority: boolean; // Red border for priority rooms
+  isPriority: boolean; // Must be true or false; red border for priority rooms when true
   flagged?: boolean; // If true, room contributes to "Flagged" category on Home
   notes?: NotesInfo;
   priorityCount?: number; // Number badge for priority (e.g., 11 for first guest)

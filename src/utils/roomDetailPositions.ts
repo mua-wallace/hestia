@@ -86,8 +86,8 @@ export function calculatePositions(config: RoomTypeConfig): CalculatedPositions 
     positions.specialInstructionsTitle = currentTop + gapToTitle;
     positions.specialInstructionsText = positions.specialInstructionsTitle + 25; // 25px below title
     
-    // Calculate divider position based on special instructions text
-    const gapFromTextToDivider = isStayoverOrTurndown ? 70 : 68;
+    // Calculate divider position - margin top from special instructions text
+    const gapFromTextToDivider = isStayoverOrTurndown ? 44 : 40;
     positions.divider1 = positions.specialInstructionsText + gapFromTextToDivider;
   } else {
     // No special instructions (Departure only)

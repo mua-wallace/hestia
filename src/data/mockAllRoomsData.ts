@@ -1510,6 +1510,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       withLinen: true, // Stayover with Linen (linen change day)
       houseKeepingStatus: 'Dirty',
       isPriority: false,
+      promisedTime: null,
       flagged: true,
       guests: [
         {
@@ -1537,6 +1538,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       withLinen: false,
       houseKeepingStatus: 'Cleaned',
       isPriority: true,
+      promisedTime: '12:00',
       flagged: false,
       priorityCount: 11,
       guests: [
@@ -1568,6 +1570,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       withLinen: false,
       houseKeepingStatus: 'InProgress',
       isPriority: true,
+      promisedTime: '13:00',
       flagged: true,
       priorityCount: 11, // First guest has 11
       guests: [
@@ -1607,6 +1610,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       withLinen: false,
       houseKeepingStatus: 'Dirty',
       isPriority: false,
+      promisedTime: '12:00',
       flagged: false,
       guests: [
         {
@@ -1622,7 +1626,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         name: 'Zoe Tsakeri',
         statusText: 'Not Started',
         statusColor: '#1e1e1e',
-        promiseTime: 'Promise time: 18:00',
+        promiseTime: 'Promise time: 12:00',
       },
     },
     {
@@ -1634,6 +1638,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       withLinen: false,
       houseKeepingStatus: 'Cleaned',
       isPriority: false,
+      promisedTime: null,
       flagged: false,
       priorityCount: 11,
       guests: [
@@ -1665,6 +1670,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       withLinen: false, // Stayover no Linen
       houseKeepingStatus: 'Inspected',
       isPriority: false,
+      promisedTime: null,
       flagged: true,
       guests: [
         {
@@ -1693,6 +1699,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       reservationStatus: 'Occupied',
       houseKeepingStatus: 'Inspected',
       isPriority: false,
+      promisedTime: '13:00',
       flagged: false,
       guests: [
         {
@@ -1720,6 +1727,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       reservationStatus: 'Occupied',
       houseKeepingStatus: 'InProgress',
       isPriority: false,
+      promisedTime: null,
       flagged: false,
       guests: [
         {
@@ -1747,6 +1755,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       reservationStatus: 'Vacant',
       houseKeepingStatus: 'Cleaned',
       isPriority: false,
+      promisedTime: null,
       flagged: false,
       guests: [
         {
@@ -1775,6 +1784,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       reservationStatus: 'Vacant',
       houseKeepingStatus: 'Inspected',
       isPriority: false,
+      promisedTime: '12:00',
       flagged: false,
       guests: [
         {
@@ -1803,6 +1813,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       reservationStatus: 'Vacant',
       houseKeepingStatus: 'InProgress',
       isPriority: false,
+      promisedTime: null,
       flagged: false,
       guests: [
         {
@@ -1830,6 +1841,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       reservationStatus: 'Vacant',
       houseKeepingStatus: 'Dirty',
       isPriority: false,
+      promisedTime: null,
       flagged: false,
       guests: [
         {
@@ -1858,6 +1870,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       reservationStatus: 'Occupied',
       houseKeepingStatus: 'Inspected',
       isPriority: false,
+      promisedTime: '13:00',
       flagged: false,
       guests: [
         {
@@ -1885,6 +1898,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       reservationStatus: 'Occupied',
       houseKeepingStatus: 'Cleaned',
       isPriority: false,
+      promisedTime: null,
       flagged: false,
       guests: [
         {
@@ -1911,6 +1925,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       withLinen: false,
       houseKeepingStatus: 'InProgress',
       isPriority: false,
+      promisedTime: null,
       flagged: false,
       guests: [
         {
@@ -1937,6 +1952,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       withLinen: true, // Stayover with Linen
       houseKeepingStatus: 'Cleaned',
       isPriority: true,
+      promisedTime: '13:00',
       flagged: false,
       priorityCount: 4,
       guests: [

@@ -46,6 +46,9 @@
         "projectId": "812d1d0f-dd1e-4634-9ebc-c3a124ab1aa5"
       }
     },
-    "owner": "wallice-dev"
+    "owner": "wallice-dev",
+    "plugins": [
+      "expo-font"
+    ]
   }
 }

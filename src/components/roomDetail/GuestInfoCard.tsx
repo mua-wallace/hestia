@@ -235,18 +235,6 @@ export default function GuestInfoCard({
           </Text>
         </>
       )}
-      
-      {/* Divider after Special Instructions - only show for Arrival, not for Departure/Stayover/Turndown */}
-      {specialInstructions && config.specialInstructions && category === 'Arrival' && (
-        <View
-          style={[
-            styles.dividerAfterSpecial,
-            {
-              top: (ROOM_DETAIL_GUEST_INFO.divider.top - absoluteTop) * normalizedScaleX,
-            },
-          ]}
-        />
-      )}
     </View>
   );
 }
@@ -311,14 +299,6 @@ const styles = StyleSheet.create({
     color: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.text.color,
     lineHeight: 18 * normalizedScaleX,
     zIndex: 2, // Above divider
-  },
-  dividerAfterSpecial: {
-    position: 'absolute',
-    left: ROOM_DETAIL_GUEST_INFO.divider.left,
-    width: ROOM_DETAIL_GUEST_INFO.divider.width * normalizedScaleX,
-    height: ROOM_DETAIL_GUEST_INFO.divider.height,
-    backgroundColor: ROOM_DETAIL_GUEST_INFO.divider.color,
-    zIndex: 0, // Below content
   },
 });
 

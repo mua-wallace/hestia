@@ -26,6 +26,7 @@ import { STATUS_OPTIONS } from '../types/allRooms.types';
 import type { RoomDetailData, DetailTab, Note, Task } from '../types/roomDetail.types';
 import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
+import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
 
 type ArrivalDepartureDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -429,6 +430,9 @@ export default function ArrivalDepartureDetailScreen() {
         returnLaterAtTimestamp={returnLaterAtTimestamp}
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceReason={refuseServiceReason}
+        flagged={localRoom?.flagged === true}
+        frontOfficeLabel={room.frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}
+        showWithLinenBadge={room.frontOfficeStatus === 'Stayover' && showStayoverWithLinenBadge(localRoom)}
       />
 
       {/* Tab Navigation - Below header (252px) */}
