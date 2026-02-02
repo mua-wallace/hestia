@@ -93,6 +93,8 @@ export interface RoomCardData {
 
 export interface AllRoomsScreenData {
   rooms: RoomCardData[];
+  /** PM shift rooms from pm-operational-data.csv; used when selectedShift === 'PM' */
+  roomsPM?: RoomCardData[];
   selectedShift: 'AM' | 'PM';
 }
 

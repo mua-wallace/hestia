@@ -540,7 +540,10 @@ export default function AllRoomsScreen() {
 
   // Filter rooms based on search query and filters
   const filteredRooms = useMemo(() => {
-    let rooms = allRoomsData.rooms;
+    // PM: use roomsPM from pm-operational-data.csv when available; else filter AM rooms
+    const roomsPM = allRoomsData.roomsPM;
+    const usePMRooms = allRoomsData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    let rooms = usePMRooms ? roomsPM : allRoomsData.rooms;
 
     // Apply filters if provided
     if (activeFilters) {
@@ -628,21 +631,22 @@ export default function AllRoomsScreen() {
       );
     }
 
-    // PM mode: show Turndown, No Task, and Vacant cards
-    if (allRoomsData.selectedShift === 'PM') {
+    // PM mode: when using roomsPM list it's already Turndown/No Task/Vacant; else filter to those
+    if (allRoomsData.selectedShift === 'PM' && !usePMRooms) {
       rooms = rooms.filter(
         (room) =>
           room.frontOfficeStatus === 'Turndown' ||
           room.frontOfficeStatus === 'No Task' ||
           room.reservationStatus === 'Vacant'
       );
-    } else {
-      // AM mode: hide Turndown cards entirely
+    }
+    // AM mode: hide Turndown cards entirely
+    if (allRoomsData.selectedShift === 'AM') {
       rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');
     }
 
     return rooms;
-  }, [allRoomsData.rooms, allRoomsData.selectedShift, activeFilters, searchQuery]);
+  }, [allRoomsData.rooms, allRoomsData.roomsPM, allRoomsData.selectedShift, activeFilters, searchQuery]);
 
   return (
     <View style={[

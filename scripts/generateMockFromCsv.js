@@ -1,13 +1,16 @@
 /**
- * Generates src/data/mockAllRoomsData.ts from operational-data.csv [AM shift].
+ * Generates src/data/mockAllRoomsData.ts from operational-data.csv [AM] and pm-operational-data.csv [PM].
  * Run: node scripts/generateMockFromCsv.js
+ * Reads both CSVs and outputs { rooms, roomsPM } so switching to PM shows PM rooms.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const csvPath = path.join(__dirname, '..', 'operational-data.csv');
-const outPath = path.join(__dirname, '..', 'src', 'data', 'mockAllRoomsData.ts');
+const projectRoot = path.join(__dirname, '..');
+const csvPathAM = path.join(projectRoot, 'operational-data.csv');
+const csvPathPM = path.join(projectRoot, 'pm-operational-data.csv');
+const outPath = path.join(projectRoot, 'src', 'data', 'mockAllRoomsData.ts');
 
 function parseCSVLine(line) {
   const result = [];
@@ -80,6 +83,14 @@ function mapFrontOfficeStatus(task) {
   return 'Stayover';
 }
 
+/** PM CSV: houskeepingTask "Turn down" -> Turndown, "No Task" -> No Task */
+function mapFrontOfficeStatusPM(task) {
+  const t = (task || '').trim();
+  if (t === 'Turn down') return 'Turndown';
+  if (t === 'No Task') return 'No Task';
+  return 'Turndown';
+}
+
 function withLinen(task) {
   const t = (task || '').trim();
   if (t === 'Stayover with Linen') return true;
@@ -107,10 +118,12 @@ function creditVal(v) {
   return isNaN(n) ? 45 : n;
 }
 
-const csv = fs.readFileSync(csvPath, 'utf8');
-const lines = csv.split('\n').filter((l) => l.trim());
-const header = parseCSVLine(lines[0]);
-const rows = lines.slice(1).map(parseCSVLine);
+// Parse CSV helper
+function parseCsvFile(filePath) {
+  const csv = fs.readFileSync(filePath, 'utf8');
+  const lines = csv.split('\n').filter((l) => l.trim());
+  return lines.slice(1).map(parseCSVLine);
+}
 
 const defaultAvatar = "require('../../assets/icons/profile-avatar.png')";
 const reservationStatusMap = {
@@ -133,10 +146,11 @@ function normalizeReservationStatus(s) {
   return reservationStatusMap[t] || 'Occupied';
 }
 
-const rooms = rows.map((cells, idx) => {
+function buildRoomsFromRows(rows, mapFrontOffice, isPM) {
+  return rows.map((cells) => {
   const roomNumber = (cells[0] || '').trim();
   const task = cells[4] || '';
-  const frontOffice = mapFrontOfficeStatus(task);
+  const frontOffice = mapFrontOffice(task);
   const hasArrival = frontOffice === 'Arrival' || frontOffice === 'Arrival/Departure';
   const hasDeparture = frontOffice === 'Departure' || frontOffice === 'Arrival/Departure';
 
@@ -202,15 +216,16 @@ const rooms = rows.map((cells, idx) => {
 
   const attendantName = (cells[20] || '').trim();
   const isNotAssigned = !attendantName || attendantName === 'Not Assigned';
-  const noteMadeByStr = (cells[23] || '').trim();
+  const noteMadeByStr = isPM ? '' : (cells[23] || '').trim();
   const notesCount = (cells[22] && cells[22].trim()) ? 1 : 0;
 
   const specialInstr = (cells[21] || '').trim();
   const specialInstructions = frontOffice === 'Departure' ? null : (specialInstr || null);
   const roomNotesVal = (cells[22] || '').trim() || null;
-  const noteMadeByVal = roomNotesVal && noteMadeByStr ? { name: noteMadeByStr, avatar: defaultAvatar } : null;
+  const noteMadeByVal = !isPM && roomNotesVal && noteMadeByStr ? { name: noteMadeByStr, avatar: defaultAvatar } : null;
 
-  const flagged = /^yes$/i.test((cells[24] || '').trim());
+  const flaggedCol = isPM ? 23 : 24;
+  const flagged = /^yes$/i.test((cells[flaggedCol] || '').trim());
 
   return {
     id: `room-${roomNumber}`,
@@ -236,7 +251,19 @@ const rooms = rows.map((cells, idx) => {
     roomNotes: roomNotesVal,
     noteMadeBy: noteMadeByVal,
   };
-});
+  });
+}
+
+// Read AM CSV and build rooms
+const rowsAM = parseCsvFile(csvPathAM);
+const rooms = buildRoomsFromRows(rowsAM, mapFrontOfficeStatus, false);
+
+// Read PM CSV if exists and build roomsPM
+let roomsPM = [];
+if (fs.existsSync(csvPathPM)) {
+  const rowsPM = parseCsvFile(csvPathPM);
+  roomsPM = buildRoomsFromRows(rowsPM, mapFrontOfficeStatusPM, true);
+}
 
 function escapeStr(s) {
   if (s == null) return 'null';
@@ -294,21 +321,29 @@ function roomToTs(room) {
 }
 
 const roomsTs = rooms.map(roomToTs).join('\n');
+const roomsPMTs = roomsPM.map(roomToTs).join('\n');
 
 const tsContent = `/**
- * Mock rooms data generated from operational-data.csv [AM shift].
- * Source: operational-data.csv — regenerate with: node scripts/generateMockFromCsv.js
+ * Mock rooms data generated from operational-data.csv [AM] and pm-operational-data.csv [PM].
+ * Regenerate with: node scripts/generateMockFromCsv.js
  */
 
 import type { RoomCardData } from '../types/allRooms.types';
 
-export const mockAllRoomsData: { selectedShift: 'AM'; rooms: RoomCardData[] } = {
+export const mockAllRoomsData: {
+  selectedShift: 'AM';
+  rooms: RoomCardData[];
+  roomsPM: RoomCardData[];
+} = {
   selectedShift: 'AM',
   rooms: [
 ${roomsTs}
+  ],
+  roomsPM: [
+${roomsPMTs}
   ],
 };
 `;
 
 fs.writeFileSync(outPath, tsContent, 'utf8');
-console.log('Generated', outPath, 'with', rooms.length, 'rooms.');
+console.log('Generated', outPath, 'with', rooms.length, 'AM rooms and', roomsPM.length, 'PM rooms.');
