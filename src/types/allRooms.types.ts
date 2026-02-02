@@ -35,9 +35,12 @@ export interface GuestInfo {
   name: string;
   /** Dates of stay. For ETA = checking in; for EDT = checking out. Display: DD.MM.YYYY - DD.MM.YYYY */
   datesOfStay: DatesOfStay;
-  time: string; // ETA: 17:00 or EDT: 12:00
+  /** Time value: HH:mm (24h) or h:00am/pm for Arrival [ETA] / Departure [EDT]; "N/A" for Stayover, Turndown, No Task, Vacant */
+  time: string;
+  /** ETA = Arrival (check-in); EDT = Departure (check-out); N/A = Stayover, Turndown, No Task, Vacant */
+  timeLabel: 'ETA' | 'EDT' | 'N/A';
   guestCount: GuestCount; // Display: adults/kids (e.g. 2/2)
-  timeLabel: 'ETA' | 'EDT'; // To know if it's arrival or departure
+  vipCode?: number; // VIP code badge (e.g., 11 for first guest, 22 for second in Arrival/Departure)
   isVacant?: boolean; // For turndown vacant state
   /** ISO date string (YYYY-MM-DD) of guest arrival; used for Stayover linen calculation (every 2nd day = linen change) */
   arrivalDate?: string;
@@ -57,6 +60,12 @@ export interface NotesInfo {
   hasRushed?: boolean; // If true, show "Rushed and notes"
 }
 
+/** Who made the note - shown in room details */
+export interface NoteMadeBy {
+  name: string;
+  avatar?: any;
+}
+
 export interface RoomCardData {
   id: string;
   roomNumber: string; // "201", "202", etc.
@@ -70,12 +79,16 @@ export interface RoomCardData {
   reservationStatus?: ReservationStatus; // Due in / Due out, Occupied, Checked out / Due in, Checked in, Checked out, Due out, Vacant, Out Of Order, Due Out / Out Of Order, Checked out / Out Of Order
   promisedTime?: PromisedTime; // 12:00, 13:00, or null
   guests: GuestInfo[]; // Array to support Arrival/Departure rooms with 2 guests
-  staff: StaffInfo;
+  roomAttendantAssigned: StaffInfo;
   isPriority: boolean; // Must be true or false; red border for priority rooms when true
-  flagged?: boolean; // If true, room contributes to "Flagged" category on Home
+  flagged: boolean; // Must be true or false; when true, room contributes to "Flagged" category on Home
   notes?: NotesInfo;
-  vipCode?: number; // VIP code badge (e.g., 11 for first guest)
-  secondGuestVipCode?: number; // For Arrival/Departure rooms with 2 guests (e.g., 22)
+  /** Special instructions for room. null for Departure rooms; displayed in room details for all other room types */
+  specialInstructions?: string | null;
+  /** Room note text. null when no note. Displayed in room details. */
+  roomNotes?: string | null;
+  /** Who made the room note. null when no note. Paired with roomNotes. */
+  noteMadeBy?: NoteMadeBy | null;
 }
 
 export interface AllRoomsScreenData {

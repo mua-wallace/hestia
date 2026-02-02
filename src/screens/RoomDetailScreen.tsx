@@ -82,14 +82,26 @@ export default function RoomDetailScreen() {
   const [refuseServiceReason, setRefuseServiceReason] = useState<string | undefined>(undefined);
 
   // Track notes and assigned staff in state
+  // Initial notes: room note (roomNotes + noteMadeBy) if present, else default InProgress notes or empty
   const [notes, setNotes] = useState<Note[]>(() => {
-    if (room.houseKeepingStatus === 'InProgress') {
+    const roomNote: Note[] = room.roomNotes && room.noteMadeBy
+      ? [{
+          id: 'room-note',
+          text: room.roomNotes,
+          staff: {
+            name: room.noteMadeBy.name,
+            avatar: room.noteMadeBy.avatar ?? require('../../assets/icons/profile-avatar.png'),
+          },
+          createdAt: new Date().toISOString(),
+        }]
+      : [];
+    if (room.houseKeepingStatus === 'InProgress' && roomNote.length === 0) {
       return [
         {
           id: '1',
           text: "Guest wants 2 extra bath towels + 1 hand towel. Don't move items on desk. Refill water bottles daily. Check minibar usage. Leave AC on medium-cool.",
           staff: {
-            name: room.staff?.name || 'Stella Kitou',
+            name: room.roomAttendantAssigned?.name || 'Stella Kitou',
             avatar: require('../../assets/icons/profile-avatar.png'),
           },
           createdAt: new Date().toISOString(),
@@ -98,14 +110,14 @@ export default function RoomDetailScreen() {
           id: '2',
           text: 'Deep clean bathroom (heavy bath use). Change all linens + pillow protectors. Vacuum under bed. Restock all amenities. Light at entrance flickering report to maintenance.',
           staff: {
-            name: room.staff?.name || 'Stella Kitou',
+            name: room.roomAttendantAssigned?.name || 'Stella Kitou',
             avatar: require('../../assets/icons/profile-avatar.png'),
           },
           createdAt: new Date().toISOString(),
         },
       ];
     }
-    return [];
+    return roomNote;
   });
   
   const [assignedStaff, setAssignedStaff] = useState<{
@@ -116,15 +128,15 @@ export default function RoomDetailScreen() {
     avatarColor?: string;
     department?: string;
   } | undefined>(
-    room.staff
+    room.roomAttendantAssigned
       ? {
           id: '1',
-          name: room.staff.name,
-          avatar: room.staff.avatar || require('../../assets/icons/profile-avatar.png'),
-          initials: room.staff.initials,
-          avatarColor: room.staff.avatarColor,
+          name: room.roomAttendantAssigned.name,
+          avatar: room.roomAttendantAssigned.avatar || require('../../assets/icons/profile-avatar.png'),
+          initials: room.roomAttendantAssigned.initials,
+          avatarColor: room.roomAttendantAssigned.avatarColor,
           department: (() => {
-            const staffMember = mockStaffData.find(s => s.name === room.staff?.name);
+            const staffMember = mockStaffData.find(s => s.name === room.roomAttendantAssigned?.name);
             return staffMember?.department;
           })(),
         }
@@ -273,9 +285,7 @@ export default function RoomDetailScreen() {
   const roomDetail: RoomDetailData = {
     ...room,
     roomType,
-    specialInstructions: config.hasSpecialInstructions && room.guests && room.guests.length > 0
-      ? 'Please prepare a high-floor suite with a city view, away from the elevators, set to 21°C, with hypoallergenic pillows and a fresh orchid on the nightstand.'
-      : undefined,
+    specialInstructions: room.specialInstructions ?? undefined,
     notes: notes,
     tasks: tasks,
     assignedTo: assignedStaff,
@@ -642,7 +652,7 @@ export default function RoomDetailScreen() {
                   <GuestInfoCard
                     guest={firstGuest}
                     isArrival={firstGuest.timeLabel === 'ETA'}
-                    numberBadge={room.vipCode?.toString()}
+                    numberBadge={firstGuest?.vipCode?.toString()}
                     specialInstructions={roomDetail.specialInstructions}
                     absoluteTop={positions.firstGuestTop}
                     contentAreaTop={CONTENT_AREA.top}
@@ -660,7 +670,7 @@ export default function RoomDetailScreen() {
                   <GuestInfoCard
                     guest={secondGuest}
                     isArrival={false}
-                    numberBadge={room.secondGuestVipCode?.toString() || room.vipCode?.toString()}
+                    numberBadge={secondGuest?.vipCode?.toString() || firstGuest?.vipCode?.toString()}
                     specialInstructions={undefined}
                     isSecondGuest={!!firstGuest}
                     absoluteTop={positions.secondGuestTop!}

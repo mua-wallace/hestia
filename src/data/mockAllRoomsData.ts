@@ -1517,18 +1517,19 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         {
           name: 'Mr Mohamed. B',
           datesOfStay: { from: '2025-01-26', to: '2025-02-03' },
-          time: '17:00',
-          timeLabel: 'ETA',
+          time: 'N/A',
+          timeLabel: 'N/A',
           guestCount: { adults: 2, kids: 2 },
           arrivalDate: '2025-01-26', // For automatic linen calc: every 2nd day = linen
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         initials: 'Z',
         name: 'Zoe Tsakeri',
         statusText: 'Not Started',
         statusColor: '#1e1e1e',
       },
+      specialInstructions: 'Please prepare a high-floor suite with a city view, away from the elevators.',
     },
     {
       id: 'room-102',
@@ -1541,7 +1542,6 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       isPriority: true,
       promisedTime: '12:00',
       flagged: false,
-      vipCode: 11,
       guests: [
         {
           name: 'Mr Felix. K',
@@ -1549,9 +1549,10 @@ export const mockAllRoomsData: AllRoomsScreenData = {
           time: '17:00',
           timeLabel: 'ETA',
           guestCount: { adults: 2, kids: 2 },
+          vipCode: 11,
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Etleva Hoxha',
         statusText: 'Finished: 60 mins',
@@ -1561,6 +1562,9 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         count: 1,
         hasRushed: false,
       },
+      specialInstructions: 'Set room to 21°C, with hypoallergenic pillows and a fresh orchid on the nightstand.',
+      roomNotes: 'Guest wants 2 extra bath towels + 1 hand towel. Don\'t move items on desk.',
+      noteMadeBy: { name: 'Etleva Hoxha', avatar: require('../../assets/icons/profile-avatar.png') },
     },
     {
       id: 'room-201',
@@ -1573,7 +1577,6 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       isPriority: true,
       promisedTime: '13:00',
       flagged: true,
-      vipCode: 11, // First guest has 11
       guests: [
         {
           name: 'Mr Mohamed. B',
@@ -1581,6 +1584,7 @@ export const mockAllRoomsData: AllRoomsScreenData = {
           time: '17:00',
           timeLabel: 'ETA',
           guestCount: { adults: 2, kids: 2 },
+          vipCode: 11,
         },
         {
           name: 'Mr Felix. K',
@@ -1588,9 +1592,10 @@ export const mockAllRoomsData: AllRoomsScreenData = {
           time: '12:00',
           timeLabel: 'EDT',
           guestCount: { adults: 2, kids: 2 },
+          vipCode: 22,
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Etleva Hoxha',
         statusText: 'Started: 40 mins',
@@ -1600,7 +1605,9 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         count: 3,
         hasRushed: true,
       },
-      secondGuestVipCode: 22, // Second guest has 22
+      specialInstructions: 'Please prepare a high-floor suite with a city view, away from the elevators, set to 21°C.',
+      roomNotes: 'Baby 1 year old, crib requested. Bottle warmer. Remove Dyson fan. Giovanna at 09:00am NO.',
+      noteMadeBy: { name: 'Giovanna at 09:00am', avatar: require('../../assets/icons/profile-avatar.png') },
     },
     {
       id: 'room-202',
@@ -1622,13 +1629,16 @@ export const mockAllRoomsData: AllRoomsScreenData = {
           guestCount: { adults: 2, kids: 2 },
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         initials: 'Z',
         name: 'Zoe Tsakeri',
         statusText: 'Not Started',
         statusColor: '#1e1e1e',
         promiseTime: 'Promise time: 12:00',
       },
+      specialInstructions: null,
+      roomNotes: null,
+      noteMadeBy: null,
     },
     {
       id: 'room-203',
@@ -1641,7 +1651,6 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       isPriority: false,
       promisedTime: null,
       flagged: false,
-      vipCode: 11,
       guests: [
         {
           name: 'Mr Mohamed. B',
@@ -1649,9 +1658,10 @@ export const mockAllRoomsData: AllRoomsScreenData = {
           time: '17:00',
           timeLabel: 'ETA',
           guestCount: { adults: 2, kids: 2 },
+          vipCode: 11,
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Finished: 60 mins',
@@ -1661,6 +1671,8 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         count: 3,
         hasRushed: false,
       },
+      roomNotes: 'Top VIP guest. Call supervisor to check room after service. Leon at 09:30am Yes.',
+      noteMadeBy: { name: 'Leon at 09:30am', avatar: require('../../assets/icons/profile-avatar.png') },
     },
     {
       id: 'room-204',
@@ -1677,18 +1689,19 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         {
           name: 'Mr Mohamed. B',
           datesOfStay: { from: '2025-01-29', to: '2025-02-05' },
-          time: '17:00',
-          timeLabel: 'ETA',
+          time: 'N/A',
+          timeLabel: 'N/A',
           guestCount: { adults: 2, kids: 2 },
           arrivalDate: '2025-01-29',
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Finished: 65 mins',
         statusColor: '#f92424',
       },
+      specialInstructions: 'Do not disturb before 10:00. Leave extra coffee pods.',
     },
     {
       id: 'room-206',
@@ -1706,17 +1719,18 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         {
           name: 'Mr Mohamed. B',
           datesOfStay: { from: '2025-01-28', to: '2025-02-05' },
-          time: '17:00',
-          timeLabel: 'ETA',
+          time: 'N/A',
+          timeLabel: 'N/A',
           guestCount: { adults: 2, kids: 2 },
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Finished: 65 mins',
         statusColor: '#f92424',
       },
+      specialInstructions: 'Baby crib requested. Remove Dyson fan before 09:00.',
     },
     {
       id: 'room-207',
@@ -1734,17 +1748,18 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         {
           name: 'Mr Mohamed. B',
           datesOfStay: { from: '2025-01-29', to: '2025-02-06' },
-          time: '17:00',
-          timeLabel: 'ETA',
+          time: 'N/A',
+          timeLabel: 'N/A',
           guestCount: { adults: 2, kids: 2 },
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Promised: 65 mins',
         statusColor: '#f92424',
       },
+      specialInstructions: 'Late checkout approved until 14:00. Refresh minibar.',
     },
     {
       id: 'room-208',
@@ -1762,18 +1777,19 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         {
           name: 'Vacant',
           datesOfStay: { from: '', to: '' },
-          time: '',
-          timeLabel: 'ETA',
+          time: 'N/A',
+          timeLabel: 'N/A',
           guestCount: { adults: 0, kids: 0 },
           isVacant: true,
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Promised: 65 mins',
         statusColor: '#f92424',
       },
+      specialInstructions: 'Vacant room - standard turndown. No special requests.',
     },
     {
       id: 'room-209',
@@ -1791,18 +1807,19 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         {
           name: 'Vacant',
           datesOfStay: { from: '', to: '' },
-          time: '',
-          timeLabel: 'ETA',
+          time: 'N/A',
+          timeLabel: 'N/A',
           guestCount: { adults: 0, kids: 0 },
           isVacant: true,
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Promised: 65 mins',
         statusColor: '#f92424',
       },
+      specialInstructions: 'Vacant room - standard turndown.',
     },
     {
       id: 'room-210',
@@ -1820,18 +1837,19 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         {
           name: 'Vacant',
           datesOfStay: { from: '', to: '' },
-          time: '',
-          timeLabel: 'ETA',
+          time: 'N/A',
+          timeLabel: 'N/A',
           guestCount: { adults: 0, kids: 0 },
           isVacant: true,
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Promised: 65 mins',
         statusColor: '#f92424',
       },
+      specialInstructions: 'Vacant room - check minibar before turndown.',
     },
     {
       id: 'room-211',
@@ -1848,13 +1866,13 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         {
           name: 'Vacant',
           datesOfStay: { from: '', to: '' },
-          time: '',
-          timeLabel: 'ETA',
+          time: 'N/A',
+          timeLabel: 'N/A',
           guestCount: { adults: 0, kids: 0 },
           isVacant: true,
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Promised: 65 mins',
@@ -1877,17 +1895,18 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         {
           name: 'Mr Mohamed. B',
           datesOfStay: { from: '2025-01-28', to: '2025-02-05' },
-          time: '17:00',
-          timeLabel: 'ETA',
+          time: 'N/A',
+          timeLabel: 'N/A',
           guestCount: { adults: 2, kids: 2 },
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Finished: 65 mins',
         statusColor: '#f92424',
       },
+      specialInstructions: 'No task - DND until 14:00. Guest prefers afternoon service.',
     },
     {
       id: 'room-no-task-2',
@@ -1905,12 +1924,12 @@ export const mockAllRoomsData: AllRoomsScreenData = {
         {
           name: 'Ms Jane Doe',
           datesOfStay: { from: '2025-01-30', to: '2025-02-07' },
-          time: '18:00',
-          timeLabel: 'ETA',
+          time: 'N/A',
+          timeLabel: 'N/A',
           guestCount: { adults: 1, kids: 1 },
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Promised: 45 mins',
@@ -1937,12 +1956,13 @@ export const mockAllRoomsData: AllRoomsScreenData = {
           guestCount: { adults: 2, kids: 2 },
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Etleva Hoxha',
         statusText: 'Started: 15 mins',
         statusColor: '#1e1e1e',
       },
+      specialInstructions: 'Early check-in requested. Room ready by 12:00.',
     },
     {
       id: 'room-401',
@@ -1955,23 +1975,24 @@ export const mockAllRoomsData: AllRoomsScreenData = {
       isPriority: true,
       promisedTime: '13:00',
       flagged: false,
-      vipCode: 4,
       guests: [
         {
           name: 'Mr Felix. K',
           datesOfStay: { from: '2025-01-28', to: '2025-02-05' },
-          time: '17:00',
-          timeLabel: 'ETA',
+          time: 'N/A',
+          timeLabel: 'N/A',
           guestCount: { adults: 2, kids: 2 },
           arrivalDate: '2025-01-28',
+          vipCode: 4,
         },
       ],
-      staff: {
+      roomAttendantAssigned: {
         avatar: require('../../assets/icons/profile-avatar.png'),
         name: 'Yenchai Moliao',
         statusText: 'Finished: 45 mins',
         statusColor: '#41d541',
       },
+      specialInstructions: 'Linen change today. Extra pillows on request.',
     },
   ],
 };

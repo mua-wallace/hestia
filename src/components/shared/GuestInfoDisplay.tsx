@@ -426,7 +426,7 @@ export default function GuestInfoDisplay({
           )}
         </View>
       ) : (isArrival || isStayover || isTurndown) && guest.timeLabel && guest.time && !(timeLeft !== undefined && timeTop !== undefined) ? (
-        // For Arrival, Stayover, Turndown: date and ETA on same row
+        // For Arrival, Stayover, Turndown: date and ETA/EDT/N/A on same row
         <View style={[
           styles.detailsRowWithTime, 
           { 
@@ -437,7 +437,7 @@ export default function GuestInfoDisplay({
         ]}>
           <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
           <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
-            {guest.timeLabel}: {guest.time}
+            {guest.timeLabel === 'N/A' ? 'N/A' : `${guest.timeLabel}: ${guest.time}`}
           </Text>
         </View>
       ) : (
@@ -493,7 +493,7 @@ export default function GuestInfoDisplay({
             top: (timePos.top ?? 0) * normalizedScaleX,
           }
         ]}>
-          {guest.timeLabel}: {guest.time}
+          {guest.timeLabel === 'N/A' ? 'N/A' : `${guest.timeLabel}: ${guest.time}`}
         </Text>
       )}
     </View>
