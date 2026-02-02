@@ -18,10 +18,17 @@ import { MoreMenuItemId } from '../types/more.types';
 import type { RootStackParamList } from '../navigation/types';
 import { BlurView } from 'expo-blur';
 import { FilterState, FilterCounts } from '../types/filter.types';
+import type { CategoryName } from '../types/home.types';
 import AllRoomsFilterModal from '../components/allRooms/AllRoomsFilterModal';
 import { CARD_DIMENSIONS, CARD_COLORS } from '../constants/allRoomsStyles';
 import { getShiftFromTime } from '../utils/shiftUtils';
 import { getStayoverWithLinen } from '../utils/stayoverLinen';
+
+/** When user taps a status badge on Home (e.g. cleaned[2] under Flagged). */
+export type CategoryFilterParam = {
+  category: CategoryName;
+  roomState: 'dirty' | 'inProgress' | 'cleaned' | 'inspected';
+};
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -73,16 +80,42 @@ export default function AllRoomsScreen() {
   // Check if we came from a stack navigation (show back button) or tab navigation (don't show)
   const showBackButton = (route.params as any)?.showBackButton ?? false;
   const routeFilters = (route.params as any)?.filters as FilterState | undefined;
-  
-  // Initialize local filters with route filters if available
-  const [localFilters, setLocalFilters] = useState<FilterState | undefined>(routeFilters);
-  
-  // Sync local filters with route filters when route params change
+  const routeCategoryFilter = (route.params as any)?.categoryFilter as CategoryFilterParam | undefined;
+
+  // Initialize local filters: merge route filters with categoryFilter.roomState when coming from Home badge tap
+  const [localFilters, setLocalFilters] = useState<FilterState | undefined>(() => {
+    const rf = routeFilters;
+    const cf = routeCategoryFilter;
+    if (cf) {
+      const baseRoomStates = { dirty: false, inProgress: false, cleaned: false, inspected: false, priority: false };
+      return {
+        ...(rf || {}),
+        roomStates: { ...baseRoomStates, ...(rf?.roomStates || {}), [cf.roomState]: true },
+        guests: rf?.guests ?? { arrivals: false, departures: false, turnDown: false, noTask: false, stayOver: false, stayOverWithLinen: false, stayOverNoLinen: false, checkedIn: false, checkedOut: false, checkedOutDueIn: false, outOfOrder: false, outOfService: false },
+        reservations: rf?.reservations ?? { occupied: false, vacant: false },
+        floors: rf?.floors ?? { all: false, first: false, second: false, third: false, fourth: false },
+      } as FilterState;
+    }
+    return rf;
+  });
+
+  // Sync local filters with route params when navigating (e.g. from Home with categoryFilter)
   React.useEffect(() => {
-    if (routeFilters) {
+    if (routeCategoryFilter) {
+      setLocalFilters((prev) => {
+        const baseRoomStates = { dirty: false, inProgress: false, cleaned: false, inspected: false, priority: false };
+        return {
+          ...(prev || routeFilters || {}),
+          roomStates: { ...baseRoomStates, ...(prev?.roomStates || routeFilters?.roomStates || {}), [routeCategoryFilter.roomState]: true },
+          guests: prev?.guests ?? routeFilters?.guests ?? { arrivals: false, departures: false, turnDown: false, noTask: false, stayOver: false, stayOverWithLinen: false, stayOverNoLinen: false, checkedIn: false, checkedOut: false, checkedOutDueIn: false, outOfOrder: false, outOfService: false },
+          reservations: prev?.reservations ?? routeFilters?.reservations ?? { occupied: false, vacant: false },
+          floors: prev?.floors ?? routeFilters?.floors ?? { all: false, first: false, second: false, third: false, fourth: false },
+        } as FilterState;
+      });
+    } else if (routeFilters) {
       setLocalFilters(routeFilters);
     }
-  }, [routeFilters]);
+  }, [routeFilters, routeCategoryFilter]);
   
   // Prefer local filters (user's current selection) over route filters (initial state)
   // This allows reset to work properly by overriding route filters
@@ -554,6 +587,24 @@ export default function AllRoomsScreen() {
     const usePMRooms = allRoomsData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     let rooms = usePMRooms ? roomsPM : allRoomsData.rooms;
 
+    // When user tapped a status badge on Home (e.g. cleaned[2] under Flagged), show only that category + status
+    if (routeCategoryFilter) {
+      const { category, roomState } = routeCategoryFilter;
+      const statusToHouseKeeping: Record<string, string> = { dirty: 'Dirty', inProgress: 'InProgress', cleaned: 'Cleaned', inspected: 'Inspected' };
+      const targetStatus = statusToHouseKeeping[roomState];
+      rooms = rooms.filter((room) => {
+        const matchesCategory =
+          category === 'Flagged' ? !!room.flagged
+          : category === 'Arrivals' ? (room.frontOfficeStatus === 'Arrival' || room.frontOfficeStatus === 'Arrival/Departure')
+          : category === 'StayOvers' ? room.frontOfficeStatus === 'Stayover'
+          : category === 'Turndown' ? room.frontOfficeStatus === 'Turndown'
+          : category === 'No Task' ? room.frontOfficeStatus === 'No Task'
+          : category === 'Vacant' ? (room.reservationStatus || '').toLowerCase() === 'vacant'
+          : false;
+        return matchesCategory && room.houseKeepingStatus === targetStatus;
+      });
+    }
+
     // Apply filters if provided
     if (activeFilters) {
       const hasRoomStateFilter = Object.values(activeFilters.roomStates).some(v => v);
@@ -658,7 +709,7 @@ export default function AllRoomsScreen() {
     }
 
     return rooms;
-  }, [allRoomsData.rooms, allRoomsData.roomsPM, allRoomsData.selectedShift, activeFilters, searchQuery]);
+  }, [allRoomsData.rooms, allRoomsData.roomsPM, allRoomsData.selectedShift, activeFilters, searchQuery, routeCategoryFilter]);
 
   return (
     <View style={[

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { typography } from '../../theme';
 import { normalizedScaleX } from '../../utils/responsive';
 
@@ -20,10 +20,13 @@ interface StatusIndicatorProps {
   iconHeight?: number;
   rightLabelIcon?: any;
   isPM?: boolean;
+  /** When count >= 1, tapping the badge navigates/filters. Optional. */
+  onPress?: () => void;
 }
 
-export default function StatusIndicator({ color, icon, count, label, iconWidth, iconHeight, rightLabelIcon, isPM = false }: StatusIndicatorProps) {
+export default function StatusIndicator({ color, icon, count, label, iconWidth, iconHeight, rightLabelIcon, isPM = false, onPress }: StatusIndicatorProps) {
   const [textWidth, setTextWidth] = useState(0);
+  const isPressable = count >= 1 && !!onPress;
   
   const iconStyle = [
     styles.icon,
@@ -36,8 +39,8 @@ export default function StatusIndicator({ color, icon, count, label, iconWidth, 
     ? textWidth / 2 + 9 * normalizedScaleX + 2 * normalizedScaleX 
     : 0;
 
-  return (
-    <View style={styles.container}>
+  const content = (
+    <View style={styles.contentWrapper}>
       <View style={styles.iconContainer}>
         <View style={[styles.circle, { backgroundColor: color }]}>
           <Image
@@ -80,6 +83,18 @@ export default function StatusIndicator({ color, icon, count, label, iconWidth, 
       </View>
     </View>
   );
+
+  return (
+    <View style={styles.container}>
+      {isPressable ? (
+        <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.touchable}>
+          {content}
+        </TouchableOpacity>
+      ) : (
+        content
+      )}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -90,6 +105,18 @@ const styles = StyleSheet.create({
     maxWidth: '100%', // Prevent overflow on small screens
     // Ensure consistent alignment
     justifyContent: 'flex-start',
+  },
+  touchable: {
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+    maxWidth: '100%',
+  },
+  contentWrapper: {
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+    maxWidth: '100%',
   },
   iconContainer: {
     position: 'relative',

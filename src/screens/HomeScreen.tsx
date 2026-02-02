@@ -128,6 +128,15 @@ export default function HomeScreen() {
     navigation.navigate('AllRooms', { showBackButton: true, filters: activeFilters } as any);
   };
 
+  /** When user taps a status badge (e.g. cleaned[2] under Flagged), filter and show only those rooms. */
+  const handleStatusPress = (category: CategorySection, roomState: keyof import('../types/home.types').RoomStatus) => {
+    navigation.navigate('AllRooms', {
+      showBackButton: true,
+      filters: activeFilters,
+      categoryFilter: { category: category.name, roomState },
+    } as any);
+  };
+
   const getRoomFloor = (roomNumber: string): number | null => {
     const firstChar = (roomNumber || '').trim()[0];
     const floor = Number.parseInt(firstChar || '', 10);
@@ -367,6 +376,7 @@ export default function HomeScreen() {
                 key={category.id} 
                 category={category} 
                 onPress={handleCategoryPress}
+                onStatusPress={handleStatusPress}
                 selectedShift={homeData.selectedShift}
               />
             ))}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import type { CategorySection, ShiftType } from '../../types/home.types';
+import type { CategorySection, ShiftType, RoomStatus } from '../../types/home.types';
 import { colors, typography } from '../../theme';
 import { Dimensions } from 'react-native';
 import { normalizedScaleX, scaleX } from '../../utils/responsive';
@@ -13,6 +13,8 @@ import PriorityBadge from './PriorityBadge';
 interface CategoryCardProps {
   category: CategorySection;
   onPress?: () => void;
+  /** When a status badge with count >= 1 is tapped (e.g. cleaned[2] under Flagged). */
+  onStatusPress?: (category: CategorySection, status: keyof RoomStatus) => void;
   selectedShift?: ShiftType;
 }
 
@@ -40,7 +42,8 @@ const STATUS_CONFIG = {
   },
 };
 
-export default function CategoryCard({ category, onPress, selectedShift }: CategoryCardProps) {
+export default function CategoryCard({ category, onPress, onStatusPress, selectedShift }: CategoryCardProps) {
+  const statusKeys: (keyof RoomStatus)[] = ['dirty', 'inProgress', 'cleaned', 'inspected'];
   return (
     <TouchableOpacity style={[
       styles.container,
@@ -73,44 +76,21 @@ export default function CategoryCard({ category, onPress, selectedShift }: Categ
         selectedShift === 'PM' && styles.dividerPM
       ]} />
 
-      {/* Status Indicators */}
+      {/* Status Indicators - tappable when count >= 1 to filter by category + status */}
       <View style={styles.statusGrid}>
-        <StatusIndicator
-          color={STATUS_CONFIG.dirty.color}
-          icon={STATUS_CONFIG.dirty.icon}
-          count={category.status.dirty}
-          label={STATUS_CONFIG.dirty.label}
-          iconWidth={29.478}
-          iconHeight={30.769}
-          isPM={selectedShift === 'PM'}
-        />
-        <StatusIndicator
-          color={STATUS_CONFIG.inProgress.color}
-          icon={STATUS_CONFIG.inProgress.icon}
-          count={category.status.inProgress}
-          label={STATUS_CONFIG.inProgress.label}
-          iconWidth={29.478}
-          iconHeight={30.769}
-          isPM={selectedShift === 'PM'}
-        />
-        <StatusIndicator
-          color={STATUS_CONFIG.cleaned.color}
-          icon={STATUS_CONFIG.cleaned.icon}
-          count={category.status.cleaned}
-          label={STATUS_CONFIG.cleaned.label}
-          iconWidth={29.478}
-          iconHeight={30.769}
-          isPM={selectedShift === 'PM'}
-        />
-        <StatusIndicator
-          color={STATUS_CONFIG.inspected.color}
-          icon={STATUS_CONFIG.inspected.icon}
-          count={category.status.inspected}
-          label={STATUS_CONFIG.inspected.label}
-          iconWidth={29.478}
-          iconHeight={30.769}
-          isPM={selectedShift === 'PM'}
-        />
+        {statusKeys.map((statusKey) => (
+          <StatusIndicator
+            key={statusKey}
+            color={STATUS_CONFIG[statusKey].color}
+            icon={STATUS_CONFIG[statusKey].icon}
+            count={category.status[statusKey]}
+            label={STATUS_CONFIG[statusKey].label}
+            iconWidth={29.478}
+            iconHeight={30.769}
+            isPM={selectedShift === 'PM'}
+            onPress={category.status[statusKey] >= 1 && onStatusPress ? () => onStatusPress(category, statusKey) : undefined}
+          />
+        ))}
       </View>
     </TouchableOpacity>
   );
