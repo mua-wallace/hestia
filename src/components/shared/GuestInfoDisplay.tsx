@@ -459,10 +459,18 @@ export default function GuestInfoDisplay({
           { 
             top: calculatedDateTop * normalizedScaleX,
             left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
-            zIndex: 10, // Lower z-index so time can appear above
+            zIndex: 10,
           }
         ]}>
-          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
+          <Text 
+            style={[
+              styles.dateRange, 
+              isPMTheme && styles.dateRangePM,
+              dateLeft !== undefined && timeLeft !== undefined && { marginRight: 12 * normalizedScaleX },
+            ]}
+          >
+            {formatDatesOfStay(guest.datesOfStay)}
+          </Text>
         </View>
       )}
 

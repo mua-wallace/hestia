@@ -9,6 +9,7 @@ import MorePopup from '../components/more/MorePopup';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockChatData } from '../data/mockChatData';
 import { MoreMenuItemId } from '../types/more.types';
+import type { ReturnToTab } from '../navigation/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -59,15 +60,16 @@ export default function SettingsScreen() {
 
   const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
     setShowMorePopup(false);
+    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     switch (menuItem) {
       case 'lostAndFound':
-        navigation.navigate('LostAndFound');
+        navigation.navigate('LostAndFound', { returnToTab });
         break;
       case 'staff':
-        navigation.navigate('Staff');
+        navigation.navigate('Staff', { returnToTab });
         break;
       case 'settings':
-        navigation.navigate('Settings');
+        navigation.navigate('Settings', { returnToTab });
         break;
       default:
         break;
@@ -79,7 +81,12 @@ export default function SettingsScreen() {
   };
 
   const handleBack = () => {
-    navigation.navigate('Home');
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      const returnToTab = (route.params as { returnToTab?: ReturnToTab } | undefined)?.returnToTab ?? 'Home';
+      navigation.navigate(returnToTab as keyof MainTabsParamList);
+    }
   };
 
   return (
@@ -88,7 +95,7 @@ export default function SettingsScreen() {
         <Text style={styles.title}>Settings</Text>
         <Text style={styles.subtitle}>Coming Soon</Text>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.backButtonText}>Back to Home</Text>
+          <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
         
         {showMorePopup && (

@@ -19,13 +19,16 @@ export type RootStackParamList = {
   CreateTicketForm: { departmentId: string };
 };
 
+/** Tab/screen to return to when back is pressed (e.g. from Settings/Staff/LostAndFound). */
+export type ReturnToTab = 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
+
 export type MainTabsParamList = {
   Home: undefined;
   Rooms: undefined;
   Chat: undefined;
   Tickets: undefined;
-  LostAndFound: { openRegisterModal?: boolean } | undefined;
-  Staff: undefined;
-  Settings: undefined;
+  LostAndFound: { openRegisterModal?: boolean; returnToTab?: ReturnToTab } | undefined;
+  Staff: { returnToTab?: ReturnToTab } | undefined;
+  Settings: { returnToTab?: ReturnToTab } | undefined;
 };
 

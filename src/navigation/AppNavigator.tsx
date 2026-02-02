@@ -16,6 +16,7 @@ import CreateTicketScreen from '../screens/CreateTicketScreen';
 import CreateTicketFormScreen from '../screens/CreateTicketFormScreen';
 import ChatDetailScreen from '../screens/ChatDetailScreen';
 import type { RootStackParamList, MainTabsParamList } from './types';
+import { colors } from '../theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabsParamList>();
@@ -81,10 +82,11 @@ export default function AppNavigator() {
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
-        animationDuration: 250,
+        animationDuration: 280,
         gestureEnabled: true,
         gestureDirection: 'horizontal',
         fullScreenGestureEnabled: true,
+        freezeOnBlur: true,
       }}
     >
       <Stack.Screen name="Splash" component={SplashScreen} />
@@ -102,8 +104,12 @@ export default function AppNavigator() {
         component={RoomDetailScreen}
         options={{
           animation: 'slide_from_right',
+          animationDuration: 320,
           gestureEnabled: true,
           gestureDirection: 'horizontal',
+          fullScreenGestureEnabled: true,
+          animationMatchesGesture: true,
+          contentStyle: { backgroundColor: colors.background.primary },
         }}
       />
       <Stack.Screen 

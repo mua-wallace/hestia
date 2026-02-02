@@ -82,15 +82,16 @@ export default function TicketsScreen() {
 
   const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
     setShowMorePopup(false);
+    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     switch (menuItem) {
       case 'lostAndFound':
-        navigation.navigate('LostAndFound');
+        navigation.navigate('LostAndFound', { returnToTab });
         break;
       case 'staff':
-        navigation.navigate('Staff');
+        navigation.navigate('Staff', { returnToTab });
         break;
       case 'settings':
-        navigation.navigate('Settings');
+        navigation.navigate('Settings', { returnToTab });
         break;
       default:
         break;

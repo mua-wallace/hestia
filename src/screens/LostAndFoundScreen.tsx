@@ -21,6 +21,7 @@ import {
   LOST_AND_FOUND_DIVIDER,
   scaleX,
 } from '../constants/lostAndFoundStyles';
+import type { ReturnToTab } from '../navigation/types';
 
 type MainTabsParamList = {
   Home: undefined;
@@ -95,15 +96,16 @@ export default function LostAndFoundScreen() {
 
   const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
     setShowMorePopup(false);
+    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     switch (menuItem) {
       case 'lostAndFound':
-        navigation.navigate('LostAndFound');
+        navigation.navigate('LostAndFound', { returnToTab });
         break;
       case 'staff':
-        navigation.navigate('Staff');
+        navigation.navigate('Staff', { returnToTab });
         break;
       case 'settings':
-        navigation.navigate('Settings');
+        navigation.navigate('Settings', { returnToTab });
         break;
       default:
         break;
@@ -115,7 +117,12 @@ export default function LostAndFoundScreen() {
   };
 
   const handleBackPress = () => {
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      const returnToTab = (route.params as { returnToTab?: ReturnToTab } | undefined)?.returnToTab ?? 'Home';
+      navigation.navigate(returnToTab as keyof MainTabsParamList);
+    }
   };
 
   const handleRegisterPress = () => {
