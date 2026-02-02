@@ -111,49 +111,59 @@ export default function GuestInfoDisplay({
         : GUEST_INFO.containerStandard.left;
 
   // Determine name top position - use override if provided, otherwise calculate
+  // For Arrival/Departure cards (with or without isPriority), use first/second guest positions
   const calculatedNameTop = nameTop !== undefined
     ? nameTop
-    : isPriority
+    : (isArrivalDeparture || category === 'ArrivalDeparture')
       ? (isSecondGuest ? GUEST_INFO.nameSecond.top : GUEST_INFO.name.top)
-      : hasNotes || isTurndown || isStayover || isNoTask
-        ? GUEST_INFO.nameWithNotes.top
-        : isArrival
-          ? GUEST_INFO.nameStandardArrival.top
-          : GUEST_INFO.nameStandard.top;
+      : isPriority
+        ? (isSecondGuest ? GUEST_INFO.nameSecond.top : GUEST_INFO.name.top)
+        : hasNotes || isTurndown || isStayover || isNoTask
+          ? GUEST_INFO.nameWithNotes.top
+          : isArrival
+            ? GUEST_INFO.nameStandardArrival.top
+            : GUEST_INFO.nameStandard.top;
 
   // Determine date range top position - use override if provided, otherwise calculate
+  // For Arrival/Departure cards (with or without isPriority), use first/second guest positions
   const calculatedDateTop = dateTop !== undefined
     ? dateTop
-    : isPriority
+    : (isArrivalDeparture || category === 'ArrivalDeparture')
       ? (isSecondGuest ? GUEST_INFO.dateRangeSecond.top : GUEST_INFO.dateRange.top)
-      : hasNotes || isTurndown || isStayover || isNoTask
-        ? GUEST_INFO.dateRangeWithNotes.top
-        : isArrival
-          ? GUEST_INFO.dateRangeStandardArrival.top
-          : GUEST_INFO.dateRangeStandard.top;
+      : isPriority
+        ? (isSecondGuest ? GUEST_INFO.dateRangeSecond.top : GUEST_INFO.dateRange.top)
+        : hasNotes || isTurndown || isStayover || isNoTask
+          ? GUEST_INFO.dateRangeWithNotes.top
+          : isArrival
+            ? GUEST_INFO.dateRangeStandardArrival.top
+            : GUEST_INFO.dateRangeStandard.top;
 
   // Determine time (ETA/EDT) position - use override if provided
   // For Arrival/Stayover/Turndown cards, align time with date range row
   // No Task: no ETA shown
+  // For Arrival/Departure cards, use first/second guest positions
   const timePos: { left: number; top: number } | null = isNoTask
     ? null
     : timeLeft !== undefined && timeTop !== undefined
       ? { left: timeLeft, top: timeTop }
-      : isPriority
+      : (isArrivalDeparture || category === 'ArrivalDeparture')
         ? (isSecondGuest ? GUEST_INFO.time.positions.prioritySecond : GUEST_INFO.time.positions.priorityFirst)
-        : hasNotes || isTurndown || isStayover
-          ? GUEST_INFO.time.positions.withNotes
-          : isArrival || isStayover || isTurndown
-            ? {
-                // Align time with date range row (top 109px) for proper alignment
-                left: GUEST_INFO.time.positions.standardArrival.left,
-                top: calculatedDateTop, // Use same top as date range for alignment
-              }
-            : null; // Departure cards don't show time
+        : isPriority
+          ? (isSecondGuest ? GUEST_INFO.time.positions.prioritySecond : GUEST_INFO.time.positions.priorityFirst)
+          : hasNotes || isTurndown || isStayover
+            ? GUEST_INFO.time.positions.withNotes
+            : isArrival || isStayover || isTurndown
+              ? {
+                  // Align time with date range row (top 109px) for proper alignment
+                  left: GUEST_INFO.time.positions.standardArrival.left,
+                  top: calculatedDateTop, // Use same top as date range for alignment
+                }
+              : null; // Departure cards don't show time
 
   // Determine guest count position - use override if provided
   // Note: For Arrival/Departure cards, guest count should align with date range (same top position)
   // No Task: no guest count shown
+  // For Arrival/Departure cards (with or without isPriority), use first/second guest positions
   const countPos: { iconLeft: number; textLeft: number; top?: number; iconTop?: number; textTop?: number } | null = isNoTask
     ? null
     : countIconLeft !== undefined && countTextLeft !== undefined
@@ -164,7 +174,7 @@ export default function GuestInfoDisplay({
           iconTop: countTop,
           textTop: countTop 
         }
-      : isPriority && isArrivalDeparture
+      : (isArrivalDeparture || category === 'ArrivalDeparture')
         ? {
             // For Arrival/Departure cards, align guest count with date range row
             iconLeft: isSecondGuest ? GUEST_INFO.guestCount.positions.prioritySecond.iconLeft : GUEST_INFO.guestCount.positions.priorityFirst.iconLeft,
@@ -195,6 +205,7 @@ export default function GuestInfoDisplay({
 
   // Determine guest icon absolute positioning
   // If iconLeft is provided, use it for absolute positioning
+  // For Arrival/Departure cards (with or without isPriority), use first/second guest positions
   let guestIconPos: { left: number; top: number } | null = null;
   if (iconLeft !== undefined) {
     // Use custom iconLeft and iconTop for room detail screen
@@ -202,7 +213,8 @@ export default function GuestInfoDisplay({
       left: iconLeft,
       top: iconTop !== undefined ? iconTop : calculatedNameTop, // Use iconTop if provided, otherwise same as name
     };
-  } else if (isArrivalDeparture && isPriority) {
+  } else if (isArrivalDeparture || category === 'ArrivalDeparture') {
+    // For all Arrival/Departure cards (priority or not), use first/second guest positions
     guestIconPos = isSecondGuest
       ? GUEST_INFO.iconArrivalDeparture.positions.secondGuest
       : GUEST_INFO.iconArrivalDeparture.positions.firstGuest;
@@ -243,7 +255,8 @@ export default function GuestInfoDisplay({
 
   // Calculate guest count positions for Arrival, Stayover, Turndown (separate row below date)
   // Also show separately for Departure when custom positioning is provided (Room Detail screen)
-  const shouldShowGuestCountBelow = countPos && ((isArrival || isStayover || isTurndown) || (isDeparture && countIconLeft !== undefined && countTextLeft !== undefined)) && !(isArrivalDeparture && isPriority);
+  // For Arrival/Departure cards, guest count is shown inline with date (not below)
+  const shouldShowGuestCountBelow = countPos && ((isArrival || isStayover || isTurndown) || (isDeparture && countIconLeft !== undefined && countTextLeft !== undefined)) && !(isArrivalDeparture || category === 'ArrivalDeparture');
   const guestCountTop = shouldShowGuestCountBelow
     ? (countTop !== undefined
         ? countTop * normalizedScaleX // Use custom position if provided (Room Detail screen)
@@ -402,7 +415,7 @@ export default function GuestInfoDisplay({
       {/* For Arrival/Departure and Departure: date, icon, text on same row */}
       {/* For Arrival, Stayover, Turndown: date and ETA on same row, icon+text on separate row below */}
       {/* Exception: If custom time positioning is provided (Room Detail screen), render time separately */}
-      {(isArrivalDeparture && isPriority) || (isDeparture && !hasNotes && !(timeLeft !== undefined && timeTop !== undefined)) ? (
+      {(isArrivalDeparture || category === 'ArrivalDeparture') || (isDeparture && !hasNotes && !(timeLeft !== undefined && timeTop !== undefined)) ? (
         <View style={[
           styles.detailsRowWithCount, 
           { 
@@ -425,8 +438,8 @@ export default function GuestInfoDisplay({
             </>
           )}
         </View>
-      ) : (isArrival || isStayover || isTurndown) && guest.timeLabel && guest.time && !(timeLeft !== undefined && timeTop !== undefined) ? (
-        // For Arrival, Stayover, Turndown: date and ETA/EDT/N/A on same row
+      ) : (isArrival || isStayover || isTurndown) && guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && !(timeLeft !== undefined && timeTop !== undefined) ? (
+        // For Arrival, Stayover, Turndown: date and ETA/EDT on same row (skip if N/A)
         <View style={[
           styles.detailsRowWithTime, 
           { 
@@ -437,7 +450,7 @@ export default function GuestInfoDisplay({
         ]}>
           <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
           <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
-            {guest.timeLabel === 'N/A' ? 'N/A' : `${guest.timeLabel}: ${guest.time}`}
+            {`${guest.timeLabel}: ${guest.time}`}
           </Text>
         </View>
       ) : (
@@ -484,7 +497,8 @@ export default function GuestInfoDisplay({
 
       {/* Time (ETA/EDT) - render separately when custom positioning is provided (Room Detail screen) or for Departure cards */}
       {/* Render LAST to ensure it's on top */}
-      {guest.timeLabel && guest.time && timePos && (timeLeft !== undefined && timeTop !== undefined || !(isArrival || isStayover || isTurndown || isNoTask)) && (
+      {/* Skip rendering if timeLabel is N/A */}
+      {guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && timePos && (timeLeft !== undefined && timeTop !== undefined || !(isArrival || isStayover || isTurndown || isNoTask)) && (
         <Text style={[
           styles.time, 
           isPMTheme && styles.timePM,
@@ -493,7 +507,7 @@ export default function GuestInfoDisplay({
             top: (timePos.top ?? 0) * normalizedScaleX,
           }
         ]}>
-          {guest.timeLabel === 'N/A' ? 'N/A' : `${guest.timeLabel}: ${guest.time}`}
+          {`${guest.timeLabel}: ${guest.time}`}
         </Text>
       )}
     </View>
