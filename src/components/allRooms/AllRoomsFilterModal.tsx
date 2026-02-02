@@ -197,6 +197,14 @@ export default function AllRoomsFilterModal({
       selected: filters?.guests?.turnDown || false,
     },
     {
+      id: 'noTask',
+      label: 'No Task',
+      icon: require('../../../assets/icons/turndown-filter-icon.png'),
+      iconColor: undefined,
+      count: safeFilterCounts.guests?.noTask || 0,
+      selected: filters?.guests?.noTask || false,
+    },
+    {
       id: 'checkedIn',
       label: 'Checked In',
       icon: require('../../../assets/icons/checked-in-filter-icon.png'),

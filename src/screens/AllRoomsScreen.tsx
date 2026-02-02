@@ -112,8 +112,12 @@ export default function AllRoomsScreen() {
     setShowFilterModal(true);
   };
 
-  // Calculate filter counts from rooms data
+  // Calculate filter counts from current shift's room list (AM: rooms, PM: roomsPM)
   const filterCounts: FilterCounts = useMemo(() => {
+    const roomsPM = allRoomsData.roomsPM;
+    const usePMRooms = allRoomsData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const sourceRooms = usePMRooms ? roomsPM : allRoomsData.rooms;
+
     const roomStates = {
       dirty: 0,
       inProgress: 0,
@@ -129,6 +133,7 @@ export default function AllRoomsScreen() {
       arrivals: 0,
       departures: 0,
       turnDown: 0,
+      noTask: 0,
       stayOver: 0,
       stayOverWithLinen: 0,
       stayOverNoLinen: 0,
@@ -142,9 +147,9 @@ export default function AllRoomsScreen() {
       occupied: 0,
       vacant: 0,
     };
-    const totalRooms = allRoomsData.rooms.length;
+    const totalRooms = sourceRooms.length;
 
-    allRoomsData.rooms.forEach((room) => {
+    sourceRooms.forEach((room) => {
       // Room state counts
       if (room.houseKeepingStatus === 'Dirty') roomStates.dirty++;
       if (room.houseKeepingStatus === 'InProgress') roomStates.inProgress++;
@@ -162,6 +167,9 @@ export default function AllRoomsScreen() {
       if (room.frontOfficeStatus === 'Turndown') {
         guests.turnDown++;
       }
+      if (room.frontOfficeStatus === 'No Task') {
+        guests.noTask++;
+      }
       if (room.frontOfficeStatus === 'Stayover') {
         guests.stayOver++;
         const withLinen = getStayoverWithLinen(room);
@@ -169,10 +177,11 @@ export default function AllRoomsScreen() {
         else if (withLinen === false) guests.stayOverNoLinen++;
       }
 
-      // Reservation status counts
-      if (room.reservationStatus === 'Occupied') {
+      // Reservation status counts (normalize casing for comparison)
+      const res = (room.reservationStatus || '').toLowerCase();
+      if (res === 'occupied') {
         reservations.occupied++;
-      } else if (room.reservationStatus === 'Vacant') {
+      } else if (res === 'vacant') {
         reservations.vacant++;
       }
     });
@@ -186,7 +195,7 @@ export default function AllRoomsScreen() {
       fourth: 0,
     };
 
-    allRoomsData.rooms.forEach((room) => {
+    sourceRooms.forEach((room) => {
       const roomNum = parseInt(room.roomNumber, 10);
       if (!isNaN(roomNum)) {
         if (roomNum >= 100 && roomNum < 200) {
@@ -210,7 +219,7 @@ export default function AllRoomsScreen() {
     };
 
     return { roomStates, guests, reservations, floors, totalRooms };
-  }, [allRoomsData.rooms]);
+  }, [allRoomsData.rooms, allRoomsData.roomsPM, allRoomsData.selectedShift]);
 
   const handleApplyFilters = (appliedFilters: FilterState) => {
     setLocalFilters(appliedFilters);
@@ -573,7 +582,8 @@ export default function AllRoomsScreen() {
         // If "All" is selected, include all floors (no filtering needed)
       }
 
-      if (hasRoomStateFilter || hasGuestFilter) {
+      // Apply room state, guest, and reservation filters (any combination)
+      if (hasRoomStateFilter || hasGuestFilter || hasReservationFilter) {
         rooms = rooms.filter((room) => {
           // Check room state filters
           if (hasRoomStateFilter) {
@@ -589,12 +599,13 @@ export default function AllRoomsScreen() {
             }
           }
 
-          // Check guest filters
+          // Check guest filters (AM: Arrival/Departure/Stayover/Turndown; PM: Turndown/No Task + reservation Vacant)
           if (hasGuestFilter) {
             const matchesGuest =
               (activeFilters.guests.arrivals && (room.frontOfficeStatus === 'Arrival' || room.frontOfficeStatus === 'Arrival/Departure')) ||
               (activeFilters.guests.departures && (room.frontOfficeStatus === 'Departure' || room.frontOfficeStatus === 'Arrival/Departure')) ||
               (activeFilters.guests.turnDown && room.frontOfficeStatus === 'Turndown') ||
+              (activeFilters.guests.noTask && room.frontOfficeStatus === 'No Task') ||
               (activeFilters.guests.stayOver && room.frontOfficeStatus === 'Stayover') ||
               (activeFilters.guests.stayOverWithLinen && room.frontOfficeStatus === 'Stayover' && getStayoverWithLinen(room) === true) ||
               (activeFilters.guests.stayOverNoLinen && room.frontOfficeStatus === 'Stayover' && getStayoverWithLinen(room) === false);
@@ -604,11 +615,12 @@ export default function AllRoomsScreen() {
             }
           }
 
-          // Check reservation filters
+          // Check reservation filters (case-insensitive for robustness)
           if (hasReservationFilter) {
+            const res = (room.reservationStatus || '').toLowerCase();
             const matchesReservation =
-              (activeFilters.reservations?.occupied && room.reservationStatus === 'Occupied') ||
-              (activeFilters.reservations?.vacant && room.reservationStatus === 'Vacant');
+              (activeFilters.reservations?.occupied && res === 'occupied') ||
+              (activeFilters.reservations?.vacant && res === 'vacant');
 
             if (!matchesReservation) {
               return false;
