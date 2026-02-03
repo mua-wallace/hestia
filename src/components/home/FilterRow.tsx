@@ -11,28 +11,37 @@ interface FilterRowProps {
   label: string;
   icon: any;
   iconColor?: string;
+  iconTintColor?: string;
   count: number;
   selected: boolean;
   onToggle: () => void;
   showCount?: boolean;
   isCircular?: boolean; // For room state icons that should be circular
   isPriority?: boolean; // For priority icon that should always show
+  rowPaddingVertical?: number;
+  labelNumberOfLines?: number;
 }
 
 export default function FilterRow({
   label,
   icon,
   iconColor,
+  iconTintColor,
   count,
   selected,
   onToggle,
   showCount = true,
   isCircular = false,
   isPriority = false,
+  rowPaddingVertical = 8,
+  labelNumberOfLines = 1,
 }: FilterRowProps) {
   return (
     <TouchableOpacity
-      style={styles.row}
+      style={[
+        styles.row,
+        rowPaddingVertical !== undefined && { paddingVertical: rowPaddingVertical * scaleX },
+      ]}
       onPress={onToggle}
       activeOpacity={0.7}
     >
@@ -52,16 +61,23 @@ export default function FilterRow({
             source={icon}
             style={[
               isCircular ? styles.circularIcon : styles.icon,
-              // For circular icons, use white tint; for priority, don't apply tint; otherwise use iconColor
+              // For circular icons, use white tint; for priority, don't apply tint; otherwise use iconColor/iconTintColor
               isCircular && { tintColor: '#ffffff' },
-              !isCircular && iconColor && !isPriority && { tintColor: iconColor },
+              !isCircular && iconTintColor && !isPriority && { tintColor: iconTintColor },
+              !isCircular && !iconTintColor && iconColor && !isPriority && { tintColor: iconColor },
             ]}
             resizeMode="contain"
           />
         )}
       </View>
 
-      <Text style={styles.label}>{label}</Text>
+      <Text
+        style={styles.label}
+        numberOfLines={labelNumberOfLines}
+        ellipsizeMode="tail"
+      >
+        {label}
+      </Text>
 
       {showCount && count > 0 && (
         <Text style={styles.count}>

@@ -1,11 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
-import { typography } from '../../theme';
+import React from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { colors, typography } from '../../theme';
 import { normalizedScaleX } from '../../utils/responsive';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
 // Calculate responsive dimensions - ensure minimum sizes for badge space
 const iconContainerWidth = (50.017 + 16) * normalizedScaleX;
@@ -24,30 +20,30 @@ interface StatusIndicatorProps {
   onPress?: () => void;
 }
 
-export default function StatusIndicator({ color, icon, count, label, iconWidth, iconHeight, rightLabelIcon, isPM = false, onPress }: StatusIndicatorProps) {
-  const [textWidth, setTextWidth] = useState(0);
+export default function StatusIndicator({
+  color,
+  icon,
+  count,
+  label,
+  iconWidth,
+  iconHeight,
+  rightLabelIcon,
+  isPM = false,
+  onPress,
+}: StatusIndicatorProps) {
   const isPressable = count >= 1 && !!onPress;
-  
+
   const iconStyle = [
     styles.icon,
     iconWidth ? { width: iconWidth * normalizedScaleX } : null,
     iconHeight ? { height: iconHeight * normalizedScaleX } : null,
   ].filter(Boolean) as any;
 
-  // Calculate position for right icon to appear after centered text
-  const rightIconOffset = rightLabelIcon && textWidth > 0 
-    ? textWidth / 2 + 9 * normalizedScaleX + 2 * normalizedScaleX 
-    : 0;
-
   const content = (
     <View style={styles.contentWrapper}>
       <View style={styles.iconContainer}>
         <View style={[styles.circle, { backgroundColor: color }]}>
-          <Image
-            source={icon}
-            style={iconStyle}
-            resizeMode="contain"
-          />
+          <Image source={icon} style={iconStyle} resizeMode="contain" />
         </View>
         {count > 0 && (
           <View style={styles.badgeContainer}>
@@ -57,26 +53,18 @@ export default function StatusIndicator({ color, icon, count, label, iconWidth, 
           </View>
         )}
       </View>
-      <View style={styles.labelContainer}>
-        <Text 
+      <View style={styles.labelRow}>
+        <Text
           style={[styles.label, isPM && styles.labelPM]}
-          onLayout={(event) => {
-            const { width } = event.nativeEvent.layout;
-            setTextWidth(width);
-          }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
         >
           {label}
         </Text>
         {rightLabelIcon && (
           <Image
             source={rightLabelIcon}
-            style={[
-              styles.rightLabelIcon,
-              { 
-                transform: [{ rotate: '90deg' }], 
-                marginLeft: rightIconOffset 
-              }
-            ]}
+            style={[styles.rightLabelIcon, isPM && styles.rightLabelIconPM]}
             resizeMode="contain"
           />
         )}
@@ -100,10 +88,9 @@ export default function StatusIndicator({ color, icon, count, label, iconWidth, 
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    flex: 1, // Equal spacing between icons
-    minWidth: 0, // Allow flex to work properly
-    maxWidth: '100%', // Prevent overflow on small screens
-    // Ensure consistent alignment
+    flex: 1,
+    minWidth: 0,
+    maxWidth: '100%',
     justifyContent: 'flex-start',
   },
   touchable: {
@@ -114,9 +101,7 @@ const styles = StyleSheet.create({
   },
   contentWrapper: {
     alignItems: 'center',
-    flex: 1,
-    minWidth: 0,
-    maxWidth: '100%',
+    width: '100%',
   },
   iconContainer: {
     position: 'relative',
@@ -125,7 +110,6 @@ const styles = StyleSheet.create({
     height: iconContainerHeight,
     justifyContent: 'center',
     alignItems: 'center',
-    // Ensure consistent horizontal alignment - center the container
     alignSelf: 'center',
   },
   circle: {
@@ -142,10 +126,8 @@ const styles = StyleSheet.create({
   },
   badgeContainer: {
     position: 'absolute',
-    // Position badge at bottom-right corner, moved further right to avoid covering icon
-    // Use percentage-based positioning relative to container for better responsiveness
     bottom: -4 * normalizedScaleX,
-    right: -16 * normalizedScaleX, // Moved further right to reduce icon coverage
+    right: -16 * normalizedScaleX,
     zIndex: 10,
   },
   badge: {
@@ -167,21 +149,19 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.bold as any,
     color: '#000000',
   },
-  labelContainer: {
+  labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    flexWrap: 'wrap', // Allow wrapping on very small screens
-    width: '100%', // Ensure full width for proper centering
-    // Ensure consistent horizontal alignment with icon above
-    alignSelf: 'center',
-    position: 'relative', // For absolute positioning of right icon
+    marginTop: 4 * normalizedScaleX,
+    paddingHorizontal: 2 * normalizedScaleX,
+    minHeight: 20 * normalizedScaleX, // Keep label visible on all cards (Flagged, Arrivals, StayOvers)
   },
   label: {
     fontSize: 14 * normalizedScaleX,
-    fontFamily: 'Inter',
-    fontWeight: '300' as any,
-    color: '#000000',
+    fontFamily: typography.fontFamily.secondary as any,
+    fontWeight: typography.fontWeights.light as any,
+    color: colors.text.primary,
     textAlign: 'center',
   },
   labelPM: {
@@ -190,8 +170,11 @@ const styles = StyleSheet.create({
   rightLabelIcon: {
     width: 18 * normalizedScaleX,
     height: 18 * normalizedScaleX,
-    position: 'absolute',
-    left: '50%',
+    marginLeft: 6 * normalizedScaleX,
+    tintColor: colors.text.primary,
+  },
+  rightLabelIconPM: {
+    tintColor: '#ffffff',
   },
 });
 

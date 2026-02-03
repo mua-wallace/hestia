@@ -19,7 +19,15 @@ interface CategoryCardProps {
 }
 
 // Status configuration
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<
+  keyof RoomStatus,
+  {
+    color: string;
+    icon: any;
+    label: string;
+    rightLabelIcon?: any;
+  }
+> = {
   dirty: {
     color: '#f92424',
     icon: require('../../../assets/icons/dirty-icon.png'),
@@ -42,13 +50,32 @@ const STATUS_CONFIG = {
   },
 };
 
+const LEFT_BORDER_WIDTH = 5 * scaleX;
+const CARD_RADIUS = 12 * scaleX;
+
 export default function CategoryCard({ category, onPress, onStatusPress, selectedShift }: CategoryCardProps) {
   const statusKeys: (keyof RoomStatus)[] = ['dirty', 'inProgress', 'cleaned', 'inspected'];
   return (
-    <TouchableOpacity style={[
-      styles.container,
-      selectedShift === 'PM' && styles.containerPM
-    ]} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={[
+        styles.container,
+        selectedShift === 'PM' && styles.containerPM,
+      ]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      {/* Colored left border accent - separate View so it always shows with borderRadius */}
+      <View
+        style={[
+          styles.leftBorder,
+          {
+            width: LEFT_BORDER_WIDTH,
+            backgroundColor: category.borderColor,
+            borderTopLeftRadius: CARD_RADIUS,
+            borderBottomLeftRadius: CARD_RADIUS,
+          },
+        ]}
+      />
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
@@ -87,6 +114,7 @@ export default function CategoryCard({ category, onPress, onStatusPress, selecte
             label={STATUS_CONFIG[statusKey].label}
             iconWidth={29.478}
             iconHeight={30.769}
+            rightLabelIcon={STATUS_CONFIG[statusKey].rightLabelIcon}
             isPM={selectedShift === 'PM'}
             onPress={category.status[statusKey] >= 1 && onStatusPress ? () => onStatusPress(category, statusKey) : undefined}
           />
@@ -106,6 +134,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 10 * scaleX,
     marginVertical: 13 * scaleX,
     position: 'relative',
+    overflow: 'hidden',
+    flexDirection: 'column',
+  },
+  leftBorder: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -114,6 +151,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 21 * scaleX,
     paddingTop: 17 * scaleX,
     paddingBottom: 20 * scaleX,
+    minHeight: 67 * scaleX, // Fixed height so all cards (Flagged, Arrivals, StayOvers) leave same space for status row
   },
   titleRow: {
     flexDirection: 'row',
@@ -149,13 +187,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#4A4D59', // Darker divider for PM mode
   },
   statusGrid: {
+    flex: 1,
+    minHeight: 90 * scaleX, // Reserve space for icon + label so labels always visible (Flagged, Arrivals, StayOvers)
     flexDirection: 'row',
-    justifyContent: 'space-around', // Use space-around for even distribution
-    alignItems: 'flex-start', // Align all items at the top for consistent vertical alignment
-    paddingLeft: 21 * scaleX, // Match header paddingHorizontal for equal left padding
-    paddingRight: 21 * scaleX, // Match header paddingHorizontal for equal right padding
-    marginTop: 30 * normalizedScaleX,
-    flexWrap: 'nowrap', // Prevent wrapping on small screens
+    justifyContent: 'space-around',
+    alignItems: 'flex-start',
+    paddingLeft: 21 * scaleX,
+    paddingRight: 21 * scaleX,
+    paddingTop: 30 * normalizedScaleX,
+    flexWrap: 'nowrap',
   },
 });
 
