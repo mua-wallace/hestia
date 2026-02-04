@@ -122,7 +122,6 @@ const styles = StyleSheet.create({
   icon: {
     width: 18 * normalizedScaleX,
     height: 18 * normalizedScaleX,
-    tintColor: '#ffffff',
   },
   badgeContainer: {
     position: 'absolute',

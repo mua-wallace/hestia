@@ -193,7 +193,8 @@ export default function HomeFilterModal({
         {
           id: 'dirty',
           label: 'Dirty',
-          icon: require('../../../assets/icons/dirty-state-icon.png'),
+          // Use the same dirty icon as Home screen status badges for consistency
+          icon: require('../../../assets/icons/dirty-icon.png'),
           iconColor: '#f92424',
           count: safeFilterCounts.roomStates.dirty || 0,
           selected: filters.roomStates.dirty || false,
