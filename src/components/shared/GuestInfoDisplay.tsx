@@ -138,6 +138,25 @@ export default function GuestInfoDisplay({
             ? GUEST_INFO.dateRangeStandardArrival.top
             : GUEST_INFO.dateRangeStandard.top;
 
+  // Max name length: "Eric Coleman & Glenn" = 23 characters
+  // If name exceeds this length, truncate at 23 chars and wrap remainder to next line
+  const MAX_NAME_LENGTH = 23;
+  const shouldWrapName = guest.name.length > MAX_NAME_LENGTH;
+  
+  // Adjust date top position when name wraps - add extra space for wrapped line
+  // When name wraps: 
+  // - Second line takes up full line height (18px)
+  // - Margin between lines (2px scaled in styles)
+  // - Margin before date (6px for better spacing)
+  // Total: lineHeight + marginTop + bottomMargin = 18 + 2 + 6 = 26px total
+  // We need to account for the full height of the second line plus adequate spacing
+  const secondLineMarginTop = 2; // Margin between first and second line (scaled in styles)
+  const bottomMargin = 6; // Margin between second line and date (increased for better spacing)
+  const WRAP_SPACING = GUEST_INFO.name.lineHeight + secondLineMarginTop + bottomMargin; // 18 + 2 + 6 = 26px total
+  const adjustedDateTop = shouldWrapName 
+    ? calculatedDateTop + WRAP_SPACING
+    : calculatedDateTop;
+
   // Determine time (ETA/EDT) position - use override if provided
   // For Arrival/Stayover/Turndown cards, align time with date range row
   // No Task: no ETA shown
@@ -155,8 +174,9 @@ export default function GuestInfoDisplay({
             : isArrival || isStayover || isTurndown
               ? {
                   // Align time with date range row (top 109px) for proper alignment
+                  // Use adjustedDateTop to account for wrapped names
                   left: GUEST_INFO.time.positions.standardArrival.left,
-                  top: calculatedDateTop, // Use same top as date range for alignment
+                  top: adjustedDateTop, // Use adjusted date top to account for wrapped names
                 }
               : null; // Departure cards don't show time
 
@@ -179,8 +199,8 @@ export default function GuestInfoDisplay({
             // For Arrival/Departure cards, align guest count with date range row
             iconLeft: isSecondGuest ? GUEST_INFO.guestCount.positions.prioritySecond.iconLeft : GUEST_INFO.guestCount.positions.priorityFirst.iconLeft,
             textLeft: isSecondGuest ? GUEST_INFO.guestCount.positions.prioritySecond.textLeft : GUEST_INFO.guestCount.positions.priorityFirst.textLeft,
-            iconTop: calculatedDateTop, // Align with date range
-            textTop: calculatedDateTop, // Align with date range
+            iconTop: adjustedDateTop, // Align with adjusted date range (accounts for wrapped names)
+            textTop: adjustedDateTop, // Align with adjusted date range (accounts for wrapped names)
           }
         : isPriority
           ? (isSecondGuest ? GUEST_INFO.guestCount.positions.prioritySecond : GUEST_INFO.guestCount.positions.priorityFirst)
@@ -248,6 +268,15 @@ export default function GuestInfoDisplay({
   // Use numberBadge if provided, otherwise use vipCode
   const displayBadge = numberBadge || (vipCode ? vipCode.toString() : undefined);
 
+  // Max name length: "Eric Coleman & Glenn" = 23 characters
+  // If name exceeds this length, truncate at 23 chars and wrap remainder to next line
+  const firstNamePart = shouldWrapName 
+    ? guest.name.substring(0, MAX_NAME_LENGTH).trim()
+    : guest.name;
+  const secondNamePart = shouldWrapName 
+    ? guest.name.substring(MAX_NAME_LENGTH).trim()
+    : null;
+  
   // Calculate positions for absolute positioning mode
   const containerStyle = absolutePositioning && absoluteTop !== undefined
     ? { top: absoluteTop * normalizedScaleX }
@@ -257,13 +286,19 @@ export default function GuestInfoDisplay({
   // Also show separately for Departure when custom positioning is provided (Room Detail screen)
   // For Arrival/Departure cards, guest count is shown inline with date (not below)
   const shouldShowGuestCountBelow = countPos && ((isArrival || isStayover || isTurndown) || (isDeparture && countIconLeft !== undefined && countTextLeft !== undefined)) && !(isArrivalDeparture || category === 'ArrivalDeparture');
+  
+  // Calculate guest count top position based on adjustedDateTop (which accounts for wrapped names)
+  // This ensures guest count is positioned correctly below the date, even when name wraps
   const guestCountTop = shouldShowGuestCountBelow
     ? (countTop !== undefined
         ? countTop * normalizedScaleX // Use custom position if provided (Room Detail screen)
         : hasNotes
           ? ((GUEST_INFO.guestCount.positions.withNotes.iconTop ?? 0)) * normalizedScaleX
-          : (calculatedDateTop + GUEST_INFO.dateRange.lineHeight + 2) * normalizedScaleX)
+          : (adjustedDateTop + GUEST_INFO.dateRange.lineHeight + 2) * normalizedScaleX) // Use adjustedDateTop instead of calculatedDateTop
     : 0;
+
+  // Guest count top is already adjusted (uses adjustedDateTop), so no additional adjustment needed
+  const adjustedGuestCountTop = guestCountTop;
   const iconVerticalOffset = shouldShowGuestCountBelow
     ? (GUEST_INFO.guestCount.lineHeight * normalizedScaleX - GUEST_INFO.guestCount.icon.height * normalizedScaleX) / 2
     : 0;
@@ -390,23 +425,54 @@ export default function GuestInfoDisplay({
               resizeMode="contain"
             />
           )}
-          <View style={[styles.guestNameContainer, guestIconPos !== null && styles.guestNameContainerNoIcon]}>
-            <Text 
-              style={[styles.guestName, isPMTheme && styles.guestNamePM]} 
-              numberOfLines={2}
-              ellipsizeMode="tail"
-            >
-              {guest.name}
-            </Text>
-            {/* Priority/Number Badge - positioned immediately after name text with consistent spacing */}
-            {displayBadge && (
-              <Text 
-                style={[styles.priorityCountInline, isPMTheme && styles.priorityCountInlinePM]}
-                numberOfLines={1}
-              >
-                {displayBadge}
-              </Text>
-            )}
+            <View style={[styles.guestNameContainer, guestIconPos !== null && styles.guestNameContainerNoIcon]}>
+              {/* First line: First 23 characters (or full name if <= 23 chars) */}
+              {shouldWrapName ? (
+                <>
+                  <Text 
+                    style={[styles.guestName, isPMTheme && styles.guestNamePM]} 
+                    numberOfLines={1}
+                  >
+                    {firstNamePart}
+                  </Text>
+                  {/* Second line: Remaining characters with badge */}
+                  {secondNamePart && (
+                    <View style={styles.guestNameSecondRow}>
+                      <Text 
+                        style={[styles.guestName, isPMTheme && styles.guestNamePM]} 
+                        numberOfLines={1}
+                      >
+                        {secondNamePart}
+                      </Text>
+                      {displayBadge && (
+                        <Text 
+                          style={[styles.priorityCountInline, isPMTheme && styles.priorityCountInlinePM]}
+                          numberOfLines={1}
+                        >
+                          {displayBadge}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </>
+              ) : (
+                <View style={styles.guestNameSingleRow}>
+                  <Text 
+                    style={[styles.guestName, isPMTheme && styles.guestNamePM]} 
+                    numberOfLines={1}
+                  >
+                    {firstNamePart}
+                  </Text>
+                  {displayBadge && (
+                    <Text 
+                      style={[styles.priorityCountInline, isPMTheme && styles.priorityCountInlinePM]}
+                      numberOfLines={1}
+                    >
+                      {displayBadge}
+                    </Text>
+                  )}
+                </View>
+              )}
           </View>
         </View>
       )}
@@ -419,7 +485,7 @@ export default function GuestInfoDisplay({
         <View style={[
           styles.detailsRowWithCount, 
           { 
-            top: calculatedDateTop * normalizedScaleX,
+            top: adjustedDateTop * normalizedScaleX,
             left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
             zIndex: 10, // Lower z-index so time can appear above
           }
@@ -443,12 +509,12 @@ export default function GuestInfoDisplay({
         <View style={[
           styles.detailsRowWithTime, 
           { 
-            top: calculatedDateTop * normalizedScaleX,
+            top: adjustedDateTop * normalizedScaleX,
             left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
             zIndex: 10, // Lower z-index so time can appear above
           }
         ]}>
-          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
+          <Text style={[styles.dateRange, styles.dateRangeWithTime, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
           <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
             {`${guest.timeLabel}: ${guest.time}`}
           </Text>
@@ -457,7 +523,7 @@ export default function GuestInfoDisplay({
         <View style={[
           styles.detailsRow, 
           { 
-            top: calculatedDateTop * normalizedScaleX,
+            top: adjustedDateTop * normalizedScaleX,
             left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
             zIndex: 10,
           }
@@ -485,7 +551,7 @@ export default function GuestInfoDisplay({
               isPMTheme && styles.countIconPM,
               {
                 left: guestCountIconLeft,
-                top: guestCountTop + iconVerticalOffset, // Center icon vertically with text
+                top: adjustedGuestCountTop + iconVerticalOffset, // Center icon vertically with text
               }
             ]}
             resizeMode="contain"
@@ -495,7 +561,7 @@ export default function GuestInfoDisplay({
             isPMTheme && styles.countTextPM,
             {
               left: guestCountTextLeft,
-              top: guestCountTop, // Text top position
+              top: adjustedGuestCountTop, // Text top position
             }
           ]}>
             {formatGuestCount(guest.guestCount)}
@@ -512,7 +578,13 @@ export default function GuestInfoDisplay({
           isPMTheme && styles.timePM,
           { 
             left: ((timePos.left ?? 0) - calculatedContainerLeft) * normalizedScaleX,
-            top: (timePos.top ?? 0) * normalizedScaleX,
+            // Use adjustedDateTop for time position when name wraps (for Arrival/Stayover/Turndown)
+            // If custom timeTop is provided, use it; otherwise use timePos.top which may have been adjusted
+            top: (timeTop !== undefined 
+              ? timeTop 
+              : (isArrival || isStayover || isTurndown) && shouldWrapName && !(timeLeft !== undefined && timeTop !== undefined)
+                ? adjustedDateTop // Use adjusted position when name wraps
+                : timePos.top ?? 0) * normalizedScaleX,
           }
         ]}>
           {`${guest.timeLabel}: ${guest.time}`}
@@ -575,12 +647,24 @@ const styles = StyleSheet.create({
     tintColor: undefined,
   },
   guestNameContainer: {
-    flexDirection: 'row', // Horizontal layout for name and badge
-    alignItems: 'baseline', // Align name and badge by baseline so name is fully visible
+    flexDirection: 'column', // Vertical layout for name lines
+    alignItems: 'flex-start', // Align name lines to start
     flexShrink: 1, // Allow shrinking but prefer to show full name
-    flexGrow: 0, // Don't grow - let badge follow immediately after
-    minWidth: 120 * normalizedScaleX, // Minimum width to ensure name starts showing
+    flex: 1, // Take available space
+    minWidth: 0, // Allow flex to work properly
     overflow: 'visible', // Ensure text is not clipped
+    paddingRight: 8 * normalizedScaleX, // Padding from container edge
+  },
+  guestNameSingleRow: {
+    flexDirection: 'row', // Horizontal layout for name and badge when name is short
+    alignItems: 'baseline', // Align badge with text baseline
+    flexWrap: 'wrap',
+  },
+  guestNameSecondRow: {
+    flexDirection: 'row', // Horizontal layout for second part and badge
+    alignItems: 'baseline', // Align badge with text baseline
+    flexWrap: 'wrap',
+    marginTop: 2 * normalizedScaleX, // Small spacing between first and second line of name (responsive)
   },
   guestNameContainerNoIcon: {
     marginLeft: 0,
@@ -653,6 +737,8 @@ const styles = StyleSheet.create({
     minHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Changed from fixed height to minHeight
     zIndex: 5, // Very low z-index so time appears above
     overflow: 'visible', // Ensure content is not clipped
+    maxWidth: 180 * normalizedScaleX, // Match guest info container width to prevent overflow
+    flexWrap: 'wrap', // Allow wrapping if needed
   },
   guestCountRow: {
     position: 'absolute',
@@ -670,6 +756,11 @@ const styles = StyleSheet.create({
     includeFontPadding: false, // Remove extra padding for better alignment
     textAlignVertical: 'center', // Center text vertically
     backgroundColor: 'transparent', // Ensure no background covers time
+  },
+  dateRangeWithTime: {
+    marginRight: 8 * normalizedScaleX, // Add spacing between date and time to prevent overlap
+    flexShrink: 1, // Allow date to shrink when time is present
+    maxWidth: '65%', // Limit date width to leave space for time (EDT/ETA)
   },
   dateRangePM: {
     color: '#ffffff',

@@ -57,19 +57,41 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
   const hasNotes = !!room.notes;
   const isPM = selectedShift === 'PM';
 
+  // Check if any guest names wrap (longer than 23 characters)
+  const MAX_NAME_LENGTH = 23;
+  const wrappedGuestCount = room.guests?.filter(guest => guest.name.length > MAX_NAME_LENGTH).length ?? 0;
+  
+  // Calculate additional height needed when names wrap
+  // Each wrapped name adds: line height (18px) + margin between lines (2px) + margin before date (6px) = 26px total
+  // This matches the spacing used in GuestInfoDisplay for consistency
+  // Scale using scaleX to match card dimension scaling
+  const WRAP_SPACING = GUEST_INFO.name.lineHeight + 2 + 6; // 18 + 2 + 6 = 26px total spacing
+  
+  // For Arrival/Departure cards: only add one wrap spacing regardless of how many guests wrap
+  // The card already has vertical space for 2 guests (292px), so we only need to add height once at the bottom
+  // For single guest cards: add height for each wrapped guest name
+  const wrappedNameExtraHeight = wrappedGuestCount > 0 
+    ? (isArrivalDeparture 
+        ? WRAP_SPACING * scaleX // Add only one wrap spacing for Arrival/Departure cards (regardless of how many guests wrap)
+        : wrappedGuestCount * WRAP_SPACING * scaleX) // For single guest cards, add for each wrapped name
+    : 0;
+
   // Calculate card height based on type - matching Figma exactly
   const getCardHeight = (): number => {
+    let baseHeight: number;
     if (isArrivalDeparture) {
-      return CARD_DIMENSIONS.heights.arrivalDeparture * scaleX; // 292px
+      baseHeight = CARD_DIMENSIONS.heights.arrivalDeparture * scaleX; // 292px
+    } else if (hasNotes) {
+      baseHeight = CARD_DIMENSIONS.heights.withNotes * scaleX; // 222px
+    } else if (isDeparture) {
+      baseHeight = CARD_DIMENSIONS.heights.standard * scaleX; // 177px
+    } else {
+      // Arrival, Stayover, Turndown use 185px
+      baseHeight = CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 185px
     }
-    if (hasNotes) {
-      return CARD_DIMENSIONS.heights.withNotes * scaleX; // 222px
-    }
-    if (isDeparture) {
-      return CARD_DIMENSIONS.heights.standard * scaleX; // 177px
-    }
-    // Arrival, Stayover, Turndown use 185px
-    return CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 185px
+    
+    // Add extra height if names wrap
+    return baseHeight + wrappedNameExtraHeight;
   };
 
   // Determine card background and border - based on status and PM mode
@@ -127,7 +149,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
       ]}
       onPress={onPress}
       onLayout={onLayout}
-      activeOpacity={0.7}
+      activeOpacity={0.6} // Slightly lower opacity for smoother press feedback
     >
       {/* Room Header Section */}
       <View style={styles.roomHeader}>

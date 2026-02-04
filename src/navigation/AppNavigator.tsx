@@ -104,12 +104,14 @@ export default function AppNavigator() {
         component={RoomDetailScreen}
         options={{
           animation: 'slide_from_right',
-          animationDuration: 320,
+          animationDuration: 400, // Increased duration for smoother, more natural transition
           gestureEnabled: true,
           gestureDirection: 'horizontal',
           fullScreenGestureEnabled: true,
           animationMatchesGesture: true,
           contentStyle: { backgroundColor: colors.background.primary },
+          // Native stack uses platform-native animations which are already smooth
+          // The increased duration helps make the transition feel more natural
         }}
       />
       <Stack.Screen 
