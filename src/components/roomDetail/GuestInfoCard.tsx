@@ -124,7 +124,7 @@ export default function GuestInfoCard({
           },
         ]}
       >
-        <Text style={styles.guestName} numberOfLines={1}>
+        <Text style={styles.guestName} numberOfLines={2}>
           {guest.name}
         </Text>
         

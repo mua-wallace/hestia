@@ -44,7 +44,8 @@ interface RoomCardProps {
   selectedShift?: ShiftType;
 }
 
-const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, onStatusPress, onLayout, statusButtonRef, selectedShift }, ref) => {
+const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardProps>(
+  ({ room, onPress, onStatusPress, onLayout, statusButtonRef, selectedShift }, ref) => {
   // Card type detection
   const isArrivalDeparture = room.frontOfficeStatus === 'Arrival/Departure';
   const isDeparture = room.frontOfficeStatus === 'Departure';
@@ -302,7 +303,7 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
       {/* Notes Section - shown for cards with notes */}
       {hasNotes && (
         <NotesSection 
-          notes={room.notes} 
+          notes={room.notes!} 
           isArrivalDeparture={isArrivalDeparture} 
         />
       )}

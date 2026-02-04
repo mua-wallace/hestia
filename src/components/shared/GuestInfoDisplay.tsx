@@ -393,7 +393,7 @@ export default function GuestInfoDisplay({
           <View style={[styles.guestNameContainer, guestIconPos !== null && styles.guestNameContainerNoIcon]}>
             <Text 
               style={[styles.guestName, isPMTheme && styles.guestNamePM]} 
-              numberOfLines={1} 
+              numberOfLines={2}
               ellipsizeMode="tail"
             >
               {guest.name}
