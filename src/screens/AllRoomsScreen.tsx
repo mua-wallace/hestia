@@ -56,9 +56,11 @@ type AllRoomsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, '
 export default function AllRoomsScreen() {
   const navigation = useNavigation<AllRoomsScreenNavigationProp>();
   const route = useRoute();
+  // Get shift from route params if provided (from HomeScreen), otherwise use time-based shift
+  const routeShift = (route.params as any)?.selectedShift as ShiftType | undefined;
   const [allRoomsData, setAllRoomsData] = useState(() => ({
     ...mockAllRoomsData,
-    selectedShift: getShiftFromTime(),
+    selectedShift: routeShift || getShiftFromTime(),
   }));
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -98,6 +100,22 @@ export default function AllRoomsScreen() {
     }
     return rf;
   });
+
+  // Sync shift from route params when navigating from HomeScreen
+  // Use useFocusEffect to ensure it works properly on both iOS and Android
+  useFocusEffect(
+    React.useCallback(() => {
+      const params = route.params as any;
+      const currentRouteShift = params?.selectedShift as ShiftType | undefined;
+      // Only update if shift is provided and different from current
+      if (currentRouteShift && currentRouteShift !== allRoomsData.selectedShift) {
+        setAllRoomsData(prev => ({ ...prev, selectedShift: currentRouteShift }));
+        // Reset filters when shift changes via navigation
+        setLocalFilters(undefined);
+        setSearchQuery('');
+      }
+    }, [route.params, allRoomsData.selectedShift])
+  );
 
   // Sync local filters with route params when navigating (e.g. from Home with categoryFilter)
   React.useEffect(() => {

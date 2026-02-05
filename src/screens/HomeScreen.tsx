@@ -127,8 +127,12 @@ export default function HomeScreen() {
   };
 
   const handleCategoryPress = () => {
-    // Navigate to All Rooms screen with back button
-    navigation.navigate('AllRooms', { showBackButton: true, filters: activeFilters } as any);
+    // Navigate to All Rooms screen with back button and current shift
+    navigation.navigate('AllRooms', { 
+      showBackButton: true, 
+      filters: activeFilters,
+      selectedShift: homeData.selectedShift,
+    } as any);
   };
 
   /** When user taps a status badge (e.g. cleaned[2] under Flagged), filter and show only those rooms. */
@@ -137,6 +141,7 @@ export default function HomeScreen() {
       showBackButton: true,
       filters: activeFilters,
       categoryFilter: { category: category.name, roomState },
+      selectedShift: homeData.selectedShift, // Pass current shift from HomeScreen
     } as any);
   };
 
