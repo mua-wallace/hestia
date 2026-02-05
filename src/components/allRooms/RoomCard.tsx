@@ -344,6 +344,7 @@ const styles = StyleSheet.create({
     marginBottom: CARD_DIMENSIONS.marginBottom * scaleX,
     position: 'relative',
     width: CARD_DIMENSIONS.width * scaleX,
+    alignSelf: 'center', // Center cards horizontally to match Figma
     overflow: 'visible', // Changed to visible to prevent clipping guest names
   },
   priorityBorder: {

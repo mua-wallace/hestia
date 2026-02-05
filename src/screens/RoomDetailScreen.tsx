@@ -1,26 +1,14 @@
 /**
- * Room Detail Screen - Reusable for all room types
+ * Room Detail Screen - Wrapper that transforms route params to props
+ * Uses reusable RoomDetailContent component
  * Supports: Arrival, Departure, ArrivalDeparture, Stayover, Turndown
- * 
- * This screen dynamically adjusts layout based on room type configuration
  */
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, LayoutChangeEvent } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, TouchableOpacity } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { colors } from '../theme';
-import { scaleX, ROOM_DETAIL_HEADER, DETAIL_TABS, CONTENT_AREA, GUEST_INFO, ASSIGNED_TO, ASSIGNED_TASK_CARD } from '../constants/roomDetailStyles';
-import { getRoomTypeConfig } from '../constants/roomTypeConfigs';
-import { calculatePositions } from '../utils/roomDetailPositions';
-import RoomDetailHeader from '../components/roomDetail/RoomDetailHeader';
-import DetailTabNavigation from '../components/roomDetail/DetailTabNavigation';
-import GuestInfoCard from '../components/roomDetail/GuestInfoCard';
-import NotesSection from '../components/roomDetail/NotesSection';
-import LostAndFoundSection from '../components/roomDetail/LostAndFoundSection';
-import AssignedToSection from '../components/roomDetail/AssignedToSection';
-import ChecklistSection from '../components/roomDetail/ChecklistSection';
-import RoomTicketsSection from '../components/roomDetail/RoomTicketsSection';
+import { ROOM_DETAIL_HEADER, scaleX } from '../constants/roomDetailStyles';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
 import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
@@ -29,11 +17,11 @@ import ReassignModal from '../components/roomDetail/ReassignModal';
 import AddNoteModal from '../components/roomDetail/AddNoteModal';
 import AddTaskModal from '../components/roomDetail/AddTaskModal';
 import ViewTaskModal from '../components/roomDetail/ViewTaskModal';
-import HistorySection from '../components/roomDetail/HistorySection';
+import RoomDetailContent from '../components/roomDetail/RoomDetailContent';
+import { getRoomTypeConfig } from '../constants/roomTypeConfigs';
 import type { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import { STATUS_OPTIONS } from '../types/allRooms.types';
-import type { RoomDetailData, DetailTab, Note, Task, RoomType, HistoryEvent, HistoryGroup } from '../types/roomDetail.types';
-import type { LostAndFoundItem } from '../types/lostAndFound.types';
+import type { Note, Task, RoomType, HistoryEvent, HistoryGroup } from '../types/roomDetail.types';
 import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
 import { getMockHistoryEvents } from '../data/mockHistoryData';
@@ -51,11 +39,14 @@ export default function RoomDetailScreen() {
   const room = (route.params as any)?.room as RoomCardData;
   const roomType = (route.params as any)?.roomType as RoomType || 'ArrivalDeparture'; // Default to ArrivalDeparture
 
-  // Get room type configuration and calculate positions
-  const config = useMemo(() => getRoomTypeConfig(roomType), [roomType]);
-  const positions = useMemo(() => calculatePositions(config), [config]);
+  // Safety check: ensure room data exists
+  if (!room) {
+    console.warn('RoomDetailScreen: No room data provided');
+    return null;
+  }
 
-  const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
+  // Get room type configuration
+  const config = React.useMemo(() => getRoomTypeConfig(roomType), [roomType]);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
   const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
@@ -82,42 +73,22 @@ export default function RoomDetailScreen() {
   const [refuseServiceReason, setRefuseServiceReason] = useState<string | undefined>(undefined);
 
   // Track notes and assigned staff in state
-  // Initial notes: room note (roomNotes + noteMadeBy) if present, else default InProgress notes or empty
+  // Initial notes: room note (roomNotes + noteMadeBy) if present
   const [notes, setNotes] = useState<Note[]>(() => {
-    const roomNote: Note[] = room.roomNotes && room.noteMadeBy
-      ? [{
-          id: 'room-note',
-          text: room.roomNotes,
-          staff: {
-            name: room.noteMadeBy.name,
-            avatar: room.noteMadeBy.avatar ?? require('../../assets/icons/profile-avatar.png'),
-          },
-          createdAt: new Date().toISOString(),
-        }]
-      : [];
-    if (room.houseKeepingStatus === 'InProgress' && roomNote.length === 0) {
-      return [
-        {
-          id: '1',
-          text: "Guest wants 2 extra bath towels + 1 hand towel. Don't move items on desk. Refill water bottles daily. Check minibar usage. Leave AC on medium-cool.",
-          staff: {
-            name: room.roomAttendantAssigned?.name || 'Stella Kitou',
-            avatar: require('../../assets/icons/profile-avatar.png'),
-          },
-          createdAt: new Date().toISOString(),
+    // Always use actual room notes if available
+    if (room.roomNotes && room.noteMadeBy) {
+      return [{
+        id: 'room-note',
+        text: room.roomNotes,
+        staff: {
+          name: room.noteMadeBy.name,
+          avatar: room.noteMadeBy.avatar ?? require('../../assets/icons/profile-avatar.png'),
         },
-        {
-          id: '2',
-          text: 'Deep clean bathroom (heavy bath use). Change all linens + pillow protectors. Vacuum under bed. Restock all amenities. Light at entrance flickering report to maintenance.',
-          staff: {
-            name: room.roomAttendantAssigned?.name || 'Stella Kitou',
-            avatar: require('../../assets/icons/profile-avatar.png'),
-          },
-          createdAt: new Date().toISOString(),
-        },
-      ];
+        createdAt: new Date().toISOString(),
+      }];
     }
-    return roomNote;
+    // Return empty array if no room notes - don't use default notes
+    return [];
   });
   
   const [assignedStaff, setAssignedStaff] = useState<{
@@ -143,58 +114,26 @@ export default function RoomDetailScreen() {
       : undefined
   );
   
-  // Track tasks in state
-  const [tasks, setTasks] = useState<Task[]>([]);
+  // Track tasks in state - initialize from room data if available
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    // If room has roomNotes that could be used as initial task, add it
+    // Otherwise start with empty array
+    return [];
+  });
   
   // Track history events in state
   const [historyEvents, setHistoryEvents] = useState<HistoryEvent[]>(() => {
     return getMockHistoryEvents(room.roomNumber);
   });
   
-  // Constants for "See More" functionality (matching ReturnLaterModal)
-  const MAX_LINES = 2; // Maximum lines to show before truncating
-  const LINE_HEIGHT = 18; // Line height in unscaled pixels
-  const dummyTaskText = 'Deep clean bathroom (heavy bath use). Change all linens + pillow protectors. Vacuum under bed. Restock all amenities. Light at entrance flickering report to maintenance.';
-  
-  // "See More" functionality state
-  const [showSeeMore, setShowSeeMore] = useState(false);
-  const [textHeight, setTextHeight] = useState<number>(0);
-  const fullTextRef = useRef<Text>(null);
-  
-  // Calculate if text needs truncation (rough estimate for initial render)
-  const charsPerLine = 50;
-  const maxChars = MAX_LINES * charsPerLine;
-  const estimatedNeedsTruncation = dummyTaskText.length > maxChars;
-  
-  // Measure full text height to determine if truncation is needed
-  const handleFullTextLayout = (event: LayoutChangeEvent) => {
-    const { height } = event.nativeEvent.layout;
-    setTextHeight(height);
-    const maxHeight = MAX_LINES * LINE_HEIGHT * scaleX;
-    setShowSeeMore(height > maxHeight);
-  };
-  
-  // Initialize showSeeMore based on estimated length
-  useEffect(() => {
-    if (textHeight === 0) {
-      setShowSeeMore(estimatedNeedsTruncation);
+  // Use room notes as task description if available, otherwise use empty string
+  // Task description should only show if there are actual tasks
+  const getTaskDescription = () => {
+    if (tasks.length > 0) {
+      return tasks[0].text;
     }
-  }, [dummyTaskText, textHeight, estimatedNeedsTruncation]);
-  
-  // Get truncated text for display
-  const getDisplayText = () => {
-    if (!showSeeMore) {
-      return dummyTaskText;
-    }
-    // Truncate to approximately MAX_LINES
-    const truncated = dummyTaskText.substring(0, maxChars);
-    // Find last space to avoid cutting words
-    const lastSpace = truncated.lastIndexOf(' ');
-    return lastSpace > 0 ? truncated.substring(0, lastSpace) + '...' : truncated + '...';
-  };
-  
-  const handleSeeMorePress = () => {
-    setShowSeeMore(false);
+    // Don't show default task text - only show if there are actual tasks
+    return undefined;
   };
 
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -277,37 +216,7 @@ export default function RoomDetailScreen() {
   };
   
   // Track paused time
-  const [pausedAt, setPausedAt] = useState<string | undefined>(
-    selectedStatusText === 'Pause' ? '11:22' : undefined
-  );
-
-  // Transform room data to detail data format
-  const roomDetail: RoomDetailData = {
-    ...room,
-    roomType,
-    specialInstructions: room.specialInstructions ?? undefined,
-    notes: notes,
-    tasks: tasks,
-    assignedTo: assignedStaff,
-    isUrgent: room.isPriority,
-    lostAndFoundItems: config.lostAndFoundType === 'withItems' ? [
-      // Mock lost & found items for Stayover/Turndown
-      {
-        id: 'lf1',
-        itemName: 'Wrist Watch',
-        itemId: 'FH31390',
-        location: 'Guest bathroom while cleaning',
-        storedLocation: 'HSK Office',
-        registeredBy: {
-          name: 'Stella Kitou',
-          avatar: require('../../assets/icons/profile-avatar.png'),
-          timestamp: '15:00, 11 November 2025',
-        },
-        status: 'stored',
-        createdAt: new Date().toISOString(),
-      },
-    ] : undefined,
-  };
+  const [pausedAt, setPausedAt] = useState<string | undefined>(undefined);
 
   const handleBackPress = () => {
     if (navigation.canGoBack()) {
@@ -372,7 +281,7 @@ export default function RoomDetailScreen() {
       return;
     }
 
-    const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['status'] => {
+    const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['houseKeepingStatus'] => {
       switch (option) {
         case 'Dirty':
           return 'Dirty';
@@ -541,57 +450,98 @@ export default function RoomDetailScreen() {
     return null;
   }
 
+  // Transform room data to props format for reusable component
   // Determine guests based on room type
-  const guests = room.guests || [];
-  const firstGuest = config.numberOfGuests === 2 
-    ? guests.find((g) => g.timeLabel === 'ETA') 
-    : guests[0];
-  const secondGuest = config.numberOfGuests === 2 
-    ? guests.find((g) => g.timeLabel === 'EDT') 
-    : undefined;
+  const roomGuests = room.guests || [];
+  
+  // Build guests array with type information
+  const guestsWithTypes: Array<{ guest: import('../types/allRooms.types').GuestInfo; type: 'Arrival' | 'Departure' | 'Stayover' | 'Turndown' }> = [];
+  
+  if (roomType === 'ArrivalDeparture') {
+    // For Arrival/Departure: first guest is Arrival, second is Departure
+    const arrivalGuest = roomGuests.find((g) => g.timeLabel === 'ETA');
+    const departureGuest = roomGuests.find((g) => g.timeLabel === 'EDT');
+    if (arrivalGuest) {
+      guestsWithTypes.push({ guest: arrivalGuest, type: 'Arrival' });
+    }
+    if (departureGuest) {
+      guestsWithTypes.push({ guest: departureGuest, type: 'Departure' });
+    }
+  } else if (roomType === 'Arrival') {
+    // For Arrival: single arrival guest
+    const arrivalGuest = roomGuests.find((g) => g.timeLabel === 'ETA') || roomGuests[0];
+    if (arrivalGuest) {
+      guestsWithTypes.push({ guest: arrivalGuest, type: 'Arrival' });
+    }
+  } else if (roomType === 'Departure') {
+    // For Departure: single departure guest
+    const departureGuest = roomGuests.find((g) => g.timeLabel === 'EDT') || roomGuests[0];
+    if (departureGuest) {
+      guestsWithTypes.push({ guest: departureGuest, type: 'Departure' });
+    }
+  } else if (roomType === 'Stayover') {
+    // For Stayover: single stayover guest
+    const stayoverGuest = roomGuests[0];
+    if (stayoverGuest) {
+      guestsWithTypes.push({ guest: stayoverGuest, type: 'Stayover' });
+    }
+  } else if (roomType === 'Turndown') {
+    // For Turndown: single turndown guest
+    const turndownGuest = roomGuests[0];
+    if (turndownGuest) {
+      guestsWithTypes.push({ guest: turndownGuest, type: 'Turndown' });
+    }
+  }
 
-  // Calculate dynamic styles based on positions
-  const dynamicStyles = {
-    guestInfoSection: {
-      paddingTop: (positions.guestInfoTitle - CONTENT_AREA.top) * scaleX,
-      minHeight: (positions.divider2 - positions.guestInfoTitle) * scaleX,
+  // Get task description from tasks
+  const taskDescription = getTaskDescription();
+
+  // Get lost & found items based on config
+  const lostAndFoundItems = config.lostAndFoundType === 'withItems' ? [
+    {
+      id: 'lf1',
+      itemName: 'Wrist Watch',
+      itemId: 'FH31390',
+      location: 'Guest bathroom while cleaning',
+      storedLocation: 'HSK Office',
+      registeredBy: {
+        name: 'Stella Kitou',
+        avatar: require('../../assets/icons/profile-avatar.png'),
+        timestamp: '15:00, 11 November 2025',
+      },
+      status: 'stored' as const,
+      createdAt: new Date().toISOString(),
     },
-    guestInfoTitle: {
-      top: (positions.guestInfoTitle - CONTENT_AREA.top) * scaleX,
-    },
-    divider1: {
-      top: (positions.divider1 - CONTENT_AREA.top) * scaleX,
-    },
-    divider2: {
-      top: (positions.divider2 - CONTENT_AREA.top) * scaleX,
-    },
-    cardSpacer: {
-      // Spacer must reserve space from divider2 to the Lost & Found title (not just card end)
-      // This ensures the absolutely positioned card doesn't overlap with Lost & Found section
-      height: ((positions.lostAndFoundTitle - positions.divider2)) * scaleX,
-    },
-    assignedToSectionContainer: {
-      top: (positions.assignedToTitle - CONTENT_AREA.top) * scaleX,
-    },
-    assignedTaskCard: {
-      top: (positions.cardTop - CONTENT_AREA.top) * scaleX,
-      height: positions.cardHeight * scaleX,
-    },
-  };
+  ] : undefined;
 
   return (
-    <View style={styles.container}>
-      {/* Gray Background */}
-      <View style={styles.backgroundTop} />
-
-      {/* Header */}
-      <RoomDetailHeader
-        roomNumber={localRoom.roomNumber}
-        roomCode={`${localRoom.roomCategory} - ${localRoom.credit}`}
+    <View style={{ flex: 1 }}>
+      {/* Reusable Room Detail Content Component */}
+      <RoomDetailContent
+        roomNumber={room.roomNumber}
+        roomCode={`${room.roomCategory} - ${room.credit}`}
         status={currentStatus}
+        flagged={room.flagged === true}
+        frontOfficeStatus={room.frontOfficeStatus}
+        roomType={roomType}
+        guests={guestsWithTypes}
+        specialInstructions={room.specialInstructions ?? undefined}
+        assignedTo={assignedStaff}
+        taskDescription={taskDescription}
+        notes={notes}
+        lostAndFoundItems={lostAndFoundItems}
+        historyEvents={historyEvents}
         onBackPress={handleBackPress}
         onStatusPress={handleStatusPress}
-        statusButtonRef={statusButtonRef}
+        onStatusChange={handleStatusSelect}
+        onFlagToggle={handleFlagToggle}
+        onReassign={handleReassign}
+        onAddNote={handleAddNote}
+        onSaveNote={handleSaveNote}
+        onAddTask={handleAddTask}
+        onSaveTask={handleSaveTask}
+        onAddLostAndFoundItem={handleAddPhotos}
+        onDownloadHistoryReport={handleDownloadReport}
         customStatusText={
           showReturnLaterModal
             ? 'Return Later'
@@ -603,175 +553,8 @@ export default function RoomDetailScreen() {
         returnLaterAtTimestamp={returnLaterAtTimestamp}
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceReason={refuseServiceReason}
-        flagged={localRoom.flagged === true}
-        frontOfficeLabel={room.frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}
-        showWithLinenBadge={room.frontOfficeStatus === 'Stayover' && showStayoverWithLinenBadge(localRoom)}
+        showWithLinenBadge={room.frontOfficeStatus === 'Stayover' && showStayoverWithLinenBadge(room)}
       />
-
-      {/* Tab Navigation */}
-      <DetailTabNavigation
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-      />
-
-      {/* Content Area */}
-      {activeTab === 'Checklist' ? (
-        <ChecklistSection
-          roomNumber={room.roomNumber}
-          roomCode={`${room.roomCategory} - ${room.credit}`}
-          roomStatus={currentStatus}
-          onSubmit={(data) => {
-            console.log('Checklist submitted:', data);
-          }}
-          onCancel={() => {
-            console.log('Checklist cancelled');
-          }}
-        />
-      ) : activeTab === 'Tickets' ? (
-        <RoomTicketsSection
-          roomNumber={room.roomNumber}
-          onSubmit={(ticketData) => {
-            console.log('Ticket submitted:', ticketData);
-          }}
-        />
-      ) : (
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {activeTab === 'Overview' && (
-          <>
-            {/* Guest Info Section */}
-            {(firstGuest || secondGuest) && (
-              <View style={[styles.guestInfoSection, dynamicStyles.guestInfoSection]}>
-                <Text style={[styles.guestInfoTitle, dynamicStyles.guestInfoTitle]}>Guest Info</Text>
-
-                {/* First Guest */}
-                {firstGuest && (
-                  <GuestInfoCard
-                    guest={firstGuest}
-                    isArrival={firstGuest.timeLabel === 'ETA'}
-                    numberBadge={firstGuest?.vipCode?.toString()}
-                    specialInstructions={roomDetail.specialInstructions}
-                    absoluteTop={positions.firstGuestTop}
-                    contentAreaTop={CONTENT_AREA.top}
-                    specialInstructionsTitleTop={positions.specialInstructionsTitle}
-                    specialInstructionsTextTop={positions.specialInstructionsText}
-                    roomCategory={firstGuest.timeLabel === 'ETA' ? 'Arrival' : roomType}
-                  />
-                )}
-
-                {/* Divider between guests */}
-                {firstGuest && secondGuest && <View style={[styles.divider1, dynamicStyles.divider1]} />}
-
-                {/* Second Guest */}
-                {secondGuest && (
-                  <GuestInfoCard
-                    guest={secondGuest}
-                    isArrival={false}
-                    numberBadge={secondGuest?.vipCode?.toString() || firstGuest?.vipCode?.toString()}
-                    specialInstructions={undefined}
-                    isSecondGuest={!!firstGuest}
-                    absoluteTop={positions.secondGuestTop!}
-                    contentAreaTop={CONTENT_AREA.top}
-                    roomCategory="Departure"
-                  />
-                )}
-
-                {/* Divider after guest info */}
-                {(firstGuest || secondGuest) && <View style={[styles.divider2, dynamicStyles.divider2]} />}
-              </View>
-            )}
-
-            {/* Spacer for card */}
-            <View style={[styles.cardSpacer, dynamicStyles.cardSpacer]} />
-
-            {/* Assigned to Section */}
-            {roomDetail.assignedTo && (
-              <View style={[styles.assignedToSectionContainer, dynamicStyles.assignedToSectionContainer]}>
-                <Text style={styles.assignedToTitle}>Assigned to</Text>
-              </View>
-            )}
-
-            {/* Card Container */}
-            <View style={[styles.assignedTaskCard, dynamicStyles.assignedTaskCard]}>
-              {roomDetail.assignedTo && (
-                <AssignedToSection
-                  staff={roomDetail.assignedTo}
-                  onReassignPress={handleReassign}
-                />
-              )}
-
-              <View style={styles.cardDivider} />
-
-              {/* Task Section - Inline implementation matching ReturnLaterModal */}
-              <View style={styles.taskSection}>
-                <Text style={styles.taskTitle}>Task</Text>
-                {/* Hidden text to measure full height */}
-                <Text
-                  ref={fullTextRef}
-                  style={[styles.taskText, styles.hiddenText]}
-                  onLayout={handleFullTextLayout}
-                >
-                  {dummyTaskText}
-                </Text>
-                {/* Text with inline "see more" button */}
-                <Text
-                  style={styles.taskText}
-                  numberOfLines={!showSeeMore ? MAX_LINES : undefined}
-                >
-                  {getDisplayText()}
-                  {showSeeMore && (
-                    <>
-                      {' '}
-                      <Text
-                        style={styles.seeMoreText}
-                        onPress={handleSeeMorePress}
-                      >
-                        see more
-                      </Text>
-                    </>
-                  )}
-                </Text>
-              </View>
-            </View>
-
-            {/* Lost and Found Section */}
-            <LostAndFoundSection 
-              displayType={config.lostAndFoundType}
-              items={roomDetail.lostAndFoundItems}
-              onAddPhotosPress={handleAddPhotos}
-              onTitlePress={handleLostAndFoundTitlePress}
-              onItemPress={handleLostAndFoundItemPress}
-            />
-
-            {/* Notes Section */}
-            <NotesSection
-              notes={roomDetail.notes}
-              onAddPress={handleAddNote}
-            />
-          </>
-        )}
-
-          {activeTab === 'History' && (
-            <HistorySection
-              events={historyEvents}
-              roomNumber={room.roomNumber}
-              roomCode={`${room.roomCategory} - ${room.credit}`}
-              onDownloadReport={handleDownloadReport}
-              isGeneratingReport={isGeneratingReport}
-            />
-          )}
-          {activeTab !== 'Overview' && activeTab !== 'History' && (
-            <View style={styles.placeholderContent}>
-              <Text style={styles.placeholderText}>
-                {activeTab} content coming soon
-              </Text>
-            </View>
-          )}
-        </ScrollView>
-      )}
 
       {/* Modals */}
       <StatusChangeModal
@@ -796,9 +579,9 @@ export default function RoomDetailScreen() {
         }}
         onConfirm={handleReturnLaterConfirm}
         roomNumber={room.roomNumber}
-        assignedTo={roomDetail.assignedTo}
+        assignedTo={assignedStaff}
         onReassignPress={handleReassign}
-        taskDescription={roomDetail.tasks && roomDetail.tasks.length > 0 ? roomDetail.tasks[0].text : undefined}
+        taskDescription={tasks.length > 0 ? tasks[0].text : undefined}
       />
 
       <PromiseTimeModal
@@ -820,7 +603,7 @@ export default function RoomDetailScreen() {
         }}
         onConfirm={handleRefuseServiceConfirm}
         roomNumber={room.roomNumber}
-        assignedTo={roomDetail.assignedTo}
+        assignedTo={assignedStaff}
         onReassignPress={handleReassign}
       />
 
@@ -829,7 +612,7 @@ export default function RoomDetailScreen() {
         onClose={() => setShowReassignModal(false)}
         onStaffSelect={handleStaffSelect}
         onAutoAssign={handleAutoAssign}
-        currentAssignedStaffId={roomDetail.assignedTo?.id}
+        currentAssignedStaffId={assignedStaff?.id}
         roomNumber={room.roomNumber}
       />
 
@@ -854,139 +637,3 @@ export default function RoomDetailScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  scrollView: {
-    flex: 1,
-    marginTop: CONTENT_AREA.top * scaleX,
-  },
-  scrollContent: {
-    paddingTop: 0,
-    paddingBottom: 200 * scaleX,
-  },
-  backgroundTop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: CONTENT_AREA.backgroundTopHeight * scaleX,
-    backgroundColor: CONTENT_AREA.backgroundTop,
-    zIndex: 0,
-  },
-  guestInfoSection: {
-    position: 'relative',
-    width: '100%',
-  },
-  guestInfoTitle: {
-    position: 'absolute',
-    left: GUEST_INFO.title.left * scaleX,
-    fontSize: GUEST_INFO.title.fontSize * scaleX,
-    fontFamily: 'Helvetica',
-    fontWeight: 'bold' as any,
-    color: GUEST_INFO.title.color,
-  },
-  divider1: {
-    position: 'absolute',
-    left: GUEST_INFO.divider.left,
-    width: GUEST_INFO.divider.width * scaleX,
-    height: GUEST_INFO.divider.height,
-    backgroundColor: GUEST_INFO.divider.color,
-    zIndex: 0,
-  },
-  divider2: {
-    position: 'absolute',
-    left: GUEST_INFO.divider2.left,
-    width: GUEST_INFO.divider2.width * scaleX,
-    height: GUEST_INFO.divider2.height,
-    backgroundColor: GUEST_INFO.divider2.color,
-    zIndex: 0,
-  },
-  placeholderContent: {
-    padding: 40 * scaleX,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 200 * scaleX,
-  },
-  placeholderText: {
-    fontSize: 16 * scaleX,
-    color: '#999',
-  },
-  cardSpacer: {
-    width: '100%',
-  },
-  assignedToSectionContainer: {
-    position: 'absolute',
-    left: 0,
-    width: '100%',
-    height: 20 * scaleX,
-    zIndex: 2,
-  },
-  assignedToTitle: {
-    position: 'absolute',
-    left: ASSIGNED_TO.title.left * scaleX,
-    top: 0,
-    fontSize: ASSIGNED_TO.title.fontSize * scaleX,
-    fontFamily: 'Helvetica',
-    fontWeight: 'bold' as any,
-    color: ASSIGNED_TO.title.color,
-  },
-  assignedTaskCard: {
-    position: 'absolute',
-    left: ASSIGNED_TASK_CARD.left * scaleX,
-    width: ASSIGNED_TASK_CARD.width * scaleX,
-    borderRadius: ASSIGNED_TASK_CARD.borderRadius * scaleX,
-    backgroundColor: ASSIGNED_TASK_CARD.backgroundColor,
-    borderWidth: ASSIGNED_TASK_CARD.borderWidth,
-    borderColor: ASSIGNED_TASK_CARD.borderColor,
-    paddingHorizontal: ASSIGNED_TASK_CARD.paddingHorizontal * scaleX,
-    paddingVertical: ASSIGNED_TASK_CARD.paddingVertical * scaleX,
-    zIndex: 1,
-    overflow: 'hidden',
-  },
-  cardDivider: {
-    position: 'absolute',
-    left: ASSIGNED_TASK_CARD.paddingHorizontal * scaleX,
-    top: ASSIGNED_TASK_CARD.divider.top * scaleX,
-    width: ASSIGNED_TASK_CARD.divider.width * scaleX,
-    height: ASSIGNED_TASK_CARD.divider.height,
-    backgroundColor: ASSIGNED_TASK_CARD.divider.backgroundColor,
-    zIndex: 2,
-  },
-  taskSection: {
-    position: 'absolute',
-    left: 16 * scaleX, // Match card padding
-    right: 16 * scaleX, // Match card padding
-    top: 86 * scaleX, // Below divider (78px) + 8px spacing
-    paddingHorizontal: 0,
-  },
-  taskTitle: {
-    fontSize: 14 * scaleX,
-    fontFamily: 'Helvetica',
-    fontWeight: '700',
-    color: '#1e1e1e',
-    marginBottom: 8 * scaleX,
-  },
-  taskText: {
-    fontSize: 13 * scaleX,
-    fontFamily: 'Helvetica',
-    fontWeight: '300',
-    color: '#000000',
-    lineHeight: 18 * scaleX,
-  },
-  hiddenText: {
-    position: 'absolute',
-    opacity: 0,
-    zIndex: -1,
-    width: '100%',
-  },
-  seeMoreText: {
-    fontSize: 13 * scaleX,
-    fontFamily: 'Helvetica',
-    fontWeight: '500',
-    color: '#5a759d',
-  },
-});

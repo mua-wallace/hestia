@@ -68,6 +68,78 @@ export interface HistoryGroup {
   events: HistoryEvent[];
 }
 
-
-
-
+/**
+ * Props interface for reusable RoomDetailScreen component
+ * All content is passed as props for maximum reusability
+ */
+export interface RoomDetailScreenProps {
+  // Room identification
+  roomNumber: string;
+  roomCode: string; // e.g., "ST2K - 1.4"
+  
+  // Room status
+  status: RoomStatus;
+  flagged?: boolean;
+  frontOfficeStatus?: 'Arrival' | 'Departure' | 'Arrival/Departure' | 'Stayover' | 'Turndown' | 'No Task';
+  
+  // Room type determines layout structure
+  roomType: RoomType;
+  
+  // Guest information
+  // For Arrival/Departure: [arrivalGuest, departureGuest]
+  // For Arrival: [arrivalGuest]
+  // For Departure: [departureGuest]
+  // For Stayover/Turndown: [stayoverGuest]
+  guests: Array<{
+    guest: import('./allRooms.types').GuestInfo;
+    type: 'Arrival' | 'Departure' | 'Stayover' | 'Turndown';
+  }>;
+  
+  // Special instructions (shown after Arrival guest info for Arrival/Departure, or after guest info for other types)
+  specialInstructions?: string | null;
+  
+  // Assigned staff
+  assignedTo?: {
+    id: string;
+    name: string;
+    avatar?: any;
+    initials?: string;
+    avatarColor?: string;
+    department?: string;
+  };
+  
+  // Task description
+  taskDescription?: string;
+  
+  // Notes
+  notes?: Note[];
+  
+  // Lost & Found items (for Stayover/Turndown)
+  lostAndFoundItems?: LostAndFoundItem[];
+  
+  // History events
+  historyEvents?: HistoryEvent[];
+  
+  // Callbacks
+  onBackPress?: () => void;
+  onStatusPress?: () => void;
+  onStatusChange?: (status: RoomStatus) => void;
+  onFlagToggle?: (flagged: boolean) => void;
+  onReassign?: () => void;
+  onAddNote?: () => void;
+  onSaveNote?: (noteText: string) => void;
+  onAddTask?: () => void;
+  onSaveTask?: (taskText: string) => void;
+  onAddLostAndFoundItem?: () => void;
+  onDownloadHistoryReport?: () => Promise<void>;
+  
+  // Optional: Custom status text (for Pause, Return Later, etc.)
+  customStatusText?: string;
+  pausedAt?: string;
+  returnLaterAtTimestamp?: number;
+  promiseTimeAtTimestamp?: number;
+  refuseServiceReason?: string;
+  
+  // Optional: Show stayover with linen badge
+  showWithLinenBadge?: boolean;
+}

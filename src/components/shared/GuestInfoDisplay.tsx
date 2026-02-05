@@ -289,12 +289,18 @@ export default function GuestInfoDisplay({
   
   // Calculate guest count top position based on adjustedDateTop (which accounts for wrapped names)
   // This ensures guest count is positioned correctly below the date, even when name wraps
+  // For Arrival/Stayover/Turndown: position below date range with proper spacing
+  // When date and time are on same row, use the taller lineHeight (time: 18px vs date: 17px)
+  // Spacing: max lineHeight (18px) + gap (4px) = 22px total spacing from date top
+  const dateTimeRowHeight = (isArrival || isStayover || isTurndown) && guest.timeLabel && guest.time && guest.timeLabel !== 'N/A'
+    ? Math.max(GUEST_INFO.dateRange.lineHeight, GUEST_INFO.time.lineHeight) // Use taller lineHeight when time is present
+    : GUEST_INFO.dateRange.lineHeight; // Just date lineHeight when no time
   const guestCountTop = shouldShowGuestCountBelow
     ? (countTop !== undefined
         ? countTop * normalizedScaleX // Use custom position if provided (Room Detail screen)
         : hasNotes
           ? ((GUEST_INFO.guestCount.positions.withNotes.iconTop ?? 0)) * normalizedScaleX
-          : (adjustedDateTop + GUEST_INFO.dateRange.lineHeight + 2) * normalizedScaleX) // Use adjustedDateTop instead of calculatedDateTop
+          : (adjustedDateTop + dateTimeRowHeight + 4) * normalizedScaleX) // Use adjustedDateTop + dateTimeRowHeight + 4px gap for proper spacing below date/time row
     : 0;
 
   // Guest count top is already adjusted (uses adjustedDateTop), so no additional adjustment needed
@@ -734,7 +740,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start', // Changed from 'center' to 'flex-start' to prevent clipping
     left: 0,
-    minHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Changed from fixed height to minHeight
+    minHeight: Math.max(GUEST_INFO.dateRange.lineHeight, GUEST_INFO.time.lineHeight) * normalizedScaleX, // Use the taller of date or time lineHeight to prevent overlap
     zIndex: 5, // Very low z-index so time appears above
     overflow: 'visible', // Ensure content is not clipped
     maxWidth: 180 * normalizedScaleX, // Match guest info container width to prevent overflow
