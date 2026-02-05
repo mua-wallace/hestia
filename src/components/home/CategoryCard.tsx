@@ -50,7 +50,6 @@ const STATUS_CONFIG: Record<
   },
 };
 
-const LEFT_BORDER_WIDTH = 5 * scaleX;
 const CARD_RADIUS = 12 * scaleX;
 
 export default function CategoryCard({ category, onPress, onStatusPress, selectedShift }: CategoryCardProps) {
@@ -64,18 +63,6 @@ export default function CategoryCard({ category, onPress, onStatusPress, selecte
       onPress={onPress}
       activeOpacity={0.7}
     >
-      {/* Colored left border accent - separate View so it always shows with borderRadius */}
-      <View
-        style={[
-          styles.leftBorder,
-          {
-            width: LEFT_BORDER_WIDTH,
-            backgroundColor: category.borderColor,
-            borderTopLeftRadius: CARD_RADIUS,
-            borderBottomLeftRadius: CARD_RADIUS,
-          },
-        ]}
-      />
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
@@ -126,23 +113,28 @@ export default function CategoryCard({ category, onPress, onStatusPress, selecte
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(238,240,246,0.35)',
-    borderRadius: 12 * scaleX,
+    backgroundColor: '#ffffff', // White background as per Figma design
+    borderRadius: 12 * scaleX, // 12px border radius
     borderWidth: 1,
     borderColor: '#e3e3e3', // Light grey border color
-    height: 223 * scaleX,
-    marginHorizontal: 10 * scaleX,
-    marginVertical: 13 * scaleX,
+    width: 422 * scaleX, // Exact width from Figma: 422px
+    height: 223 * scaleX, // Exact height from Figma: 223px
+    marginHorizontal: 9 * scaleX, // (440 - 422) / 2 = 9px on each side
+    marginVertical: 13 * scaleX, // 13px vertical spacing between cards
+    alignSelf: 'center', // Center cards horizontally
     position: 'relative',
-    overflow: 'hidden',
+    overflow: 'hidden', // Keep overflow hidden for clean edges
     flexDirection: 'column',
+    // Subtle light grey shadow around edges as per Figma design
+    shadowColor: '#a0a0a0', // Light grey shadow color
+    shadowOffset: { width: 0, height: 2 * scaleX },
+    shadowOpacity: 0.15, // Subtle shadow opacity
+    shadowRadius: 8 * scaleX, // Shadow blur radius
+    elevation: 4, // Android shadow
   },
-  leftBorder: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    zIndex: 1,
+  containerPM: {
+    backgroundColor: '#3A3D49', // Dark background for PM mode
+    borderColor: '#4A4D59', // Darker border for PM mode
   },
   header: {
     flexDirection: 'row',
@@ -177,8 +169,8 @@ const styles = StyleSheet.create({
   },
   divider: {
     position: 'absolute',
-    left: 0, // Touch left border
-    right: 0, // Touch right border
+    left: 0,
+    right: 0,
     top: (17 + 30 + 20 + 10) * scaleX, // paddingTop (17) + content height (~30px for 24px font with line height) + paddingBottom (20) + extra spacing (10) = 77px
     height: 1,
     backgroundColor: '#e3e3e3', // Light grey divider color (same as other cards)
