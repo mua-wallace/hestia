@@ -133,6 +133,9 @@ export default function AllRoomsScreen() {
 
   const handleShiftToggle = (shift: ShiftType) => {
     setAllRoomsData(prev => ({ ...prev, selectedShift: shift }));
+    // Reset filters when shift changes - filters should be per shift
+    setLocalFilters(undefined);
+    setSearchQuery(''); // Also reset search query
   };
 
   const handleSearch = (text: string) => {
