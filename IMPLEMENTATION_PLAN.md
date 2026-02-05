@@ -49,11 +49,11 @@ The design system is defined in `design-system.json` and includes:
 - [ ] Badge component
 
 ### Phase 3: Authentication Screens
-- [ ] Splash Screen
-  - Logo and branding
-  - "Build by Housekeepers" text
-  - "For Housekeeping" text
-  - Pagination indicator
+- [x] Splash Screen ✅
+  - [x] Logo and branding
+  - [x] "Build by Housekeepers" text
+  - [x] "For Housekeeping" text
+  - [x] Pagination indicator
 - [ ] Login Screen
   - Company email input
   - Password input

@@ -54,7 +54,7 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#5a759d', // Exact color from Figma
+    backgroundColor: '#5D799B', // Exact color from Figma design
   },
   // Group 524 container - positioned at x=124, y=376, width=177, height=55
   logoTitleGroup: {
@@ -77,11 +77,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 66 * scaleX, // 190 - 124 = 66px
     top: 10 * scaleX, // 386 - 376 = 10px
-    width: 111 * scaleX,
+    width: 120 * scaleX, // Increased width to ensure "Hestia" displays fully
     height: 45 * scaleX,
     fontSize: 39 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular,
+    fontWeight: typography.fontWeights.regular as '400',
     color: '#fefeff', // Exact color from Figma
     lineHeight: 39 * scaleX * 1.147, // line-height: 1.147
     textAlign: 'left',
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     height: 22 * scaleX,
     fontSize: 22 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light,
+    fontWeight: typography.fontWeights.light as '300',
     color: colors.text.white,
     lineHeight: 22 * scaleX, // normal line height
     textAlign: 'left',
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     height: 24 * scaleX,
     fontSize: 21 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.bold,
+    fontWeight: typography.fontWeights.bold as '700',
     color: colors.text.white,
     lineHeight: 24 * scaleX,
     textAlign: 'left',
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     top: 909 * scaleX,
     width: 54 * scaleX,
     height: 8 * scaleX,
-    backgroundColor: '#d9d9d9', // Exact color from Figma
+    backgroundColor: '#C0C0C0', // Exact color from Figma design
     borderRadius: 57 * scaleX, // Exact border radius from Figma
   },
 });
