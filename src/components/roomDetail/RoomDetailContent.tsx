@@ -313,8 +313,8 @@ export default function RoomDetailContent({
 
               <View style={styles.cardDivider} />
 
-              {/* Task Section - Always show if taskDescription exists */}
-              {taskDescription ? (
+              {/* Task Section - Always show (with default if no taskDescription) */}
+              {taskDescription && (
                 <View style={styles.taskSection}>
                   <Text style={styles.taskTitle}>Task</Text>
                   {/* Hidden text to measure full height */}
@@ -344,7 +344,7 @@ export default function RoomDetailContent({
                     )}
                   </Text>
                 </View>
-              ) : null}
+              )}
             </View>
 
             {/* Lost and Found Section */}

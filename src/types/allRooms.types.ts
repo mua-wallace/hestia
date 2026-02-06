@@ -89,6 +89,12 @@ export interface RoomCardData {
   roomNotes?: string | null;
   /** Who made the room note. null when no note. Paired with roomNotes. */
   noteMadeBy?: NoteMadeBy | null;
+  /** Tasks associated with the room. Displayed in Assigned To card in room details. */
+  tasks?: Array<{
+    id: string;
+    text: string;
+    createdAt: string;
+  }>;
 }
 
 export interface AllRoomsScreenData {

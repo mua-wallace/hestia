@@ -27,6 +27,7 @@ import { mockStaffData } from '../data/mockStaffData';
 import { getMockHistoryEvents } from '../data/mockHistoryData';
 import { generateHistoryReport } from '../utils/generateHistoryReport';
 import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
+import { getDefaultTaskText } from '../utils/defaultTasks';
 
 type RoomDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -116,7 +117,14 @@ export default function RoomDetailScreen() {
   
   // Track tasks in state - initialize from room data if available
   const [tasks, setTasks] = useState<Task[]>(() => {
-    // If room has roomNotes that could be used as initial task, add it
+    // Initialize from room data if tasks are provided
+    if (room.tasks && room.tasks.length > 0) {
+      return room.tasks.map(task => ({
+        id: task.id,
+        text: task.text,
+        createdAt: task.createdAt,
+      }));
+    }
     // Otherwise start with empty array
     return [];
   });
@@ -126,14 +134,13 @@ export default function RoomDetailScreen() {
     return getMockHistoryEvents(room.roomNumber);
   });
   
-  // Use room notes as task description if available, otherwise use empty string
-  // Task description should only show if there are actual tasks
+  // Get task description - use actual tasks or default task
   const getTaskDescription = () => {
     if (tasks.length > 0) {
       return tasks[0].text;
     }
-    // Don't show default task text - only show if there are actual tasks
-    return undefined;
+    // Return default task based on room type
+    return getDefaultTaskText(roomType);
   };
 
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
