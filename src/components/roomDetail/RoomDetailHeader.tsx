@@ -19,6 +19,8 @@ interface RoomDetailHeaderProps {
   promiseTimeAtTimestamp?: number; // Epoch ms when room will be ready; header shows time + countdown
   refuseServiceReason?: string; // Selected reason or custom reason when Refuse Service is confirmed
   flagged?: boolean; // When true, show Flagged variant (Figma 2333-646): light header, red text, Flagged pill
+  frontOfficeLabel?: string; // Front office status e.g. "Stayover" - shown below room code for Stayover rooms
+  showWithLinenBadge?: boolean; // When true, show "with Linen" badge next to Stayover label
 }
 
 export default function RoomDetailHeader({
@@ -35,6 +37,8 @@ export default function RoomDetailHeader({
   promiseTimeAtTimestamp,
   refuseServiceReason,
   flagged = false,
+  frontOfficeLabel,
+  showWithLinenBadge = false,
 }: RoomDetailHeaderProps) {
   const statusConfig = STATUS_CONFIGS[status];
   const isReturnLater = customStatusText === 'Return Later';
@@ -211,6 +215,35 @@ export default function RoomDetailHeader({
         {roomCode}
       </Text>
 
+      {/* Front Office Label (e.g. Stayover) + with Linen badge when applicable */}
+      {frontOfficeLabel && (
+        <View style={styles.frontOfficeLabelRow}>
+          <Text
+            style={[
+              styles.frontOfficeLabel,
+              flagged && { color: ROOM_DETAIL_HEADER.flagged.roomCodeColor },
+              isPaused && { color: ROOM_DETAIL_HEADER.paused.roomCodeColor },
+              (isReturnLater || isPromiseTime || isRefuseService) && { color: ROOM_DETAIL_HEADER.returnLater.roomCodeColor },
+            ]}
+          >
+            {frontOfficeLabel}
+          </Text>
+          {showWithLinenBadge && (
+            <View style={[
+              styles.withLinenBadge,
+              flagged && styles.withLinenBadgeFlagged,
+            ]}>
+              <Text style={[
+                styles.withLinenBadgeText,
+                flagged && styles.withLinenBadgeTextFlagged,
+              ]}>
+                with Linen
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
       {/* Status Indicator: Flagged pill (Figma 2333-646) or default status pill */}
       <TouchableOpacity
         ref={statusButtonRef}
@@ -366,6 +399,43 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     textAlign: 'center',
+  },
+  frontOfficeLabelRow: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    left: 0,
+    right: 0,
+    top: 130 * scaleX,
+    gap: 6 * scaleX,
+  },
+  frontOfficeLabel: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.bold as any,
+    color: ROOM_DETAIL_HEADER.roomCode.color,
+  },
+  withLinenBadge: {
+    paddingHorizontal: 8 * scaleX,
+    paddingVertical: 2 * scaleX,
+    borderRadius: 6 * scaleX,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(123, 31, 162, 0.7)',
+  },
+  withLinenBadgeFlagged: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderColor: 'rgba(123, 31, 162, 0.8)',
+  },
+  withLinenBadgeText: {
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.bold as any,
+    color: '#334866',
+  },
+  withLinenBadgeTextFlagged: {
+    color: '#334866',
   },
   statusIndicator: {
     position: 'absolute',

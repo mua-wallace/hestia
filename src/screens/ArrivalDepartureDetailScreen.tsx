@@ -26,6 +26,7 @@ import { STATUS_OPTIONS } from '../types/allRooms.types';
 import type { RoomDetailData, DetailTab, Note, Task } from '../types/roomDetail.types';
 import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
+import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
 
 type ArrivalDepartureDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -62,16 +63,26 @@ export default function ArrivalDepartureDetailScreen() {
   // Track room data locally to allow updates (e.g., flagged status)
   const [localRoom, setLocalRoom] = useState<RoomCardData>(room);
   // Track notes and assigned staff in state
-  // Initialize notes based on room status - show default notes for InProgress, empty for others
+  // Initial notes: room note (roomNotes + noteMadeBy) if present, else default InProgress notes or empty
   const [notes, setNotes] = useState<Note[]>(() => {
-    // For InProgress status, show default notes; for other statuses (Cleaned, Dirty, Inspected), start with empty or room notes
-    if (room.houseKeepingStatus === 'InProgress') {
+    const roomNote: Note[] = room.roomNotes && room.noteMadeBy
+      ? [{
+          id: 'room-note',
+          text: room.roomNotes,
+          staff: {
+            name: room.noteMadeBy.name,
+            avatar: room.noteMadeBy.avatar ?? require('../../assets/icons/profile-avatar.png'),
+          },
+          createdAt: new Date().toISOString(),
+        }]
+      : [];
+    if (room.houseKeepingStatus === 'InProgress' && roomNote.length === 0) {
       return [
         {
           id: '1',
           text: "Guest wants 2 extra bath towels + 1 hand towel. Don't move items on desk. Refill water bottles daily. Check minibar usage. Leave AC on medium-cool.",
           staff: {
-            name: room.staff?.name || 'Stella Kitou',
+            name: room.roomAttendantAssigned?.name || 'Stella Kitou',
             avatar: require('../../assets/icons/profile-avatar.png'),
           },
           createdAt: new Date().toISOString(),
@@ -80,16 +91,14 @@ export default function ArrivalDepartureDetailScreen() {
           id: '2',
           text: 'Deep clean bathroom (heavy bath use). Change all linens + pillow protectors. Vacuum under bed. Restock all amenities. Light at entrance flickering report to maintenance.',
           staff: {
-            name: room.staff?.name || 'Stella Kitou',
+            name: room.roomAttendantAssigned?.name || 'Stella Kitou',
             avatar: require('../../assets/icons/profile-avatar.png'),
           },
           createdAt: new Date().toISOString(),
         },
       ];
     }
-    // For Cleaned, Dirty, Inspected statuses, start with empty notes array
-    // In a real app, you would fetch notes from the API based on room status
-    return [];
+    return roomNote;
   });
   const [assignedStaff, setAssignedStaff] = useState<{
     id: string;
@@ -99,16 +108,16 @@ export default function ArrivalDepartureDetailScreen() {
     avatarColor?: string;
     department?: string;
   } | undefined>(
-    room.staff
+    room.roomAttendantAssigned
       ? {
           id: '1', // Default id since StaffInfo doesn't have id
-          name: room.staff.name,
-          avatar: room.staff.avatar || require('../../assets/icons/profile-avatar.png'),
-          initials: room.staff.initials,
-          avatarColor: room.staff.avatarColor,
+          name: room.roomAttendantAssigned.name,
+          avatar: room.roomAttendantAssigned.avatar || require('../../assets/icons/profile-avatar.png'),
+          initials: room.roomAttendantAssigned.initials,
+          avatarColor: room.roomAttendantAssigned.avatarColor,
           // Get department from mock data by matching name
           department: (() => {
-            const staffMember = mockStaffData.find(s => s.name === room.staff?.name);
+            const staffMember = mockStaffData.find(s => s.name === room.roomAttendantAssigned?.name);
             return staffMember?.department;
           })(),
         }
@@ -126,9 +135,7 @@ export default function ArrivalDepartureDetailScreen() {
   // In a real app, this would come from an API or be passed directly
   const roomDetail: RoomDetailData = {
     ...room,
-    specialInstructions: room.guests && room.guests.length > 0
-      ? 'Please prepare a high-floor suite with a city view, away from the elevators, set to 21°C, with hypoallergenic pillows and a fresh orchid on the nightstand.'
-      : undefined,
+    specialInstructions: room.specialInstructions ?? undefined,
     notes: notes,
     tasks: tasks,
     assignedTo: assignedStaff,
@@ -429,6 +436,9 @@ export default function ArrivalDepartureDetailScreen() {
         returnLaterAtTimestamp={returnLaterAtTimestamp}
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceReason={refuseServiceReason}
+        flagged={localRoom?.flagged === true}
+        frontOfficeLabel={room.frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}
+        showWithLinenBadge={room.frontOfficeStatus === 'Stayover' && showStayoverWithLinenBadge(localRoom)}
       />
 
       {/* Tab Navigation - Below header (252px) */}
@@ -482,7 +492,7 @@ export default function ArrivalDepartureDetailScreen() {
                   <GuestInfoCard
                     guest={arrivalGuest}
                     isArrival={true}
-                    numberBadge={room.priorityCount?.toString()}
+                    numberBadge={room.guests[0]?.vipCode?.toString()}
                     specialInstructions={roomDetail.specialInstructions}
                     absoluteTop={GUEST_INFO.arrival.name.top}
                     contentAreaTop={CONTENT_AREA.top}
@@ -497,7 +507,7 @@ export default function ArrivalDepartureDetailScreen() {
                   <GuestInfoCard
                     guest={departureGuest}
                     isArrival={false}
-                    numberBadge={room.secondGuestPriorityCount?.toString() || room.priorityCount?.toString()}
+                    numberBadge={room.guests[1]?.vipCode?.toString() || room.guests[0]?.vipCode?.toString()}
                     specialInstructions={undefined} // Departure guests don't have special instructions
                     isSecondGuest={!!arrivalGuest} // Second guest if there's an arrival guest
                     absoluteTop={GUEST_INFO.departure.name.top}

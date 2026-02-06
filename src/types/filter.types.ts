@@ -3,7 +3,7 @@
  */
 
 export type RoomStateFilter = 'dirty' | 'inProgress' | 'cleaned' | 'inspected' | 'priority' | 'paused' | 'refused' | 'returnLater';
-export type GuestFilter = 'arrivals' | 'departures' | 'turnDown' | 'stayOver' | 'stayOverWithLinen' | 'stayOverNoLinen' | 'checkedIn' | 'checkedOut' | 'checkedOutDueIn' | 'outOfOrder' | 'outOfService';
+export type GuestFilter = 'arrivals' | 'departures' | 'turnDown' | 'noTask' | 'stayOver' | 'stayOverWithLinen' | 'stayOverNoLinen' | 'checkedIn' | 'checkedOut' | 'checkedOutDueIn' | 'outOfOrder' | 'outOfService';
 export type ReservationFilter = 'occupied' | 'vacant';
 export type FloorFilter = 'all' | 'first' | 'second' | 'third' | 'fourth';
 
@@ -22,6 +22,7 @@ export interface FilterState {
     arrivals: boolean;
     departures: boolean;
     turnDown: boolean;
+    noTask?: boolean;
     stayOver: boolean;
     stayOverWithLinen?: boolean;
     stayOverNoLinen?: boolean;
@@ -53,6 +54,7 @@ export interface FilterCounts {
     arrivals: number;
     departures: number;
     turnDown: number;
+    noTask?: number;
     stayOver: number;
     stayOverWithLinen?: number;
     stayOverNoLinen?: number;

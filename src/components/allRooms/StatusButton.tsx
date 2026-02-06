@@ -28,20 +28,23 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
   const config = STATUS_CONFIGS[status];
   
   // Determine button position based on card type
-  let buttonLeft: number;
+  // Status button should be right-aligned with consistent right margin
+  const CARD_WIDTH = 426;
+  const RIGHT_MARGIN = 15; // Consistent margin from right edge
+  let buttonRight: number;
   let buttonTop: number;
   
   if (isArrivalDeparture) {
-    buttonLeft = STATUS_BUTTON.positions.arrivalDeparture.left;
+    buttonRight = RIGHT_MARGIN;
     buttonTop = STATUS_BUTTON.positions.arrivalDeparture.top;
   } else if (hasNotes) {
-    buttonLeft = STATUS_BUTTON.positions.arrivalWithNotes.left;
+    buttonRight = RIGHT_MARGIN;
     buttonTop = STATUS_BUTTON.positions.arrivalWithNotes.top;
   } else if (status === 'Dirty') {
-    buttonLeft = STATUS_BUTTON.positions.departure.left;
+    buttonRight = RIGHT_MARGIN;
     buttonTop = STATUS_BUTTON.positions.departure.top;
   } else {
-    buttonLeft = STATUS_BUTTON.positions.standard.left;
+    buttonRight = RIGHT_MARGIN;
     buttonTop = STATUS_BUTTON.positions.standard.top;
   }
 
@@ -58,7 +61,7 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
         style={[
           styles.containerFlagged,
           {
-            left: buttonLeft * scaleX,
+            right: buttonRight * scaleX,
             top: buttonTop * scaleX,
             width: STATUS_BUTTON.width * scaleX,
             height: STATUS_BUTTON.height * scaleX,
@@ -97,7 +100,7 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
       style={[
         styles.containerIconOnly, 
         { 
-          left: buttonLeft * scaleX,
+          right: buttonRight * scaleX,
           top: buttonTop * scaleX,
         }
       ]}

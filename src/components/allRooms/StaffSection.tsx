@@ -6,7 +6,7 @@ import type { ShiftType } from '../../types/home.types';
 import { scaleX, STAFF_SECTION } from '../../constants/allRoomsStyles';
 
 interface StaffSectionProps {
-  staff: StaffInfo;
+  staff: StaffInfo; // Room attendant assigned - passed as 'staff' for component reuse
   isPriority?: boolean;
   frontOfficeStatus?: string; // To determine if it's Departure card
   selectedShift?: ShiftType;

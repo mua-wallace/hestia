@@ -155,15 +155,17 @@ export const GUEST_INFO = {
     height: 1,
     color: '#c6c5c5',
   },
+  // Vertical spacing (px) between rows for proper alignment
+  rowGap: 10, // gap between name row and date/time/count row
   arrival: {
     icon: {
       left: 21,
       top: 349,
-      width: 21,
-      height: 21,
+      width: 28.371,
+      height: 29.919,
     },
     name: {
-      left: 77,
+      left: 77, // 21 + 21 icon + 12 gap + 23 name start
       top: 349,
       fontSize: 14,
       fontWeight: 'bold' as const,
@@ -177,10 +179,9 @@ export const GUEST_INFO = {
       color: '#334866',
     },
     categoryBadge: {
-      // Pill-shaped badge positioned after number badge
-      left: 209, // Positioned after number badge (189) with ~20px spacing
-      top: 349, // Same as name
-      backgroundColor: '#41d541', // Green for Arrival
+      left: 209,
+      top: 349,
+      backgroundColor: '#41d541',
       paddingHorizontal: 12,
       paddingVertical: 4,
       borderRadius: 6,
@@ -190,21 +191,21 @@ export const GUEST_INFO = {
     },
     dates: {
       left: 79,
-      top: 377,
+      top: 377, // name (349) + 28
       fontSize: 14,
       fontWeight: 'light' as const,
       color: '#000000',
     },
     occupancy: {
-      iconLeft: 164,
-      textLeft: 183,
+      iconLeft: 172, // date block ~79+90 + 12 spacing
+      textLeft: 191,
       top: 378,
       fontSize: 14,
       fontWeight: 'light' as const,
       color: '#000000',
     },
     eta: {
-      left: 215,
+      left: 223, // occupancy text ~191+20 + 12 spacing
       top: 377,
       fontSize: 14,
       fontWeight: 'regular' as const,
@@ -232,8 +233,8 @@ export const GUEST_INFO = {
     icon: {
       left: 21,
       top: 542,
-      width: 21,
-      height: 21,
+      width: 28.371,
+      height: 29.919,
     },
     name: {
       left: 77,
@@ -250,10 +251,9 @@ export const GUEST_INFO = {
       color: '#334866',
     },
     categoryBadge: {
-      // Pill-shaped badge positioned after number badge
-      left: 177, // Positioned after number badge (157) with ~20px spacing
-      top: 542, // Same as name
-      backgroundColor: '#f92424', // Red for Departure
+      left: 177,
+      top: 542,
+      backgroundColor: '#f92424',
       paddingHorizontal: 12,
       paddingVertical: 4,
       borderRadius: 6,
@@ -269,15 +269,15 @@ export const GUEST_INFO = {
       color: '#000000',
     },
     occupancy: {
-      iconLeft: 163,
-      textLeft: 182,
+      iconLeft: 171,
+      textLeft: 190,
       top: 566,
       fontSize: 14,
       fontWeight: 'light' as const,
       color: '#000000',
     },
     edt: {
-      left: 222,
+      left: 230,
       top: 567,
       fontSize: 14,
       fontWeight: 'regular' as const,

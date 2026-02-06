@@ -65,3 +65,29 @@ export const truncateText = (text: string, maxLength: number): string => {
   return `${text.substring(0, maxLength)}...`;
 };
 
+/**
+ * Format guest count for display: "adults/kids" (e.g. "2/2")
+ * Returns empty string when undefined or both adults and kids are 0
+ */
+export const formatGuestCount = (guestCount: { adults: number; kids: number } | undefined | null): string => {
+  if (!guestCount) return '';
+  if (guestCount.adults === 0 && guestCount.kids === 0) return '';
+  return `${guestCount.adults}/${guestCount.kids}`;
+};
+
+/**
+ * Format dates of stay for display: "DD/MM - DD/MM" (e.g. "03/01 - 06/01"), year trimmed
+ * Accepts ISO (YYYY-MM-DD) in from/to
+ */
+export const formatDatesOfStay = (datesOfStay: { from: string; to: string } | undefined | null): string => {
+  if (!datesOfStay?.from || !datesOfStay?.to) return '';
+  const formatPart = (iso: string) => {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    return `${day}/${month}`;
+  };
+  return `${formatPart(datesOfStay.from)} - ${formatPart(datesOfStay.to)}`;
+};
+

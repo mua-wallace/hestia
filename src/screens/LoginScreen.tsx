@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity, Image, ScrollView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 import { colors, typography } from '../theme';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Design is based on iPhone 16 Pro Max (440px width, 956px height)
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
@@ -21,6 +22,7 @@ const LANGUAGES = [
 
 export default function LoginScreen() {
   const navigation = useNavigation<LoginScreenNavigationProp>();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('Stellakitou@mandarinorientalsavoy.ch');
   const [password, setPassword] = useState('**********************');
   const [selectedLanguage, setSelectedLanguage] = useState('EN');
@@ -31,8 +33,16 @@ export default function LoginScreen() {
     navigation.replace('Main');
   };
 
+  // Calculate safe top padding for Android
+  const safeTop = Platform.OS === 'android' ? Math.max(insets.top, 20) : 0;
+
   return (
-    <View style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={[styles.contentContainer, { paddingTop: safeTop }]}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* Header Section (Group 208) */}
       {/* Logo (Group 207) - x=35, y=85, 34.673×32.711px */}
       <Image 
@@ -189,7 +199,7 @@ export default function LoginScreen() {
         {/* Having issues text - x=154, y=875, 216×22px */}
         <Text style={styles.customerServiceSubtitle}>Having issues with the app?</Text>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -198,6 +208,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#eef0f6', // Exact color from Figma
   },
+  contentContainer: {
+    minHeight: SCREEN_HEIGHT,
+    paddingBottom: 40,
+  },
   // Header Logo (Group 207) - x=35, y=85, 34.673×32.711px
   headerLogo: {
     position: 'absolute',
@@ -205,26 +219,29 @@ const styles = StyleSheet.create({
     top: 85 * scaleX,
     width: 34.673 * scaleX,
     height: 32.711 * scaleX,
+    zIndex: 1, // Ensure logo is visible
   },
   // Hestia Text - x=80.18, y=96.79, 69.816×18.812px
   hestiaText: {
     position: 'absolute',
     left: 80.18 * scaleX,
     top: 96.79 * scaleX,
-    width: 69.816 * scaleX,
+    minWidth: 70 * scaleX, // Ensure full text visibility
     height: 18.812 * scaleX,
     fontSize: 19 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.regular as any,
-    color: colors.text.primary,
+    color: '#5A759D', // Exact color from Figma
+    includeFontPadding: Platform.OS === 'android' ? false : undefined,
   },
   // Language Selector Container - wraps text and arrow for vertical centering
   languageSelectorContainer: {
     position: 'absolute',
-    left: 259 * scaleX,
+    right: 35 * scaleX, // Use right positioning for better fit
     top: 97 * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
+    zIndex: 1, // Ensure language selector is visible
   },
   languageSelector: {
     // No positioning needed - within flex container
@@ -233,7 +250,7 @@ const styles = StyleSheet.create({
     fontSize: 17 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.light as any,
-    color: colors.primary.main,
+    color: colors.text.tertiary, // Lighter grey (#a0a0a0) as per Figma
   },
   languageValue: {
     fontWeight: typography.fontWeights.bold as any,
@@ -250,7 +267,7 @@ const styles = StyleSheet.create({
   dropdownArrow: {
     width: 18 * scaleX, // Actual image dimensions (18x9)
     height: 9 * scaleX,
-    tintColor: colors.primary.main, // Match the color scheme
+    tintColor: colors.text.primary, // Dark grey (#1e1e1e) as per Figma
     // No rotation needed - arrow already points in correct direction
   },
   dropdownArrowOpen: {
@@ -268,7 +285,7 @@ const styles = StyleSheet.create({
   // Language Dropdown Menu
   languageDropdownMenu: {
     position: 'absolute',
-    left: 259 * scaleX,
+    right: 35 * scaleX, // Match language selector container position
     top: 120 * scaleX,
     backgroundColor: colors.background.primary,
     borderWidth: 1,
@@ -310,12 +327,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 35 * scaleX,
     top: 189 * scaleX,
-    width: 109 * scaleX,
+    minWidth: 120 * scaleX, // Ensure enough width for "Log in" text
     height: 39 * scaleX,
     fontSize: 34 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: colors.primary.main,
+    includeFontPadding: Platform.OS === 'android' ? false : undefined, // Fix Android text clipping
+    textAlignVertical: 'center',
   },
   // Company Email Label - x=35, y=308
   emailLabel: {

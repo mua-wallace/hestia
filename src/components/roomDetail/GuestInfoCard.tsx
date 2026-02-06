@@ -59,30 +59,34 @@ export default function GuestInfoCard({
   // But for single room type screens, the guest is always at the FIRST position (e.g., 369px for Departure-only).
   // So we need to use RELATIVE offsets, not absolute positions.
   
-  // From Figma: All positions are absolute, convert to relative to container
-  // Container is at absoluteTop, so relative = absolute - absoluteTop
-  const nameTopRelative = 0; // Name at absoluteTop (349 or 542 in combined, or 369 in single), container at absoluteTop, so relative = 0
+  // Vertical spacing: use rowGap from constants for consistent spacing between name and date row
+  const rowGap = (ROOM_DETAIL_GUEST_INFO as { rowGap?: number }).rowGap ?? 8;
+  const nameTopRelative = 0;
+  // Date/time/count row: same baseline, with consistent spacing below name (28 + rowGap)
+  const dateRowOffset = (configKey === 'departure' ? 26 : 28) + rowGap;
+  const dateTopRelative = dateRowOffset;
+  const timeTopRelative = dateRowOffset;
+  const countTopRelative = dateRowOffset;
   
-  // Use fixed relative offsets based on room type, not absolute positions from config
-  // Arrival: date is 28px below name (377 - 349 = 28)
-  // Departure: date is 26px below name (568 - 542 = 26)
-  const dateTopRelative = configKey === 'departure' ? 26 : 28;
-  
-  // Time positions relative to name
-  // Arrival: ETA at 28px (same as date, 377 - 349 = 28)
-  // Departure: EDT at 25px (567 - 542 = 25)
-  const timeTopRelative = configKey === 'departure' ? 25 : 28;
-  
-  // Occupancy positions relative to name
-  // Arrival: 29px (378 - 349 = 29)
-  // Departure: 24px (566 - 542 = 24)
-  const countTopRelative = configKey === 'departure' ? 24 : 29;
-  
-  // All left positions are absolute from screen edge
   const containerLeft = 0;
-  const iconLeftRelative = config.icon.left; // 21
-  const iconTopRelative = 0; // Icon at same top as name (absoluteTop), so relative = 0
-  const nameLeftRelative = config.name.left; // 77
+  const iconLeftRelative = config.icon.left;
+  
+  // Center-align icon vertically with the name row
+  // Name has lineHeight of 21px (from guestName style), so center is at 21/2 = 10.5px
+  // Icon height is 29.919px, so center is at 29.919/2 = 14.9595px
+  // To align centers: iconTop = nameCenter - iconCenter = 10.5 - 14.9595 = -4.4595px
+  const nameLineHeight = 21; // From guestName style lineHeight
+  const iconHeight = config.icon.height; // 29.919px
+  const nameCenter = nameLineHeight / 2;
+  const iconCenter = iconHeight / 2;
+  const iconTopRelative = nameCenter - iconCenter; // Center-align icon with name
+  
+  // Calculate name left position based on icon position and width
+  // Icon left: 21px, Icon width: 28.371px
+  // Name left from Figma: 77px (arrival) or 77px (departure)
+  // Gap = name.left - (icon.left + icon.width) = 77 - (21 + 28.371) = 27.629px
+  // Use the exact Figma value for consistency
+  const nameLeftRelative = config.name.left; // Use exact Figma value (77px)
   // Badge position from Figma: exact left position (189 for arrival, 157 for departure)
   const badgeLeftRelative = config.numberBadge.left; // Exact Figma position
   const badgeTopRelative = config.numberBadge.top - absoluteTop; // Position relative to name (350 - 349 = 1px for arrival)
@@ -135,7 +139,7 @@ export default function GuestInfoCard({
           },
         ]}
       >
-        <Text style={styles.guestName} numberOfLines={1}>
+        <Text style={styles.guestName} numberOfLines={2}>
           {guest.name}
         </Text>
         
@@ -160,7 +164,6 @@ export default function GuestInfoCard({
                 paddingHorizontal: config.categoryBadge.paddingHorizontal * normalizedScaleX,
                 paddingVertical: config.categoryBadge.paddingVertical * normalizedScaleX,
                 borderRadius: config.categoryBadge.borderRadius * normalizedScaleX,
-                marginLeft: 8 * normalizedScaleX, // Fixed spacing after name/number badge
               },
             ]}
           >
@@ -235,18 +238,6 @@ export default function GuestInfoCard({
           </Text>
         </>
       )}
-      
-      {/* Divider after Special Instructions - only show for Arrival, not for Departure/Stayover/Turndown */}
-      {specialInstructions && config.specialInstructions && category === 'Arrival' && (
-        <View
-          style={[
-            styles.dividerAfterSpecial,
-            {
-              top: (ROOM_DETAIL_GUEST_INFO.divider.top - absoluteTop) * normalizedScaleX,
-            },
-          ]}
-        />
-      )}
     </View>
   );
 }
@@ -260,14 +251,15 @@ const styles = StyleSheet.create({
   },
   guestIcon: {
     position: 'absolute',
-    width: 21 * normalizedScaleX,
-    height: 21 * normalizedScaleX,
+    width: 28.371 * normalizedScaleX,
+    height: 29.919 * normalizedScaleX,
   },
   nameAndBadgeRow: {
     position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
-    zIndex: 30, // Ensure name row is above other elements
+    zIndex: 30,
+    gap: 8 * normalizedScaleX, // Spacing between name, number badge, category badge
   },
   guestName: {
     fontSize: 14 * normalizedScaleX,
@@ -275,20 +267,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold' as any,
     color: '#000000',
     lineHeight: 21 * normalizedScaleX,
-    flexShrink: 0, // Don't shrink the name - show it fully
+    flexShrink: 0,
   },
   numberBadge: {
     fontSize: 12 * normalizedScaleX,
     fontFamily: 'Helvetica',
     fontWeight: 'light' as any,
     color: '#334866',
-    marginLeft: 8 * normalizedScaleX,
-    flexShrink: 0, // Don't shrink the badge
+    flexShrink: 0,
   },
   categoryBadge: {
     justifyContent: 'center',
     alignItems: 'center',
-    flexShrink: 0, // Don't shrink the badge
+    flexShrink: 0,
   },
   categoryBadgeText: {
     fontFamily: 'Helvetica',
@@ -311,14 +302,6 @@ const styles = StyleSheet.create({
     color: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.text.color,
     lineHeight: 18 * normalizedScaleX,
     zIndex: 2, // Above divider
-  },
-  dividerAfterSpecial: {
-    position: 'absolute',
-    left: ROOM_DETAIL_GUEST_INFO.divider.left,
-    width: ROOM_DETAIL_GUEST_INFO.divider.width * normalizedScaleX,
-    height: ROOM_DETAIL_GUEST_INFO.divider.height,
-    backgroundColor: ROOM_DETAIL_GUEST_INFO.divider.color,
-    zIndex: 0, // Below content
   },
 });
 

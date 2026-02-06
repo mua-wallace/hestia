@@ -44,9 +44,17 @@ export interface CalculatedPositions {
 /**
  * Calculate all positions for a given room type
  * All positions are absolute from the top of the screen
+ * @param config Room type configuration
+ * @param hasSpecialInstructionsData Whether special instructions are actually present in the room data
+ * @param firstGuestName Optional first guest name to check if it wraps (for Arrival/Departure rooms)
  */
-export function calculatePositions(config: RoomTypeConfig): CalculatedPositions {
+export function calculatePositions(config: RoomTypeConfig, hasSpecialInstructionsData?: boolean, firstGuestName?: string): CalculatedPositions {
   const { guestInfoStartTop, hasSpecialInstructions, numberOfGuests, cardHeight } = config;
+  
+  // Use actual presence of special instructions data if provided, otherwise fall back to config
+  const actuallyHasSpecialInstructions = hasSpecialInstructionsData !== undefined 
+    ? hasSpecialInstructionsData 
+    : hasSpecialInstructions;
   
   // Guest Info Section
   const guestInfoTitle = guestInfoStartTop;
@@ -56,7 +64,16 @@ export function calculatePositions(config: RoomTypeConfig): CalculatedPositions 
   // - Stayover/Turndown: 50px (318 -> 368)
   const gapToGuest = config.type === 'Departure' ? 66 : config.type === 'Stayover' || config.type === 'Turndown' ? 50 : 46;
   const firstGuestTop = guestInfoTitle + gapToGuest;
-  const firstGuestDateTop = firstGuestTop + 28; // Dates appear 28px below name
+  
+  // Check if first guest name wraps (for Arrival/Departure rooms)
+  const MAX_NAME_LENGTH = 23;
+  const firstGuestNameWraps = firstGuestName ? firstGuestName.length > MAX_NAME_LENGTH : false;
+  // When name wraps, GuestInfoDisplay adds WRAP_SPACING (26px) to date top position
+  const WRAP_SPACING = 26; // lineHeight (18px) + marginTop (2px) + bottomMargin (6px)
+  const baseGapToDate = 28; // Base gap from name to date
+  const actualGapToDate = firstGuestNameWraps ? baseGapToDate + WRAP_SPACING : baseGapToDate; // 54px if wrapped, 28px if not
+  
+  const firstGuestDateTop = firstGuestTop + actualGapToDate; // Dates appear below name (adjusted for wrapped names)
   
   let currentTop = firstGuestDateTop;
   
@@ -76,8 +93,8 @@ export function calculatePositions(config: RoomTypeConfig): CalculatedPositions 
     notesDividerTop: 0,
   };
   
-  // Special Instructions (if applicable)
-  if (hasSpecialInstructions) {
+  // Special Instructions (if applicable AND actually present)
+  if (actuallyHasSpecialInstructions) {
     // For Stayover/Turndown: dates at 396, special title at 441, text at 466, divider at 536
     // For Arrival: dates at 377, special title at 417, text at 442, divider at 510
     const isStayoverOrTurndown = config.type === 'Stayover' || config.type === 'Turndown';
@@ -86,18 +103,48 @@ export function calculatePositions(config: RoomTypeConfig): CalculatedPositions 
     positions.specialInstructionsTitle = currentTop + gapToTitle;
     positions.specialInstructionsText = positions.specialInstructionsTitle + 25; // 25px below title
     
-    // Calculate divider position based on special instructions text
-    const gapFromTextToDivider = isStayoverOrTurndown ? 70 : 68;
+    // Calculate divider position - margin top from special instructions text
+    const gapFromTextToDivider = isStayoverOrTurndown ? 44 : 40;
     positions.divider1 = positions.specialInstructionsText + gapFromTextToDivider;
   } else {
-    // No special instructions (Departure only)
+    // No special instructions - place divider closer to dates
     // For Departure: dates at 397, divider at 436 (39px gap)
-    positions.divider1 = currentTop + 39;
+    // For other types without special instructions: use similar spacing
+    const gapToDivider = config.type === 'Departure' ? 39 : 39; // Consistent 39px gap when no special instructions
+    positions.divider1 = currentTop + gapToDivider;
   }
   
   // Second Guest (if dual guest - ArrivalDeparture only)
   if (numberOfGuests === 2) {
-    positions.secondGuestTop = positions.divider1 + 32; // 32px gap from divider to second guest
+    // Calculate actual height of first guest card
+    // Name line height: 21px per line (from guestName style)
+    const nameLineHeight = 21;
+    const nameHeight = firstGuestNameWraps ? nameLineHeight * 2 : nameLineHeight; // 42px if wrapped, 21px if not
+    
+    // Date row height: For Room Detail screen, date + guestcount + ETA are all inline in one row
+    // Approximate height: ~18px (line height of date/time text)
+    const dateRowHeight = 18;
+    
+    // Calculate first guest card bottom position
+    // Name top + name height + actual gap to date (already calculated above) + date row height
+    const firstGuestCardBottom = firstGuestTop + nameHeight + actualGapToDate + dateRowHeight;
+    
+    // Ensure divider is below first guest card with proper spacing
+    // The divider position was already calculated above (either from special instructions or from currentTop)
+    // But we need to ensure it's below the first guest card when name wraps
+    const minGapFromFirstGuest = firstGuestNameWraps ? 28 : 12; // More gap when name wraps (28px vs 12px)
+    const minDividerPosition = firstGuestCardBottom + minGapFromFirstGuest;
+    
+    // Update divider1 position if needed to prevent overlap
+    // This ensures divider is always below the first guest card, even when name wraps
+    if (positions.divider1 < minDividerPosition) {
+      positions.divider1 = minDividerPosition;
+    }
+    
+    // Second guest starts with proper gap from divider
+    // Significantly increase gap when first guest name wraps to push second guest down
+    const gapToSecondGuest = firstGuestNameWraps ? 56 : 32; // Much more gap when name wraps (56px vs 32px)
+    positions.secondGuestTop = positions.divider1 + gapToSecondGuest;
     positions.secondGuestDateTop = positions.secondGuestTop + 26; // 26px from name to dates for departure
     positions.divider2 = positions.secondGuestDateTop + 57; // 57px from dates to divider2
   } else {

@@ -18,10 +18,17 @@ import { MoreMenuItemId } from '../types/more.types';
 import type { RootStackParamList } from '../navigation/types';
 import { BlurView } from 'expo-blur';
 import { FilterState, FilterCounts } from '../types/filter.types';
+import type { CategoryName } from '../types/home.types';
 import AllRoomsFilterModal from '../components/allRooms/AllRoomsFilterModal';
 import { CARD_DIMENSIONS, CARD_COLORS } from '../constants/allRoomsStyles';
 import { getShiftFromTime } from '../utils/shiftUtils';
 import { getStayoverWithLinen } from '../utils/stayoverLinen';
+
+/** When user taps a status badge on Home (e.g. cleaned[2] under Flagged). */
+export type CategoryFilterParam = {
+  category: CategoryName;
+  roomState: 'dirty' | 'inProgress' | 'cleaned' | 'inspected';
+};
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -49,9 +56,11 @@ type AllRoomsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, '
 export default function AllRoomsScreen() {
   const navigation = useNavigation<AllRoomsScreenNavigationProp>();
   const route = useRoute();
+  // Get shift from route params if provided (from HomeScreen), otherwise use time-based shift
+  const routeShift = (route.params as any)?.selectedShift as ShiftType | undefined;
   const [allRoomsData, setAllRoomsData] = useState(() => ({
     ...mockAllRoomsData,
-    selectedShift: getShiftFromTime(),
+    selectedShift: routeShift || getShiftFromTime(),
   }));
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,16 +82,58 @@ export default function AllRoomsScreen() {
   // Check if we came from a stack navigation (show back button) or tab navigation (don't show)
   const showBackButton = (route.params as any)?.showBackButton ?? false;
   const routeFilters = (route.params as any)?.filters as FilterState | undefined;
-  
-  // Initialize local filters with route filters if available
-  const [localFilters, setLocalFilters] = useState<FilterState | undefined>(routeFilters);
-  
-  // Sync local filters with route filters when route params change
+  const routeCategoryFilter = (route.params as any)?.categoryFilter as CategoryFilterParam | undefined;
+
+  // Initialize local filters: merge route filters with categoryFilter.roomState when coming from Home badge tap
+  const [localFilters, setLocalFilters] = useState<FilterState | undefined>(() => {
+    const rf = routeFilters;
+    const cf = routeCategoryFilter;
+    if (cf) {
+      const baseRoomStates = { dirty: false, inProgress: false, cleaned: false, inspected: false, priority: false };
+      return {
+        ...(rf || {}),
+        roomStates: { ...baseRoomStates, ...(rf?.roomStates || {}), [cf.roomState]: true },
+        guests: rf?.guests ?? { arrivals: false, departures: false, turnDown: false, noTask: false, stayOver: false, stayOverWithLinen: false, stayOverNoLinen: false, checkedIn: false, checkedOut: false, checkedOutDueIn: false, outOfOrder: false, outOfService: false },
+        reservations: rf?.reservations ?? { occupied: false, vacant: false },
+        floors: rf?.floors ?? { all: false, first: false, second: false, third: false, fourth: false },
+      } as FilterState;
+    }
+    return rf;
+  });
+
+  // Sync shift from route params when navigating from HomeScreen
+  // Use useFocusEffect to ensure it works properly on both iOS and Android
+  useFocusEffect(
+    React.useCallback(() => {
+      const params = route.params as any;
+      const currentRouteShift = params?.selectedShift as ShiftType | undefined;
+      // Only update if shift is provided and different from current
+      if (currentRouteShift && currentRouteShift !== allRoomsData.selectedShift) {
+        setAllRoomsData(prev => ({ ...prev, selectedShift: currentRouteShift }));
+        // Reset filters when shift changes via navigation
+        setLocalFilters(undefined);
+        setSearchQuery('');
+      }
+    }, [route.params, allRoomsData.selectedShift])
+  );
+
+  // Sync local filters with route params when navigating (e.g. from Home with categoryFilter)
   React.useEffect(() => {
-    if (routeFilters) {
+    if (routeCategoryFilter) {
+      setLocalFilters((prev) => {
+        const baseRoomStates = { dirty: false, inProgress: false, cleaned: false, inspected: false, priority: false };
+        return {
+          ...(prev || routeFilters || {}),
+          roomStates: { ...baseRoomStates, ...(prev?.roomStates || routeFilters?.roomStates || {}), [routeCategoryFilter.roomState]: true },
+          guests: prev?.guests ?? routeFilters?.guests ?? { arrivals: false, departures: false, turnDown: false, noTask: false, stayOver: false, stayOverWithLinen: false, stayOverNoLinen: false, checkedIn: false, checkedOut: false, checkedOutDueIn: false, outOfOrder: false, outOfService: false },
+          reservations: prev?.reservations ?? routeFilters?.reservations ?? { occupied: false, vacant: false },
+          floors: prev?.floors ?? routeFilters?.floors ?? { all: false, first: false, second: false, third: false, fourth: false },
+        } as FilterState;
+      });
+    } else if (routeFilters) {
       setLocalFilters(routeFilters);
     }
-  }, [routeFilters]);
+  }, [routeFilters, routeCategoryFilter]);
   
   // Prefer local filters (user's current selection) over route filters (initial state)
   // This allows reset to work properly by overriding route filters
@@ -100,6 +151,9 @@ export default function AllRoomsScreen() {
 
   const handleShiftToggle = (shift: ShiftType) => {
     setAllRoomsData(prev => ({ ...prev, selectedShift: shift }));
+    // Reset filters when shift changes - filters should be per shift
+    setLocalFilters(undefined);
+    setSearchQuery(''); // Also reset search query
   };
 
   const handleSearch = (text: string) => {
@@ -112,8 +166,12 @@ export default function AllRoomsScreen() {
     setShowFilterModal(true);
   };
 
-  // Calculate filter counts from rooms data
+  // Calculate filter counts from current shift's room list (AM: rooms, PM: roomsPM)
   const filterCounts: FilterCounts = useMemo(() => {
+    const roomsPM = allRoomsData.roomsPM;
+    const usePMRooms = allRoomsData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const sourceRooms = usePMRooms ? roomsPM : allRoomsData.rooms;
+
     const roomStates = {
       dirty: 0,
       inProgress: 0,
@@ -129,6 +187,7 @@ export default function AllRoomsScreen() {
       arrivals: 0,
       departures: 0,
       turnDown: 0,
+      noTask: 0,
       stayOver: 0,
       stayOverWithLinen: 0,
       stayOverNoLinen: 0,
@@ -142,9 +201,9 @@ export default function AllRoomsScreen() {
       occupied: 0,
       vacant: 0,
     };
-    const totalRooms = allRoomsData.rooms.length;
+    const totalRooms = sourceRooms.length;
 
-    allRoomsData.rooms.forEach((room) => {
+    sourceRooms.forEach((room) => {
       // Room state counts
       if (room.houseKeepingStatus === 'Dirty') roomStates.dirty++;
       if (room.houseKeepingStatus === 'InProgress') roomStates.inProgress++;
@@ -162,6 +221,9 @@ export default function AllRoomsScreen() {
       if (room.frontOfficeStatus === 'Turndown') {
         guests.turnDown++;
       }
+      if (room.frontOfficeStatus === 'No Task') {
+        guests.noTask++;
+      }
       if (room.frontOfficeStatus === 'Stayover') {
         guests.stayOver++;
         const withLinen = getStayoverWithLinen(room);
@@ -169,10 +231,11 @@ export default function AllRoomsScreen() {
         else if (withLinen === false) guests.stayOverNoLinen++;
       }
 
-      // Reservation status counts
-      if (room.reservationStatus === 'Occupied') {
+      // Reservation status counts (normalize casing for comparison)
+      const res = (room.reservationStatus || '').toLowerCase();
+      if (res === 'occupied') {
         reservations.occupied++;
-      } else if (room.reservationStatus === 'Vacant') {
+      } else if (res === 'vacant') {
         reservations.vacant++;
       }
     });
@@ -186,7 +249,7 @@ export default function AllRoomsScreen() {
       fourth: 0,
     };
 
-    allRoomsData.rooms.forEach((room) => {
+    sourceRooms.forEach((room) => {
       const roomNum = parseInt(room.roomNumber, 10);
       if (!isNaN(roomNum)) {
         if (roomNum >= 100 && roomNum < 200) {
@@ -210,7 +273,7 @@ export default function AllRoomsScreen() {
     };
 
     return { roomStates, guests, reservations, floors, totalRooms };
-  }, [allRoomsData.rooms]);
+  }, [allRoomsData.rooms, allRoomsData.roomsPM, allRoomsData.selectedShift]);
 
   const handleApplyFilters = (appliedFilters: FilterState) => {
     setLocalFilters(appliedFilters);
@@ -512,15 +575,17 @@ export default function AllRoomsScreen() {
 
   const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
     setShowMorePopup(false);
+    const currentScreen = (route.params as any)?.showBackButton ? 'Rooms' : (route.name as string);
+    const returnToTab = currentScreen as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     switch (menuItem) {
       case 'lostAndFound':
-        navigation.navigate('LostAndFound');
+        navigation.navigate('LostAndFound', { returnToTab });
         break;
       case 'staff':
-        navigation.navigate('Staff');
+        navigation.navigate('Staff', { returnToTab });
         break;
       case 'settings':
-        navigation.navigate('Settings');
+        navigation.navigate('Settings', { returnToTab });
         break;
       default:
         break;
@@ -540,7 +605,28 @@ export default function AllRoomsScreen() {
 
   // Filter rooms based on search query and filters
   const filteredRooms = useMemo(() => {
-    let rooms = allRoomsData.rooms;
+    // PM: use roomsPM from pm-operational-data.csv when available; else filter AM rooms
+    const roomsPM = allRoomsData.roomsPM;
+    const usePMRooms = allRoomsData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    let rooms = usePMRooms ? roomsPM : allRoomsData.rooms;
+
+    // When user tapped a status badge on Home (e.g. cleaned[2] under Flagged), show only that category + status
+    if (routeCategoryFilter) {
+      const { category, roomState } = routeCategoryFilter;
+      const statusToHouseKeeping: Record<string, string> = { dirty: 'Dirty', inProgress: 'InProgress', cleaned: 'Cleaned', inspected: 'Inspected' };
+      const targetStatus = statusToHouseKeeping[roomState];
+      rooms = rooms.filter((room) => {
+        const matchesCategory =
+          category === 'Flagged' ? !!room.flagged
+          : category === 'Arrivals' ? (room.frontOfficeStatus === 'Arrival' || room.frontOfficeStatus === 'Arrival/Departure')
+          : category === 'StayOvers' ? room.frontOfficeStatus === 'Stayover'
+          : category === 'Turndown' ? room.frontOfficeStatus === 'Turndown'
+          : category === 'No Task' ? room.frontOfficeStatus === 'No Task'
+          : category === 'Vacant' ? (room.reservationStatus || '').toLowerCase() === 'vacant'
+          : false;
+        return matchesCategory && room.houseKeepingStatus === targetStatus;
+      });
+    }
 
     // Apply filters if provided
     if (activeFilters) {
@@ -570,7 +656,8 @@ export default function AllRoomsScreen() {
         // If "All" is selected, include all floors (no filtering needed)
       }
 
-      if (hasRoomStateFilter || hasGuestFilter) {
+      // Apply room state, guest, and reservation filters (any combination)
+      if (hasRoomStateFilter || hasGuestFilter || hasReservationFilter) {
         rooms = rooms.filter((room) => {
           // Check room state filters
           if (hasRoomStateFilter) {
@@ -586,12 +673,13 @@ export default function AllRoomsScreen() {
             }
           }
 
-          // Check guest filters
+          // Check guest filters (AM: Arrival/Departure/Stayover/Turndown; PM: Turndown/No Task + reservation Vacant)
           if (hasGuestFilter) {
             const matchesGuest =
               (activeFilters.guests.arrivals && (room.frontOfficeStatus === 'Arrival' || room.frontOfficeStatus === 'Arrival/Departure')) ||
               (activeFilters.guests.departures && (room.frontOfficeStatus === 'Departure' || room.frontOfficeStatus === 'Arrival/Departure')) ||
               (activeFilters.guests.turnDown && room.frontOfficeStatus === 'Turndown') ||
+              (activeFilters.guests.noTask && room.frontOfficeStatus === 'No Task') ||
               (activeFilters.guests.stayOver && room.frontOfficeStatus === 'Stayover') ||
               (activeFilters.guests.stayOverWithLinen && room.frontOfficeStatus === 'Stayover' && getStayoverWithLinen(room) === true) ||
               (activeFilters.guests.stayOverNoLinen && room.frontOfficeStatus === 'Stayover' && getStayoverWithLinen(room) === false);
@@ -601,11 +689,12 @@ export default function AllRoomsScreen() {
             }
           }
 
-          // Check reservation filters
+          // Check reservation filters (case-insensitive for robustness)
           if (hasReservationFilter) {
+            const res = (room.reservationStatus || '').toLowerCase();
             const matchesReservation =
-              (activeFilters.reservations?.occupied && room.reservationStatus === 'Occupied') ||
-              (activeFilters.reservations?.vacant && room.reservationStatus === 'Vacant');
+              (activeFilters.reservations?.occupied && res === 'occupied') ||
+              (activeFilters.reservations?.vacant && res === 'vacant');
 
             if (!matchesReservation) {
               return false;
@@ -628,21 +717,22 @@ export default function AllRoomsScreen() {
       );
     }
 
-    // PM mode: show Turndown, No Task, and Vacant cards
-    if (allRoomsData.selectedShift === 'PM') {
+    // PM mode: when using roomsPM list it's already Turndown/No Task/Vacant; else filter to those
+    if (allRoomsData.selectedShift === 'PM' && !usePMRooms) {
       rooms = rooms.filter(
         (room) =>
           room.frontOfficeStatus === 'Turndown' ||
           room.frontOfficeStatus === 'No Task' ||
           room.reservationStatus === 'Vacant'
       );
-    } else {
-      // AM mode: hide Turndown cards entirely
+    }
+    // AM mode: hide Turndown cards entirely
+    if (allRoomsData.selectedShift === 'AM') {
       rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');
     }
 
     return rooms;
-  }, [allRoomsData.rooms, allRoomsData.selectedShift, activeFilters, searchQuery]);
+  }, [allRoomsData.rooms, allRoomsData.roomsPM, allRoomsData.selectedShift, activeFilters, searchQuery, routeCategoryFilter]);
 
   return (
     <View style={[

@@ -20,6 +20,7 @@ import StaffTabs from '../components/staff/StaffTabs';
 import StaffCard from '../components/staff/StaffCard';
 import { StaffTab, StaffMember } from '../types/staff.types';
 import { scaleX, STAFF_DATE } from '../constants/staffStyles';
+import type { ReturnToTab } from '../navigation/types';
 
 const DESIGN_WIDTH = 440;
 
@@ -131,15 +132,16 @@ export default function StaffScreen() {
 
   const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
     setShowMorePopup(false);
+    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     switch (menuItem) {
       case 'lostAndFound':
-        navigation.navigate('LostAndFound');
+        navigation.navigate('LostAndFound', { returnToTab });
         break;
       case 'staff':
-        navigation.navigate('Staff');
+        navigation.navigate('Staff', { returnToTab });
         break;
       case 'settings':
-        navigation.navigate('Settings');
+        navigation.navigate('Settings', { returnToTab });
         break;
       default:
         break;
@@ -151,7 +153,12 @@ export default function StaffScreen() {
   };
 
   const handleBack = () => {
-    navigation.goBack();
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      const returnToTab = (route.params as { returnToTab?: ReturnToTab } | undefined)?.returnToTab ?? 'Home';
+      navigation.navigate(returnToTab as keyof MainTabsParamList);
+    }
   };
 
   const handleSearch = () => {

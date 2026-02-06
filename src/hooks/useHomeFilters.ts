@@ -16,6 +16,7 @@ const defaultFilterState: FilterState = {
     arrivals: false,
     departures: false,
     turnDown: false,
+    noTask: false,
     stayOver: false,
     stayOverWithLinen: false,
     stayOverNoLinen: false,

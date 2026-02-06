@@ -1,17 +1,46 @@
 /** Front office status: Arrival/Departure, Arrival, Departure, Stayover, Turndown, No Task, Refresh */
 export type FrontOfficeStatus = 'Arrival/Departure' | 'Arrival' | 'Departure' | 'Stayover' | 'Turndown' | 'No Task' | 'Refresh';
-export type ReservationStatus = 'Vacant' | 'Occupied';
+export type ReservationStatus =
+  | 'Due in / Due out'
+  | 'Occupied'
+  | 'Checked out / Due in'
+  | 'Checked in'
+  | 'Checked out'
+  | 'Due out'
+  | 'Vacant'
+  | 'Out Of Order'
+  | 'Due Out / Out Of Order'
+  | 'Checked out / Out Of Order';
 
 export type RoomStatus = 'Dirty' | 'InProgress' | 'Cleaned' | 'Inspected';
 
+/** Promised ready time for the room: 12:00, 13:00, or null */
+export type PromisedTime = '12:00' | '13:00' | null;
+
 export type StatusChangeOption = 'Priority' | 'Dirty' | 'Cleaned' | 'Inspected' | 'Pause' | 'ReturnLater' | 'RefuseService' | 'PromisedTime';
+
+/** Guest count: adults/kids. For ETA (arrival) = checking in; for EDT (departure) = checking out */
+export interface GuestCount {
+  adults: number;
+  kids: number;
+}
+
+/** Dates of stay. For ETA guest = checking in; for EDT guest = checking out. ISO format for parsing. */
+export interface DatesOfStay {
+  from: string; // ISO YYYY-MM-DD
+  to: string;   // ISO YYYY-MM-DD
+}
 
 export interface GuestInfo {
   name: string;
-  dateRange: string;
-  time: string; // ETA: 17:00 or EDT: 12:00
-  guestCount: string; // "2/2"
-  timeLabel: 'ETA' | 'EDT'; // To know if it's arrival or departure
+  /** Dates of stay. For ETA = checking in; for EDT = checking out. Display: DD.MM.YYYY - DD.MM.YYYY */
+  datesOfStay: DatesOfStay;
+  /** Time value: HH:mm (24h) or h:00am/pm for Arrival [ETA] / Departure [EDT]; "N/A" for Stayover, Turndown, No Task, Vacant */
+  time: string;
+  /** ETA = Arrival (check-in); EDT = Departure (check-out); N/A = Stayover, Turndown, No Task, Vacant */
+  timeLabel: 'ETA' | 'EDT' | 'N/A';
+  guestCount: GuestCount; // Display: adults/kids (e.g. 2/2)
+  vipCode?: number; // VIP code badge (e.g., 11 for first guest, 22 for second in Arrival/Departure)
   isVacant?: boolean; // For turndown vacant state
   /** ISO date string (YYYY-MM-DD) of guest arrival; used for Stayover linen calculation (every 2nd day = linen change) */
   arrivalDate?: string;
@@ -31,6 +60,12 @@ export interface NotesInfo {
   hasRushed?: boolean; // If true, show "Rushed and notes"
 }
 
+/** Who made the note - shown in room details */
+export interface NoteMadeBy {
+  name: string;
+  avatar?: any;
+}
+
 export interface RoomCardData {
   id: string;
   roomNumber: string; // "201", "202", etc.
@@ -41,18 +76,31 @@ export interface RoomCardData {
   /** When frontOfficeStatus is Stayover: true = Stayover with Linen (linen change day), false = Stayover no Linen. Computed from arrival date (every 2nd day of stay) if not set. */
   withLinen?: boolean;
   houseKeepingStatus: RoomStatus;
-  reservationStatus?: ReservationStatus; // For distinguishing vacant turndown rooms
+  reservationStatus?: ReservationStatus; // Due in / Due out, Occupied, Checked out / Due in, Checked in, Checked out, Due out, Vacant, Out Of Order, Due Out / Out Of Order, Checked out / Out Of Order
+  promisedTime?: PromisedTime; // 12:00, 13:00, or null
   guests: GuestInfo[]; // Array to support Arrival/Departure rooms with 2 guests
-  staff: StaffInfo;
-  isPriority: boolean; // Red border for priority rooms
-  flagged?: boolean; // If true, room contributes to "Flagged" category on Home
+  roomAttendantAssigned: StaffInfo;
+  isPriority: boolean; // Must be true or false; red border for priority rooms when true
+  flagged: boolean; // Must be true or false; when true, room contributes to "Flagged" category on Home
   notes?: NotesInfo;
-  priorityCount?: number; // Number badge for priority (e.g., 11 for first guest)
-  secondGuestPriorityCount?: number; // For Arrival/Departure rooms with 2 guests (e.g., 22)
+  /** Special instructions for room. null for Departure rooms; displayed in room details for all other room types */
+  specialInstructions?: string | null;
+  /** Room note text. null when no note. Displayed in room details. */
+  roomNotes?: string | null;
+  /** Who made the room note. null when no note. Paired with roomNotes. */
+  noteMadeBy?: NoteMadeBy | null;
+  /** Tasks associated with the room. Displayed in Assigned To card in room details. */
+  tasks?: Array<{
+    id: string;
+    text: string;
+    createdAt: string;
+  }>;
 }
 
 export interface AllRoomsScreenData {
   rooms: RoomCardData[];
+  /** PM shift rooms from pm-operational-data.csv; used when selectedShift === 'PM' */
+  roomsPM?: RoomCardData[];
   selectedShift: 'AM' | 'PM';
 }
 

@@ -15,7 +15,7 @@
 //         guests: [
 //             {
 //                 name: guestNameCheckingIn,
-//                 dateRange: dateRangeCheckingIn,
+//                 datesOfStay: { from: dateFromCheckingIn, to: dateToCheckingIn },
 //                 time: ETA,
 //                 timeLabel: 'ETA',
 //                 guestCount: numberOfAdultsGuestcheckingIn/numberOfKidsGuestcheckingIn,
@@ -23,7 +23,7 @@
 //             },
 //           {
 //             name: guestNameCheckingOut,
-//             dateRange: dateRangeCheckingOut,
+//             datesOfStay: { from: dateFromCheckingOut, to: dateToCheckingOut },
 //             time: EDT,
 //             timeLabel: 'EDT',
 //             guestCount: numberOfAdultsGuestcheckingOut/numberOfKidsGuestcheckingOut,

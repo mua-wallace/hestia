@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import type { CategorySection, ShiftType } from '../../types/home.types';
+import type { CategorySection, ShiftType, RoomStatus } from '../../types/home.types';
 import { colors, typography } from '../../theme';
 import { Dimensions } from 'react-native';
 import { normalizedScaleX, scaleX } from '../../utils/responsive';
@@ -13,11 +13,21 @@ import PriorityBadge from './PriorityBadge';
 interface CategoryCardProps {
   category: CategorySection;
   onPress?: () => void;
+  /** When a status badge with count >= 1 is tapped (e.g. cleaned[2] under Flagged). */
+  onStatusPress?: (category: CategorySection, status: keyof RoomStatus) => void;
   selectedShift?: ShiftType;
 }
 
 // Status configuration
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<
+  keyof RoomStatus,
+  {
+    color: string;
+    icon: any;
+    label: string;
+    rightLabelIcon?: any;
+  }
+> = {
   dirty: {
     color: '#f92424',
     icon: require('../../../assets/icons/dirty-icon.png'),
@@ -40,12 +50,19 @@ const STATUS_CONFIG = {
   },
 };
 
-export default function CategoryCard({ category, onPress, selectedShift }: CategoryCardProps) {
+const CARD_RADIUS = 12 * scaleX;
+
+export default function CategoryCard({ category, onPress, onStatusPress, selectedShift }: CategoryCardProps) {
+  const statusKeys: (keyof RoomStatus)[] = ['dirty', 'inProgress', 'cleaned', 'inspected'];
   return (
-    <TouchableOpacity style={[
-      styles.container,
-      selectedShift === 'PM' && styles.containerPM
-    ]} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={[
+        styles.container,
+        selectedShift === 'PM' && styles.containerPM,
+      ]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
@@ -73,44 +90,22 @@ export default function CategoryCard({ category, onPress, selectedShift }: Categ
         selectedShift === 'PM' && styles.dividerPM
       ]} />
 
-      {/* Status Indicators */}
+      {/* Status Indicators - tappable when count >= 1 to filter by category + status */}
       <View style={styles.statusGrid}>
-        <StatusIndicator
-          color={STATUS_CONFIG.dirty.color}
-          icon={STATUS_CONFIG.dirty.icon}
-          count={category.status.dirty}
-          label={STATUS_CONFIG.dirty.label}
-          iconWidth={29.478}
-          iconHeight={30.769}
-          isPM={selectedShift === 'PM'}
-        />
-        <StatusIndicator
-          color={STATUS_CONFIG.inProgress.color}
-          icon={STATUS_CONFIG.inProgress.icon}
-          count={category.status.inProgress}
-          label={STATUS_CONFIG.inProgress.label}
-          iconWidth={29.478}
-          iconHeight={30.769}
-          isPM={selectedShift === 'PM'}
-        />
-        <StatusIndicator
-          color={STATUS_CONFIG.cleaned.color}
-          icon={STATUS_CONFIG.cleaned.icon}
-          count={category.status.cleaned}
-          label={STATUS_CONFIG.cleaned.label}
-          iconWidth={29.478}
-          iconHeight={30.769}
-          isPM={selectedShift === 'PM'}
-        />
-        <StatusIndicator
-          color={STATUS_CONFIG.inspected.color}
-          icon={STATUS_CONFIG.inspected.icon}
-          count={category.status.inspected}
-          label={STATUS_CONFIG.inspected.label}
-          iconWidth={29.478}
-          iconHeight={30.769}
-          isPM={selectedShift === 'PM'}
-        />
+        {statusKeys.map((statusKey) => (
+          <StatusIndicator
+            key={statusKey}
+            color={STATUS_CONFIG[statusKey].color}
+            icon={STATUS_CONFIG[statusKey].icon}
+            count={category.status[statusKey]}
+            label={STATUS_CONFIG[statusKey].label}
+            iconWidth={29.478}
+            iconHeight={30.769}
+            rightLabelIcon={STATUS_CONFIG[statusKey].rightLabelIcon}
+            isPM={selectedShift === 'PM'}
+            onPress={category.status[statusKey] >= 1 && onStatusPress ? () => onStatusPress(category, statusKey) : undefined}
+          />
+        ))}
       </View>
     </TouchableOpacity>
   );
@@ -118,14 +113,28 @@ export default function CategoryCard({ category, onPress, selectedShift }: Categ
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(238,240,246,0.35)',
-    borderRadius: 12 * scaleX,
+    backgroundColor: '#ffffff', // White background as per Figma design
+    borderRadius: 12 * scaleX, // 12px border radius
     borderWidth: 1,
     borderColor: '#e3e3e3', // Light grey border color
-    height: 223 * scaleX,
-    marginHorizontal: 10 * scaleX,
-    marginVertical: 13 * scaleX,
+    width: 422 * scaleX, // Exact width from Figma: 422px
+    height: 223 * scaleX, // Exact height from Figma: 223px
+    marginHorizontal: 9 * scaleX, // (440 - 422) / 2 = 9px on each side
+    marginVertical: 13 * scaleX, // 13px vertical spacing between cards
+    alignSelf: 'center', // Center cards horizontally
     position: 'relative',
+    overflow: 'hidden', // Keep overflow hidden for clean edges
+    flexDirection: 'column',
+    // Subtle light grey shadow around edges as per Figma design
+    shadowColor: '#a0a0a0', // Light grey shadow color
+    shadowOffset: { width: 0, height: 2 * scaleX },
+    shadowOpacity: 0.15, // Subtle shadow opacity
+    shadowRadius: 8 * scaleX, // Shadow blur radius
+    elevation: 4, // Android shadow
+  },
+  containerPM: {
+    backgroundColor: '#3A3D49', // Dark background for PM mode
+    borderColor: '#4A4D59', // Darker border for PM mode
   },
   header: {
     flexDirection: 'row',
@@ -134,6 +143,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 21 * scaleX,
     paddingTop: 17 * scaleX,
     paddingBottom: 20 * scaleX,
+    minHeight: 67 * scaleX, // Fixed height so all cards (Flagged, Arrivals, StayOvers) leave same space for status row
   },
   titleRow: {
     flexDirection: 'row',
@@ -159,8 +169,8 @@ const styles = StyleSheet.create({
   },
   divider: {
     position: 'absolute',
-    left: 0, // Touch left border
-    right: 0, // Touch right border
+    left: 0,
+    right: 0,
     top: (17 + 30 + 20 + 10) * scaleX, // paddingTop (17) + content height (~30px for 24px font with line height) + paddingBottom (20) + extra spacing (10) = 77px
     height: 1,
     backgroundColor: '#e3e3e3', // Light grey divider color (same as other cards)
@@ -169,13 +179,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#4A4D59', // Darker divider for PM mode
   },
   statusGrid: {
+    flex: 1,
+    minHeight: 90 * scaleX, // Reserve space for icon + label so labels always visible (Flagged, Arrivals, StayOvers)
     flexDirection: 'row',
-    justifyContent: 'space-around', // Use space-around for even distribution
-    alignItems: 'flex-start', // Align all items at the top for consistent vertical alignment
-    paddingLeft: 21 * scaleX, // Match header paddingHorizontal for equal left padding
-    paddingRight: 21 * scaleX, // Match header paddingHorizontal for equal right padding
-    marginTop: 30 * normalizedScaleX,
-    flexWrap: 'nowrap', // Prevent wrapping on small screens
+    justifyContent: 'space-around',
+    alignItems: 'flex-start',
+    paddingLeft: 21 * scaleX,
+    paddingRight: 21 * scaleX,
+    paddingTop: 30 * normalizedScaleX,
+    flexWrap: 'nowrap',
   },
 });
 

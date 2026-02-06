@@ -67,6 +67,8 @@ export default function HomeScreen() {
 
   const handleShiftToggle = (shift: ShiftType) => {
     setHomeData(prev => ({ ...prev, selectedShift: shift }));
+    // Reset filters when shift changes - filters should be per shift
+    setActiveFilters(undefined);
   };
 
   const handleSearch = (text: string) => {
@@ -104,15 +106,16 @@ export default function HomeScreen() {
 
   const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
     setShowMorePopup(false);
+    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     switch (menuItem) {
       case 'lostAndFound':
-        navigation.navigate('LostAndFound');
+        navigation.navigate('LostAndFound', { returnToTab });
         break;
       case 'staff':
-        navigation.navigate('Staff');
+        navigation.navigate('Staff', { returnToTab });
         break;
       case 'settings':
-        navigation.navigate('Settings');
+        navigation.navigate('Settings', { returnToTab });
         break;
       default:
         break;
@@ -124,8 +127,22 @@ export default function HomeScreen() {
   };
 
   const handleCategoryPress = () => {
-    // Navigate to All Rooms screen with back button
-    navigation.navigate('AllRooms', { showBackButton: true, filters: activeFilters } as any);
+    // Navigate to All Rooms screen with back button and current shift
+    navigation.navigate('AllRooms', { 
+      showBackButton: true, 
+      filters: activeFilters,
+      selectedShift: homeData.selectedShift,
+    } as any);
+  };
+
+  /** When user taps a status badge (e.g. cleaned[2] under Flagged), filter and show only those rooms. */
+  const handleStatusPress = (category: CategorySection, roomState: keyof import('../types/home.types').RoomStatus) => {
+    navigation.navigate('AllRooms', {
+      showBackButton: true,
+      filters: activeFilters,
+      categoryFilter: { category: category.name, roomState },
+      selectedShift: homeData.selectedShift, // Pass current shift from HomeScreen
+    } as any);
   };
 
   const getRoomFloor = (roomNumber: string): number | null => {
@@ -185,12 +202,26 @@ export default function HomeScreen() {
   };
 
   const derivedCategories = useMemo(() => {
-    let rooms = filterRoomsByFloors(mockAllRoomsData.rooms, activeFilters);
+    // Use PM rooms data if available and PM shift is selected, otherwise use AM rooms
+    const roomsPM = mockAllRoomsData.roomsPM;
+    const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const sourceRooms = usePMRooms ? roomsPM : mockAllRoomsData.rooms;
+    
+    // Apply filters to the correct shift's data
+    let rooms = filterRoomsByFloors(sourceRooms, activeFilters);
 
     const categories: CategorySection[] = [];
 
     if (homeData.selectedShift === 'PM') {
       // PM shift: show only Turndown, No Task, Vacant cards
+      // If using roomsPM, they're already filtered; otherwise filter from AM rooms
+      if (!usePMRooms) {
+        rooms = rooms.filter((r) => 
+          r.frontOfficeStatus === 'Turndown' ||
+          r.frontOfficeStatus === 'No Task' ||
+          r.reservationStatus === 'Vacant'
+        );
+      }
       const turndownRooms = rooms.filter((r) => r.frontOfficeStatus === 'Turndown');
       const noTaskRooms = rooms.filter((r) => r.frontOfficeStatus === 'No Task');
       const vacantRooms = rooms.filter((r) => r.reservationStatus === 'Vacant');
@@ -199,6 +230,8 @@ export default function HomeScreen() {
       categories.push(buildCategory('Vacant', 'vacant', '#41d541', vacantRooms));
     } else {
       // AM shift: Flagged, Arrivals, StayOvers
+      // Hide Turndown rooms in AM mode
+      rooms = rooms.filter((r) => r.frontOfficeStatus !== 'Turndown');
       const flaggedRooms = rooms.filter((r) => !!r.flagged);
       const arrivalRooms = rooms.filter((r) => r.frontOfficeStatus === 'Arrival' || r.frontOfficeStatus === 'Arrival/Departure');
       const stayOverRooms = rooms.filter((r) => r.frontOfficeStatus === 'Stayover');
@@ -271,6 +304,11 @@ export default function HomeScreen() {
       totalRooms += category.total;
     });
 
+    // Use PM rooms data if available and PM shift is selected, otherwise use AM rooms
+    const roomsPM = mockAllRoomsData.roomsPM;
+    const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const sourceRooms = usePMRooms ? roomsPM : mockAllRoomsData.rooms;
+
     // Reservations (Vacant) - from categories when PM, or from room data
     const reservations = {
       occupied: 0,
@@ -283,19 +321,19 @@ export default function HomeScreen() {
         }
       });
     } else {
-      mockAllRoomsData.rooms.forEach((r) => {
+      sourceRooms.forEach((r) => {
         if (r.reservationStatus === 'Vacant') reservations.vacant += 1;
         else if (r.reservationStatus === 'Occupied') reservations.occupied += 1;
       });
     }
 
-    // Calculate departures from actual room data
-    const departureRooms = mockAllRoomsData.rooms.filter(
+    // Calculate departures from actual room data for current shift
+    const departureRooms = sourceRooms.filter(
       (r) => r.frontOfficeStatus === 'Departure' || r.frontOfficeStatus === 'Arrival/Departure'
     );
     guests.departures = departureRooms.length;
 
-    // Calculate floor counts based on actual room numbers from mockAllRoomsData
+    // Calculate floor counts based on actual room numbers from current shift's data
     // Room numbers: 1xx = 1st floor, 2xx = 2nd floor, 3xx = 3rd floor, 4xx = 4th floor
     const floorCounts = {
       first: 0,
@@ -304,7 +342,7 @@ export default function HomeScreen() {
       fourth: 0,
     };
 
-    mockAllRoomsData.rooms.forEach((room) => {
+    sourceRooms.forEach((room) => {
       const roomNum = parseInt(room.roomNumber, 10);
       if (!isNaN(roomNum)) {
         if (roomNum >= 100 && roomNum < 200) {
@@ -328,7 +366,7 @@ export default function HomeScreen() {
     };
 
     return { roomStates, guests, floors, totalRooms, reservations };
-  }, [homeData, derivedCategories]);
+  }, [homeData.categories, derivedCategories, homeData.selectedShift]);
 
   const handleGoToResults = (filters: FilterState) => {
     // Apply filters to Home stats/cards in both AM and PM modes
@@ -367,6 +405,7 @@ export default function HomeScreen() {
                 key={category.id} 
                 category={category} 
                 onPress={handleCategoryPress}
+                onStatusPress={handleStatusPress}
                 selectedShift={homeData.selectedShift}
               />
             ))}

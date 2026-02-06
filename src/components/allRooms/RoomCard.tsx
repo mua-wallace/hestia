@@ -4,7 +4,7 @@ import { colors, typography } from '../../theme';
 import { scaleX } from '../../constants/allRoomsStyles';
 import type { RoomCardData } from '../../types/allRooms.types';
 import { FRONT_OFFICE_STATUS_ICONS, STATUS_CONFIGS } from '../../types/allRooms.types';
-import { getStayoverDisplayLabel } from '../../utils/stayoverLinen';
+import { getStayoverDisplayLabel, showStayoverWithLinenBadge } from '../../utils/stayoverLinen';
 import type { ShiftType } from '../../types/home.types';
 import {
   CARD_DIMENSIONS,
@@ -44,7 +44,8 @@ interface RoomCardProps {
   selectedShift?: ShiftType;
 }
 
-const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, onStatusPress, onLayout, statusButtonRef, selectedShift }, ref) => {
+const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardProps>(
+  ({ room, onPress, onStatusPress, onLayout, statusButtonRef, selectedShift }, ref) => {
   // Card type detection
   const isArrivalDeparture = room.frontOfficeStatus === 'Arrival/Departure';
   const isDeparture = room.frontOfficeStatus === 'Departure';
@@ -56,19 +57,41 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
   const hasNotes = !!room.notes;
   const isPM = selectedShift === 'PM';
 
+  // Check if any guest names wrap (longer than 23 characters)
+  const MAX_NAME_LENGTH = 23;
+  const wrappedGuestCount = room.guests?.filter(guest => guest.name.length > MAX_NAME_LENGTH).length ?? 0;
+  
+  // Calculate additional height needed when names wrap
+  // Each wrapped name adds: line height (18px) + margin between lines (2px) + margin before date (6px) = 26px total
+  // This matches the spacing used in GuestInfoDisplay for consistency
+  // Scale using scaleX to match card dimension scaling
+  const WRAP_SPACING = GUEST_INFO.name.lineHeight + 2 + 6; // 18 + 2 + 6 = 26px total spacing
+  
+  // For Arrival/Departure cards: only add one wrap spacing regardless of how many guests wrap
+  // The card already has vertical space for 2 guests (292px), so we only need to add height once at the bottom
+  // For single guest cards: add height for each wrapped guest name
+  const wrappedNameExtraHeight = wrappedGuestCount > 0 
+    ? (isArrivalDeparture 
+        ? WRAP_SPACING * scaleX // Add only one wrap spacing for Arrival/Departure cards (regardless of how many guests wrap)
+        : wrappedGuestCount * WRAP_SPACING * scaleX) // For single guest cards, add for each wrapped name
+    : 0;
+
   // Calculate card height based on type - matching Figma exactly
   const getCardHeight = (): number => {
+    let baseHeight: number;
     if (isArrivalDeparture) {
-      return CARD_DIMENSIONS.heights.arrivalDeparture * scaleX; // 292px
+      baseHeight = CARD_DIMENSIONS.heights.arrivalDeparture * scaleX; // 292px
+    } else if (hasNotes) {
+      baseHeight = CARD_DIMENSIONS.heights.withNotes * scaleX; // 222px
+    } else if (isDeparture) {
+      baseHeight = CARD_DIMENSIONS.heights.standard * scaleX; // 177px
+    } else {
+      // Arrival, Stayover, Turndown use 185px
+      baseHeight = CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 185px
     }
-    if (hasNotes) {
-      return CARD_DIMENSIONS.heights.withNotes * scaleX; // 222px
-    }
-    if (isDeparture) {
-      return CARD_DIMENSIONS.heights.standard * scaleX; // 177px
-    }
-    // Arrival, Stayover, Turndown use 185px
-    return CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 185px
+    
+    // Add extra height if names wrap
+    return baseHeight + wrappedNameExtraHeight;
   };
 
   // Determine card background and border - based on status and PM mode
@@ -126,7 +149,7 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
       ]}
       onPress={onPress}
       onLayout={onLayout}
-      activeOpacity={0.7}
+      activeOpacity={0.6} // Slightly lower opacity for smoother press feedback
     >
       {/* Room Header Section */}
       <View style={styles.roomHeader}>
@@ -168,14 +191,32 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
           {`${room.roomCategory} - ${room.credit}`}
         </Text>
         
-        {/* Front Office Status Label (e.g., "Arrival", "Stayover (with Linen)", etc.) */}
-        <Text style={[
-          styles.categoryLabel,
-          !room.isPriority && styles.categoryLabelStandard,
-          selectedShift === 'PM' && styles.categoryLabelPM
+        {/* Front Office Status Label: "Stayover" + "with Linen" badge when applicable, or other status */}
+        <View style={[
+          styles.categoryLabelRow,
+          !room.isPriority && styles.categoryLabelRowStandard
         ]}>
-          {getStayoverDisplayLabel(room)}
-        </Text>
+          <Text style={[
+            styles.categoryLabel,
+            selectedShift === 'PM' && styles.categoryLabelPM
+          ]}>
+            {getStayoverDisplayLabel(room)}
+          </Text>
+          {isStayover && showStayoverWithLinenBadge(room) && (
+            <View style={[
+              styles.withLinenBadge,
+              room.isPriority && styles.withLinenBadgePriority,
+              selectedShift === 'PM' && styles.withLinenBadgePM
+            ]}>
+              <Text style={[
+                styles.withLinenBadgeText,
+                selectedShift === 'PM' && styles.withLinenBadgeTextPM
+              ]}>
+                with Linen
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {/* Guest Container Background - for standard cards without notes */}
@@ -237,16 +278,11 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
           const isFirstGuest = index === 0;
           const isSecondGuest = index === 1;
           
-          // Determine priority count for each guest
-          const guestPriorityCount = isArrivalDeparture
-            ? (isFirstGuest ? room.priorityCount : room.secondGuestPriorityCount)
-            : (isFirstGuest ? room.priorityCount : undefined);
-          
           return (
             <GuestInfoSection 
               key={`guest-${index}`}
               guest={guest} 
-              priorityCount={guestPriorityCount}
+              vipCode={guest.vipCode}
               isPriority={room.isPriority}
               isFirstGuest={isFirstGuest}
               isSecondGuest={isSecondGuest}
@@ -267,7 +303,7 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
 
       {/* Staff Section */}
       <StaffSection 
-        staff={room.staff} 
+        staff={room.roomAttendantAssigned} 
         isPriority={room.isPriority} 
         frontOfficeStatus={room.frontOfficeStatus}
         selectedShift={selectedShift}
@@ -289,7 +325,7 @@ const RoomCard = forwardRef<TouchableOpacity, RoomCardProps>(({ room, onPress, o
       {/* Notes Section - shown for cards with notes */}
       {hasNotes && (
         <NotesSection 
-          notes={room.notes} 
+          notes={room.notes!} 
           isArrivalDeparture={isArrivalDeparture} 
         />
       )}
@@ -308,6 +344,7 @@ const styles = StyleSheet.create({
     marginBottom: CARD_DIMENSIONS.marginBottom * scaleX,
     position: 'relative',
     width: CARD_DIMENSIONS.width * scaleX,
+    alignSelf: 'center', // Center cards horizontally to match Figma
     overflow: 'visible', // Changed to visible to prevent clipping guest names
   },
   priorityBorder: {
@@ -386,18 +423,49 @@ const styles = StyleSheet.create({
     color: ROOM_HEADER.priorityBadge.color,
     lineHeight: ROOM_HEADER.roomType.lineHeight * scaleX,
   },
-  categoryLabel: {
+  categoryLabelRow: {
     position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    left: ROOM_HEADER.category.left * scaleX,
+    top: ROOM_HEADER.category.top * scaleX,
+    gap: 6 * scaleX,
+  },
+  categoryLabelRowStandard: {
+    left: ROOM_HEADER.categoryStandard.left * scaleX,
+  },
+  categoryLabel: {
     fontSize: ROOM_HEADER.category.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: ROOM_HEADER.category.color,
-    left: ROOM_HEADER.category.left * scaleX,
-    top: ROOM_HEADER.category.top * scaleX,
     lineHeight: ROOM_HEADER.category.lineHeight * scaleX,
   },
-  categoryLabelStandard: {
-    left: ROOM_HEADER.categoryStandard.left * scaleX,
+  withLinenBadge: {
+    paddingHorizontal: 8 * scaleX,
+    paddingVertical: 2 * scaleX,
+    borderRadius: 6 * scaleX,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(123, 31, 162, 0.5)',
+  },
+  withLinenBadgePriority: {
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderColor: 'rgba(123, 31, 162, 0.6)',
+  },
+  withLinenBadgePM: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(179, 136, 255, 0.7)',
+  },
+  withLinenBadgeText: {
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.bold as any,
+    color: '#334866',
+  },
+  withLinenBadgeTextPM: {
+    color: '#FFFFFF',
   },
   guestContainerBg: {
     position: 'absolute',

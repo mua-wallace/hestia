@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { colors, typography } from '../../theme';
-import FilterCheckbox from '../home/FilterCheckbox';
 import SeeRoomsButton from '../shared/SeeRoomsButton';
 import { FilterState, FilterCounts } from '../../types/filter.types';
 import { useHomeFilters } from '../../hooks/useHomeFilters';
+import FilterRow from '../home/FilterRow';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -197,6 +197,14 @@ export default function AllRoomsFilterModal({
       selected: filters?.guests?.turnDown || false,
     },
     {
+      id: 'noTask',
+      label: 'No Task',
+      icon: require('../../../assets/icons/turndown-filter-icon.png'),
+      iconColor: undefined,
+      count: safeFilterCounts.guests?.noTask || 0,
+      selected: filters?.guests?.noTask || false,
+    },
+    {
       id: 'checkedIn',
       label: 'Checked In',
       icon: require('../../../assets/icons/checked-in-filter-icon.png'),
@@ -321,18 +329,29 @@ export default function AllRoomsFilterModal({
               {/* Housekeeping Status Section */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Housekeeping Status</Text>
-                {visibleHousekeeping.map((option) => (
-                  <FilterRow
-                    key={option.id}
-                    label={option.label}
-                    icon={option.icon}
-                    iconColor={option.iconColor}
-                    count={option.count}
-                    selected={option.selected}
-                    onToggle={() => toggleRoomState(option.id as any)}
-                    showCount={true}
-                  />
-                ))}
+                {visibleHousekeeping.map((option) => {
+                  const isCircular = option.iconColor !== undefined;
+                  const isPriority = option.id === 'priority';
+                  const shouldUseSpecificColor = ['paused', 'refused', 'returnLater'].includes(option.id);
+                  const iconTintColor = !isCircular && !isPriority && shouldUseSpecificColor ? '#000001' : undefined;
+                  return (
+                    <FilterRow
+                      key={option.id}
+                      label={option.label}
+                      icon={option.icon}
+                      iconColor={option.iconColor}
+                      iconTintColor={iconTintColor}
+                      count={option.count}
+                      selected={option.selected}
+                      onToggle={() => toggleRoomState(option.id as any)}
+                      showCount={true}
+                      isCircular={isCircular}
+                      isPriority={isPriority}
+                      rowPaddingVertical={12}
+                      labelNumberOfLines={2}
+                    />
+                  );
+                })}
                 {hasMoreHousekeeping && (
                   <TouchableOpacity
                     style={styles.seeMoreButton}
@@ -356,18 +375,24 @@ export default function AllRoomsFilterModal({
               {/* Front Office Status Section */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Front Office Status</Text>
-                {visibleFrontOffice.map((option) => (
-                  <FilterRow
-                    key={option.id}
-                    label={option.label}
-                    icon={option.icon}
-                    iconColor={option.iconColor}
-                    count={option.count}
-                    selected={option.selected}
-                    onToggle={() => toggleGuest(option.id as any)}
-                    showCount={true}
-                  />
-                ))}
+                {visibleFrontOffice.map((option) => {
+                  const isCircular = option.iconColor !== undefined;
+                  return (
+                    <FilterRow
+                      key={option.id}
+                      label={option.label}
+                      icon={option.icon}
+                      iconColor={option.iconColor}
+                      count={option.count}
+                      selected={option.selected}
+                      onToggle={() => toggleGuest(option.id as any)}
+                      showCount={true}
+                      isCircular={isCircular}
+                      rowPaddingVertical={12}
+                      labelNumberOfLines={2}
+                    />
+                  );
+                })}
                 {hasMoreFrontOffice && (
                   <TouchableOpacity
                     style={styles.seeMoreButton}
@@ -391,18 +416,24 @@ export default function AllRoomsFilterModal({
               {/* Reservations Status Section */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Reservations Status</Text>
-                {reservationsOptions.map((option) => (
-                  <FilterRow
-                    key={option.id}
-                    label={option.label}
-                    icon={option.icon}
-                    iconColor={option.iconColor}
-                    count={option.count}
-                    selected={option.selected}
-                    onToggle={() => toggleReservation(option.id as 'occupied' | 'vacant')}
-                    showCount={false}
-                  />
-                ))}
+                {reservationsOptions.map((option) => {
+                  const isCircular = option.iconColor !== undefined;
+                  return (
+                    <FilterRow
+                      key={option.id}
+                      label={option.label}
+                      icon={option.icon}
+                      iconColor={option.iconColor}
+                      count={option.count}
+                      selected={option.selected}
+                      onToggle={() => toggleReservation(option.id as 'occupied' | 'vacant')}
+                      showCount={false}
+                      isCircular={isCircular}
+                      rowPaddingVertical={12}
+                      labelNumberOfLines={2}
+                    />
+                  );
+                })}
               </View>
             </ScrollView>
 
@@ -417,93 +448,6 @@ export default function AllRoomsFilterModal({
         </View>
       </View>
     </Modal>
-  );
-}
-
-interface FilterRowProps {
-  label: string;
-  icon: any;
-  iconColor?: string;
-  count: number;
-  selected: boolean;
-  onToggle: () => void;
-  showCount: boolean;
-}
-
-function FilterRow({
-  label,
-  icon,
-  iconColor,
-  count,
-  selected,
-  onToggle,
-  showCount,
-}: FilterRowProps) {
-  const isCircular = iconColor !== undefined;
-  const isPriority = label === 'Priority';
-  // Icons that should use the specific color #000001
-  const specificColorIcons = ['Paused', 'Refused', 'Return Later'];
-  const shouldUseSpecificColor = specificColorIcons.includes(label);
-  const shouldApplyTint = !specificColorIcons.includes(label);
-
-  // Use Math.round to ensure pixel-perfect rendering and prevent blurriness
-  const iconSize = Math.round(24 * scaleX);
-  const iconContainerSize = Math.round(24 * scaleX);
-  const iconMarginLeft = Math.round(12 * scaleX);
-  const circularIconSize = Math.round(16 * scaleX);
-  const circularBorderRadius = Math.round(12 * scaleX);
-
-  return (
-    <TouchableOpacity
-      style={styles.filterRow}
-      onPress={onToggle}
-      activeOpacity={0.7}
-    >
-      <FilterCheckbox checked={selected} onToggle={onToggle} />
-      
-      <View
-        style={[
-          styles.iconContainer,
-          {
-            width: iconContainerSize,
-            height: iconContainerSize,
-            marginLeft: iconMarginLeft,
-          },
-          isCircular && [
-            styles.circularIconContainer,
-            {
-              borderRadius: circularBorderRadius,
-              width: iconContainerSize,
-              height: iconContainerSize,
-            },
-            iconColor && { backgroundColor: iconColor },
-          ],
-        ]}
-      >
-        {icon && (
-          <Image
-            source={icon}
-            style={[
-              isCircular 
-                ? { ...styles.circularIcon, width: circularIconSize, height: circularIconSize }
-                : { ...styles.icon, width: iconSize, height: iconSize },
-              isCircular && { tintColor: '#ffffff' },
-              !isCircular && shouldUseSpecificColor && { tintColor: '#000001' },
-              !isCircular && iconColor && !isPriority && shouldApplyTint && { tintColor: iconColor },
-            ]}
-            resizeMode="contain"
-          />
-        )}
-      </View>
-
-      <Text style={styles.filterLabel}>{label}</Text>
-
-      {showCount && count > 0 && (
-        <Text style={styles.filterCount}>
-          {count} {count === 1 ? 'Room' : 'Rooms'}
-        </Text>
-      )}
-    </TouchableOpacity>
   );
 }
 
@@ -594,39 +538,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.semiBold as any,
     color: colors.text.primary,
     marginBottom: 16 * scaleX,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12 * scaleX,
-  },
-  iconContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  circularIconContainer: {
-    // Dimensions set inline in component
-  },
-  icon: {
-    // Dimensions set inline in component
-  },
-  circularIcon: {
-    // Dimensions set inline in component
-  },
-  filterLabel: {
-    flex: 1,
-    fontSize: 16 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular as any,
-    color: colors.text.primary,
-    marginLeft: 12 * scaleX,
-  },
-  filterCount: {
-    fontSize: 16 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular as any,
-    color: '#A9A9A9',
-    marginLeft: 8 * scaleX,
   },
   seeMoreButton: {
     flexDirection: 'row',
