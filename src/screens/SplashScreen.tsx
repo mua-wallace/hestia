@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { colors, typography } from '../theme';
+import { useAuth } from '../contexts/AuthContext';
 
 type SplashScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Splash'>;
 
@@ -13,17 +14,25 @@ const DESIGN_WIDTH = 440;
 const DESIGN_HEIGHT = 956;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
+const MIN_SPLASH_DURATION_MS = 2000;
+
 export default function SplashScreen() {
   const navigation = useNavigation<SplashScreenNavigationProp>();
+  const { session, isLoading } = useAuth();
 
   useEffect(() => {
-    // Navigate to login after 3 seconds
+    if (isLoading) return;
+
     const timer = setTimeout(() => {
-      navigation.replace('Login');
-    }, 3000);
+      if (session) {
+        navigation.replace('Main');
+      } else {
+        navigation.replace('Login');
+      }
+    }, MIN_SPLASH_DURATION_MS);
 
     return () => clearTimeout(timer);
-  }, [navigation]);
+  }, [isLoading, session, navigation]);
 
   return (
     <View style={styles.container}>
