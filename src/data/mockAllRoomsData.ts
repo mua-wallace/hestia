@@ -489,7 +489,7 @@ export const mockAllRoomsData: {
       promisedTime: "12:00",
       guests: [
         {
-          name: "Ethan Miller & Ulysses Navarro",
+          name: "Ethan Miller & Ulysses",
           datesOfStay: { from: "2026-01-03", to: "2026-01-11" },
           time: "14:00",
           timeLabel: "ETA",
@@ -1871,7 +1871,7 @@ export const mockAllRoomsData: {
       promisedTime: "12:00",
       guests: [
         {
-          name: "Ethan Miller & Ulysses Navarro",
+          name: "Ethan Miller & Ulysses",
           datesOfStay: { from: "2026-01-03", to: "2026-01-11" },
           time: "N/A",
           timeLabel: "N/A",

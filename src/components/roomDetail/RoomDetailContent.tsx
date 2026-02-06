@@ -58,7 +58,9 @@ export default function RoomDetailContent({
   const config = useMemo(() => getRoomTypeConfig(roomType), [roomType]);
   // Calculate positions based on actual presence of special instructions
   const hasSpecialInstructionsData = !!specialInstructions;
-  const positions = useMemo(() => calculatePositions(config, hasSpecialInstructionsData), [config, hasSpecialInstructionsData]);
+  // Get first guest name to check if it wraps (for Arrival/Departure rooms)
+  const firstGuestName = guests.find(g => g.type === 'Arrival')?.guest?.name || guests[0]?.guest?.name;
+  const positions = useMemo(() => calculatePositions(config, hasSpecialInstructionsData, firstGuestName), [config, hasSpecialInstructionsData, firstGuestName]);
 
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
   const statusButtonRef = useRef<TouchableOpacity>(null);
