@@ -44,9 +44,16 @@ export interface CalculatedPositions {
 /**
  * Calculate all positions for a given room type
  * All positions are absolute from the top of the screen
+ * @param config Room type configuration
+ * @param hasSpecialInstructionsData Whether special instructions are actually present in the room data
  */
-export function calculatePositions(config: RoomTypeConfig): CalculatedPositions {
+export function calculatePositions(config: RoomTypeConfig, hasSpecialInstructionsData?: boolean): CalculatedPositions {
   const { guestInfoStartTop, hasSpecialInstructions, numberOfGuests, cardHeight } = config;
+  
+  // Use actual presence of special instructions data if provided, otherwise fall back to config
+  const actuallyHasSpecialInstructions = hasSpecialInstructionsData !== undefined 
+    ? hasSpecialInstructionsData 
+    : hasSpecialInstructions;
   
   // Guest Info Section
   const guestInfoTitle = guestInfoStartTop;
@@ -76,8 +83,8 @@ export function calculatePositions(config: RoomTypeConfig): CalculatedPositions 
     notesDividerTop: 0,
   };
   
-  // Special Instructions (if applicable)
-  if (hasSpecialInstructions) {
+  // Special Instructions (if applicable AND actually present)
+  if (actuallyHasSpecialInstructions) {
     // For Stayover/Turndown: dates at 396, special title at 441, text at 466, divider at 536
     // For Arrival: dates at 377, special title at 417, text at 442, divider at 510
     const isStayoverOrTurndown = config.type === 'Stayover' || config.type === 'Turndown';
@@ -90,9 +97,11 @@ export function calculatePositions(config: RoomTypeConfig): CalculatedPositions 
     const gapFromTextToDivider = isStayoverOrTurndown ? 44 : 40;
     positions.divider1 = positions.specialInstructionsText + gapFromTextToDivider;
   } else {
-    // No special instructions (Departure only)
+    // No special instructions - place divider closer to dates
     // For Departure: dates at 397, divider at 436 (39px gap)
-    positions.divider1 = currentTop + 39;
+    // For other types without special instructions: use similar spacing
+    const gapToDivider = config.type === 'Departure' ? 39 : 39; // Consistent 39px gap when no special instructions
+    positions.divider1 = currentTop + gapToDivider;
   }
   
   // Second Guest (if dual guest - ArrivalDeparture only)

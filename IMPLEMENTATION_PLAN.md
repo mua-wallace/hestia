@@ -74,18 +74,37 @@ The design system is defined in `design-system.json` and includes:
   - Navigation menu (Home, Rooms, Chat, Tickets, More)
 
 ### Phase 5: Rooms Module
-- [ ] Rooms List Screen
-  - Search functionality
-  - Room cards with status
-  - Filter by type (Arrival, Departure, Stayover, Turndown)
-  - Status indicators
-- [ ] Room Details Screen
-  - Guest information
-  - Special instructions
-  - Status change options
-  - Notes section
-  - Lost & Found section
-  - Tabs (Overview, Tickets, Checklist, History)
+- [x] Rooms List Screen ✅
+  - [x] Search functionality
+  - [x] Room cards with status
+  - [x] Filter by type (Arrival, Departure, Stayover, Turndown)
+  - [x] Status indicators
+- [x] Room Details Screen ✅
+  - [x] Header with room number, code, and status indicator
+  - [x] Tab navigation (Overview, Tickets, Checklist, History)
+  - [x] Guest Info Section
+    - [x] Guest icon (21x21px) - matches Figma
+    - [x] Guest name with VIP code and category badge
+    - [x] Dates, guest count, and ETA/EDT display
+    - [x] Proper spacing and alignment
+  - [x] Special Instructions Section
+    - [x] Title and text styling (13px font, proper spacing)
+    - [x] Dynamic positioning when instructions are missing
+  - [x] Assigned To Section
+    - [x] Staff card with profile picture (35x35px)
+    - [x] Name and department display
+    - [x] Reassign button
+    - [x] Task section within card (14px title, 13px text)
+    - [x] Task text properly displayed within card
+  - [x] Lost & Found Section
+    - [x] Icon (53.176x58.008px) - matches Figma
+    - [x] Empty box for Arrival/Departure rooms
+    - [x] Items display for Stayover/Turndown rooms
+  - [x] Notes Section
+    - [x] Icon (31.974x31.974px) - matches Figma
+    - [x] Badge with note count
+    - [x] Note items with staff profile and text
+  - [x] All spacing, fonts, and colors match Figma design exactly
 - [ ] Status Change Modal
   - Status options (Cleaned, Inspected, Dirty, Priority, etc.)
   - Promise time selector

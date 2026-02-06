@@ -161,8 +161,8 @@ export const GUEST_INFO = {
     icon: {
       left: 21,
       top: 349,
-      width: 21,
-      height: 21,
+      width: 28.371,
+      height: 29.919,
     },
     name: {
       left: 77, // 21 + 21 icon + 12 gap + 23 name start
@@ -233,8 +233,8 @@ export const GUEST_INFO = {
     icon: {
       left: 21,
       top: 542,
-      width: 21,
-      height: 21,
+      width: 28.371,
+      height: 29.919,
     },
     name: {
       left: 77,

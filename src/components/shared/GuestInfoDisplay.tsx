@@ -283,9 +283,17 @@ export default function GuestInfoDisplay({
     : {};
 
   // Calculate guest count positions for Arrival, Stayover, Turndown (separate row below date)
-  // Also show separately for Departure when custom positioning is provided (Room Detail screen)
+  // Show below only if time exists and is not N/A, AND guestcount exists
   // For Arrival/Departure cards, guest count is shown inline with date (not below)
-  const shouldShowGuestCountBelow = countPos && ((isArrival || isStayover || isTurndown) || (isDeparture && countIconLeft !== undefined && countTextLeft !== undefined)) && !(isArrivalDeparture || category === 'ArrivalDeparture');
+  // For Room Detail screen, guest count is shown inline (not below)
+  const hasTime = guest.timeLabel && guest.time && guest.timeLabel !== 'N/A';
+  const hasGuestCount = guest.guestCount && guest.guestCount.adults !== undefined;
+  const shouldShowGuestCountBelow = countPos && 
+    !(timeLeft !== undefined && timeTop !== undefined) && // Not Room Detail screen
+    !(isArrivalDeparture || category === 'ArrivalDeparture') && // Not Arrival/Departure
+    ((isArrival || isStayover || isTurndown) || (isDeparture && countIconLeft !== undefined && countTextLeft !== undefined)) &&
+    hasTime && // Time must exist
+    hasGuestCount; // Guest count must exist
   
   // Calculate guest count top position based on adjustedDateTop (which accounts for wrapped names)
   // This ensures guest count is positioned correctly below the date, even when name wraps
@@ -483,21 +491,60 @@ export default function GuestInfoDisplay({
         </View>
       )}
 
-      {/* Date Range Row */}
-      {/* For Arrival/Departure and Departure: date, icon, text on same row */}
-      {/* For Arrival, Stayover, Turndown: date and ETA on same row, icon+text on separate row below */}
-      {/* Exception: If custom time positioning is provided (Room Detail screen), render time separately */}
-      {(isArrivalDeparture || category === 'ArrivalDeparture') || (isDeparture && !hasNotes && !(timeLeft !== undefined && timeTop !== undefined)) ? (
+      {/* Date Range Row - New Layout Logic */}
+      {/* Room Detail Screen: dateOfStay, guestcount, EDT/ETA all in one line */}
+      {/* All Rooms - Arrival/Departure: Line 1 = dateOfStay + guestcount, Line 2 = EDT/ETA */}
+      {/* All Rooms - Other types: Line 1 = dateOfStay + EDT/ETA, Line 2 = guestcount (unless N/A/null, then all on Line 1) */}
+      
+      {timeLeft !== undefined && timeTop !== undefined ? (
+        // ROOM DETAIL SCREEN: dateOfStay, guestcount, EDT/ETA all in one line
+        // If any is N/A or null, display whatever is available
+        <View style={[
+          styles.detailsRow, 
+          { 
+            top: adjustedDateTop * normalizedScaleX,
+            left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+            zIndex: 10,
+            alignItems: 'center',
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+          }
+        ]}>
+          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM, { marginRight: 8 * normalizedScaleX }]}>
+            {formatDatesOfStay(guest.datesOfStay)}
+          </Text>
+          {/* Guest Count - inline if available */}
+          {guest.guestCount && guest.guestCount.adults !== undefined && (
+            <>
+              <Image
+                source={require('../../../assets/icons/people-icon.png')}
+                style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM, { marginLeft: 0, marginRight: 4 * normalizedScaleX }]}
+                resizeMode="contain"
+              />
+              <Text style={[styles.countTextInline, { marginRight: 8 * normalizedScaleX }]}>
+                {formatGuestCount(guest.guestCount)}
+              </Text>
+            </>
+          )}
+          {/* Time (ETA/EDT) - inline if available and not N/A */}
+          {guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && (
+            <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
+              {`${guest.timeLabel}: ${guest.time}`}
+            </Text>
+          )}
+        </View>
+      ) : (isArrivalDeparture || category === 'ArrivalDeparture') ? (
+        // ALL ROOMS - Arrival/Departure: Line 1 = dateOfStay + guestcount
         <View style={[
           styles.detailsRowWithCount, 
           { 
             top: adjustedDateTop * normalizedScaleX,
             left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
-            zIndex: 10, // Lower z-index so time can appear above
+            zIndex: 10,
           }
         ]}>
           <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
-          {countPos && (
+          {countPos && guest.guestCount && guest.guestCount.adults !== undefined && (
             <>
               <Image
                 source={require('../../../assets/icons/people-icon.png')}
@@ -510,45 +557,104 @@ export default function GuestInfoDisplay({
             </>
           )}
         </View>
-      ) : (isArrival || isStayover || isTurndown) && guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && !(timeLeft !== undefined && timeTop !== undefined) ? (
-        // For Arrival, Stayover, Turndown: date and ETA/EDT on same row (skip if N/A)
-        <View style={[
-          styles.detailsRowWithTime, 
-          { 
-            top: adjustedDateTop * normalizedScaleX,
-            left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
-            zIndex: 10, // Lower z-index so time can appear above
+      ) : (isArrival || isStayover || isTurndown || isDeparture) ? (
+        // ALL ROOMS - Other types (Arrival, Stayover, Turndown, Departure)
+        // Check if time is N/A/null OR guestcount is null/N/A - if so, display all on Line 1
+        (() => {
+          const checkHasTime = guest.timeLabel && guest.time && guest.timeLabel !== 'N/A';
+          const checkHasGuestCount = guest.guestCount && guest.guestCount.adults !== undefined;
+          const showAllOnOneLine = !checkHasTime || !checkHasGuestCount;
+          
+          if (showAllOnOneLine) {
+            // Line 1: dateOfStay + EDT/ETA + guestcount (whatever is available)
+            return (
+              <View style={[
+                styles.detailsRow, 
+                { 
+                  top: adjustedDateTop * normalizedScaleX,
+                  left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+                  zIndex: 10,
+                  alignItems: 'center',
+                }
+              ]}>
+                <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>
+                  {formatDatesOfStay(guest.datesOfStay)}
+                </Text>
+                {checkHasTime && (
+                  <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
+                    {`${guest.timeLabel}: ${guest.time}`}
+                  </Text>
+                )}
+                {checkHasGuestCount && (
+                  <>
+                    <Image
+                      source={require('../../../assets/icons/people-icon.png')}
+                      style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM]}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.countTextInline}>
+                      {formatGuestCount(guest.guestCount)}
+                    </Text>
+                  </>
+                )}
+              </View>
+            );
+          } else {
+            // Line 1: dateOfStay + EDT/ETA (guestcount will be on Line 2)
+            return (
+              <View style={[
+                styles.detailsRowWithTime, 
+                { 
+                  top: adjustedDateTop * normalizedScaleX,
+                  left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+                  zIndex: 10,
+                }
+              ]}>
+                <Text style={[styles.dateRange, styles.dateRangeWithTime, isPMTheme && styles.dateRangePM]}>
+                  {formatDatesOfStay(guest.datesOfStay)}
+                </Text>
+                <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
+                  {`${guest.timeLabel}: ${guest.time}`}
+                </Text>
+              </View>
+            );
           }
-        ]}>
-          <Text style={[styles.dateRange, styles.dateRangeWithTime, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
-          <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
-            {`${guest.timeLabel}: ${guest.time}`}
-          </Text>
-        </View>
+        })()
       ) : (
+        // Fallback - just date
         <View style={[
           styles.detailsRow, 
           { 
             top: adjustedDateTop * normalizedScaleX,
             left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
             zIndex: 10,
+            alignItems: 'center',
           }
         ]}>
-          <Text 
-            style={[
-              styles.dateRange, 
-              isPMTheme && styles.dateRangePM,
-              dateLeft !== undefined && timeLeft !== undefined && { marginRight: 12 * normalizedScaleX },
-            ]}
-          >
+          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>
             {formatDatesOfStay(guest.datesOfStay)}
           </Text>
         </View>
       )}
 
-      {/* Guest Count - separate row below date for Arrival, Stayover, Turndown */}
-      {/* Use exact positions from constants, positioned below date range with proper vertical alignment */}
-      {shouldShowGuestCountBelow && (
+      {/* Line 2 Rendering */}
+      {/* Arrival/Departure: Line 2 = EDT/ETA (only for All Rooms screen) */}
+      {(isArrivalDeparture || category === 'ArrivalDeparture') && guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && !(timeLeft !== undefined && timeTop !== undefined) ? (
+        // Arrival/Departure: Line 2 = EDT/ETA
+        <Text style={[
+          styles.time,
+          isPMTheme && styles.timePM,
+          {
+            left: ((timePos?.left ?? 0) - calculatedContainerLeft) * normalizedScaleX,
+            top: (adjustedDateTop + dateTimeRowHeight + 4) * normalizedScaleX, // Below date row
+          }
+        ]}>
+          {`${guest.timeLabel}: ${guest.time}`}
+        </Text>
+      ) : null}
+      
+      {/* Other types: Line 2 = guestcount (only if time exists and is not N/A, and not Room Detail screen) */}
+      {shouldShowGuestCountBelow && guest.guestCount && guest.guestCount.adults !== undefined && !(timeLeft !== undefined && timeTop !== undefined) ? (
         <>
           <Image
             source={require('../../../assets/icons/people-icon.png')}
@@ -557,7 +663,7 @@ export default function GuestInfoDisplay({
               isPMTheme && styles.countIconPM,
               {
                 left: guestCountIconLeft,
-                top: adjustedGuestCountTop + iconVerticalOffset, // Center icon vertically with text
+                top: adjustedGuestCountTop + iconVerticalOffset,
               }
             ]}
             resizeMode="contain"
@@ -567,35 +673,14 @@ export default function GuestInfoDisplay({
             isPMTheme && styles.countTextPM,
             {
               left: guestCountTextLeft,
-              top: adjustedGuestCountTop, // Text top position
+              top: adjustedGuestCountTop,
             }
           ]}>
             {formatGuestCount(guest.guestCount)}
           </Text>
         </>
-      )}
+      ) : null}
 
-      {/* Time (ETA/EDT) - render separately when custom positioning is provided (Room Detail screen) or for Departure cards */}
-      {/* Render LAST to ensure it's on top */}
-      {/* Skip rendering if timeLabel is N/A */}
-      {guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && timePos && (timeLeft !== undefined && timeTop !== undefined || !(isArrival || isStayover || isTurndown || isNoTask)) && (
-        <Text style={[
-          styles.time, 
-          isPMTheme && styles.timePM,
-          { 
-            left: ((timePos.left ?? 0) - calculatedContainerLeft) * normalizedScaleX,
-            // Use adjustedDateTop for time position when name wraps (for Arrival/Stayover/Turndown)
-            // If custom timeTop is provided, use it; otherwise use timePos.top which may have been adjusted
-            top: (timeTop !== undefined 
-              ? timeTop 
-              : (isArrival || isStayover || isTurndown) && shouldWrapName && !(timeLeft !== undefined && timeTop !== undefined)
-                ? adjustedDateTop // Use adjusted position when name wraps
-                : timePos.top ?? 0) * normalizedScaleX,
-          }
-        ]}>
-          {`${guest.timeLabel}: ${guest.time}`}
-        </Text>
-      )}
     </View>
   );
 }
@@ -720,7 +805,7 @@ const styles = StyleSheet.create({
   detailsRow: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'flex-start', // Changed from 'center' to 'flex-start' to prevent clipping
+    alignItems: 'center', // Use 'center' for consistent vertical alignment with other rows
     left: 0,
     minHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Changed from fixed height to minHeight
     zIndex: 5, // Very low z-index so time appears above

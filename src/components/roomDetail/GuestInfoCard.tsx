@@ -70,8 +70,23 @@ export default function GuestInfoCard({
   
   const containerLeft = 0;
   const iconLeftRelative = config.icon.left;
-  const iconTopRelative = 0;
-  const nameLeftRelative = config.name.left + 4; // 4px spacing after icon
+  
+  // Center-align icon vertically with the name row
+  // Name has lineHeight of 21px (from guestName style), so center is at 21/2 = 10.5px
+  // Icon height is 29.919px, so center is at 29.919/2 = 14.9595px
+  // To align centers: iconTop = nameCenter - iconCenter = 10.5 - 14.9595 = -4.4595px
+  const nameLineHeight = 21; // From guestName style lineHeight
+  const iconHeight = config.icon.height; // 29.919px
+  const nameCenter = nameLineHeight / 2;
+  const iconCenter = iconHeight / 2;
+  const iconTopRelative = nameCenter - iconCenter; // Center-align icon with name
+  
+  // Calculate name left position based on icon position and width
+  // Icon left: 21px, Icon width: 28.371px
+  // Name left from Figma: 77px (arrival) or 77px (departure)
+  // Gap = name.left - (icon.left + icon.width) = 77 - (21 + 28.371) = 27.629px
+  // Use the exact Figma value for consistency
+  const nameLeftRelative = config.name.left; // Use exact Figma value (77px)
   // Badge position from Figma: exact left position (189 for arrival, 157 for departure)
   const badgeLeftRelative = config.numberBadge.left; // Exact Figma position
   const badgeTopRelative = config.numberBadge.top - absoluteTop; // Position relative to name (350 - 349 = 1px for arrival)
@@ -236,8 +251,8 @@ const styles = StyleSheet.create({
   },
   guestIcon: {
     position: 'absolute',
-    width: 21 * normalizedScaleX,
-    height: 21 * normalizedScaleX,
+    width: 28.371 * normalizedScaleX,
+    height: 29.919 * normalizedScaleX,
   },
   nameAndBadgeRow: {
     position: 'absolute',

@@ -56,7 +56,9 @@ export default function RoomDetailContent({
 }: RoomDetailScreenProps) {
   // Get room type configuration and calculate positions
   const config = useMemo(() => getRoomTypeConfig(roomType), [roomType]);
-  const positions = useMemo(() => calculatePositions(config), [config]);
+  // Calculate positions based on actual presence of special instructions
+  const hasSpecialInstructionsData = !!specialInstructions;
+  const positions = useMemo(() => calculatePositions(config, hasSpecialInstructionsData), [config, hasSpecialInstructionsData]);
 
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
   const statusButtonRef = useRef<TouchableOpacity>(null);
@@ -309,8 +311,8 @@ export default function RoomDetailContent({
 
               <View style={styles.cardDivider} />
 
-              {/* Task Section */}
-              {taskDescription && (
+              {/* Task Section - Always show if taskDescription exists */}
+              {taskDescription ? (
                 <View style={styles.taskSection}>
                   <Text style={styles.taskTitle}>Task</Text>
                   {/* Hidden text to measure full height */}
@@ -340,7 +342,7 @@ export default function RoomDetailContent({
                     )}
                   </Text>
                 </View>
-              )}
+              ) : null}
             </View>
 
             {/* Lost and Found Section */}
@@ -490,24 +492,25 @@ const styles = StyleSheet.create({
   },
   taskSection: {
     position: 'absolute',
-    left: 16 * scaleX,
-    right: 16 * scaleX,
-    top: 86 * scaleX,
+    left: 16 * scaleX, // Card padding
+    right: 16 * scaleX, // Card padding
+    top: (ASSIGNED_TASK_CARD.divider.top + ASSIGNED_TASK_CARD.divider.height + 6) * scaleX, // Below divider with 6px spacing
     paddingHorizontal: 0,
+    width: ASSIGNED_TASK_CARD.width * scaleX - (ASSIGNED_TASK_CARD.paddingHorizontal * 2 * scaleX), // Full width minus padding
   },
   taskTitle: {
-    fontSize: 14 * scaleX,
+    fontSize: 14 * scaleX, // From Figma: 14px
     fontFamily: 'Helvetica',
-    fontWeight: '700',
-    color: '#1e1e1e',
-    marginBottom: 8 * scaleX,
+    fontWeight: 'bold' as any,
+    color: '#000000', // From Figma: black
+    marginBottom: 8 * scaleX, // Spacing between title and text
   },
   taskText: {
-    fontSize: 13 * scaleX,
+    fontSize: 13 * scaleX, // From Figma: 13px
     fontFamily: 'Helvetica',
-    fontWeight: '300',
-    color: '#000000',
-    lineHeight: 18 * scaleX,
+    fontWeight: '300' as any, // Light weight
+    color: '#000000', // From Figma: black
+    lineHeight: 18 * scaleX, // Proper line height for readability
   },
   hiddenText: {
     position: 'absolute',

@@ -459,13 +459,31 @@ export default function RoomDetailScreen() {
   
   if (roomType === 'ArrivalDeparture') {
     // For Arrival/Departure: first guest is Arrival, second is Departure
-    const arrivalGuest = roomGuests.find((g) => g.timeLabel === 'ETA');
-    const departureGuest = roomGuests.find((g) => g.timeLabel === 'EDT');
-    if (arrivalGuest) {
+    // Try to find guests by timeLabel first, fallback to array position if timeLabel is missing or "N/A"
+    let arrivalGuest = roomGuests.find((g) => g.timeLabel === 'ETA');
+    let departureGuest = roomGuests.find((g) => g.timeLabel === 'EDT');
+    
+    // Fallback: if no ETA found, use first guest as Arrival (if it's not already EDT)
+    if (!arrivalGuest && roomGuests.length >= 1 && roomGuests[0].timeLabel !== 'EDT') {
+      arrivalGuest = roomGuests[0];
+    }
+    
+    // Fallback: if no EDT found, use second guest as Departure (if it exists and is not already ETA)
+    if (!departureGuest && roomGuests.length >= 2 && roomGuests[1].timeLabel !== 'ETA') {
+      departureGuest = roomGuests[1];
+    }
+    
+    // Ensure we don't add the same guest twice
+    if (arrivalGuest && arrivalGuest !== departureGuest) {
       guestsWithTypes.push({ guest: arrivalGuest, type: 'Arrival' });
     }
-    if (departureGuest) {
+    if (departureGuest && departureGuest !== arrivalGuest) {
       guestsWithTypes.push({ guest: departureGuest, type: 'Departure' });
+    }
+    
+    // Edge case: if we only found one guest, make sure we add it
+    if (guestsWithTypes.length === 0 && roomGuests.length > 0) {
+      guestsWithTypes.push({ guest: roomGuests[0], type: 'Arrival' });
     }
   } else if (roomType === 'Arrival') {
     // For Arrival: single arrival guest
