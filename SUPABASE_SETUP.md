@@ -87,7 +87,13 @@ The schema is in `supabase/migrations/`. To apply it:
    - `20250606000000_initial_schema.sql`
    - `20250606000001_rls_policies.sql`
    - `20250606000002_auth_user_sync.sql`
-3. (Optional) Run `supabase/SEED_DATA.sql` for sample data
+   - `20250606000003_add_role_permission_keys.sql`
+3. Run `supabase/SEED_DATA.sql` (permissions, roles, departments, shifts, consumables)
+4. Seed users: add `SUPABASE_SERVICE_ROLE_KEY` to `.env` (from Dashboard → Settings → API), then run:
+   ```bash
+   node scripts/seedUsers.js
+   ```
+   Default password for all seeded users: `Hestia2025!`
 
 ### Option B: Supabase CLI
 
