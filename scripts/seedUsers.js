@@ -46,7 +46,7 @@ const users = [
   { full_name: 'Lucas Braun', email: 'lucas@hestia.ch', role_key: 'night_manager', department_name: 'Night Team' },
   { full_name: 'Nina Keller', email: 'nina@hestia.ch', role_key: 'night_auditor', department_name: 'Night Team' },
   { full_name: 'Paul Steiner', email: 'paul@hestia.ch', role_key: 'night_agent', department_name: 'Night Team' },
-  { full_name: 'David Schmid', email: 'david@hestia.ch', role_key: 'engineering_director', department_name: 'Engineering' },
+  { full_name: 'Felix Fuhrken', email: 'felix@hestia.ch', role_key: 'engineering_director', department_name: 'Engineering' },
   { full_name: 'Marco Rossi', email: 'marco@hestia.ch', role_key: 'engineering_supervisor', department_name: 'Engineering' },
   { full_name: 'Ivan Petrov', email: 'ivan@hestia.ch', role_key: 'shift_engineer', department_name: 'Engineering' },
   { full_name: 'Brian Osei', email: 'brian@hestia.ch', role_key: 'it_admin', department_name: 'Information Technology' },
