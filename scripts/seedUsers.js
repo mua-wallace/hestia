@@ -9,17 +9,22 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
-const fs = require('fs');
-// Load .env if exists
+// Load .env from project root (dotenv is a dependency of expo)
 try {
-  const envPath = path.resolve(__dirname, '../.env');
-  if (fs.existsSync(envPath)) {
-    fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
-      const m = line.match(/^([^#=]+)=(.*)$/);
-      if (m) process.env[m[1].trim()] = m[2].trim();
-    });
-  }
-} catch (_) {}
+  require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+} catch (_) {
+  // Fallback: manual load
+  try {
+    const fs = require('fs');
+    const envPath = path.resolve(__dirname, '../.env');
+    if (fs.existsSync(envPath)) {
+      fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
+        const m = line.match(/^([^#=]+)=(.*)$/);
+        if (m) process.env[m[1].trim()] = m[2].trim().replace(/^["']|["']$/g, '');
+      });
+    }
+  } catch (__) {}
+}
 
 const DEFAULT_PASSWORD = 'Hestia2025!';
 
@@ -64,25 +69,27 @@ async function main() {
 
   const supabase = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
-  // Fetch department and role ids
+  // Fetch department and role ids + role display names
   const { data: departments } = await supabase.from('departments').select('id, name');
-  const { data: roles } = await supabase.from('roles').select('id, key');
+  const { data: roles } = await supabase.from('roles').select('id, key, name');
   const deptMap = Object.fromEntries((departments || []).map(d => [d.name, d.id]));
   const roleMap = Object.fromEntries((roles || []).map(r => [r.key, r.id]));
+  const roleNameMap = Object.fromEntries((roles || []).map(r => [r.key, r.name]));
 
   for (const u of users) {
     try {
+      const roleDisplayName = roleNameMap[u.role_key] || u.role_key;
       const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({
         email: u.email,
         password: DEFAULT_PASSWORD,
         email_confirm: true,
-        user_metadata: { full_name: u.full_name },
+        user_metadata: { full_name: u.full_name, role_name: roleDisplayName },
       });
 
       if (authErr) {
         if (authErr.message?.includes('already been registered')) {
           console.log(`Skip (exists): ${u.email}`);
-          // Update existing user's department/role
+          // Update existing user's department/role and metadata
           const { data: existing } = await supabase.auth.admin.listUsers();
           const user = existing?.users?.find(x => x.email === u.email);
           if (user) {
@@ -91,6 +98,9 @@ async function main() {
               role_id: roleMap[u.role_key] || null,
               full_name: u.full_name,
             }).eq('id', user.id);
+            await supabase.auth.admin.updateUserById(user.id, {
+              user_metadata: { full_name: u.full_name, role_name: roleDisplayName },
+            });
             console.log(`  Updated profile for ${u.email}`);
           }
           continue;

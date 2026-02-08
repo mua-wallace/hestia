@@ -76,6 +76,20 @@ export const formatGuestCount = (guestCount: { adults: number; kids: number } | 
 };
 
 /**
+ * Get initials from full name (first letter of first and last name)
+ * e.g. "John Doe" -> "JD", "Mary" -> "M"
+ */
+export const getInitialsFromFullName = (fullName: string): string => {
+  if (!fullName?.trim()) return '?';
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  const first = parts[0].charAt(0).toUpperCase();
+  const last = parts[parts.length - 1].charAt(0).toUpperCase();
+  return `${first}${last}`;
+};
+
+/**
  * Format dates of stay for display: "DD/MM - DD/MM" (e.g. "03/01 - 06/01"), year trimmed
  * Accepts ISO (YYYY-MM-DD) in from/to
  */

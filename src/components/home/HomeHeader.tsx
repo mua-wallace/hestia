@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
 import { UserProfile, ShiftType } from '../../types/home.types';
 import { colors, typography } from '../../theme';
+import { getInitialsFromFullName } from '../../utils/formatting';
 import AMPMToggle from './AMPMToggle';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -32,11 +33,22 @@ export default function HomeHeader({
       {/* Profile Section */}
       <View style={styles.profileSection}>
         <View style={styles.profileImageContainer}>
-          <Image
-            source={require('../../../assets/icons/profile-image.png')}
-            style={styles.profileImage}
-            resizeMode="cover"
-          />
+          {user.avatar ? (
+            <Image
+              source={{ uri: user.avatar }}
+              style={styles.profileImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.initialsCircle}>
+              <Text style={[
+                styles.initialsText,
+                selectedShift === 'PM' && styles.initialsTextPM
+              ]}>
+                {getInitialsFromFullName(user.name)}
+              </Text>
+            </View>
+          )}
           {user.hasFlag && (
             <View style={styles.flagContainer}>
               <View style={styles.flagCircle}>
@@ -107,6 +119,23 @@ const styles = StyleSheet.create({
     width: 51 * scaleX,
     height: 51 * scaleX,
     borderRadius: 25.5 * scaleX,
+  },
+  initialsCircle: {
+    width: 51 * scaleX,
+    height: 51 * scaleX,
+    borderRadius: 25.5 * scaleX,
+    backgroundColor: colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  initialsText: {
+    fontSize: 17 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.bold as any,
+    color: colors.text.white,
+  },
+  initialsTextPM: {
+    color: colors.text.white,
   },
   flagContainer: {
     position: 'absolute',

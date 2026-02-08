@@ -12,8 +12,10 @@ import SearchInput from '../components/SearchInput';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
-import type { ShiftType } from '../types/home.types';
+import type { ShiftType, UserProfile } from '../types/home.types';
 import { mockHomeData } from '../data/mockHomeData';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { mockChatData } from '../data/mockChatData';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
 import type { MoreMenuItemId } from '../types/more.types';
@@ -38,6 +40,7 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute();
+  const { session } = useAuth();
   const [homeData, setHomeData] = useState(() => ({
     ...mockHomeData,
     selectedShift: getShiftFromTime(),
@@ -49,6 +52,54 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showMorePopup, setShowMorePopup] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
+
+  // Sync user profile from auth session when logged in
+  useEffect(() => {
+    if (!session?.user) return;
+
+    const buildUserProfile = async (): Promise<UserProfile> => {
+      const metadata = session.user.user_metadata;
+      let fullName = metadata?.full_name || session.user.email?.split('@')[0] || 'User';
+      let avatarUrl: string | undefined = metadata?.avatar_url || undefined;
+      let role = metadata?.role_name || metadata?.role || 'Staff';
+
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('full_name, avatar_url, roles(name), departments(name)')
+            .eq('id', session.user.id)
+            .single();
+
+          if (!error && data) {
+            const row = data as {
+              full_name?: string;
+              avatar_url?: string;
+              roles?: { name: string } | null;
+              departments?: { name: string } | null;
+            };
+            if (row.full_name) fullName = row.full_name;
+            if (row.avatar_url) avatarUrl = row.avatar_url;
+            if (row.roles?.name) role = row.roles.name;
+            else if (row.departments?.name) role = row.departments.name;
+          }
+        } catch {
+          // Use session metadata / fallback
+        }
+      }
+
+      return {
+        name: fullName,
+        role,
+        avatar: avatarUrl,
+        hasFlag: mockHomeData.user.hasFlag,
+      };
+    };
+
+    buildUserProfile().then((user) => {
+      setHomeData((prev) => ({ ...prev, user }));
+    });
+  }, [session?.user?.id]);
 
   // Sync activeTab with current route
   useFocusEffect(
