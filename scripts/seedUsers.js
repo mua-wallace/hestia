@@ -28,6 +28,36 @@ try {
 
 const DEFAULT_PASSWORD = 'Hestia2025!';
 
+// Map role_key (used in users) to role name (stored in roles table)
+const ROLE_KEY_TO_NAME = {
+  general_manager: 'General Manager',
+  hotel_manager: 'Hotel Manager',
+  executive_housekeeper: 'Executive Housekeeper',
+  housekeeping_manager: 'Housekeeping Manager',
+  assistant_housekeeping_manager: 'Assistant Housekeeping Manager',
+  housekeeping_senior_supervisor: 'Senior Supervisor',
+  housekeeping_supervisor: 'Supervisor',
+  housekeeping_coordinator: 'Coordinator',
+  room_attendant: 'Housekeeping Room Attendant',
+  houseman: 'Housekeeping Portier / Houseman',
+  laundry_attendant: 'Housekeeping Laundry Attendant',
+  public_area_attendant: 'Housekeeping Public Area Attendant',
+  director_of_rooms: 'Director of Rooms',
+  assistant_director_of_rooms: 'Assistant Director of Rooms',
+  front_office_director: 'Director of Front Office',
+  front_office_manager: 'Front Office Manager',
+  front_office_supervisor: 'Front Office Supervisor',
+  front_office_agent: 'Front Office Agent',
+  front_office_trainee: 'Front Office Trainee',
+  night_manager: 'Night Manager',
+  night_auditor: 'Night Auditor',
+  night_agent: 'Night Agent',
+  engineering_director: 'Director of Engineering',
+  engineering_supervisor: 'Engineering Supervisor',
+  shift_engineer: 'Shift Engineer',
+  it_admin: 'IT Manager',
+};
+
 const users = [
   { full_name: 'Wallace Mua', email: 'wallace@hestia.ch', role_key: 'general_manager', department_name: 'Management' },
   { full_name: 'Stella Kitou', email: 'stella@hestia.ch', role_key: 'hotel_manager', department_name: 'Management' },
@@ -69,16 +99,16 @@ async function main() {
 
   const supabase = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
-  // Fetch department and role ids + role display names
+  // Fetch department and role ids by name
   const { data: departments } = await supabase.from('departments').select('id, name');
-  const { data: roles } = await supabase.from('roles').select('id, key, name');
+  const { data: roles } = await supabase.from('roles').select('id, name');
   const deptMap = Object.fromEntries((departments || []).map(d => [d.name, d.id]));
-  const roleMap = Object.fromEntries((roles || []).map(r => [r.key, r.id]));
-  const roleNameMap = Object.fromEntries((roles || []).map(r => [r.key, r.name]));
+  const roleMap = Object.fromEntries((roles || []).map(r => [r.name, r.id]));
 
   for (const u of users) {
     try {
-      const roleDisplayName = roleNameMap[u.role_key] || u.role_key;
+      const roleDisplayName = ROLE_KEY_TO_NAME[u.role_key] || u.role_key;
+      const roleId = roleMap[roleDisplayName] || null;
       const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({
         email: u.email,
         password: DEFAULT_PASSWORD,
@@ -95,7 +125,7 @@ async function main() {
           if (user) {
             await supabase.from('users').update({
               department_id: deptMap[u.department_name] || null,
-              role_id: roleMap[u.role_key] || null,
+              role_id: roleId,
               full_name: u.full_name,
             }).eq('id', user.id);
             await supabase.auth.admin.updateUserById(user.id, {
@@ -111,7 +141,7 @@ async function main() {
       // Trigger creates users row; update department and role
       await supabase.from('users').update({
         department_id: deptMap[u.department_name] || null,
-        role_id: roleMap[u.role_key] || null,
+        role_id: roleId,
       }).eq('id', authUser.user.id);
 
       console.log(`Created: ${u.email} (${u.role_key})`);

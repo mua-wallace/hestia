@@ -1,99 +1,99 @@
 -- Hestia PMS - Seed Data
--- Run AFTER migrations (including 20250606000003_add_role_permission_keys)
+-- Run AFTER migrations (including 20250606000004_remove_key_from_roles_permissions)
 -- Order: 1. Permissions, 2. Roles, 3. role_permissions, 4. Departments, 5. Shifts, 6. Consumables
 
 -- ============================================
--- 1. PERMISSIONS
+-- 1. PERMISSIONS (name = permission name, description = description)
 -- ============================================
-INSERT INTO permissions (key, name, description) VALUES
-  ('view_dashboard', 'view_dashboard', 'View system dashboard'),
-  ('view_rooms', 'view_rooms', 'View room details'),
-  ('assign_rooms', 'assign_rooms', 'Assign rooms to staff'),
-  ('update_room_status', 'update_room_status', 'Update room work status'),
-  ('view_reservations', 'view_reservations', 'View reservations'),
-  ('create_ticket', 'create_ticket', 'Create tickets'),
-  ('update_ticket', 'update_ticket', 'Update ticket status or details'),
-  ('close_ticket', 'close_ticket', 'Close tickets'),
-  ('record_consumption', 'record_consumption', 'Record guest consumptions'),
-  ('bill_consumption', 'bill_consumption', 'Bill guest consumptions'),
-  ('report_lost_found', 'report_lost_found', 'Report lost and found items'),
-  ('update_lost_found', 'update_lost_found', 'Update lost and found status'),
-  ('view_room_history', 'view_room_history', 'View room activity history'),
-  ('send_message', 'send_message', 'Send chat messages'),
-  ('view_chats', 'view_chats', 'View chats'),
-  ('manage_users', 'manage_users', 'Manage system users'),
-  ('manage_roles', 'manage_roles', 'Manage roles and permissions'),
-  ('system_settings', 'system_settings', 'Manage system settings')
-ON CONFLICT (key) DO NOTHING;
+INSERT INTO permissions (name, description) VALUES
+  ('view_dashboard', 'View system dashboard'),
+  ('view_rooms', 'View room details'),
+  ('assign_rooms', 'Assign rooms to staff'),
+  ('update_room_status', 'Update room work status'),
+  ('view_reservations', 'View reservations'),
+  ('create_ticket', 'Create tickets'),
+  ('update_ticket', 'Update ticket status or details'),
+  ('close_ticket', 'Close tickets'),
+  ('record_consumption', 'Record guest consumptions'),
+  ('bill_consumption', 'Bill guest consumptions'),
+  ('report_lost_found', 'Report lost and found items'),
+  ('update_lost_found', 'Update lost and found status'),
+  ('view_room_history', 'View room activity history'),
+  ('send_message', 'Send chat messages'),
+  ('view_chats', 'View chats'),
+  ('manage_users', 'Manage system users'),
+  ('manage_roles', 'Manage roles and permissions'),
+  ('system_settings', 'Manage system settings')
+ON CONFLICT (name) DO NOTHING;
 
 -- ============================================
--- 2. ROLES
+-- 2. ROLES (name and description)
 -- ============================================
-INSERT INTO roles (key, name, description) VALUES
-  ('executive_housekeeper', 'Executive Housekeeper', 'Housekeeping'),
-  ('housekeeping_manager', 'Housekeeping Manager', 'Housekeeping'),
-  ('assistant_housekeeping_manager', 'Assistant Housekeeping Manager', 'Housekeeping'),
-  ('housekeeping_senior_supervisor', 'Senior Supervisor', 'Housekeeping'),
-  ('housekeeping_supervisor', 'Supervisor', 'Housekeeping'),
-  ('housekeeping_coordinator', 'Coordinator', 'Housekeeping'),
-  ('room_attendant', 'Housekeeping Room Attendant', 'Housekeeping'),
-  ('houseman', 'Housekeeping Portier / Houseman', 'Housekeeping'),
-  ('laundry_attendant', 'Housekeeping Laundry Attendant', 'Housekeeping'),
-  ('public_area_attendant', 'Housekeeping Public Area Attendant', 'Housekeeping'),
-  ('director_of_rooms', 'Director of Rooms', 'Rooms Division'),
-  ('assistant_director_of_rooms', 'Assistant Director of Rooms', 'Rooms Division'),
-  ('front_office_director', 'Director of Front Office', 'Front Office'),
-  ('front_office_manager', 'Front Office Manager', 'Front Office'),
-  ('front_office_supervisor', 'Front Office Supervisor', 'Front Office'),
-  ('front_office_agent', 'Front Office Agent', 'Front Office'),
-  ('front_office_trainee', 'Front Office Trainee', 'Front Office'),
-  ('night_manager', 'Night Manager', 'Night Team'),
-  ('night_auditor', 'Night Auditor', 'Night Team'),
-  ('night_agent', 'Night Agent', 'Night Team'),
-  ('engineering_director', 'Director of Engineering', 'Engineering'),
-  ('engineering_supervisor', 'Engineering Supervisor', 'Engineering'),
-  ('shift_engineer', 'Shift Engineer', 'Engineering'),
-  ('it_admin', 'IT Manager', 'IT'),
-  ('general_manager', 'General Manager', 'Management'),
-  ('hotel_manager', 'Hotel Manager', 'Management')
-ON CONFLICT (key) DO NOTHING;
+INSERT INTO roles (name, description) VALUES
+  ('Executive Housekeeper', 'Executive Housekeeper'),
+  ('Housekeeping Manager', 'Housekeeping Manager'),
+  ('Assistant Housekeeping Manager', 'Assistant Housekeeping Manager'),
+  ('Senior Supervisor', 'Senior Supervisor'),
+  ('Supervisor', 'Supervisor'),
+  ('Coordinator', 'Coordinator'),
+  ('Housekeeping Room Attendant', 'Housekeeping Room Attendant'),
+  ('Housekeeping Portier / Houseman', 'Housekeeping Portier / Houseman'),
+  ('Housekeeping Laundry Attendant', 'Housekeeping Laundry Attendant'),
+  ('Housekeeping Public Area Attendant', 'Housekeeping Public Area Attendant'),
+  ('Director of Rooms', 'Director of Rooms'),
+  ('Assistant Director of Rooms', 'Assistant Director of Rooms'),
+  ('Director of Front Office', 'Director of Front Office'),
+  ('Front Office Manager', 'Front Office Manager'),
+  ('Front Office Supervisor', 'Front Office Supervisor'),
+  ('Front Office Agent', 'Front Office Agent'),
+  ('Front Office Trainee', 'Front Office Trainee'),
+  ('Night Manager', 'Night Manager'),
+  ('Night Auditor', 'Night Auditor'),
+  ('Night Agent', 'Night Agent'),
+  ('Director of Engineering', 'Director of Engineering'),
+  ('Engineering Supervisor', 'Engineering Supervisor'),
+  ('Shift Engineer', 'Shift Engineer'),
+  ('IT Manager', 'IT Manager'),
+  ('General Manager', 'General Manager'),
+  ('Hotel Manager', 'Hotel Manager')
+ON CONFLICT (name) DO NOTHING;
 
 -- ============================================
--- 3. ROLE_PERMISSIONS (map permissions to roles)
+-- 3. ROLE_PERMISSIONS (map permissions to roles by name)
 -- ============================================
-WITH role_perms(role_key, perm_key) AS (
+WITH role_perms(role_name, perm_name) AS (
   VALUES
-    ('executive_housekeeper','view_dashboard'),('executive_housekeeper','view_rooms'),('executive_housekeeper','assign_rooms'),('executive_housekeeper','update_room_status'),('executive_housekeeper','create_ticket'),('executive_housekeeper','close_ticket'),('executive_housekeeper','bill_consumption'),('executive_housekeeper','update_lost_found'),('executive_housekeeper','view_room_history'),('executive_housekeeper','send_message'),('executive_housekeeper','view_chats'),
-    ('housekeeping_manager','view_rooms'),('housekeeping_manager','assign_rooms'),('housekeeping_manager','update_room_status'),('housekeeping_manager','create_ticket'),('housekeeping_manager','update_ticket'),('housekeeping_manager','bill_consumption'),('housekeeping_manager','update_lost_found'),('housekeeping_manager','view_room_history'),('housekeeping_manager','send_message'),('housekeeping_manager','view_chats'),
-    ('assistant_housekeeping_manager','view_rooms'),('assistant_housekeeping_manager','assign_rooms'),('assistant_housekeeping_manager','update_room_status'),('assistant_housekeeping_manager','create_ticket'),('assistant_housekeeping_manager','update_ticket'),('assistant_housekeeping_manager','update_lost_found'),('assistant_housekeeping_manager','view_room_history'),('assistant_housekeeping_manager','send_message'),('assistant_housekeeping_manager','view_chats'),
-    ('housekeeping_senior_supervisor','view_rooms'),('housekeeping_senior_supervisor','assign_rooms'),('housekeeping_senior_supervisor','update_room_status'),('housekeeping_senior_supervisor','create_ticket'),('housekeeping_senior_supervisor','update_ticket'),('housekeeping_senior_supervisor','view_room_history'),('housekeeping_senior_supervisor','send_message'),('housekeeping_senior_supervisor','view_chats'),
-    ('housekeeping_supervisor','view_rooms'),('housekeeping_supervisor','assign_rooms'),('housekeeping_supervisor','update_room_status'),('housekeeping_supervisor','create_ticket'),('housekeeping_supervisor','update_ticket'),('housekeeping_supervisor','send_message'),('housekeeping_supervisor','view_chats'),
-    ('housekeeping_coordinator','view_rooms'),('housekeeping_coordinator','assign_rooms'),('housekeeping_coordinator','send_message'),('housekeeping_coordinator','view_chats'),
-    ('room_attendant','view_rooms'),('room_attendant','update_room_status'),('room_attendant','record_consumption'),('room_attendant','report_lost_found'),('room_attendant','send_message'),('room_attendant','view_chats'),
-    ('houseman','view_rooms'),('houseman','update_room_status'),('houseman','send_message'),('houseman','view_chats'),
-    ('laundry_attendant','view_rooms'),('laundry_attendant','record_consumption'),('laundry_attendant','send_message'),('laundry_attendant','view_chats'),
-    ('public_area_attendant','view_rooms'),('public_area_attendant','update_room_status'),('public_area_attendant','send_message'),('public_area_attendant','view_chats'),
-    ('director_of_rooms','view_dashboard'),('director_of_rooms','view_rooms'),('director_of_rooms','assign_rooms'),('director_of_rooms','view_reservations'),('director_of_rooms','close_ticket'),('director_of_rooms','bill_consumption'),('director_of_rooms','view_room_history'),('director_of_rooms','send_message'),('director_of_rooms','view_chats'),
-    ('assistant_director_of_rooms','view_rooms'),('assistant_director_of_rooms','assign_rooms'),('assistant_director_of_rooms','view_reservations'),('assistant_director_of_rooms','update_ticket'),('assistant_director_of_rooms','view_room_history'),('assistant_director_of_rooms','send_message'),('assistant_director_of_rooms','view_chats'),
-    ('front_office_director','view_dashboard'),('front_office_director','view_rooms'),('front_office_director','view_reservations'),('front_office_director','create_ticket'),('front_office_director','close_ticket'),('front_office_director','bill_consumption'),('front_office_director','view_room_history'),('front_office_director','send_message'),('front_office_director','view_chats'),
-    ('front_office_manager','view_rooms'),('front_office_manager','view_reservations'),('front_office_manager','create_ticket'),('front_office_manager','update_ticket'),('front_office_manager','bill_consumption'),('front_office_manager','send_message'),('front_office_manager','view_chats'),
-    ('front_office_supervisor','view_rooms'),('front_office_supervisor','view_reservations'),('front_office_supervisor','create_ticket'),('front_office_supervisor','update_ticket'),('front_office_supervisor','send_message'),('front_office_supervisor','view_chats'),
-    ('front_office_agent','view_rooms'),('front_office_agent','view_reservations'),('front_office_agent','create_ticket'),('front_office_agent','record_consumption'),('front_office_agent','send_message'),('front_office_agent','view_chats'),
-    ('front_office_trainee','view_rooms'),('front_office_trainee','view_reservations'),('front_office_trainee','send_message'),('front_office_trainee','view_chats'),
-    ('night_manager','view_dashboard'),('night_manager','view_rooms'),('night_manager','view_reservations'),('night_manager','close_ticket'),('night_manager','bill_consumption'),('night_manager','view_room_history'),('night_manager','send_message'),('night_manager','view_chats'),
-    ('night_auditor','view_rooms'),('night_auditor','view_reservations'),('night_auditor','bill_consumption'),('night_auditor','send_message'),('night_auditor','view_chats'),
-    ('night_agent','view_rooms'),('night_agent','create_ticket'),('night_agent','send_message'),('night_agent','view_chats'),
-    ('engineering_director','view_dashboard'),('engineering_director','view_rooms'),('engineering_director','update_ticket'),('engineering_director','close_ticket'),('engineering_director','view_room_history'),('engineering_director','send_message'),('engineering_director','view_chats'),
-    ('engineering_supervisor','view_rooms'),('engineering_supervisor','update_ticket'),('engineering_supervisor','close_ticket'),('engineering_supervisor','send_message'),('engineering_supervisor','view_chats'),
-    ('shift_engineer','view_rooms'),('shift_engineer','update_ticket'),('shift_engineer','send_message'),('shift_engineer','view_chats'),
-    ('it_admin','view_dashboard'),('it_admin','manage_users'),('it_admin','manage_roles'),('it_admin','system_settings'),('it_admin','send_message'),('it_admin','view_chats'),
-    ('general_manager','view_dashboard'),('general_manager','manage_users'),('general_manager','manage_roles'),('general_manager','view_rooms'),('general_manager','view_reservations'),('general_manager','close_ticket'),('general_manager','bill_consumption'),('general_manager','system_settings'),('general_manager','view_room_history'),('general_manager','send_message'),('general_manager','view_chats'),
-    ('hotel_manager','view_dashboard'),('hotel_manager','view_rooms'),('hotel_manager','view_reservations'),('hotel_manager','close_ticket'),('hotel_manager','bill_consumption'),('hotel_manager','view_room_history'),('hotel_manager','send_message'),('hotel_manager','view_chats')
+    ('Executive Housekeeper','view_dashboard'),('Executive Housekeeper','view_rooms'),('Executive Housekeeper','assign_rooms'),('Executive Housekeeper','update_room_status'),('Executive Housekeeper','create_ticket'),('Executive Housekeeper','close_ticket'),('Executive Housekeeper','bill_consumption'),('Executive Housekeeper','update_lost_found'),('Executive Housekeeper','view_room_history'),('Executive Housekeeper','send_message'),('Executive Housekeeper','view_chats'),
+    ('Housekeeping Manager','view_rooms'),('Housekeeping Manager','assign_rooms'),('Housekeeping Manager','update_room_status'),('Housekeeping Manager','create_ticket'),('Housekeeping Manager','update_ticket'),('Housekeeping Manager','bill_consumption'),('Housekeeping Manager','update_lost_found'),('Housekeeping Manager','view_room_history'),('Housekeeping Manager','send_message'),('Housekeeping Manager','view_chats'),
+    ('Assistant Housekeeping Manager','view_rooms'),('Assistant Housekeeping Manager','assign_rooms'),('Assistant Housekeeping Manager','update_room_status'),('Assistant Housekeeping Manager','create_ticket'),('Assistant Housekeeping Manager','update_ticket'),('Assistant Housekeeping Manager','update_lost_found'),('Assistant Housekeeping Manager','view_room_history'),('Assistant Housekeeping Manager','send_message'),('Assistant Housekeeping Manager','view_chats'),
+    ('Senior Supervisor','view_rooms'),('Senior Supervisor','assign_rooms'),('Senior Supervisor','update_room_status'),('Senior Supervisor','create_ticket'),('Senior Supervisor','update_ticket'),('Senior Supervisor','view_room_history'),('Senior Supervisor','send_message'),('Senior Supervisor','view_chats'),
+    ('Supervisor','view_rooms'),('Supervisor','assign_rooms'),('Supervisor','update_room_status'),('Supervisor','create_ticket'),('Supervisor','update_ticket'),('Supervisor','send_message'),('Supervisor','view_chats'),
+    ('Coordinator','view_rooms'),('Coordinator','assign_rooms'),('Coordinator','send_message'),('Coordinator','view_chats'),
+    ('Housekeeping Room Attendant','view_rooms'),('Housekeeping Room Attendant','update_room_status'),('Housekeeping Room Attendant','record_consumption'),('Housekeeping Room Attendant','report_lost_found'),('Housekeeping Room Attendant','send_message'),('Housekeeping Room Attendant','view_chats'),
+    ('Housekeeping Portier / Houseman','view_rooms'),('Housekeeping Portier / Houseman','update_room_status'),('Housekeeping Portier / Houseman','send_message'),('Housekeeping Portier / Houseman','view_chats'),
+    ('Housekeeping Laundry Attendant','view_rooms'),('Housekeeping Laundry Attendant','record_consumption'),('Housekeeping Laundry Attendant','send_message'),('Housekeeping Laundry Attendant','view_chats'),
+    ('Housekeeping Public Area Attendant','view_rooms'),('Housekeeping Public Area Attendant','update_room_status'),('Housekeeping Public Area Attendant','send_message'),('Housekeeping Public Area Attendant','view_chats'),
+    ('Director of Rooms','view_dashboard'),('Director of Rooms','view_rooms'),('Director of Rooms','assign_rooms'),('Director of Rooms','view_reservations'),('Director of Rooms','close_ticket'),('Director of Rooms','bill_consumption'),('Director of Rooms','view_room_history'),('Director of Rooms','send_message'),('Director of Rooms','view_chats'),
+    ('Assistant Director of Rooms','view_rooms'),('Assistant Director of Rooms','assign_rooms'),('Assistant Director of Rooms','view_reservations'),('Assistant Director of Rooms','update_ticket'),('Assistant Director of Rooms','view_room_history'),('Assistant Director of Rooms','send_message'),('Assistant Director of Rooms','view_chats'),
+    ('Director of Front Office','view_dashboard'),('Director of Front Office','view_rooms'),('Director of Front Office','view_reservations'),('Director of Front Office','create_ticket'),('Director of Front Office','close_ticket'),('Director of Front Office','bill_consumption'),('Director of Front Office','view_room_history'),('Director of Front Office','send_message'),('Director of Front Office','view_chats'),
+    ('Front Office Manager','view_rooms'),('Front Office Manager','view_reservations'),('Front Office Manager','create_ticket'),('Front Office Manager','update_ticket'),('Front Office Manager','bill_consumption'),('Front Office Manager','send_message'),('Front Office Manager','view_chats'),
+    ('Front Office Supervisor','view_rooms'),('Front Office Supervisor','view_reservations'),('Front Office Supervisor','create_ticket'),('Front Office Supervisor','update_ticket'),('Front Office Supervisor','send_message'),('Front Office Supervisor','view_chats'),
+    ('Front Office Agent','view_rooms'),('Front Office Agent','view_reservations'),('Front Office Agent','create_ticket'),('Front Office Agent','record_consumption'),('Front Office Agent','send_message'),('Front Office Agent','view_chats'),
+    ('Front Office Trainee','view_rooms'),('Front Office Trainee','view_reservations'),('Front Office Trainee','send_message'),('Front Office Trainee','view_chats'),
+    ('Night Manager','view_dashboard'),('Night Manager','view_rooms'),('Night Manager','view_reservations'),('Night Manager','close_ticket'),('Night Manager','bill_consumption'),('Night Manager','view_room_history'),('Night Manager','send_message'),('Night Manager','view_chats'),
+    ('Night Auditor','view_rooms'),('Night Auditor','view_reservations'),('Night Auditor','bill_consumption'),('Night Auditor','send_message'),('Night Auditor','view_chats'),
+    ('Night Agent','view_rooms'),('Night Agent','create_ticket'),('Night Agent','send_message'),('Night Agent','view_chats'),
+    ('Director of Engineering','view_dashboard'),('Director of Engineering','view_rooms'),('Director of Engineering','update_ticket'),('Director of Engineering','close_ticket'),('Director of Engineering','view_room_history'),('Director of Engineering','send_message'),('Director of Engineering','view_chats'),
+    ('Engineering Supervisor','view_rooms'),('Engineering Supervisor','update_ticket'),('Engineering Supervisor','close_ticket'),('Engineering Supervisor','send_message'),('Engineering Supervisor','view_chats'),
+    ('Shift Engineer','view_rooms'),('Shift Engineer','update_ticket'),('Shift Engineer','send_message'),('Shift Engineer','view_chats'),
+    ('IT Manager','view_dashboard'),('IT Manager','manage_users'),('IT Manager','manage_roles'),('IT Manager','system_settings'),('IT Manager','send_message'),('IT Manager','view_chats'),
+    ('General Manager','view_dashboard'),('General Manager','manage_users'),('General Manager','manage_roles'),('General Manager','view_rooms'),('General Manager','view_reservations'),('General Manager','close_ticket'),('General Manager','bill_consumption'),('General Manager','system_settings'),('General Manager','view_room_history'),('General Manager','send_message'),('General Manager','view_chats'),
+    ('Hotel Manager','view_dashboard'),('Hotel Manager','view_rooms'),('Hotel Manager','view_reservations'),('Hotel Manager','close_ticket'),('Hotel Manager','bill_consumption'),('Hotel Manager','view_room_history'),('Hotel Manager','send_message'),('Hotel Manager','view_chats')
 )
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM role_perms rp
-JOIN roles r ON r.key = rp.role_key
-JOIN permissions p ON p.key = rp.perm_key
+JOIN roles r ON r.name = rp.role_name
+JOIN permissions p ON p.name = rp.perm_name
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- ============================================
