@@ -721,7 +721,6 @@ export default function AllRoomsScreen() {
             // Empty state card when filters don't match any rooms
             <View style={[
               styles.emptyStateCard,
-              allRoomsData.selectedShift === 'PM' && styles.emptyStateCardPM
             ]}>
               <View style={styles.emptyStateIconContainer}>
                 <View style={styles.emptyStateIconCircle}>
@@ -735,13 +734,11 @@ export default function AllRoomsScreen() {
               </View>
               <Text style={[
                 styles.emptyStateTitle,
-                allRoomsData.selectedShift === 'PM' && styles.emptyStateTitlePM
               ]}>
                 No rooms found
               </Text>
               <Text style={[
                 styles.emptyStateMessage,
-                allRoomsData.selectedShift === 'PM' && styles.emptyStateMessagePM
               ]}>
                 The chosen filter options do not match any rooms.{'\n'}Try adjusting your filters or search query.
               </Text>

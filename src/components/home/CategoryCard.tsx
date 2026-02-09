@@ -58,26 +58,17 @@ export default function CategoryCard({ category, onPress, onStatusPress, onPrior
   const statusKeys: (keyof RoomStatus)[] = ['dirty', 'inProgress', 'cleaned', 'inspected'];
   return (
     <TouchableOpacity
-      style={[
-        styles.container,
-        selectedShift === 'PM' && styles.containerPM,
-      ]}
+      style={styles.container}
       onPress={onPress}
       activeOpacity={0.7}
     >
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={[
-            styles.totalCount,
-            selectedShift === 'PM' && styles.totalCountPM
-          ]}>
+          <Text style={styles.totalCount}>
             {category.total}{' '}
           </Text>
-          <Text style={[
-            styles.categoryName,
-            selectedShift === 'PM' && styles.categoryNamePM
-          ]}>
+          <Text style={styles.categoryName}>
             {category.name}
           </Text>
         </View>
@@ -90,10 +81,7 @@ export default function CategoryCard({ category, onPress, onStatusPress, onPrior
       </View>
 
       {/* Divider */}
-      <View style={[
-        styles.divider,
-        selectedShift === 'PM' && styles.dividerPM
-      ]} />
+      <View style={styles.divider} />
 
       {/* Status Indicators - tappable when count >= 1 to filter by category + status */}
       <View style={styles.statusGrid}>
@@ -107,7 +95,7 @@ export default function CategoryCard({ category, onPress, onStatusPress, onPrior
             iconWidth={29.478}
             iconHeight={30.769}
             rightLabelIcon={STATUS_CONFIG[statusKey].rightLabelIcon}
-            isPM={selectedShift === 'PM'}
+            isPM={false}
             onPress={category.status[statusKey] >= 1 && onStatusPress ? () => onStatusPress(category, statusKey) : undefined}
           />
         ))}

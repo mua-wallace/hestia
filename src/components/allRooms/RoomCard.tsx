@@ -55,7 +55,6 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
   const isVacant = room.guests?.[0]?.isVacant === true;
   const isVacantTurndown = isTurndown && isVacant;
   const hasNotes = !!room.notes;
-  const isPM = selectedShift === 'PM';
 
   // Check if any guest names wrap (longer than 23 characters)
   const MAX_NAME_LENGTH = 23;
@@ -94,21 +93,9 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
     return baseHeight + wrappedNameExtraHeight;
   };
 
-  // Determine card background and border - based on status and PM mode
+  // Determine card background and border - always use AM styling (PM keeps screen bg only)
   const getCardStyles = () => {
     const isInProgress = room.houseKeepingStatus === 'InProgress';
-    const isPM = selectedShift === 'PM';
-    
-    if (isPM) {
-      return {
-        backgroundColor: isInProgress 
-          ? '#4A4D59' // Darker gray for PM priority
-          : '#3A3D49', // Dark gray for PM mode
-        borderColor: '#4A4D59', // Darker border for PM mode
-        borderWidth: 1,
-      };
-    }
-    
     return {
       backgroundColor: isInProgress 
         ? CARD_COLORS.priorityBackground 
@@ -174,10 +161,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           styles.roomInfo,
           !room.isPriority && styles.roomInfoStandard
         ]}>
-          <Text style={[
-            styles.roomNumber,
-            selectedShift === 'PM' && styles.roomNumberPM
-          ]}>
+          <Text style={styles.roomNumber}>
             {room.roomNumber}
           </Text>
         </View>
@@ -187,10 +171,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           styles.roomTypeRow,
           !room.isPriority && styles.roomTypeRowStandard,
         ]}>
-          <Text style={[
-            styles.roomTypeText,
-            selectedShift === 'PM' && styles.roomTypePM
-          ]}>
+          <Text style={styles.roomTypeText}>
             {`${room.roomCategory} - ${room.credit}`}
           </Text>
           {room.isPriority && (
@@ -208,22 +189,15 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           styles.categoryLabelRow,
           !room.isPriority && styles.categoryLabelRowStandard
         ]}>
-          <Text style={[
-            styles.categoryLabel,
-            selectedShift === 'PM' && styles.categoryLabelPM
-          ]}>
+          <Text style={styles.categoryLabel}>
             {getStayoverDisplayLabel(room)}
           </Text>
           {isStayover && showStayoverWithLinenBadge(room) && (
             <View style={[
               styles.withLinenBadge,
               room.isPriority && styles.withLinenBadgePriority,
-              selectedShift === 'PM' && styles.withLinenBadgePM
             ]}>
-              <Text style={[
-                styles.withLinenBadgeText,
-                selectedShift === 'PM' && styles.withLinenBadgeTextPM
-              ]}>
+              <Text style={styles.withLinenBadgeText}>
                 with Linen
               </Text>
             </View>
@@ -257,10 +231,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           <View style={styles.vacantLeft}>
             <Image
               source={require('../../../assets/icons/vacant-chair.png')}
-              style={[
-                styles.vacantIcon,
-                isPM && styles.vacantIconPM,
-              ]}
+              style={styles.vacantIcon}
               resizeMode="contain"
             />
             <Text
@@ -291,9 +262,9 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           const isSecondGuest = index === 1;
           
           return (
-            <GuestInfoSection 
+            <GuestInfoSection
               key={`guest-${index}`}
-              guest={guest} 
+              guest={guest}
               vipCode={guest.vipCode}
               isPriority={room.isPriority}
               isFirstGuest={isFirstGuest}
@@ -301,7 +272,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
               hasNotes={hasNotes}
               frontOfficeStatus={room.frontOfficeStatus}
               isArrivalDeparture={isArrivalDeparture}
-              selectedShift={selectedShift}
+              selectedShift="AM"
             />
           );
         })
@@ -314,11 +285,11 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
       ]} />
 
       {/* Staff Section */}
-      <StaffSection 
-        staff={room.roomAttendantAssigned} 
-        isPriority={room.isPriority} 
+      <StaffSection
+        staff={room.roomAttendantAssigned}
+        isPriority={room.isPriority}
         frontOfficeStatus={room.frontOfficeStatus}
-        selectedShift={selectedShift}
+        selectedShift="AM"
       />
 
       {/* Status Button */}
