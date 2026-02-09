@@ -20,6 +20,7 @@
     "@react-navigation/native": "^6.1.9",
     "@react-navigation/native-stack": "^6.9.17",
     "@supabase/supabase-js": "^2.95.3",
+    "base64-arraybuffer": "^1.0.2",
     "expo": "~54.0.33",
     "expo-av": "^16.0.8",
     "expo-blur": "^15.0.8",

@@ -23,6 +23,7 @@ export interface CategorySection {
 export interface UserProfile {
   name: string;
   role: string;
+  department?: string; // Optional - e.g. Housekeeping, Front Office
   avatar?: string; // Optional - when absent, show initials from name
   hasFlag: boolean;
 }

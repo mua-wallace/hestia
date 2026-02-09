@@ -63,6 +63,7 @@ export default function HomeScreen() {
       let fullName = metadata?.full_name || session.user.email?.split('@')[0] || 'User';
       let avatarUrl: string | undefined = metadata?.avatar_url || undefined;
       let role = metadata?.role_name || metadata?.role || 'Staff';
+      let department: string | undefined = metadata?.department || undefined;
 
       if (isSupabaseConfigured) {
         try {
@@ -83,6 +84,7 @@ export default function HomeScreen() {
             if (row.avatar_url) avatarUrl = row.avatar_url;
             if (row.roles?.name) role = row.roles.name;
             else if (row.departments?.name) role = row.departments.name;
+            if (row.departments?.name) department = row.departments.name;
           }
         } catch {
           // Use session metadata / fallback
@@ -92,6 +94,7 @@ export default function HomeScreen() {
       return {
         name: fullName,
         role,
+        department,
         avatar: avatarUrl,
         hasFlag: mockHomeData.user.hasFlag,
       };
@@ -101,6 +104,39 @@ export default function HomeScreen() {
       setHomeData((prev) => ({ ...prev, user }));
     });
   }, [session?.user?.id]);
+
+  // Refetch user profile when returning to screen (e.g. after updating avatar)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!session?.user) return;
+      const buildUserProfile = async (): Promise<UserProfile> => {
+        const metadata = session.user.user_metadata;
+        let fullName = metadata?.full_name || session.user.email?.split('@')[0] || 'User';
+        let avatarUrl: string | undefined = metadata?.avatar_url || undefined;
+        let role = metadata?.role_name || metadata?.role || 'Staff';
+        let department: string | undefined = metadata?.department || undefined;
+        if (isSupabaseConfigured) {
+          try {
+            const { data, error } = await supabase
+              .from('users')
+              .select('full_name, avatar_url, roles(name), departments(name)')
+              .eq('id', session.user.id)
+              .single();
+            if (!error && data) {
+              const row = data as { full_name?: string; avatar_url?: string; roles?: { name: string } | null; departments?: { name: string } | null };
+              if (row.full_name) fullName = row.full_name;
+              if (row.avatar_url) avatarUrl = row.avatar_url;
+              if (row.roles?.name) role = row.roles.name;
+              else if (row.departments?.name) role = row.departments.name;
+              if (row.departments?.name) department = row.departments.name;
+            }
+          } catch { /* ignore */ }
+        }
+        return { name: fullName, role, department, avatar: avatarUrl, hasFlag: mockHomeData.user.hasFlag };
+      };
+      buildUserProfile().then((user) => setHomeData((prev) => ({ ...prev, user })));
+    }, [session?.user?.id])
+  );
 
   // Sync activeTab with current route
   useFocusEffect(
@@ -135,6 +171,10 @@ export default function HomeScreen() {
   const handleBellPress = () => {
     // TODO: Implement notifications
     console.log('Bell pressed');
+  };
+
+  const handleProfilePress = () => {
+    navigation.navigate('UserProfile', { user: homeData.user });
   };
 
   const handleTabPress = (tab: string) => {
@@ -467,6 +507,7 @@ export default function HomeScreen() {
           date={homeData.date}
           onShiftToggle={handleShiftToggle}
           onBellPress={handleBellPress}
+          onProfilePress={handleProfilePress}
         />
 
         {/* Search Bar and Filter - Fixed below header */}

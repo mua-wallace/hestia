@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { UserProfile, ShiftType } from '../../types/home.types';
 import { colors, typography } from '../../theme';
 import { getInitialsFromFullName } from '../../utils/formatting';
@@ -15,6 +15,7 @@ interface HomeHeaderProps {
   date: string;
   onShiftToggle: (shift: ShiftType) => void;
   onBellPress: () => void;
+  onProfilePress?: () => void;
 }
 
 export default function HomeHeader({
@@ -23,15 +24,18 @@ export default function HomeHeader({
   date,
   onShiftToggle,
   onBellPress,
+  onProfilePress,
 }: HomeHeaderProps) {
+  const ProfileWrapper = onProfilePress ? TouchableOpacity : View;
+  const profileWrapperProps = onProfilePress ? { onPress: onProfilePress, activeOpacity: 0.8 } : {};
 
   return (
     <View style={[
       styles.container,
       selectedShift === 'PM' && styles.containerPM
     ]}>
-      {/* Profile Section */}
-      <View style={styles.profileSection}>
+      {/* Profile Section - tappable to open profile */}
+      <ProfileWrapper style={styles.profileSection} {...profileWrapperProps}>
         <View style={styles.profileImageContainer}>
           {user.avatar ? (
             <Image
@@ -75,7 +79,7 @@ export default function HomeHeader({
             {user.role}
           </Text>
         </View>
-      </View>
+      </ProfileWrapper>
 
       {/* AM/PM Toggle */}
       <View style={styles.toggleContainer}>

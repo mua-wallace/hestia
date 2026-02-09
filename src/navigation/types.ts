@@ -9,6 +9,7 @@ export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   Main: undefined;
+  UserProfile: { user: import('../types/home.types').UserProfile };
   AllRooms: { showBackButton?: boolean };
   RoomDetails: { roomId: string };
   RoomDetail: { room: any; roomType: RoomType }; // New reusable room detail screen
