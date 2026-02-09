@@ -15,6 +15,8 @@ interface CategoryCardProps {
   onPress?: () => void;
   /** When a status badge with count >= 1 is tapped (e.g. cleaned[2] under Flagged). */
   onStatusPress?: (category: CategorySection, status: keyof RoomStatus) => void;
+  /** When the priority badge is tapped - filter and show priority rooms. */
+  onPriorityPress?: (category: CategorySection) => void;
   selectedShift?: ShiftType;
 }
 
@@ -52,7 +54,7 @@ const STATUS_CONFIG: Record<
 
 const CARD_RADIUS = 12 * scaleX;
 
-export default function CategoryCard({ category, onPress, onStatusPress, selectedShift }: CategoryCardProps) {
+export default function CategoryCard({ category, onPress, onStatusPress, onPriorityPress, selectedShift }: CategoryCardProps) {
   const statusKeys: (keyof RoomStatus)[] = ['dirty', 'inProgress', 'cleaned', 'inspected'];
   return (
     <TouchableOpacity
@@ -80,7 +82,10 @@ export default function CategoryCard({ category, onPress, onStatusPress, selecte
           </Text>
         </View>
         {category.priority !== undefined && category.priority > 0 && (
-          <PriorityBadge count={category.priority} />
+          <PriorityBadge
+            count={category.priority}
+            onPress={onPriorityPress ? () => onPriorityPress(category) : undefined}
+          />
         )}
       </View>
 

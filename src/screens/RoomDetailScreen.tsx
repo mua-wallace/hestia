@@ -309,8 +309,13 @@ export default function RoomDetailScreen() {
 
     const newStatus = mapStatusOptionToRoomStatus(statusOption);
     setCurrentStatus(newStatus);
-    
-    if (statusOption === 'Pause') {
+
+    // Priority: set room as priority and show "In Progress" (not "Priority")
+    if (statusOption === 'Priority') {
+      setLocalRoom((prev) => ({ ...prev, isPriority: true }));
+      setSelectedStatusText(undefined);
+      setPausedAt(undefined);
+    } else if (statusOption === 'Pause') {
       const now = new Date();
       const hours = now.getHours().toString().padStart(2, '0');
       const minutes = now.getMinutes().toString().padStart(2, '0');
@@ -547,6 +552,7 @@ export default function RoomDetailScreen() {
         roomCode={`${room.roomCategory} - ${room.credit}`}
         status={currentStatus}
         flagged={room.flagged === true}
+        isPriority={localRoom.isPriority === true}
         frontOfficeStatus={room.frontOfficeStatus}
         roomType={roomType}
         guests={guestsWithTypes}

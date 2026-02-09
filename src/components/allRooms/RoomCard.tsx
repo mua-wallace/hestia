@@ -182,14 +182,26 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           </Text>
         </View>
         
-        {/* Room Type + Credit display: "ST2K - 45", "ST2K - 60", etc. */}
-        <Text style={[
-          styles.roomType,
-          !room.isPriority && styles.roomTypeStandard,
-          selectedShift === 'PM' && styles.roomTypePM
+        {/* Room Type + Credit display: "ST2K - 45", "ST2K - 60", etc. + red flag when priority */}
+        <View style={[
+          styles.roomTypeRow,
+          !room.isPriority && styles.roomTypeRowStandard,
         ]}>
-          {`${room.roomCategory} - ${room.credit}`}
-        </Text>
+          <Text style={[
+            styles.roomTypeText,
+            selectedShift === 'PM' && styles.roomTypePM
+          ]}>
+            {`${room.roomCategory} - ${room.credit}`}
+          </Text>
+          {room.isPriority && (
+            <Image
+              source={require('../../../assets/icons/flag.png')}
+              style={styles.roomTypeFlagIcon}
+              resizeMode="contain"
+              tintColor="#f92424"
+            />
+          )}
+        </View>
         
         {/* Front Office Status Label: "Stayover" + "with Linen" badge when applicable, or other status */}
         <View style={[
@@ -403,18 +415,27 @@ const styles = StyleSheet.create({
     color: ROOM_HEADER.roomNumber.color,
     lineHeight: ROOM_HEADER.roomNumber.lineHeight * scaleX,
   },
-  roomType: {
+  roomTypeRow: {
     position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6 * scaleX,
+    left: ROOM_HEADER.roomType.left * scaleX,
+    top: ROOM_HEADER.roomType.top * scaleX,
+  },
+  roomTypeRowStandard: {
+    left: ROOM_HEADER.roomTypeStandard.left * scaleX,
+  },
+  roomTypeText: {
     fontSize: ROOM_HEADER.roomType.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.light as any,
     color: ROOM_HEADER.roomType.color,
     lineHeight: ROOM_HEADER.roomType.lineHeight * scaleX,
-    left: ROOM_HEADER.roomType.left * scaleX, // 111px for priority
-    top: ROOM_HEADER.roomType.top * scaleX, // 22px
   },
-  roomTypeStandard: {
-    left: ROOM_HEADER.roomTypeStandard.left * scaleX, // 118px for standard
+  roomTypeFlagIcon: {
+    width: 14 * scaleX,
+    height: 14 * scaleX,
   },
   priorityTextHeader: {
     fontSize: ROOM_HEADER.priorityBadge.fontSize * scaleX,

@@ -1,19 +1,18 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { typography } from '../../theme';
 import { normalizedScaleX } from '../../utils/responsive';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
-
 interface PriorityBadgeProps {
   count: number;
+  onPress?: () => void;
 }
 
-export default function PriorityBadge({ count }: PriorityBadgeProps) {
+export default function PriorityBadge({ count, onPress }: PriorityBadgeProps) {
+  const isPressable = count >= 1 && !!onPress;
+  const Wrapper = isPressable ? TouchableOpacity : View;
   return (
-    <View style={styles.container}>
+    <Wrapper style={styles.container} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.iconContainer}>
         <Image
           source={require('../../../assets/icons/prioirty-icon.png')}
@@ -28,7 +27,7 @@ export default function PriorityBadge({ count }: PriorityBadgeProps) {
           </View>
         </View>
       )}
-    </View>
+    </Wrapper>
   );
 }
 

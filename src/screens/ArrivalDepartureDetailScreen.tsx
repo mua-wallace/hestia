@@ -237,18 +237,19 @@ export default function ArrivalDepartureDetailScreen() {
 
     // Update local status state to change header background color
     setCurrentStatus(newStatus);
-    
-    // If Pause is selected, don't change the status text (keep "In Progress")
-    // Only set paused time to show "Paused at {time}" below the status
-    if (statusOption === 'Pause') {
+
+    // Priority: set room as priority and show "In Progress" (not "Priority")
+    if (statusOption === 'Priority') {
+      setLocalRoom((prev) => (prev ? { ...prev, isPriority: true } : prev));
+      setSelectedStatusText(undefined);
+      setPausedAt(undefined);
+    } else if (statusOption === 'Pause') {
       const now = new Date();
       const hours = now.getHours().toString().padStart(2, '0');
       const minutes = now.getMinutes().toString().padStart(2, '0');
       setPausedAt(`${hours}:${minutes}`);
-      // Don't set selectedStatusText - keep it undefined so it shows "In Progress"
       setSelectedStatusText(undefined);
     } else {
-      // Update selected status text to show the selected option label
       setSelectedStatusText(statusLabel);
       setPausedAt(undefined);
     }
@@ -437,6 +438,7 @@ export default function ArrivalDepartureDetailScreen() {
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceReason={refuseServiceReason}
         flagged={localRoom?.flagged === true}
+        isPriority={localRoom?.isPriority === true}
         frontOfficeLabel={room.frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}
         showWithLinenBadge={room.frontOfficeStatus === 'Stayover' && showStayoverWithLinenBadge(localRoom)}
       />

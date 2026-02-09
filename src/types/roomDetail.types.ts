@@ -80,6 +80,7 @@ export interface RoomDetailScreenProps {
   // Room status
   status: RoomStatus;
   flagged?: boolean;
+  isPriority?: boolean;
   frontOfficeStatus?: 'Arrival' | 'Departure' | 'Arrival/Departure' | 'Stayover' | 'Turndown' | 'No Task';
   
   // Room type determines layout structure

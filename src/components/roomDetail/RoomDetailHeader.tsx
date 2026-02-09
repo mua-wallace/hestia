@@ -19,6 +19,7 @@ interface RoomDetailHeaderProps {
   promiseTimeAtTimestamp?: number; // Epoch ms when room will be ready; header shows time + countdown
   refuseServiceReason?: string; // Selected reason or custom reason when Refuse Service is confirmed
   flagged?: boolean; // When true, show Flagged variant (Figma 2333-646): light header, red text, Flagged pill
+  isPriority?: boolean; // When true, show red flag in circular white badge after room number
   frontOfficeLabel?: string; // Front office status e.g. "Stayover" - shown below room code for Stayover rooms
   showWithLinenBadge?: boolean; // When true, show "with Linen" badge next to Stayover label
 }
@@ -37,6 +38,7 @@ export default function RoomDetailHeader({
   promiseTimeAtTimestamp,
   refuseServiceReason,
   flagged = false,
+  isPriority = false,
   frontOfficeLabel,
   showWithLinenBadge = false,
 }: RoomDetailHeaderProps) {
@@ -191,17 +193,29 @@ export default function RoomDetailHeader({
         />
       </TouchableOpacity>
 
-      {/* Room Number */}
-      <Text
-        style={[
-          styles.roomNumber,
-          flagged && { color: ROOM_DETAIL_HEADER.flagged.roomNumberColor },
-          isPaused && { color: ROOM_DETAIL_HEADER.paused.roomNumberColor },
-          (isReturnLater || isPromiseTime || isRefuseService) && { color: ROOM_DETAIL_HEADER.returnLater.roomNumberColor },
-        ]}
-      >
-        Room {roomNumber}
-      </Text>
+      {/* Room Number + optional priority flag badge */}
+      <View style={styles.roomNumberRow}>
+        <Text
+          style={[
+            styles.roomNumber,
+            flagged && { color: ROOM_DETAIL_HEADER.flagged.roomNumberColor },
+            isPaused && { color: ROOM_DETAIL_HEADER.paused.roomNumberColor },
+            (isReturnLater || isPromiseTime || isRefuseService) && { color: ROOM_DETAIL_HEADER.returnLater.roomNumberColor },
+          ]}
+        >
+          Room {roomNumber}
+        </Text>
+        {isPriority && (
+          <View style={styles.priorityBadge}>
+            <Image
+              source={require('../../../assets/icons/flag.png')}
+              style={styles.priorityBadgeIcon}
+              resizeMode="contain"
+              tintColor="#f92424"
+            />
+          </View>
+        )}
+      </View>
 
       {/* Room Code */}
       <Text
@@ -378,16 +392,33 @@ const styles = StyleSheet.create({
     height: ROOM_DETAIL_HEADER.backButton.height * scaleX,
     // No transform - use icon directly as is
   },
-  roomNumber: {
+  roomNumberRow: {
     position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    left: 0,
+    right: 0,
+    top: ROOM_DETAIL_HEADER.roomNumber.top * scaleX,
+    gap: 10 * scaleX,
+  },
+  roomNumber: {
     fontSize: ROOM_DETAIL_HEADER.roomNumber.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: ROOM_DETAIL_HEADER.roomNumber.color,
-    top: ROOM_DETAIL_HEADER.roomNumber.top * scaleX,
-    left: 0,
-    right: 0,
-    textAlign: 'center',
+  },
+  priorityBadge: {
+    width: 28 * scaleX,
+    height: 28 * scaleX,
+    borderRadius: 14 * scaleX,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  priorityBadgeIcon: {
+    width: 12 * scaleX,
+    height: 12 * scaleX,
   },
   roomCode: {
     position: 'absolute',

@@ -193,7 +193,17 @@ export default function HomeScreen() {
       showBackButton: true,
       filters: activeFilters,
       categoryFilter: { category: category.name, roomState },
-      selectedShift: homeData.selectedShift, // Pass current shift from HomeScreen
+      selectedShift: homeData.selectedShift,
+    } as any);
+  };
+
+  /** When user taps priority badge, filter and show only priority rooms for that category. */
+  const handlePriorityPress = (category: CategorySection) => {
+    navigation.navigate('AllRooms', {
+      showBackButton: true,
+      filters: activeFilters,
+      categoryFilter: { category: category.name, roomState: 'priority' },
+      selectedShift: homeData.selectedShift,
     } as any);
   };
 
@@ -431,11 +441,12 @@ export default function HomeScreen() {
             }
           >
             {derivedCategories.map((category) => (
-              <CategoryCard 
-                key={category.id} 
-                category={category} 
+              <CategoryCard
+                key={category.id}
+                category={category}
                 onPress={handleCategoryPress}
                 onStatusPress={handleStatusPress}
+                onPriorityPress={handlePriorityPress}
                 selectedShift={homeData.selectedShift}
               />
             ))}

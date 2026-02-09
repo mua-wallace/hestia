@@ -25,10 +25,10 @@ import { getShiftFromTime } from '../utils/shiftUtils';
 import { getStayoverWithLinen } from '../utils/stayoverLinen';
 import { getFloorFromRoomNumber } from '../utils/formatting';
 
-/** When user taps a status badge on Home (e.g. cleaned[2] under Flagged). */
+/** When user taps a status badge or priority badge on Home. */
 export type CategoryFilterParam = {
   category: CategoryName;
-  roomState: 'dirty' | 'inProgress' | 'cleaned' | 'inspected';
+  roomState: 'dirty' | 'inProgress' | 'cleaned' | 'inspected' | 'priority';
 };
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -468,12 +468,16 @@ export default function AllRoomsScreen() {
     // Map status option to RoomStatus
     const newStatus = mapStatusOptionToRoomStatus(statusOption);
 
-    // Update room status in state
+    // Update room status in state; Priority option also sets isPriority true
     setAllRoomsData((prev) => ({
       ...prev,
       rooms: prev.rooms.map((room) =>
         room.id === selectedRoomForStatusChange.id
-          ? { ...room, houseKeepingStatus: newStatus }
+          ? {
+              ...room,
+              houseKeepingStatus: newStatus,
+              ...(statusOption === 'Priority' && { isPriority: true }),
+            }
           : room
       ),
     }));
@@ -593,11 +597,9 @@ export default function AllRoomsScreen() {
     const usePMRooms = allRoomsData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     let rooms = usePMRooms ? roomsPM : allRoomsData.rooms;
 
-    // When user tapped a status badge on Home (e.g. cleaned[2] under Flagged), show only that category + status
+    // When user tapped a status badge or priority badge on Home
     if (routeCategoryFilter) {
       const { category, roomState } = routeCategoryFilter;
-      const statusToHouseKeeping: Record<string, string> = { dirty: 'Dirty', inProgress: 'InProgress', cleaned: 'Cleaned', inspected: 'Inspected' };
-      const targetStatus = statusToHouseKeeping[roomState];
       rooms = rooms.filter((room) => {
         const matchesCategory =
           category === 'Flagged' ? !!room.flagged
@@ -607,6 +609,11 @@ export default function AllRoomsScreen() {
           : category === 'No Task' ? room.frontOfficeStatus === 'No Task'
           : category === 'Vacant' ? (room.reservationStatus || '').toLowerCase() === 'vacant'
           : false;
+        if (roomState === 'priority') {
+          return matchesCategory && !!room.isPriority;
+        }
+        const statusToHouseKeeping: Record<string, string> = { dirty: 'Dirty', inProgress: 'InProgress', cleaned: 'Cleaned', inspected: 'Inspected' };
+        const targetStatus = statusToHouseKeeping[roomState];
         return matchesCategory && room.houseKeepingStatus === targetStatus;
       });
     }

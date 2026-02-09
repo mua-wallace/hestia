@@ -27,6 +27,7 @@ export default function RoomDetailContent({
   roomCode,
   status,
   flagged = false,
+  isPriority = false,
   frontOfficeStatus,
   roomType,
   guests,
@@ -65,9 +66,12 @@ export default function RoomDetailContent({
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
   const statusButtonRef = useRef<TouchableOpacity>(null);
   
-  // Track current status
+  // Track current status - sync with parent when status changes (e.g. from StatusChangeModal)
   const [currentStatus, setCurrentStatus] = useState<RoomStatus>(status);
-  
+  React.useEffect(() => {
+    setCurrentStatus(status);
+  }, [status]);
+
   // Handle status change
   const handleStatusChange = (newStatus: RoomStatus) => {
     setCurrentStatus(newStatus);
@@ -203,6 +207,7 @@ export default function RoomDetailContent({
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceReason={refuseServiceReason}
         flagged={flagged}
+        isPriority={isPriority}
         frontOfficeLabel={frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}
         showWithLinenBadge={showWithLinenBadge}
       />
