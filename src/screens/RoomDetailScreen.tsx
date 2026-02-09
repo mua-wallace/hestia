@@ -255,12 +255,6 @@ export default function RoomDetailScreen() {
     }
   };
 
-  const handleFlagToggle = (flagged: boolean) => {
-    setLocalRoom((prev) => ({ ...prev, flagged }));
-    // TODO: Save to backend/API
-    console.log('Flag toggled for room:', localRoom.roomNumber, 'flagged:', flagged);
-  };
-
   const handleStatusSelect = (statusOption: StatusChangeOption) => {
     const statusOptionConfig = STATUS_OPTIONS.find(opt => opt.id === statusOption);
     const statusLabel = statusOptionConfig?.label || '';
@@ -551,7 +545,6 @@ export default function RoomDetailScreen() {
         roomNumber={room.roomNumber}
         roomCode={`${room.roomCategory} - ${room.credit}`}
         status={currentStatus}
-        flagged={room.flagged === true}
         isPriority={localRoom.isPriority === true}
         frontOfficeStatus={room.frontOfficeStatus}
         roomType={roomType}
@@ -565,7 +558,6 @@ export default function RoomDetailScreen() {
         onBackPress={handleBackPress}
         onStatusPress={handleStatusPress}
         onStatusChange={handleStatusSelect}
-        onFlagToggle={handleFlagToggle}
         onReassign={handleReassign}
         onAddNote={handleAddNote}
         onSaveNote={handleSaveNote}
@@ -595,7 +587,6 @@ export default function RoomDetailScreen() {
           setStatusButtonPosition(null);
         }}
         onStatusSelect={handleStatusSelect}
-        onFlagToggle={handleFlagToggle}
         currentStatus={currentStatus}
         room={localRoom}
         buttonPosition={statusButtonPosition}

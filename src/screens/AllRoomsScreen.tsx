@@ -490,43 +490,6 @@ export default function AllRoomsScreen() {
     console.log('Status changed for room:', selectedRoomForStatusChange.roomNumber, 'to:', newStatus);
   };
 
-  const handleFlagToggle = (flagged: boolean) => {
-    if (!selectedRoomForStatusChange) {
-      console.warn('⚠️ No room selected for flag toggle');
-      return;
-    }
-
-    const roomId = selectedRoomForStatusChange.id;
-    const roomNumber = selectedRoomForStatusChange.roomNumber;
-
-    console.log('🔄 Updating flag for room:', roomNumber, 'flagged:', flagged);
-
-    // Update room flagged status in state
-    setAllRoomsData((prev) => {
-      const updated = {
-        ...prev,
-        rooms: prev.rooms.map((room) =>
-          room.id === roomId
-            ? { ...room, flagged }
-            : room
-        ),
-      };
-      console.log('✅ Room state updated in allRoomsData');
-      return updated;
-    });
-
-    // Update selectedRoomForStatusChange to reflect the change immediately in modal
-    setSelectedRoomForStatusChange((prev) => {
-      if (!prev) return null;
-      const updated = { ...prev, flagged };
-      console.log('✅ selectedRoomForStatusChange updated');
-      return updated;
-    });
-
-    // TODO: Save to backend/API
-    console.log('Flag toggled for room:', roomNumber, 'flagged:', flagged);
-  };
-
   // Sync activeTab with current route
   useFocusEffect(
     React.useCallback(() => {
@@ -874,8 +837,7 @@ export default function AllRoomsScreen() {
           }
         }}
         onStatusSelect={handleStatusSelect}
-        onFlagToggle={handleFlagToggle}
-        currentStatus={selectedRoomForStatusChange?.status || 'InProgress'}
+        currentStatus={selectedRoomForStatusChange?.houseKeepingStatus || 'InProgress'}
         room={selectedRoomForStatusChange || undefined}
         buttonPosition={statusButtonPosition}
         headerHeight={217} // AllRoomsScreen header height

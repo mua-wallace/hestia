@@ -26,7 +26,6 @@ export default function RoomDetailContent({
   roomNumber,
   roomCode,
   status,
-  flagged = false,
   isPriority = false,
   frontOfficeStatus,
   roomType,
@@ -40,7 +39,6 @@ export default function RoomDetailContent({
   onBackPress,
   onStatusPress,
   onStatusChange,
-  onFlagToggle,
   onReassign,
   onAddNote,
   onSaveNote,
@@ -76,11 +74,6 @@ export default function RoomDetailContent({
   const handleStatusChange = (newStatus: RoomStatus) => {
     setCurrentStatus(newStatus);
     onStatusChange?.(newStatus);
-  };
-
-  // Handle flag toggle
-  const handleFlagToggle = (isFlagged: boolean) => {
-    onFlagToggle?.(isFlagged);
   };
 
   // "See More" functionality for task description
@@ -206,7 +199,6 @@ export default function RoomDetailContent({
         returnLaterAtTimestamp={returnLaterAtTimestamp}
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceReason={refuseServiceReason}
-        flagged={flagged}
         isPriority={isPriority}
         frontOfficeLabel={frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}
         showWithLinenBadge={showWithLinenBadge}

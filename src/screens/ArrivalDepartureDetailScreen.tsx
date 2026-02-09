@@ -176,12 +176,6 @@ export default function ArrivalDepartureDetailScreen() {
     }
   };
 
-  const handleFlagToggle = (flagged: boolean) => {
-    setLocalRoom((prev) => ({ ...prev, flagged }));
-    // TODO: Save to backend/API
-    console.log('Flag toggled for room:', localRoom.roomNumber, 'flagged:', flagged);
-  };
-
   const handleStatusSelect = (statusOption: StatusChangeOption) => {
     // Find the status option label
     const statusOptionConfig = STATUS_OPTIONS.find(opt => opt.id === statusOption);
@@ -437,7 +431,6 @@ export default function ArrivalDepartureDetailScreen() {
         returnLaterAtTimestamp={returnLaterAtTimestamp}
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceReason={refuseServiceReason}
-        flagged={localRoom?.flagged === true}
         isPriority={localRoom?.isPriority === true}
         frontOfficeLabel={room.frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}
         showWithLinenBadge={room.frontOfficeStatus === 'Stayover' && showStayoverWithLinenBadge(localRoom)}
@@ -587,7 +580,6 @@ export default function ArrivalDepartureDetailScreen() {
           setStatusButtonPosition(null);
         }}
         onStatusSelect={handleStatusSelect}
-        onFlagToggle={handleFlagToggle}
         currentStatus={currentStatus}
         room={localRoom}
         buttonPosition={statusButtonPosition}
