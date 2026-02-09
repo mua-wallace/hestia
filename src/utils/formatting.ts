@@ -76,6 +76,27 @@ export const formatGuestCount = (guestCount: { adults: number; kids: number } | 
 };
 
 /**
+ * Get floor number from room number (first digit determines floor)
+ * e.g. 101 -> 1, 305 -> 3, 507 -> 5
+ */
+export const getFloorFromRoomNumber = (roomNumber: string): number | null => {
+  const firstChar = (roomNumber || '').trim()[0];
+  const floor = Number.parseInt(firstChar || '', 10);
+  return Number.isFinite(floor) && floor >= 1 && floor <= 9 ? floor : null;
+};
+
+/**
+ * Get display label for floor number (1st Floor, 2nd Floor, 3rd Floor, etc.)
+ */
+export const getFloorLabel = (floorNum: number): string => {
+  const n = Math.floor(floorNum);
+  if (n === 1) return '1st Floor';
+  if (n === 2) return '2nd Floor';
+  if (n === 3) return '3rd Floor';
+  return `${n}th Floor`;
+};
+
+/**
  * Get initials from full name (first letter of first and last name)
  * e.g. "John Doe" -> "JD", "Mary" -> "M"
  */

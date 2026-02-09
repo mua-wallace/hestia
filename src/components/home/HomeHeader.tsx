@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   initialsText: {
-    fontSize: 17 * scaleX,
+    fontSize: 22 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: colors.text.white,

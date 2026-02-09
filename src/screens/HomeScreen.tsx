@@ -29,6 +29,7 @@ import { FilterState, FilterCounts } from '../types/filter.types';
 import type { CategorySection } from '../types/home.types';
 import type { RoomCardData } from '../types/allRooms.types';
 import { getShiftFromTime } from '../utils/shiftUtils';
+import { getFloorFromRoomNumber } from '../utils/formatting';
 
 import type { MainTabsParamList } from '../navigation/types';
 
@@ -196,12 +197,6 @@ export default function HomeScreen() {
     } as any);
   };
 
-  const getRoomFloor = (roomNumber: string): number | null => {
-    const firstChar = (roomNumber || '').trim()[0];
-    const floor = Number.parseInt(firstChar || '', 10);
-    return Number.isFinite(floor) ? floor : null;
-  };
-
   const filterRoomsByFloors = (rooms: RoomCardData[], filters?: FilterState) => {
     const floorFilters = filters?.floors;
     if (!floorFilters) return rooms;
@@ -212,15 +207,17 @@ export default function HomeScreen() {
     if (floorFilters.all) return rooms;
 
     const allowedFloors = new Set<number>();
-    if (floorFilters.first) allowedFloors.add(1);
-    if (floorFilters.second) allowedFloors.add(2);
-    if (floorFilters.third) allowedFloors.add(3);
-    if (floorFilters.fourth) allowedFloors.add(4);
+    Object.entries(floorFilters).forEach(([key, selected]) => {
+      if (key !== 'all' && selected) {
+        const floorNum = Number.parseInt(key, 10);
+        if (!isNaN(floorNum)) allowedFloors.add(floorNum);
+      }
+    });
 
     if (allowedFloors.size === 0) return rooms;
 
     return rooms.filter((r) => {
-      const floor = getRoomFloor(r.roomNumber);
+      const floor = getFloorFromRoomNumber(r.roomNumber);
       return floor !== null && allowedFloors.has(floor);
     });
   };
@@ -384,36 +381,18 @@ export default function HomeScreen() {
     );
     guests.departures = departureRooms.length;
 
-    // Calculate floor counts based on actual room numbers from current shift's data
-    // Room numbers: 1xx = 1st floor, 2xx = 2nd floor, 3xx = 3rd floor, 4xx = 4th floor
-    const floorCounts = {
-      first: 0,
-      second: 0,
-      third: 0,
-      fourth: 0,
-    };
-
+    // Calculate floor counts from first digit of room number (101->1, 305->3, 507->5)
+    const floorCounts: Record<number, number> = {};
     sourceRooms.forEach((room) => {
-      const roomNum = parseInt(room.roomNumber, 10);
-      if (!isNaN(roomNum)) {
-        if (roomNum >= 100 && roomNum < 200) {
-          floorCounts.first++;
-        } else if (roomNum >= 200 && roomNum < 300) {
-          floorCounts.second++;
-        } else if (roomNum >= 300 && roomNum < 400) {
-          floorCounts.third++;
-        } else if (roomNum >= 400 && roomNum < 500) {
-          floorCounts.fourth++;
-        }
+      const floor = getFloorFromRoomNumber(room.roomNumber);
+      if (floor !== null) {
+        floorCounts[floor] = (floorCounts[floor] || 0) + 1;
       }
     });
 
-    const floors = {
-      all: floorCounts.first + floorCounts.second + floorCounts.third + floorCounts.fourth, // Sum of all floors
-      first: floorCounts.first,
-      second: floorCounts.second,
-      third: floorCounts.third,
-      fourth: floorCounts.fourth,
+    const floors: Record<string, number> = {
+      all: Object.values(floorCounts).reduce((sum, n) => sum + n, 0),
+      ...Object.fromEntries(Object.entries(floorCounts).map(([k, v]) => [k, v])),
     };
 
     return { roomStates, guests, floors, totalRooms, reservations };

@@ -23,6 +23,7 @@ import AllRoomsFilterModal from '../components/allRooms/AllRoomsFilterModal';
 import { CARD_DIMENSIONS, CARD_COLORS } from '../constants/allRoomsStyles';
 import { getShiftFromTime } from '../utils/shiftUtils';
 import { getStayoverWithLinen } from '../utils/stayoverLinen';
+import { getFloorFromRoomNumber } from '../utils/formatting';
 
 /** When user taps a status badge on Home (e.g. cleaned[2] under Flagged). */
 export type CategoryFilterParam = {
@@ -95,7 +96,7 @@ export default function AllRoomsScreen() {
         roomStates: { ...baseRoomStates, ...(rf?.roomStates || {}), [cf.roomState]: true },
         guests: rf?.guests ?? { arrivals: false, departures: false, turnDown: false, noTask: false, stayOver: false, stayOverWithLinen: false, stayOverNoLinen: false, checkedIn: false, checkedOut: false, checkedOutDueIn: false, outOfOrder: false, outOfService: false },
         reservations: rf?.reservations ?? { occupied: false, vacant: false },
-        floors: rf?.floors ?? { all: false, first: false, second: false, third: false, fourth: false },
+        floors: rf?.floors ?? { all: false },
       } as FilterState;
     }
     return rf;
@@ -127,7 +128,7 @@ export default function AllRoomsScreen() {
           roomStates: { ...baseRoomStates, ...(prev?.roomStates || routeFilters?.roomStates || {}), [routeCategoryFilter.roomState]: true },
           guests: prev?.guests ?? routeFilters?.guests ?? { arrivals: false, departures: false, turnDown: false, noTask: false, stayOver: false, stayOverWithLinen: false, stayOverNoLinen: false, checkedIn: false, checkedOut: false, checkedOutDueIn: false, outOfOrder: false, outOfService: false },
           reservations: prev?.reservations ?? routeFilters?.reservations ?? { occupied: false, vacant: false },
-          floors: prev?.floors ?? routeFilters?.floors ?? { all: false, first: false, second: false, third: false, fourth: false },
+          floors: prev?.floors ?? routeFilters?.floors ?? { all: false },
         } as FilterState;
       });
     } else if (routeFilters) {
@@ -240,36 +241,18 @@ export default function AllRoomsScreen() {
       }
     });
 
-    // Calculate floor counts based on room numbers
-    // Room numbers: 1xx = 1st floor, 2xx = 2nd floor, 3xx = 3rd floor, 4xx = 4th floor
-    const floorCounts = {
-      first: 0,
-      second: 0,
-      third: 0,
-      fourth: 0,
-    };
-
+    // Calculate floor counts from first digit of room number (101->1, 305->3, 507->5)
+    const floorCounts: Record<number, number> = {};
     sourceRooms.forEach((room) => {
-      const roomNum = parseInt(room.roomNumber, 10);
-      if (!isNaN(roomNum)) {
-        if (roomNum >= 100 && roomNum < 200) {
-          floorCounts.first++;
-        } else if (roomNum >= 200 && roomNum < 300) {
-          floorCounts.second++;
-        } else if (roomNum >= 300 && roomNum < 400) {
-          floorCounts.third++;
-        } else if (roomNum >= 400 && roomNum < 500) {
-          floorCounts.fourth++;
-        }
+      const floor = getFloorFromRoomNumber(room.roomNumber);
+      if (floor !== null) {
+        floorCounts[floor] = (floorCounts[floor] || 0) + 1;
       }
     });
 
-    const floors = {
-      all: floorCounts.first + floorCounts.second + floorCounts.third + floorCounts.fourth, // Sum of all floors
-      first: floorCounts.first,
-      second: floorCounts.second,
-      third: floorCounts.third,
-      fourth: floorCounts.fourth,
+    const floors: Record<string, number> = {
+      all: Object.values(floorCounts).reduce((sum, n) => sum + n, 0),
+      ...Object.fromEntries(Object.entries(floorCounts).map(([k, v]) => [k, v])),
     };
 
     return { roomStates, guests, reservations, floors, totalRooms };
@@ -635,25 +618,25 @@ export default function AllRoomsScreen() {
       const hasReservationFilter = Object.values(activeFilters.reservations || {}).some(v => v);
       const hasFloorFilter = Object.values(activeFilters.floors || {}).some(v => v);
 
-      // Apply floor filter first
+      // Apply floor filter (first digit of room number = floor: 101->1, 305->3, 507->5)
       if (hasFloorFilter) {
         const floorFilters = activeFilters.floors || {};
         const isAllSelected = floorFilters.all;
-        
+
         if (!isAllSelected) {
-          // Filter by individual floors
+          const allowedFloors = new Set<number>();
+          Object.entries(floorFilters).forEach(([key, selected]) => {
+            if (key !== 'all' && selected) {
+              const floorNum = parseInt(key, 10);
+              if (!isNaN(floorNum)) allowedFloors.add(floorNum);
+            }
+          });
+
           rooms = rooms.filter((room) => {
-            const roomNum = parseInt(room.roomNumber, 10);
-            if (isNaN(roomNum)) return false;
-            
-            if (roomNum >= 100 && roomNum < 200) return floorFilters.first;
-            if (roomNum >= 200 && roomNum < 300) return floorFilters.second;
-            if (roomNum >= 300 && roomNum < 400) return floorFilters.third;
-            if (roomNum >= 400 && roomNum < 500) return floorFilters.fourth;
-            return false;
+            const floor = getFloorFromRoomNumber(room.roomNumber);
+            return floor !== null && allowedFloors.has(floor);
           });
         }
-        // If "All" is selected, include all floors (no filtering needed)
       }
 
       // Apply room state, guest, and reservation filters (any combination)

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { FilterState, FilterCounts, FloorFilter } from '../types/filter.types';
+import { FilterState, FilterCounts } from '../types/filter.types';
 
 const defaultFilterState: FilterState = {
   roomStates: {
@@ -30,13 +30,7 @@ const defaultFilterState: FilterState = {
     occupied: false,
     vacant: false,
   },
-  floors: {
-    all: false,
-    first: false,
-    second: false,
-    third: false,
-    fourth: false,
-  },
+  floors: { all: false }, // Floor keys (1,2,3,...) added dynamically from room data
 };
 
 export function useHomeFilters(initialFilters?: FilterState) {
@@ -76,12 +70,12 @@ export function useHomeFilters(initialFilters?: FilterState) {
     }));
   }, []);
 
-  const toggleFloor = useCallback((floor: FloorFilter) => {
+  const toggleFloor = useCallback((floor: string) => {
     setFilters((prev) => ({
       ...prev,
       floors: {
         ...(prev.floors || defaultFilterState.floors),
-        [floor]: !(prev.floors || defaultFilterState.floors)[floor],
+        [floor]: !(prev.floors || defaultFilterState.floors)?.[floor],
       },
     }));
   }, []);
@@ -117,12 +111,12 @@ export function useHomeFilters(initialFilters?: FilterState) {
       });
 
       // Count floors (exclude "all" since it's redundant when individual floors are selected)
-      const selectedFloors: FloorFilter[] = [];
+      const selectedFloors: string[] = [];
       if (filterCounts.floors) {
         Object.entries(floorSelections).forEach(([key, selected]) => {
           if (selected && key !== 'all') {
             hasAnyFilter = true;
-            selectedFloors.push(key as FloorFilter);
+            selectedFloors.push(key);
           }
         });
       }

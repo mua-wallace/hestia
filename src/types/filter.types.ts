@@ -5,7 +5,7 @@
 export type RoomStateFilter = 'dirty' | 'inProgress' | 'cleaned' | 'inspected' | 'priority' | 'paused' | 'refused' | 'returnLater';
 export type GuestFilter = 'arrivals' | 'departures' | 'turnDown' | 'noTask' | 'stayOver' | 'stayOverWithLinen' | 'stayOverNoLinen' | 'checkedIn' | 'checkedOut' | 'checkedOutDueIn' | 'outOfOrder' | 'outOfService';
 export type ReservationFilter = 'occupied' | 'vacant';
-export type FloorFilter = 'all' | 'first' | 'second' | 'third' | 'fourth';
+export type FloorFilter = 'all' | string; // 'all' or floor number as string: '1','2','3',...
 
 export interface FilterState {
   roomStates: {
@@ -36,7 +36,7 @@ export interface FilterState {
     occupied: boolean;
     vacant: boolean;
   };
-  floors?: Record<FloorFilter, boolean>;
+  floors?: Record<string, boolean>; // 'all' + floor numbers '1','2','3',...
 }
 
 export interface FilterCounts {
@@ -68,7 +68,7 @@ export interface FilterCounts {
     occupied: number;
     vacant: number;
   };
-  floors?: Record<FloorFilter, number>;
+  floors?: Record<string, number>; // 'all' + floor numbers '1','2','3',... with room counts
   totalRooms?: number;
 }
 
