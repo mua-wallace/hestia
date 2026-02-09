@@ -50,6 +50,7 @@ export default function HomeScreen() {
     (route.params as any)?.filters as FilterState | undefined
   );
   const [activeTab, setActiveTab] = useState('Home');
+  const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showMorePopup, setShowMorePopup] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -155,13 +156,13 @@ export default function HomeScreen() {
 
   const handleShiftToggle = (shift: ShiftType) => {
     setHomeData(prev => ({ ...prev, selectedShift: shift }));
-    // Reset filters when shift changes - filters should be per shift
+    // Reset filters and search when shift changes
     setActiveFilters(undefined);
+    setSearchQuery('');
   };
 
   const handleSearch = (text: string) => {
-    // TODO: Implement search logic
-    console.log('Search:', text);
+    setSearchQuery(text);
   };
 
   const handleFilterPress = () => {
@@ -308,6 +309,16 @@ export default function HomeScreen() {
     // Apply filters to the correct shift's data
     let rooms = filterRoomsByFloors(sourceRooms, activeFilters);
 
+    // Apply search filter (room number, guest name)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      rooms = rooms.filter(
+        (r) =>
+          r.roomNumber.toLowerCase().includes(q) ||
+          r.guests.some((g) => g.name.toLowerCase().includes(q))
+      );
+    }
+
     const categories: CategorySection[] = [];
 
     if (homeData.selectedShift === 'PM') {
@@ -339,7 +350,7 @@ export default function HomeScreen() {
     }
 
     return categories;
-  }, [activeFilters, homeData.selectedShift]);
+  }, [activeFilters, homeData.selectedShift, searchQuery]);
 
   // Sync route filters -> local state
   useEffect(() => {
@@ -532,7 +543,9 @@ export default function HomeScreen() {
                 />
               </TouchableOpacity>
               <SearchInput
-                placeholder={{ bold: 'Search ', normal: 'Rooms, Guests, Floors etc' }}
+                placeholder={{ bold: 'Search ', normal: 'by room number, guest name' }}
+                value={searchQuery}
+                onChangeText={handleSearch}
                 onSearch={handleSearch}
                 inputStyle={[
                   styles.searchInput,

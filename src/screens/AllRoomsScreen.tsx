@@ -159,8 +159,6 @@ export default function AllRoomsScreen() {
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
-    // TODO: Implement search filtering logic
-    console.log('Search:', text);
   };
 
   const handleFilterPress = () => {
@@ -793,6 +791,7 @@ export default function AllRoomsScreen() {
           selectedShift={allRoomsData.selectedShift}
           onShiftToggle={handleShiftToggle}
           onSearch={handleSearch}
+          searchQuery={searchQuery}
           onFilterPress={handleFilterPress}
           onBackPress={handleBackPress}
           showFilterModal={showFilterModal}
