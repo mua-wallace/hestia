@@ -4,6 +4,7 @@
   "main": "expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
+    "seed:departments": "node scripts/seedDepartments.js",
     "seed:roles": "node scripts/seedRolesAndPermissions.js",
     "seed:users": "node scripts/seedUsers.js",
     "start:tunnel": "expo start --tunnel",
