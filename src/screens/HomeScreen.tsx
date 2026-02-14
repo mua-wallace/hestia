@@ -302,9 +302,9 @@ export default function HomeScreen() {
 
   const derivedCategories = useMemo(() => {
     // Use PM rooms data if available and PM shift is selected, otherwise use AM rooms
-    const roomsPM = mockAllRoomsData.roomsPM;
+    const roomsPM = mockAllRoomsData?.roomsPM ?? [];
     const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    const sourceRooms = usePMRooms ? roomsPM : mockAllRoomsData.rooms;
+    const sourceRooms = usePMRooms ? roomsPM : (mockAllRoomsData?.rooms ?? []);
     
     // Apply filters to the correct shift's data
     let rooms = filterRoomsByFloors(sourceRooms, activeFilters);
@@ -414,9 +414,9 @@ export default function HomeScreen() {
     });
 
     // Use PM rooms data if available and PM shift is selected, otherwise use AM rooms
-    const roomsPM = mockAllRoomsData.roomsPM;
+    const roomsPM = mockAllRoomsData?.roomsPM ?? [];
     const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    const sourceRooms = usePMRooms ? roomsPM : mockAllRoomsData.rooms;
+    const sourceRooms = usePMRooms ? roomsPM : (mockAllRoomsData?.rooms ?? []);
 
     // Reservations (Vacant) - from categories when PM, or from room data
     const reservations = {

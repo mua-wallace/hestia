@@ -268,6 +268,21 @@ export default function GuestInfoDisplay({
   // Use numberBadge if provided, otherwise use vipCode
   const displayBadge = numberBadge || (vipCode ? vipCode.toString() : undefined);
 
+  const hasGuestImage = !!guest.imageUrl;
+  const guestImageWidth = GUEST_INFO.guestImage.width * normalizedScaleX;
+  const guestImageHeight = GUEST_INFO.guestImage.height * normalizedScaleX;
+  const guestImageRadius = GUEST_INFO.guestImage.borderRadius * normalizedScaleX;
+  const guestImageGap = GUEST_INFO.guestImage.marginRight * normalizedScaleX;
+  const infoGap = GUEST_INFO.infoColumn.gapBetweenNameAndDate * normalizedScaleX;
+
+  // Two-column layout: when hasGuestImage, container starts at image position
+  const effectiveContainerLeft =
+    hasGuestImage && guestIconPos
+      ? guestIconPos.left
+      : calculatedContainerLeft;
+  const effectiveContainerWidth =
+    (CARD_DIMENSIONS.width - effectiveContainerLeft - 14) * normalizedScaleX;
+
   // Max name length: "Eric Coleman & Glenn" = 23 characters
   // If name exceeds this length, truncate at 23 chars and wrap remainder to next line
   const firstNamePart = shouldWrapName 
@@ -332,7 +347,7 @@ export default function GuestInfoDisplay({
     : 0;
 
   // Calculate container width: card width minus container left position to ensure content is visible
-  const containerWidth = (CARD_DIMENSIONS.width - calculatedContainerLeft) * normalizedScaleX;
+  const containerWidth = hasGuestImage ? effectiveContainerWidth : (CARD_DIMENSIONS.width - calculatedContainerLeft) * normalizedScaleX;
 
   if (isVacantGuest) {
     // For vacant turndown rooms, position at guest container top
@@ -397,49 +412,38 @@ export default function GuestInfoDisplay({
       style={[
         styles.container, 
         { 
-          left: calculatedContainerLeft * normalizedScaleX,
-          width: containerWidth, // Set explicit width to ensure content is visible
+          left: effectiveContainerLeft * normalizedScaleX,
+          width: containerWidth,
         }, 
         containerStyle
       ]}
     >
-      {/* Guest Icon - positioned absolutely when needed */}
-      {!hideNameRow && guestIconPos !== null ? (
-        <Image
-          source={guestIconSource}
+      {hasGuestImage && !hideNameRow ? (
+        /* Two-column layout: image left, info right (Figma) */
+        <View
           style={[
-            styles.guestIconAbsolute,
-            { 
-              left: (guestIconPos.left - calculatedContainerLeft) * normalizedScaleX,
-              top: guestIconPos.top * normalizedScaleX,
-              tintColor: iconTintColor,
+            styles.twoColumnRow,
+            {
+              top: (guestIconPos?.top ?? calculatedNameTop) * normalizedScaleX,
+              minHeight: guestImageHeight,
             },
           ]}
-          resizeMode="contain"
-        />
-      ) : null}
-      
-      {/* Guest Name Row */}
-      {!hideNameRow && (
-        <View style={[
-          styles.guestRow, 
-          { 
-            top: calculatedNameTop * normalizedScaleX,
-            left: nameLeft !== undefined ? nameLeft * normalizedScaleX : 0,
-          }
-        ]}>
-          {guestIconPos === null && (
-            <Image
-              source={guestIconSource}
-              style={[
-                styles.guestIcon,
-                (isArrival || isDeparture || isStayover || isTurndown || isNoTask) && !isPMTheme && styles.guestIconNoTint,
-                isPMTheme && styles.guestIconPM,
-              ]}
-              resizeMode="contain"
-            />
-          )}
-            <View style={[styles.guestNameContainer, guestIconPos !== null && styles.guestNameContainerNoIcon]}>
+        >
+          <Image
+            source={{ uri: guest.imageUrl! }}
+            style={[
+              styles.guestImage,
+              {
+                width: guestImageWidth,
+                height: guestImageHeight,
+                borderRadius: guestImageRadius,
+                marginRight: guestImageGap,
+              },
+            ]}
+            resizeMode="cover"
+          />
+          <View style={[styles.guestInfoColumn, { marginTop: 0 }]}>
+            <View style={styles.guestNameContainer}>
               {/* First line: First 23 characters (or full name if <= 23 chars) */}
               {shouldWrapName ? (
                 <>
@@ -487,15 +491,96 @@ export default function GuestInfoDisplay({
                   )}
                 </View>
               )}
+            </View>
+            {/* Date + guest count row (inside info column when two-column) */}
+            {(isArrivalDeparture || category === 'ArrivalDeparture') ? (
+              <View style={[styles.detailsRowWithCount, styles.detailsRowFlex, { marginTop: infoGap }]}>
+                <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
+                {countPos && guest.guestCount && guest.guestCount.adults !== undefined && (
+                  <>
+                    <Image source={require('../../../assets/icons/people-icon.png')} style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM]} resizeMode="contain" />
+                    <Text style={styles.countTextInline}>{formatGuestCount(guest.guestCount)}</Text>
+                  </>
+                )}
+              </View>
+            ) : (
+              <View style={[styles.detailsRow, styles.detailsRowFlex, { marginTop: infoGap, alignItems: 'center' }]}>
+                <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
+                {guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && (
+                  <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>{`${guest.timeLabel}: ${guest.time}`}</Text>
+                )}
+                {guest.guestCount && guest.guestCount.adults !== undefined && (
+                  <>
+                    <Image source={require('../../../assets/icons/people-icon.png')} style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM]} resizeMode="contain" />
+                    <Text style={styles.countTextInline}>{formatGuestCount(guest.guestCount)}</Text>
+                  </>
+                )}
+              </View>
+            )}
+            {/* Arrival/Departure line 2: ETA/EDT */}
+            {(isArrivalDeparture || category === 'ArrivalDeparture') && guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && (
+              <Text style={[styles.time, styles.timeFlex, isPMTheme && styles.timePM, { marginTop: infoGap }]}>
+                {`${guest.timeLabel}: ${guest.time}`}
+              </Text>
+            )}
           </View>
         </View>
+      ) : (
+        /* Original layout when no guest image */
+        <>
+          {!hideNameRow && guestIconPos !== null && (
+            <Image
+              source={guestIconSource}
+              style={[
+                styles.guestIconAbsolute,
+                {
+                  left: (guestIconPos.left - calculatedContainerLeft) * normalizedScaleX,
+                  top: guestIconPos.top * normalizedScaleX,
+                  tintColor: iconTintColor,
+                },
+              ]}
+              resizeMode="contain"
+            />
+          )}
+          {!hideNameRow && (
+            <View style={[styles.guestRow, { top: calculatedNameTop * normalizedScaleX, left: nameLeft !== undefined ? nameLeft * normalizedScaleX : 0 }]}>
+              {guestIconPos === null && (
+                <Image
+                  source={guestIconSource}
+                  style={[
+                    styles.guestIcon,
+                    (isArrival || isDeparture || isStayover || isTurndown || isNoTask) && !isPMTheme && styles.guestIconNoTint,
+                    isPMTheme && styles.guestIconPM,
+                  ]}
+                  resizeMode="contain"
+                />
+              )}
+              <View style={[styles.guestNameContainer, guestIconPos !== null && styles.guestNameContainerNoIcon]}>
+                {shouldWrapName ? (
+                  <>
+                    <Text style={[styles.guestName, isPMTheme && styles.guestNamePM]} numberOfLines={1}>{firstNamePart}</Text>
+                    {secondNamePart && (
+                      <View style={styles.guestNameSecondRow}>
+                        <Text style={[styles.guestName, isPMTheme && styles.guestNamePM]} numberOfLines={1}>{secondNamePart}</Text>
+                        {displayBadge && <Text style={[styles.priorityCountInline, isPMTheme && styles.priorityCountInlinePM]} numberOfLines={1}>{displayBadge}</Text>}
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  <View style={styles.guestNameSingleRow}>
+                    <Text style={[styles.guestName, isPMTheme && styles.guestNamePM]} numberOfLines={1}>{firstNamePart}</Text>
+                    {displayBadge && <Text style={[styles.priorityCountInline, isPMTheme && styles.priorityCountInlinePM]} numberOfLines={1}>{displayBadge}</Text>}
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+        </>
       )}
 
-      {/* Date Range Row - New Layout Logic */}
-      {/* Room Detail Screen: dateOfStay, guestcount, EDT/ETA all in one line */}
-      {/* All Rooms - Arrival/Departure: Line 1 = dateOfStay + guestcount, Line 2 = EDT/ETA */}
-      {/* All Rooms - Other types: Line 1 = dateOfStay + EDT/ETA, Line 2 = guestcount (unless N/A/null, then all on Line 1) */}
-      
+      {/* Date Range Row - when NOT two-column layout (no guest image) */}
+      {!hasGuestImage && (
+      <>
       {timeLeft !== undefined && timeTop !== undefined ? (
         // ROOM DETAIL SCREEN: dateOfStay, guestcount, EDT/ETA all in one line
         // If any is N/A or null, display whatever is available
@@ -680,6 +765,8 @@ export default function GuestInfoDisplay({
           </Text>
         </>
       ) : null}
+      </>
+      )}
 
     </View>
   );
@@ -724,6 +811,29 @@ const styles = StyleSheet.create({
     height: GUEST_INFO.icon.height * normalizedScaleX,
     marginRight: 4 * normalizedScaleX,
     tintColor: '#334866',
+  },
+  guestAvatar: {
+    marginRight: 8 * normalizedScaleX,
+  },
+  guestAvatarAbsolute: {
+    position: 'absolute',
+  },
+  twoColumnRow: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    left: 0,
+    right: 0,
+    zIndex: 30,
+  },
+  guestImage: {
+    flexShrink: 0,
+  },
+  guestInfoColumn: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    minWidth: 0,
   },
   guestIconPM: {
     tintColor: '#ffffff',
@@ -802,10 +912,15 @@ const styles = StyleSheet.create({
     fontSize: (GUEST_INFO.priorityBadge.fontSize * 0.85) * normalizedScaleX, // 85% of original size (12 * 0.85 = 10.2px)
     lineHeight: (GUEST_INFO.priorityBadge.lineHeight * 0.85) * normalizedScaleX, // Proportionally smaller line height
   },
+  detailsRowFlex: {
+    position: 'relative',
+    left: undefined,
+    top: undefined,
+  },
   detailsRow: {
     position: 'absolute',
     flexDirection: 'row',
-    alignItems: 'center', // Use 'center' for consistent vertical alignment with other rows
+    alignItems: 'center',
     left: 0,
     minHeight: GUEST_INFO.dateRange.lineHeight * normalizedScaleX, // Changed from fixed height to minHeight
     zIndex: 5, // Very low z-index so time appears above
@@ -893,6 +1008,11 @@ const styles = StyleSheet.create({
   },
   timePM: {
     color: '#ffffff',
+  },
+  timeFlex: {
+    position: 'relative',
+    left: undefined,
+    top: undefined,
   },
   timeInline: {
     fontSize: GUEST_INFO.time.fontSize * normalizedScaleX,

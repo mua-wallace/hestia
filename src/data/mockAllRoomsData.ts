@@ -5,7 +5,21 @@
 
 import type { RoomCardData } from '../types/allRooms.types';
 
-export const mockAllRoomsData: {
+/** Injects deterministic guest image URLs for room card two-column layout (image left, info right). */
+function withGuestImages(rooms: RoomCardData[] | undefined): RoomCardData[] {
+  if (!Array.isArray(rooms)) return [];
+  return rooms.map((room) => ({
+    ...room,
+    guests: Array.isArray(room.guests)
+      ? room.guests.map((g, i) => ({
+          ...g,
+          imageUrl: `https://i.pravatar.cc/96?u=${encodeURIComponent(room.id)}-${i}`,
+        }))
+      : [],
+  }));
+}
+
+const rawMockAllRoomsData: {
   selectedShift: 'AM';
   rooms: RoomCardData[];
   roomsPM: RoomCardData[];
@@ -2766,4 +2780,13 @@ export const mockAllRoomsData: {
       noteMadeBy: null,
     },
   ],
+};
+
+const _rooms = withGuestImages(rawMockAllRoomsData?.rooms);
+const _roomsPM = withGuestImages(rawMockAllRoomsData?.roomsPM);
+
+export const mockAllRoomsData = {
+  selectedShift: rawMockAllRoomsData?.selectedShift ?? 'AM',
+  rooms: _rooms,
+  roomsPM: _roomsPM,
 };

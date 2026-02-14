@@ -113,13 +113,13 @@ export default function AllRoomsScreen() {
       const params = route.params as any;
       const currentRouteShift = params?.selectedShift as ShiftType | undefined;
       // Only update if shift is provided and different from current
-      if (currentRouteShift && currentRouteShift !== allRoomsData.selectedShift) {
+      if (currentRouteShift && currentRouteShift !== allRoomsData?.selectedShift) {
         setAllRoomsData(prev => ({ ...prev, selectedShift: currentRouteShift }));
         // Reset filters when shift changes via navigation
         setLocalFilters(undefined);
         setSearchQuery('');
       }
-    }, [route.params, allRoomsData.selectedShift])
+    }, [route.params, allRoomsData?.selectedShift])
   );
 
   // Sync local filters with route params when navigating (e.g. from Home with categoryFilter)
@@ -171,9 +171,9 @@ export default function AllRoomsScreen() {
 
   // Calculate filter counts from current shift's room list (AM: rooms, PM: roomsPM)
   const filterCounts: FilterCounts = useMemo(() => {
-    const roomsPM = allRoomsData.roomsPM;
-    const usePMRooms = allRoomsData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    const sourceRooms = usePMRooms ? roomsPM : allRoomsData.rooms;
+    const roomsPM = allRoomsData?.roomsPM ?? [];
+    const usePMRooms = allRoomsData?.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const sourceRooms = usePMRooms ? roomsPM : (allRoomsData?.rooms ?? []);
 
     const roomStates = {
       dirty: 0,
@@ -258,7 +258,7 @@ export default function AllRoomsScreen() {
     };
 
     return { roomStates, guests, reservations, floors, totalRooms };
-  }, [allRoomsData.rooms, allRoomsData.roomsPM, allRoomsData.selectedShift]);
+  }, [allRoomsData?.rooms, allRoomsData?.roomsPM, allRoomsData?.selectedShift]);
 
   const handleApplyFilters = (appliedFilters: FilterState) => {
     setLocalFilters(appliedFilters);
@@ -562,9 +562,9 @@ export default function AllRoomsScreen() {
   // Filter rooms based on search query and filters
   const filteredRooms = useMemo(() => {
     // PM: use roomsPM from pm-operational-data.csv when available; else filter AM rooms
-    const roomsPM = allRoomsData.roomsPM;
-    const usePMRooms = allRoomsData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    let rooms = usePMRooms ? roomsPM : allRoomsData.rooms;
+    const roomsPM = allRoomsData?.roomsPM ?? [];
+    const usePMRooms = allRoomsData?.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    let rooms = usePMRooms ? roomsPM : (allRoomsData?.rooms ?? []);
 
     // When user tapped a status badge or priority badge on Home
     if (routeCategoryFilter) {
@@ -677,7 +677,7 @@ export default function AllRoomsScreen() {
     }
 
     // PM mode: when using roomsPM list it's already Turndown/No Task/Vacant; else filter to those
-    if (allRoomsData.selectedShift === 'PM' && !usePMRooms) {
+    if (allRoomsData?.selectedShift === 'PM' && !usePMRooms) {
       rooms = rooms.filter(
         (room) =>
           room.frontOfficeStatus === 'Turndown' ||
@@ -686,17 +686,17 @@ export default function AllRoomsScreen() {
       );
     }
     // AM mode: hide Turndown cards entirely
-    if (allRoomsData.selectedShift === 'AM') {
+    if (allRoomsData?.selectedShift === 'AM') {
       rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');
     }
 
     return rooms;
-  }, [allRoomsData.rooms, allRoomsData.roomsPM, allRoomsData.selectedShift, activeFilters, searchQuery, routeCategoryFilter]);
+  }, [allRoomsData?.rooms, allRoomsData?.roomsPM, allRoomsData?.selectedShift, activeFilters, searchQuery, routeCategoryFilter]);
 
   return (
     <View style={[
       styles.container,
-      allRoomsData.selectedShift === 'PM' && styles.containerPM
+      allRoomsData?.selectedShift === 'PM' && styles.containerPM
     ]}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
@@ -766,7 +766,7 @@ export default function AllRoomsScreen() {
                     statusButtonRefs.current[room.id] = ref;
                   }
                 }}
-                selectedShift={allRoomsData.selectedShift}
+                selectedShift={allRoomsData?.selectedShift ?? 'AM'}
               />
             ))
           )}
@@ -796,7 +796,7 @@ export default function AllRoomsScreen() {
 
         {/* Header - Fixed at top (no blur) */}
         <AllRoomsHeader
-          selectedShift={allRoomsData.selectedShift}
+          selectedShift={allRoomsData?.selectedShift ?? 'AM'}
           onShiftToggle={handleShiftToggle}
           onSearch={handleSearch}
           searchQuery={searchQuery}
