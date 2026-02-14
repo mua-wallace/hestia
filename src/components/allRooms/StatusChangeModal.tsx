@@ -14,6 +14,8 @@ interface StatusChangeModalProps {
   visible: boolean;
   onClose: () => void;
   onStatusSelect: (status: StatusChangeOption) => void;
+  /** When provided and user selects Inspected, this is called instead of onStatusSelect. Use to show Inspection Checklist slide. */
+  onInspectedSelect?: () => void;
   currentStatus: RoomStatus;
   room?: RoomCardData; // Room data
   buttonPosition?: { x: number; y: number; width: number; height: number } | null; // Status button position on screen
@@ -25,6 +27,7 @@ export default function StatusChangeModal({
   visible,
   onClose,
   onStatusSelect,
+  onInspectedSelect,
   currentStatus,
   room,
   buttonPosition,
@@ -58,6 +61,18 @@ export default function StatusChangeModal({
   }, [visible, slideAnim, opacityAnim]);
 
   const handleStatusSelect = (option: StatusChangeOption) => {
+    // Inspected requires Inspection Checklist - delegate to onInspectedSelect if provided
+    if (option === 'Inspected' && onInspectedSelect) {
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start(() => {
+        onInspectedSelect();
+        onClose();
+      });
+      return;
+    }
+
     // Animate out before closing
     Animated.parallel([
       Animated.timing(slideAnim, {

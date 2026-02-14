@@ -14,6 +14,7 @@ import RoomCard from '../components/allRooms/RoomCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
+import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
 import { MoreMenuItemId } from '../types/more.types';
 import type { RootStackParamList } from '../navigation/types';
 import { BlurView } from 'expo-blur';
@@ -68,6 +69,9 @@ export default function AllRoomsScreen() {
   const [activeTab, setActiveTab] = useState('Rooms');
   const [showMorePopup, setShowMorePopup] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showInspectedModal, setShowInspectedModal] = useState(false);
+  const [roomForInspection, setRoomForInspection] = useState<RoomCardData | null>(null);
+  const [buttonPositionForInspection, setButtonPositionForInspection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedRoomForStatusChange, setSelectedRoomForStatusChange] = useState<RoomCardData | null>(null);
   const [selectedCardTop, setSelectedCardTop] = useState<number>(0);
@@ -460,8 +464,9 @@ export default function AllRoomsScreen() {
     }
   };
 
-  const handleStatusSelect = (statusOption: StatusChangeOption) => {
-    if (!selectedRoomForStatusChange) return;
+  const handleStatusSelect = (statusOption: StatusChangeOption, roomOverride?: RoomCardData | null) => {
+    const roomToUpdate = roomOverride ?? selectedRoomForStatusChange;
+    if (!roomToUpdate) return;
 
     // Map status option to RoomStatus
     const newStatus = mapStatusOptionToRoomStatus(statusOption);
@@ -470,7 +475,7 @@ export default function AllRoomsScreen() {
     setAllRoomsData((prev) => ({
       ...prev,
       rooms: prev.rooms.map((room) =>
-        room.id === selectedRoomForStatusChange.id
+        room.id === roomToUpdate.id
           ? {
               ...room,
               houseKeepingStatus: newStatus,
@@ -483,9 +488,12 @@ export default function AllRoomsScreen() {
     // Reset state
     setShowStatusModal(false);
     setSelectedRoomForStatusChange(null);
+    setShowInspectedModal(false);
+    setRoomForInspection(null);
+    setButtonPositionForInspection(null);
 
     // TODO: Save to backend/API
-    console.log('Status changed for room:', selectedRoomForStatusChange.roomNumber, 'to:', newStatus);
+    console.log('Status changed for room:', roomToUpdate.roomNumber, 'to:', newStatus);
   };
 
   // Sync activeTab with current route
@@ -833,10 +841,40 @@ export default function AllRoomsScreen() {
           }
         }}
         onStatusSelect={handleStatusSelect}
+        onInspectedSelect={() => {
+          if (selectedRoomForStatusChange) {
+            setRoomForInspection(selectedRoomForStatusChange);
+            setButtonPositionForInspection(statusButtonPosition);
+            setShowInspectedModal(true);
+          }
+        }}
         currentStatus={selectedRoomForStatusChange?.houseKeepingStatus || 'InProgress'}
         room={selectedRoomForStatusChange || undefined}
         buttonPosition={statusButtonPosition}
         headerHeight={217} // AllRoomsScreen header height
+      />
+
+      {/* Inspection Checklist Modal - shown when changing to Inspected */}
+      <InspectedStatusSlideModal
+        visible={showInspectedModal}
+        onClose={() => {
+          setShowInspectedModal(false);
+          setRoomForInspection(null);
+          setButtonPositionForInspection(null);
+          if (originalScrollY > 0 && scrollViewRef.current) {
+            setTimeout(() => {
+              scrollViewRef.current?.scrollTo({
+                y: originalScrollY,
+                animated: true,
+              });
+              setOriginalScrollY(0);
+            }, 100);
+          }
+        }}
+        onComplete={() => handleStatusSelect('Inspected', roomForInspection)}
+        buttonPosition={buttonPositionForInspection}
+        headerHeight={217}
+        showTriangle={true}
       />
 
       {/* Filter Modal - Use AllRoomsFilterModal for both AM and PM shifts */}

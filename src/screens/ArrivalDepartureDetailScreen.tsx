@@ -14,6 +14,7 @@ import TaskSection from '../components/roomDetail/TaskSection';
 import ChecklistSection from '../components/roomDetail/ChecklistSection';
 import RoomTicketsSection from '../components/roomDetail/RoomTicketsSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
+import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
 import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
 import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal';
@@ -40,6 +41,8 @@ export default function ArrivalDepartureDetailScreen() {
 
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showInspectedModal, setShowInspectedModal] = useState(false);
+  const [buttonPositionForInspection, setButtonPositionForInspection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
   const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
   const [showRefuseServiceModal, setShowRefuseServiceModal] = useState(false);
@@ -580,10 +583,30 @@ export default function ArrivalDepartureDetailScreen() {
           setStatusButtonPosition(null);
         }}
         onStatusSelect={handleStatusSelect}
+        onInspectedSelect={() => {
+          setButtonPositionForInspection(statusButtonPosition);
+          setShowInspectedModal(true);
+        }}
         currentStatus={currentStatus}
         room={localRoom}
         buttonPosition={statusButtonPosition}
         showTriangle={false}
+      />
+
+      <InspectedStatusSlideModal
+        visible={showInspectedModal}
+        onClose={() => {
+          setShowInspectedModal(false);
+          setButtonPositionForInspection(null);
+        }}
+        onComplete={() => {
+          handleStatusSelect('Inspected');
+          setShowInspectedModal(false);
+          setButtonPositionForInspection(null);
+        }}
+        buttonPosition={buttonPositionForInspection}
+        headerHeight={232}
+        showTriangle={!!buttonPositionForInspection}
       />
 
       <ReturnLaterModal
