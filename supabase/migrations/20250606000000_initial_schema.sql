@@ -91,6 +91,11 @@ CREATE TABLE guests (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   full_name TEXT NOT NULL,
   vip_code TEXT,
+  address TEXT,
+  company TEXT,
+  primary_email TEXT,
+  dob DATE,
+  image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
