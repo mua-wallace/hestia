@@ -18,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { mockChatData } from '../data/mockChatData';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
+import { dataService } from '../services/data';
 import type { MoreMenuItemId } from '../types/more.types';
 import type { RootStackParamList } from '../navigation/types';
 import HomeHeader from '../components/home/HomeHeader';
@@ -46,6 +47,10 @@ export default function HomeScreen() {
     ...mockHomeData,
     selectedShift: getShiftFromTime(),
   }));
+  const [roomsForHome, setRoomsForHome] = useState<{ rooms: RoomCardData[]; roomsPM: RoomCardData[] }>({
+    rooms: mockAllRoomsData?.rooms ?? [],
+    roomsPM: mockAllRoomsData?.roomsPM ?? [],
+  });
   const [activeFilters, setActiveFilters] = useState<FilterState | undefined>(
     (route.params as any)?.filters as FilterState | undefined
   );
@@ -301,10 +306,9 @@ export default function HomeScreen() {
   };
 
   const derivedCategories = useMemo(() => {
-    // Use PM rooms data if available and PM shift is selected, otherwise use AM rooms
-    const roomsPM = mockAllRoomsData?.roomsPM ?? [];
+    const roomsPM = roomsForHome.roomsPM ?? [];
     const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    const sourceRooms = usePMRooms ? roomsPM : (mockAllRoomsData?.rooms ?? []);
+    const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
     
     // Apply filters to the correct shift's data
     let rooms = filterRoomsByFloors(sourceRooms, activeFilters);
@@ -350,7 +354,7 @@ export default function HomeScreen() {
     }
 
     return categories;
-  }, [activeFilters, homeData.selectedShift, searchQuery]);
+  }, [activeFilters, homeData.selectedShift, searchQuery, roomsForHome]);
 
   // Sync route filters -> local state
   useEffect(() => {
@@ -363,13 +367,20 @@ export default function HomeScreen() {
     setHomeData((prev) => ({ ...prev, categories: derivedCategories }));
   }, [derivedCategories]);
 
-  const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    // TODO: Fetch fresh data
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+  const loadRoomsForHome = React.useCallback(async (shift: ShiftType) => {
+    const data = await dataService.getAllRoomsData(shift);
+    setRoomsForHome({ rooms: data.rooms ?? [], roomsPM: data.roomsPM ?? [] });
   }, []);
+
+  React.useEffect(() => {
+    loadRoomsForHome(homeData.selectedShift);
+  }, [homeData.selectedShift, loadRoomsForHome]);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await loadRoomsForHome(homeData.selectedShift);
+    setRefreshing(false);
+  }, [loadRoomsForHome, homeData.selectedShift]);
 
   // Calculate filter counts from homeData (use derivedCategories when categories not yet synced for current shift)
   const filterCounts: FilterCounts = useMemo(() => {
@@ -413,10 +424,9 @@ export default function HomeScreen() {
       totalRooms += category.total;
     });
 
-    // Use PM rooms data if available and PM shift is selected, otherwise use AM rooms
-    const roomsPM = mockAllRoomsData?.roomsPM ?? [];
+    const roomsPM = roomsForHome.roomsPM ?? [];
     const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    const sourceRooms = usePMRooms ? roomsPM : (mockAllRoomsData?.rooms ?? []);
+    const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
 
     // Reservations (Vacant) - from categories when PM, or from room data
     const reservations = {
@@ -457,7 +467,7 @@ export default function HomeScreen() {
     };
 
     return { roomStates, guests, floors, totalRooms, reservations };
-  }, [homeData.categories, derivedCategories, homeData.selectedShift]);
+  }, [homeData.categories, derivedCategories, homeData.selectedShift, roomsForHome]);
 
   const handleGoToResults = (filters: FilterState) => {
     // Apply filters to Home stats/cards in both AM and PM modes

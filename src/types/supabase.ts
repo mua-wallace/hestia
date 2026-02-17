@@ -447,6 +447,7 @@ export type Database = {
           front_office_status: string | null
           id: string
           kids: number | null
+          promised_time: string | null
           reservation_status: string | null
           room_id: string
           updated_at: string | null
@@ -460,6 +461,7 @@ export type Database = {
           front_office_status?: string | null
           id?: string
           kids?: number | null
+          promised_time?: string | null
           reservation_status?: string | null
           room_id: string
           updated_at?: string | null
@@ -473,6 +475,7 @@ export type Database = {
           front_office_status?: string | null
           id?: string
           kids?: number | null
+          promised_time?: string | null
           reservation_status?: string | null
           room_id?: string
           updated_at?: string | null
@@ -679,6 +682,7 @@ export type Database = {
           created_at: string | null
           credit: number | null
           flagged: boolean | null
+          house_keeping_status: string | null
           id: string
           linen_status: string | null
           notes: string | null
@@ -692,6 +696,7 @@ export type Database = {
           created_at?: string | null
           credit?: number | null
           flagged?: boolean | null
+          house_keeping_status?: string | null
           id?: string
           linen_status?: string | null
           notes?: string | null
@@ -705,6 +710,7 @@ export type Database = {
           created_at?: string | null
           credit?: number | null
           flagged?: boolean | null
+          house_keeping_status?: string | null
           id?: string
           linen_status?: string | null
           notes?: string | null

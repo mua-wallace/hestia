@@ -1,6 +1,6 @@
 /**
  * Data service layer
- * Handles mock data and will be replaced with real API calls
+ * Uses Supabase when configured, otherwise mock data
  */
 
 import { mockHomeData } from '../data/mockHomeData';
@@ -11,21 +11,33 @@ import type { HomeScreenData } from '../types/home.types';
 import type { AllRoomsScreenData } from '../types/allRooms.types';
 import type { TicketsScreenData } from '../types/tickets.types';
 import type { ChatItemData } from '../components/chat/ChatItem';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { fetchAllRoomsFromSupabase } from './allRooms';
+import { getShiftFromTime } from '../utils/shiftUtils';
 
 class DataService {
   /**
    * Get home screen data
    */
   async getHomeData(): Promise<HomeScreenData> {
-    // TODO: Replace with actual API call
+    // TODO: Replace with actual API call when home data is in Supabase
     return Promise.resolve(mockHomeData);
   }
 
   /**
-   * Get all rooms data
+   * Get all rooms data from Supabase (rooms, reservations, guests) or mock
    */
-  async getAllRoomsData(): Promise<AllRoomsScreenData> {
-    // TODO: Replace with actual API call
+  async getAllRoomsData(shift?: 'AM' | 'PM'): Promise<AllRoomsScreenData> {
+    if (isSupabaseConfigured) {
+      try {
+        const currentShift = shift ?? getShiftFromTime();
+        const data = await fetchAllRoomsFromSupabase(currentShift);
+        return data;
+      } catch (e) {
+        console.warn('Supabase getAllRooms failed, using mock:', e);
+        return Promise.resolve(mockAllRoomsData);
+      }
+    }
     return Promise.resolve(mockAllRoomsData);
   }
 
