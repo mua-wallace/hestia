@@ -113,6 +113,18 @@ export const GUEST_INFO = {
     width: 28.371,
     height: 29.919,
   },
+  /** Two-column layout: image left, info right (Figma) */
+  guestImage: {
+    width: 53,
+    height: 53,
+    borderRadius: 5,
+    marginRight: 8, // Gap between image and info column
+  },
+  infoColumn: {
+    marginTop: 0,
+    gapBetweenNameAndDate: 4,
+    gapBetweenDateAndTime: 4,
+  },
   iconArrivalDeparture: {
     width: 28.371, // Larger icon size for Arrival/Departure guest icons
     height: 29.919,

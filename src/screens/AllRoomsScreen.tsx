@@ -14,6 +14,7 @@ import RoomCard from '../components/allRooms/RoomCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import MorePopup from '../components/more/MorePopup';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
+import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
 import { MoreMenuItemId } from '../types/more.types';
 import type { RootStackParamList } from '../navigation/types';
 import { BlurView } from 'expo-blur';
@@ -23,11 +24,12 @@ import AllRoomsFilterModal from '../components/allRooms/AllRoomsFilterModal';
 import { CARD_DIMENSIONS, CARD_COLORS } from '../constants/allRoomsStyles';
 import { getShiftFromTime } from '../utils/shiftUtils';
 import { getStayoverWithLinen } from '../utils/stayoverLinen';
+import { getFloorFromRoomNumber } from '../utils/formatting';
 
-/** When user taps a status badge on Home (e.g. cleaned[2] under Flagged). */
+/** When user taps a status badge or priority badge on Home. */
 export type CategoryFilterParam = {
   category: CategoryName;
-  roomState: 'dirty' | 'inProgress' | 'cleaned' | 'inspected';
+  roomState: 'dirty' | 'inProgress' | 'cleaned' | 'inspected' | 'priority';
 };
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -67,6 +69,9 @@ export default function AllRoomsScreen() {
   const [activeTab, setActiveTab] = useState('Rooms');
   const [showMorePopup, setShowMorePopup] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showInspectedModal, setShowInspectedModal] = useState(false);
+  const [roomForInspection, setRoomForInspection] = useState<RoomCardData | null>(null);
+  const [buttonPositionForInspection, setButtonPositionForInspection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedRoomForStatusChange, setSelectedRoomForStatusChange] = useState<RoomCardData | null>(null);
   const [selectedCardTop, setSelectedCardTop] = useState<number>(0);
@@ -95,7 +100,7 @@ export default function AllRoomsScreen() {
         roomStates: { ...baseRoomStates, ...(rf?.roomStates || {}), [cf.roomState]: true },
         guests: rf?.guests ?? { arrivals: false, departures: false, turnDown: false, noTask: false, stayOver: false, stayOverWithLinen: false, stayOverNoLinen: false, checkedIn: false, checkedOut: false, checkedOutDueIn: false, outOfOrder: false, outOfService: false },
         reservations: rf?.reservations ?? { occupied: false, vacant: false },
-        floors: rf?.floors ?? { all: false, first: false, second: false, third: false, fourth: false },
+        floors: rf?.floors ?? { all: false },
       } as FilterState;
     }
     return rf;
@@ -108,13 +113,13 @@ export default function AllRoomsScreen() {
       const params = route.params as any;
       const currentRouteShift = params?.selectedShift as ShiftType | undefined;
       // Only update if shift is provided and different from current
-      if (currentRouteShift && currentRouteShift !== allRoomsData.selectedShift) {
+      if (currentRouteShift && currentRouteShift !== allRoomsData?.selectedShift) {
         setAllRoomsData(prev => ({ ...prev, selectedShift: currentRouteShift }));
         // Reset filters when shift changes via navigation
         setLocalFilters(undefined);
         setSearchQuery('');
       }
-    }, [route.params, allRoomsData.selectedShift])
+    }, [route.params, allRoomsData?.selectedShift])
   );
 
   // Sync local filters with route params when navigating (e.g. from Home with categoryFilter)
@@ -127,7 +132,7 @@ export default function AllRoomsScreen() {
           roomStates: { ...baseRoomStates, ...(prev?.roomStates || routeFilters?.roomStates || {}), [routeCategoryFilter.roomState]: true },
           guests: prev?.guests ?? routeFilters?.guests ?? { arrivals: false, departures: false, turnDown: false, noTask: false, stayOver: false, stayOverWithLinen: false, stayOverNoLinen: false, checkedIn: false, checkedOut: false, checkedOutDueIn: false, outOfOrder: false, outOfService: false },
           reservations: prev?.reservations ?? routeFilters?.reservations ?? { occupied: false, vacant: false },
-          floors: prev?.floors ?? routeFilters?.floors ?? { all: false, first: false, second: false, third: false, fourth: false },
+          floors: prev?.floors ?? routeFilters?.floors ?? { all: false },
         } as FilterState;
       });
     } else if (routeFilters) {
@@ -158,8 +163,6 @@ export default function AllRoomsScreen() {
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
-    // TODO: Implement search filtering logic
-    console.log('Search:', text);
   };
 
   const handleFilterPress = () => {
@@ -168,9 +171,9 @@ export default function AllRoomsScreen() {
 
   // Calculate filter counts from current shift's room list (AM: rooms, PM: roomsPM)
   const filterCounts: FilterCounts = useMemo(() => {
-    const roomsPM = allRoomsData.roomsPM;
-    const usePMRooms = allRoomsData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    const sourceRooms = usePMRooms ? roomsPM : allRoomsData.rooms;
+    const roomsPM = allRoomsData?.roomsPM ?? [];
+    const usePMRooms = allRoomsData?.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const sourceRooms = usePMRooms ? roomsPM : (allRoomsData?.rooms ?? []);
 
     const roomStates = {
       dirty: 0,
@@ -240,40 +243,22 @@ export default function AllRoomsScreen() {
       }
     });
 
-    // Calculate floor counts based on room numbers
-    // Room numbers: 1xx = 1st floor, 2xx = 2nd floor, 3xx = 3rd floor, 4xx = 4th floor
-    const floorCounts = {
-      first: 0,
-      second: 0,
-      third: 0,
-      fourth: 0,
-    };
-
+    // Calculate floor counts from first digit of room number (101->1, 305->3, 507->5)
+    const floorCounts: Record<number, number> = {};
     sourceRooms.forEach((room) => {
-      const roomNum = parseInt(room.roomNumber, 10);
-      if (!isNaN(roomNum)) {
-        if (roomNum >= 100 && roomNum < 200) {
-          floorCounts.first++;
-        } else if (roomNum >= 200 && roomNum < 300) {
-          floorCounts.second++;
-        } else if (roomNum >= 300 && roomNum < 400) {
-          floorCounts.third++;
-        } else if (roomNum >= 400 && roomNum < 500) {
-          floorCounts.fourth++;
-        }
+      const floor = getFloorFromRoomNumber(room.roomNumber);
+      if (floor !== null) {
+        floorCounts[floor] = (floorCounts[floor] || 0) + 1;
       }
     });
 
-    const floors = {
-      all: floorCounts.first + floorCounts.second + floorCounts.third + floorCounts.fourth, // Sum of all floors
-      first: floorCounts.first,
-      second: floorCounts.second,
-      third: floorCounts.third,
-      fourth: floorCounts.fourth,
+    const floors: Record<string, number> = {
+      all: Object.values(floorCounts).reduce((sum, n) => sum + n, 0),
+      ...Object.fromEntries(Object.entries(floorCounts).map(([k, v]) => [k, v])),
     };
 
     return { roomStates, guests, reservations, floors, totalRooms };
-  }, [allRoomsData.rooms, allRoomsData.roomsPM, allRoomsData.selectedShift]);
+  }, [allRoomsData?.rooms, allRoomsData?.roomsPM, allRoomsData?.selectedShift]);
 
   const handleApplyFilters = (appliedFilters: FilterState) => {
     setLocalFilters(appliedFilters);
@@ -479,18 +464,23 @@ export default function AllRoomsScreen() {
     }
   };
 
-  const handleStatusSelect = (statusOption: StatusChangeOption) => {
-    if (!selectedRoomForStatusChange) return;
+  const handleStatusSelect = (statusOption: StatusChangeOption, roomOverride?: RoomCardData | null) => {
+    const roomToUpdate = roomOverride ?? selectedRoomForStatusChange;
+    if (!roomToUpdate) return;
 
     // Map status option to RoomStatus
     const newStatus = mapStatusOptionToRoomStatus(statusOption);
 
-    // Update room status in state
+    // Update room status in state; Priority option also sets isPriority true
     setAllRoomsData((prev) => ({
       ...prev,
       rooms: prev.rooms.map((room) =>
-        room.id === selectedRoomForStatusChange.id
-          ? { ...room, houseKeepingStatus: newStatus }
+        room.id === roomToUpdate.id
+          ? {
+              ...room,
+              houseKeepingStatus: newStatus,
+              ...(statusOption === 'Priority' && { isPriority: true }),
+            }
           : room
       ),
     }));
@@ -498,46 +488,12 @@ export default function AllRoomsScreen() {
     // Reset state
     setShowStatusModal(false);
     setSelectedRoomForStatusChange(null);
+    setShowInspectedModal(false);
+    setRoomForInspection(null);
+    setButtonPositionForInspection(null);
 
     // TODO: Save to backend/API
-    console.log('Status changed for room:', selectedRoomForStatusChange.roomNumber, 'to:', newStatus);
-  };
-
-  const handleFlagToggle = (flagged: boolean) => {
-    if (!selectedRoomForStatusChange) {
-      console.warn('⚠️ No room selected for flag toggle');
-      return;
-    }
-
-    const roomId = selectedRoomForStatusChange.id;
-    const roomNumber = selectedRoomForStatusChange.roomNumber;
-
-    console.log('🔄 Updating flag for room:', roomNumber, 'flagged:', flagged);
-
-    // Update room flagged status in state
-    setAllRoomsData((prev) => {
-      const updated = {
-        ...prev,
-        rooms: prev.rooms.map((room) =>
-          room.id === roomId
-            ? { ...room, flagged }
-            : room
-        ),
-      };
-      console.log('✅ Room state updated in allRoomsData');
-      return updated;
-    });
-
-    // Update selectedRoomForStatusChange to reflect the change immediately in modal
-    setSelectedRoomForStatusChange((prev) => {
-      if (!prev) return null;
-      const updated = { ...prev, flagged };
-      console.log('✅ selectedRoomForStatusChange updated');
-      return updated;
-    });
-
-    // TODO: Save to backend/API
-    console.log('Flag toggled for room:', roomNumber, 'flagged:', flagged);
+    console.log('Status changed for room:', roomToUpdate.roomNumber, 'to:', newStatus);
   };
 
   // Sync activeTab with current route
@@ -606,15 +562,13 @@ export default function AllRoomsScreen() {
   // Filter rooms based on search query and filters
   const filteredRooms = useMemo(() => {
     // PM: use roomsPM from pm-operational-data.csv when available; else filter AM rooms
-    const roomsPM = allRoomsData.roomsPM;
-    const usePMRooms = allRoomsData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    let rooms = usePMRooms ? roomsPM : allRoomsData.rooms;
+    const roomsPM = allRoomsData?.roomsPM ?? [];
+    const usePMRooms = allRoomsData?.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    let rooms = usePMRooms ? roomsPM : (allRoomsData?.rooms ?? []);
 
-    // When user tapped a status badge on Home (e.g. cleaned[2] under Flagged), show only that category + status
+    // When user tapped a status badge or priority badge on Home
     if (routeCategoryFilter) {
       const { category, roomState } = routeCategoryFilter;
-      const statusToHouseKeeping: Record<string, string> = { dirty: 'Dirty', inProgress: 'InProgress', cleaned: 'Cleaned', inspected: 'Inspected' };
-      const targetStatus = statusToHouseKeeping[roomState];
       rooms = rooms.filter((room) => {
         const matchesCategory =
           category === 'Flagged' ? !!room.flagged
@@ -624,6 +578,11 @@ export default function AllRoomsScreen() {
           : category === 'No Task' ? room.frontOfficeStatus === 'No Task'
           : category === 'Vacant' ? (room.reservationStatus || '').toLowerCase() === 'vacant'
           : false;
+        if (roomState === 'priority') {
+          return matchesCategory && !!room.isPriority;
+        }
+        const statusToHouseKeeping: Record<string, string> = { dirty: 'Dirty', inProgress: 'InProgress', cleaned: 'Cleaned', inspected: 'Inspected' };
+        const targetStatus = statusToHouseKeeping[roomState];
         return matchesCategory && room.houseKeepingStatus === targetStatus;
       });
     }
@@ -635,25 +594,25 @@ export default function AllRoomsScreen() {
       const hasReservationFilter = Object.values(activeFilters.reservations || {}).some(v => v);
       const hasFloorFilter = Object.values(activeFilters.floors || {}).some(v => v);
 
-      // Apply floor filter first
+      // Apply floor filter (first digit of room number = floor: 101->1, 305->3, 507->5)
       if (hasFloorFilter) {
         const floorFilters = activeFilters.floors || {};
         const isAllSelected = floorFilters.all;
-        
+
         if (!isAllSelected) {
-          // Filter by individual floors
+          const allowedFloors = new Set<number>();
+          Object.entries(floorFilters).forEach(([key, selected]) => {
+            if (key !== 'all' && selected) {
+              const floorNum = parseInt(key, 10);
+              if (!isNaN(floorNum)) allowedFloors.add(floorNum);
+            }
+          });
+
           rooms = rooms.filter((room) => {
-            const roomNum = parseInt(room.roomNumber, 10);
-            if (isNaN(roomNum)) return false;
-            
-            if (roomNum >= 100 && roomNum < 200) return floorFilters.first;
-            if (roomNum >= 200 && roomNum < 300) return floorFilters.second;
-            if (roomNum >= 300 && roomNum < 400) return floorFilters.third;
-            if (roomNum >= 400 && roomNum < 500) return floorFilters.fourth;
-            return false;
+            const floor = getFloorFromRoomNumber(room.roomNumber);
+            return floor !== null && allowedFloors.has(floor);
           });
         }
-        // If "All" is selected, include all floors (no filtering needed)
       }
 
       // Apply room state, guest, and reservation filters (any combination)
@@ -718,7 +677,7 @@ export default function AllRoomsScreen() {
     }
 
     // PM mode: when using roomsPM list it's already Turndown/No Task/Vacant; else filter to those
-    if (allRoomsData.selectedShift === 'PM' && !usePMRooms) {
+    if (allRoomsData?.selectedShift === 'PM' && !usePMRooms) {
       rooms = rooms.filter(
         (room) =>
           room.frontOfficeStatus === 'Turndown' ||
@@ -727,17 +686,17 @@ export default function AllRoomsScreen() {
       );
     }
     // AM mode: hide Turndown cards entirely
-    if (allRoomsData.selectedShift === 'AM') {
+    if (allRoomsData?.selectedShift === 'AM') {
       rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');
     }
 
     return rooms;
-  }, [allRoomsData.rooms, allRoomsData.roomsPM, allRoomsData.selectedShift, activeFilters, searchQuery, routeCategoryFilter]);
+  }, [allRoomsData?.rooms, allRoomsData?.roomsPM, allRoomsData?.selectedShift, activeFilters, searchQuery, routeCategoryFilter]);
 
   return (
     <View style={[
       styles.container,
-      allRoomsData.selectedShift === 'PM' && styles.containerPM
+      allRoomsData?.selectedShift === 'PM' && styles.containerPM
     ]}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
@@ -768,7 +727,6 @@ export default function AllRoomsScreen() {
             // Empty state card when filters don't match any rooms
             <View style={[
               styles.emptyStateCard,
-              allRoomsData.selectedShift === 'PM' && styles.emptyStateCardPM
             ]}>
               <View style={styles.emptyStateIconContainer}>
                 <View style={styles.emptyStateIconCircle}>
@@ -782,13 +740,11 @@ export default function AllRoomsScreen() {
               </View>
               <Text style={[
                 styles.emptyStateTitle,
-                allRoomsData.selectedShift === 'PM' && styles.emptyStateTitlePM
               ]}>
                 No rooms found
               </Text>
               <Text style={[
                 styles.emptyStateMessage,
-                allRoomsData.selectedShift === 'PM' && styles.emptyStateMessagePM
               ]}>
                 The chosen filter options do not match any rooms.{'\n'}Try adjusting your filters or search query.
               </Text>
@@ -810,7 +766,7 @@ export default function AllRoomsScreen() {
                     statusButtonRefs.current[room.id] = ref;
                   }
                 }}
-                selectedShift={allRoomsData.selectedShift}
+                selectedShift={allRoomsData?.selectedShift ?? 'AM'}
               />
             ))
           )}
@@ -840,9 +796,10 @@ export default function AllRoomsScreen() {
 
         {/* Header - Fixed at top (no blur) */}
         <AllRoomsHeader
-          selectedShift={allRoomsData.selectedShift}
+          selectedShift={allRoomsData?.selectedShift ?? 'AM'}
           onShiftToggle={handleShiftToggle}
           onSearch={handleSearch}
+          searchQuery={searchQuery}
           onFilterPress={handleFilterPress}
           onBackPress={handleBackPress}
           showFilterModal={showFilterModal}
@@ -884,11 +841,40 @@ export default function AllRoomsScreen() {
           }
         }}
         onStatusSelect={handleStatusSelect}
-        onFlagToggle={handleFlagToggle}
-        currentStatus={selectedRoomForStatusChange?.status || 'InProgress'}
+        onInspectedSelect={() => {
+          if (selectedRoomForStatusChange) {
+            setRoomForInspection(selectedRoomForStatusChange);
+            setButtonPositionForInspection(statusButtonPosition);
+            setShowInspectedModal(true);
+          }
+        }}
+        currentStatus={selectedRoomForStatusChange?.houseKeepingStatus || 'InProgress'}
         room={selectedRoomForStatusChange || undefined}
         buttonPosition={statusButtonPosition}
         headerHeight={217} // AllRoomsScreen header height
+      />
+
+      {/* Inspection Checklist Modal - shown when changing to Inspected */}
+      <InspectedStatusSlideModal
+        visible={showInspectedModal}
+        onClose={() => {
+          setShowInspectedModal(false);
+          setRoomForInspection(null);
+          setButtonPositionForInspection(null);
+          if (originalScrollY > 0 && scrollViewRef.current) {
+            setTimeout(() => {
+              scrollViewRef.current?.scrollTo({
+                y: originalScrollY,
+                animated: true,
+              });
+              setOriginalScrollY(0);
+            }, 100);
+          }
+        }}
+        onComplete={() => handleStatusSelect('Inspected', roomForInspection)}
+        buttonPosition={buttonPositionForInspection}
+        headerHeight={217}
+        showTriangle={true}
       />
 
       {/* Filter Modal - Use AllRoomsFilterModal for both AM and PM shifts */}

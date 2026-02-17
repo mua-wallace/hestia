@@ -12,8 +12,10 @@ import SearchInput from '../components/SearchInput';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
-import type { ShiftType } from '../types/home.types';
+import type { ShiftType, UserProfile } from '../types/home.types';
 import { mockHomeData } from '../data/mockHomeData';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { mockChatData } from '../data/mockChatData';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
 import type { MoreMenuItemId } from '../types/more.types';
@@ -27,6 +29,7 @@ import { FilterState, FilterCounts } from '../types/filter.types';
 import type { CategorySection } from '../types/home.types';
 import type { RoomCardData } from '../types/allRooms.types';
 import { getShiftFromTime } from '../utils/shiftUtils';
+import { getFloorFromRoomNumber } from '../utils/formatting';
 
 import type { MainTabsParamList } from '../navigation/types';
 
@@ -38,6 +41,7 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute();
+  const { session } = useAuth();
   const [homeData, setHomeData] = useState(() => ({
     ...mockHomeData,
     selectedShift: getShiftFromTime(),
@@ -46,9 +50,94 @@ export default function HomeScreen() {
     (route.params as any)?.filters as FilterState | undefined
   );
   const [activeTab, setActiveTab] = useState('Home');
+  const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showMorePopup, setShowMorePopup] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
+
+  // Sync user profile from auth session when logged in
+  useEffect(() => {
+    if (!session?.user) return;
+
+    const buildUserProfile = async (): Promise<UserProfile> => {
+      const metadata = session.user.user_metadata;
+      let fullName = metadata?.full_name || session.user.email?.split('@')[0] || 'User';
+      let avatarUrl: string | undefined = metadata?.avatar_url || undefined;
+      let role = metadata?.role_name || metadata?.role || 'Staff';
+      let department: string | undefined = metadata?.department || undefined;
+
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('full_name, avatar_url, roles(name), departments(name)')
+            .eq('id', session.user.id)
+            .single();
+
+          if (!error && data) {
+            const row = data as {
+              full_name?: string;
+              avatar_url?: string;
+              roles?: { name: string } | null;
+              departments?: { name: string } | null;
+            };
+            if (row.full_name) fullName = row.full_name;
+            if (row.avatar_url) avatarUrl = row.avatar_url;
+            if (row.roles?.name) role = row.roles.name;
+            else if (row.departments?.name) role = row.departments.name;
+            if (row.departments?.name) department = row.departments.name;
+          }
+        } catch {
+          // Use session metadata / fallback
+        }
+      }
+
+      return {
+        name: fullName,
+        role,
+        department,
+        avatar: avatarUrl,
+        hasFlag: mockHomeData.user.hasFlag,
+      };
+    };
+
+    buildUserProfile().then((user) => {
+      setHomeData((prev) => ({ ...prev, user }));
+    });
+  }, [session?.user?.id]);
+
+  // Refetch user profile when returning to screen (e.g. after updating avatar)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!session?.user) return;
+      const buildUserProfile = async (): Promise<UserProfile> => {
+        const metadata = session.user.user_metadata;
+        let fullName = metadata?.full_name || session.user.email?.split('@')[0] || 'User';
+        let avatarUrl: string | undefined = metadata?.avatar_url || undefined;
+        let role = metadata?.role_name || metadata?.role || 'Staff';
+        let department: string | undefined = metadata?.department || undefined;
+        if (isSupabaseConfigured) {
+          try {
+            const { data, error } = await supabase
+              .from('users')
+              .select('full_name, avatar_url, roles(name), departments(name)')
+              .eq('id', session.user.id)
+              .single();
+            if (!error && data) {
+              const row = data as { full_name?: string; avatar_url?: string; roles?: { name: string } | null; departments?: { name: string } | null };
+              if (row.full_name) fullName = row.full_name;
+              if (row.avatar_url) avatarUrl = row.avatar_url;
+              if (row.roles?.name) role = row.roles.name;
+              else if (row.departments?.name) role = row.departments.name;
+              if (row.departments?.name) department = row.departments.name;
+            }
+          } catch { /* ignore */ }
+        }
+        return { name: fullName, role, department, avatar: avatarUrl, hasFlag: mockHomeData.user.hasFlag };
+      };
+      buildUserProfile().then((user) => setHomeData((prev) => ({ ...prev, user })));
+    }, [session?.user?.id])
+  );
 
   // Sync activeTab with current route
   useFocusEffect(
@@ -67,13 +156,13 @@ export default function HomeScreen() {
 
   const handleShiftToggle = (shift: ShiftType) => {
     setHomeData(prev => ({ ...prev, selectedShift: shift }));
-    // Reset filters when shift changes - filters should be per shift
+    // Reset filters and search when shift changes
     setActiveFilters(undefined);
+    setSearchQuery('');
   };
 
   const handleSearch = (text: string) => {
-    // TODO: Implement search logic
-    console.log('Search:', text);
+    setSearchQuery(text);
   };
 
   const handleFilterPress = () => {
@@ -83,6 +172,10 @@ export default function HomeScreen() {
   const handleBellPress = () => {
     // TODO: Implement notifications
     console.log('Bell pressed');
+  };
+
+  const handleProfilePress = () => {
+    navigation.navigate('UserProfile', { user: homeData.user });
   };
 
   const handleTabPress = (tab: string) => {
@@ -141,14 +234,18 @@ export default function HomeScreen() {
       showBackButton: true,
       filters: activeFilters,
       categoryFilter: { category: category.name, roomState },
-      selectedShift: homeData.selectedShift, // Pass current shift from HomeScreen
+      selectedShift: homeData.selectedShift,
     } as any);
   };
 
-  const getRoomFloor = (roomNumber: string): number | null => {
-    const firstChar = (roomNumber || '').trim()[0];
-    const floor = Number.parseInt(firstChar || '', 10);
-    return Number.isFinite(floor) ? floor : null;
+  /** When user taps priority badge, filter and show only priority rooms for that category. */
+  const handlePriorityPress = (category: CategorySection) => {
+    navigation.navigate('AllRooms', {
+      showBackButton: true,
+      filters: activeFilters,
+      categoryFilter: { category: category.name, roomState: 'priority' },
+      selectedShift: homeData.selectedShift,
+    } as any);
   };
 
   const filterRoomsByFloors = (rooms: RoomCardData[], filters?: FilterState) => {
@@ -161,15 +258,17 @@ export default function HomeScreen() {
     if (floorFilters.all) return rooms;
 
     const allowedFloors = new Set<number>();
-    if (floorFilters.first) allowedFloors.add(1);
-    if (floorFilters.second) allowedFloors.add(2);
-    if (floorFilters.third) allowedFloors.add(3);
-    if (floorFilters.fourth) allowedFloors.add(4);
+    Object.entries(floorFilters).forEach(([key, selected]) => {
+      if (key !== 'all' && selected) {
+        const floorNum = Number.parseInt(key, 10);
+        if (!isNaN(floorNum)) allowedFloors.add(floorNum);
+      }
+    });
 
     if (allowedFloors.size === 0) return rooms;
 
     return rooms.filter((r) => {
-      const floor = getRoomFloor(r.roomNumber);
+      const floor = getFloorFromRoomNumber(r.roomNumber);
       return floor !== null && allowedFloors.has(floor);
     });
   };
@@ -203,12 +302,22 @@ export default function HomeScreen() {
 
   const derivedCategories = useMemo(() => {
     // Use PM rooms data if available and PM shift is selected, otherwise use AM rooms
-    const roomsPM = mockAllRoomsData.roomsPM;
+    const roomsPM = mockAllRoomsData?.roomsPM ?? [];
     const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    const sourceRooms = usePMRooms ? roomsPM : mockAllRoomsData.rooms;
+    const sourceRooms = usePMRooms ? roomsPM : (mockAllRoomsData?.rooms ?? []);
     
     // Apply filters to the correct shift's data
     let rooms = filterRoomsByFloors(sourceRooms, activeFilters);
+
+    // Apply search filter (room number, guest name)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      rooms = rooms.filter(
+        (r) =>
+          r.roomNumber.toLowerCase().includes(q) ||
+          r.guests.some((g) => g.name.toLowerCase().includes(q))
+      );
+    }
 
     const categories: CategorySection[] = [];
 
@@ -241,7 +350,7 @@ export default function HomeScreen() {
     }
 
     return categories;
-  }, [activeFilters, homeData.selectedShift]);
+  }, [activeFilters, homeData.selectedShift, searchQuery]);
 
   // Sync route filters -> local state
   useEffect(() => {
@@ -305,9 +414,9 @@ export default function HomeScreen() {
     });
 
     // Use PM rooms data if available and PM shift is selected, otherwise use AM rooms
-    const roomsPM = mockAllRoomsData.roomsPM;
+    const roomsPM = mockAllRoomsData?.roomsPM ?? [];
     const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    const sourceRooms = usePMRooms ? roomsPM : mockAllRoomsData.rooms;
+    const sourceRooms = usePMRooms ? roomsPM : (mockAllRoomsData?.rooms ?? []);
 
     // Reservations (Vacant) - from categories when PM, or from room data
     const reservations = {
@@ -333,36 +442,18 @@ export default function HomeScreen() {
     );
     guests.departures = departureRooms.length;
 
-    // Calculate floor counts based on actual room numbers from current shift's data
-    // Room numbers: 1xx = 1st floor, 2xx = 2nd floor, 3xx = 3rd floor, 4xx = 4th floor
-    const floorCounts = {
-      first: 0,
-      second: 0,
-      third: 0,
-      fourth: 0,
-    };
-
+    // Calculate floor counts from first digit of room number (101->1, 305->3, 507->5)
+    const floorCounts: Record<number, number> = {};
     sourceRooms.forEach((room) => {
-      const roomNum = parseInt(room.roomNumber, 10);
-      if (!isNaN(roomNum)) {
-        if (roomNum >= 100 && roomNum < 200) {
-          floorCounts.first++;
-        } else if (roomNum >= 200 && roomNum < 300) {
-          floorCounts.second++;
-        } else if (roomNum >= 300 && roomNum < 400) {
-          floorCounts.third++;
-        } else if (roomNum >= 400 && roomNum < 500) {
-          floorCounts.fourth++;
-        }
+      const floor = getFloorFromRoomNumber(room.roomNumber);
+      if (floor !== null) {
+        floorCounts[floor] = (floorCounts[floor] || 0) + 1;
       }
     });
 
-    const floors = {
-      all: floorCounts.first + floorCounts.second + floorCounts.third + floorCounts.fourth, // Sum of all floors
-      first: floorCounts.first,
-      second: floorCounts.second,
-      third: floorCounts.third,
-      fourth: floorCounts.fourth,
+    const floors: Record<string, number> = {
+      all: Object.values(floorCounts).reduce((sum, n) => sum + n, 0),
+      ...Object.fromEntries(Object.entries(floorCounts).map(([k, v]) => [k, v])),
     };
 
     return { roomStates, guests, floors, totalRooms, reservations };
@@ -401,11 +492,12 @@ export default function HomeScreen() {
             }
           >
             {derivedCategories.map((category) => (
-              <CategoryCard 
-                key={category.id} 
-                category={category} 
+              <CategoryCard
+                key={category.id}
+                category={category}
                 onPress={handleCategoryPress}
                 onStatusPress={handleStatusPress}
+                onPriorityPress={handlePriorityPress}
                 selectedShift={homeData.selectedShift}
               />
             ))}
@@ -426,6 +518,7 @@ export default function HomeScreen() {
           date={homeData.date}
           onShiftToggle={handleShiftToggle}
           onBellPress={handleBellPress}
+          onProfilePress={handleProfilePress}
         />
 
         {/* Search Bar and Filter - Fixed below header */}
@@ -450,7 +543,9 @@ export default function HomeScreen() {
                 />
               </TouchableOpacity>
               <SearchInput
-                placeholder={{ bold: 'Search ', normal: 'Rooms, Guests, Floors etc' }}
+                placeholder={{ bold: 'Search ', normal: 'by room number, guest name' }}
+                value={searchQuery}
+                onChangeText={handleSearch}
                 onSearch={handleSearch}
                 inputStyle={[
                   styles.searchInput,

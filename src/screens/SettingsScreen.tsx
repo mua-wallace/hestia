@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
 import { colors, typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
+import { useAuth } from '../contexts/AuthContext';
 import MorePopup from '../components/more/MorePopup';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockChatData } from '../data/mockChatData';
@@ -30,8 +31,28 @@ type SettingsScreenNavigationProp = NativeStackNavigationProp<MainTabsParamList,
 export default function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const route = useRoute();
+  const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('Home');
   const [showMorePopup, setShowMorePopup] = useState(false);
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            await signOut();
+            const rootNav = navigation.getParent();
+            rootNav?.reset({ index: 0, routes: [{ name: 'Login' }] });
+          },
+        },
+      ]
+    );
+  };
 
   // Sync activeTab with current route
   useFocusEffect(
@@ -94,6 +115,9 @@ export default function SettingsScreen() {
       <View style={styles.content}>
         <Text style={styles.title}>Settings</Text>
         <Text style={styles.subtitle}>Coming Soon</Text>
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Text style={styles.signOutButtonText}>Sign Out</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
@@ -150,6 +174,18 @@ const styles = StyleSheet.create({
     fontSize: 18 * scaleX,
     color: colors.text.secondary,
     marginBottom: 30 * scaleX,
+  },
+  signOutButton: {
+    backgroundColor: '#c53030',
+    paddingHorizontal: 30 * scaleX,
+    paddingVertical: 12 * scaleX,
+    borderRadius: 8 * scaleX,
+    marginBottom: 16 * scaleX,
+  },
+  signOutButtonText: {
+    color: '#ffffff',
+    fontSize: 16 * scaleX,
+    fontWeight: '600',
   },
   backButton: {
     backgroundColor: colors.primary.main,

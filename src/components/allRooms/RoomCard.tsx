@@ -55,7 +55,6 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
   const isVacant = room.guests?.[0]?.isVacant === true;
   const isVacantTurndown = isTurndown && isVacant;
   const hasNotes = !!room.notes;
-  const isPM = selectedShift === 'PM';
 
   // Check if any guest names wrap (longer than 23 characters)
   const MAX_NAME_LENGTH = 23;
@@ -94,21 +93,9 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
     return baseHeight + wrappedNameExtraHeight;
   };
 
-  // Determine card background and border - based on status and PM mode
+  // Determine card background and border - always use AM styling (PM keeps screen bg only)
   const getCardStyles = () => {
     const isInProgress = room.houseKeepingStatus === 'InProgress';
-    const isPM = selectedShift === 'PM';
-    
-    if (isPM) {
-      return {
-        backgroundColor: isInProgress 
-          ? '#4A4D59' // Darker gray for PM priority
-          : '#3A3D49', // Dark gray for PM mode
-        borderColor: '#4A4D59', // Darker border for PM mode
-        borderWidth: 1,
-      };
-    }
-    
     return {
       backgroundColor: isInProgress 
         ? CARD_COLORS.priorityBackground 
@@ -174,44 +161,43 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           styles.roomInfo,
           !room.isPriority && styles.roomInfoStandard
         ]}>
-          <Text style={[
-            styles.roomNumber,
-            selectedShift === 'PM' && styles.roomNumberPM
-          ]}>
+          <Text style={styles.roomNumber}>
             {room.roomNumber}
           </Text>
         </View>
         
-        {/* Room Type + Credit display: "ST2K - 45", "ST2K - 60", etc. */}
-        <Text style={[
-          styles.roomType,
-          !room.isPriority && styles.roomTypeStandard,
-          selectedShift === 'PM' && styles.roomTypePM
+        {/* Room Type + Credit display: "ST2K - 45", "ST2K - 60", etc. + red flag when priority */}
+        <View style={[
+          styles.roomTypeRow,
+          !room.isPriority && styles.roomTypeRowStandard,
         ]}>
-          {`${room.roomCategory} - ${room.credit}`}
-        </Text>
+          <Text style={styles.roomTypeText}>
+            {`${room.roomCategory} - ${room.credit}`}
+          </Text>
+          {room.isPriority && (
+            <Image
+              source={require('../../../assets/icons/flag.png')}
+              style={styles.roomTypeFlagIcon}
+              resizeMode="contain"
+              tintColor="#f92424"
+            />
+          )}
+        </View>
         
         {/* Front Office Status Label: "Stayover" + "with Linen" badge when applicable, or other status */}
         <View style={[
           styles.categoryLabelRow,
           !room.isPriority && styles.categoryLabelRowStandard
         ]}>
-          <Text style={[
-            styles.categoryLabel,
-            selectedShift === 'PM' && styles.categoryLabelPM
-          ]}>
+          <Text style={styles.categoryLabel}>
             {getStayoverDisplayLabel(room)}
           </Text>
           {isStayover && showStayoverWithLinenBadge(room) && (
             <View style={[
               styles.withLinenBadge,
               room.isPriority && styles.withLinenBadgePriority,
-              selectedShift === 'PM' && styles.withLinenBadgePM
             ]}>
-              <Text style={[
-                styles.withLinenBadgeText,
-                selectedShift === 'PM' && styles.withLinenBadgeTextPM
-              ]}>
+              <Text style={styles.withLinenBadgeText}>
                 with Linen
               </Text>
             </View>
@@ -245,10 +231,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           <View style={styles.vacantLeft}>
             <Image
               source={require('../../../assets/icons/vacant-chair.png')}
-              style={[
-                styles.vacantIcon,
-                isPM && styles.vacantIconPM,
-              ]}
+              style={styles.vacantIcon}
               resizeMode="contain"
             />
             <Text
@@ -279,9 +262,9 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           const isSecondGuest = index === 1;
           
           return (
-            <GuestInfoSection 
+            <GuestInfoSection
               key={`guest-${index}`}
-              guest={guest} 
+              guest={guest}
               vipCode={guest.vipCode}
               isPriority={room.isPriority}
               isFirstGuest={isFirstGuest}
@@ -289,7 +272,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
               hasNotes={hasNotes}
               frontOfficeStatus={room.frontOfficeStatus}
               isArrivalDeparture={isArrivalDeparture}
-              selectedShift={selectedShift}
+              selectedShift="AM"
             />
           );
         })
@@ -302,11 +285,11 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
       ]} />
 
       {/* Staff Section */}
-      <StaffSection 
-        staff={room.roomAttendantAssigned} 
-        isPriority={room.isPriority} 
+      <StaffSection
+        staff={room.roomAttendantAssigned}
+        isPriority={room.isPriority}
         frontOfficeStatus={room.frontOfficeStatus}
-        selectedShift={selectedShift}
+        selectedShift="AM"
       />
 
       {/* Status Button */}
@@ -318,7 +301,6 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           isPriority={room.isPriority}
           isArrivalDeparture={isArrivalDeparture}
           hasNotes={hasNotes}
-          flagged={room.flagged === true}
         />
       )}
 
@@ -403,18 +385,27 @@ const styles = StyleSheet.create({
     color: ROOM_HEADER.roomNumber.color,
     lineHeight: ROOM_HEADER.roomNumber.lineHeight * scaleX,
   },
-  roomType: {
+  roomTypeRow: {
     position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6 * scaleX,
+    left: ROOM_HEADER.roomType.left * scaleX,
+    top: ROOM_HEADER.roomType.top * scaleX,
+  },
+  roomTypeRowStandard: {
+    left: ROOM_HEADER.roomTypeStandard.left * scaleX,
+  },
+  roomTypeText: {
     fontSize: ROOM_HEADER.roomType.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.light as any,
     color: ROOM_HEADER.roomType.color,
     lineHeight: ROOM_HEADER.roomType.lineHeight * scaleX,
-    left: ROOM_HEADER.roomType.left * scaleX, // 111px for priority
-    top: ROOM_HEADER.roomType.top * scaleX, // 22px
   },
-  roomTypeStandard: {
-    left: ROOM_HEADER.roomTypeStandard.left * scaleX, // 118px for standard
+  roomTypeFlagIcon: {
+    width: 14 * scaleX,
+    height: 14 * scaleX,
   },
   priorityTextHeader: {
     fontSize: ROOM_HEADER.priorityBadge.fontSize * scaleX,

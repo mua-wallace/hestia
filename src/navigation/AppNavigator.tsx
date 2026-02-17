@@ -12,6 +12,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import AllRoomsScreen from '../screens/AllRoomsScreen';
 import ArrivalDepartureDetailScreen from '../screens/ArrivalDepartureDetailScreen';
 import RoomDetailScreen from '../screens/RoomDetailScreen';
+import UserProfileScreen from '../screens/UserProfileScreen';
 import CreateTicketScreen from '../screens/CreateTicketScreen';
 import CreateTicketFormScreen from '../screens/CreateTicketFormScreen';
 import ChatDetailScreen from '../screens/ChatDetailScreen';
@@ -124,6 +125,11 @@ export default function AppNavigator() {
         }}
       />
       <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
+      <Stack.Screen
+        name="UserProfile"
+        component={UserProfileScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
       <Stack.Screen name="CreateTicket" component={CreateTicketScreen} />
       <Stack.Screen name="CreateTicketForm" component={CreateTicketFormScreen} />
     </Stack.Navigator>

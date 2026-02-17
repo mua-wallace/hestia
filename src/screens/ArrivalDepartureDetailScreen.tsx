@@ -14,6 +14,7 @@ import TaskSection from '../components/roomDetail/TaskSection';
 import ChecklistSection from '../components/roomDetail/ChecklistSection';
 import RoomTicketsSection from '../components/roomDetail/RoomTicketsSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
+import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
 import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
 import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal';
@@ -40,6 +41,8 @@ export default function ArrivalDepartureDetailScreen() {
 
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showInspectedModal, setShowInspectedModal] = useState(false);
+  const [buttonPositionForInspection, setButtonPositionForInspection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
   const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
   const [showRefuseServiceModal, setShowRefuseServiceModal] = useState(false);
@@ -176,12 +179,6 @@ export default function ArrivalDepartureDetailScreen() {
     }
   };
 
-  const handleFlagToggle = (flagged: boolean) => {
-    setLocalRoom((prev) => ({ ...prev, flagged }));
-    // TODO: Save to backend/API
-    console.log('Flag toggled for room:', localRoom.roomNumber, 'flagged:', flagged);
-  };
-
   const handleStatusSelect = (statusOption: StatusChangeOption) => {
     // Find the status option label
     const statusOptionConfig = STATUS_OPTIONS.find(opt => opt.id === statusOption);
@@ -237,18 +234,19 @@ export default function ArrivalDepartureDetailScreen() {
 
     // Update local status state to change header background color
     setCurrentStatus(newStatus);
-    
-    // If Pause is selected, don't change the status text (keep "In Progress")
-    // Only set paused time to show "Paused at {time}" below the status
-    if (statusOption === 'Pause') {
+
+    // Priority: set room as priority and show "In Progress" (not "Priority")
+    if (statusOption === 'Priority') {
+      setLocalRoom((prev) => (prev ? { ...prev, isPriority: true } : prev));
+      setSelectedStatusText(undefined);
+      setPausedAt(undefined);
+    } else if (statusOption === 'Pause') {
       const now = new Date();
       const hours = now.getHours().toString().padStart(2, '0');
       const minutes = now.getMinutes().toString().padStart(2, '0');
       setPausedAt(`${hours}:${minutes}`);
-      // Don't set selectedStatusText - keep it undefined so it shows "In Progress"
       setSelectedStatusText(undefined);
     } else {
-      // Update selected status text to show the selected option label
       setSelectedStatusText(statusLabel);
       setPausedAt(undefined);
     }
@@ -436,7 +434,7 @@ export default function ArrivalDepartureDetailScreen() {
         returnLaterAtTimestamp={returnLaterAtTimestamp}
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceReason={refuseServiceReason}
-        flagged={localRoom?.flagged === true}
+        isPriority={localRoom?.isPriority === true}
         frontOfficeLabel={room.frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}
         showWithLinenBadge={room.frontOfficeStatus === 'Stayover' && showStayoverWithLinenBadge(localRoom)}
       />
@@ -585,11 +583,30 @@ export default function ArrivalDepartureDetailScreen() {
           setStatusButtonPosition(null);
         }}
         onStatusSelect={handleStatusSelect}
-        onFlagToggle={handleFlagToggle}
+        onInspectedSelect={() => {
+          setButtonPositionForInspection(statusButtonPosition);
+          setShowInspectedModal(true);
+        }}
         currentStatus={currentStatus}
         room={localRoom}
         buttonPosition={statusButtonPosition}
         showTriangle={false}
+      />
+
+      <InspectedStatusSlideModal
+        visible={showInspectedModal}
+        onClose={() => {
+          setShowInspectedModal(false);
+          setButtonPositionForInspection(null);
+        }}
+        onComplete={() => {
+          handleStatusSelect('Inspected');
+          setShowInspectedModal(false);
+          setButtonPositionForInspection(null);
+        }}
+        buttonPosition={buttonPositionForInspection}
+        headerHeight={232}
+        showTriangle={!!buttonPositionForInspection}
       />
 
       <ReturnLaterModal

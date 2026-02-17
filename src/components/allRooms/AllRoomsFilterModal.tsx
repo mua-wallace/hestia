@@ -70,7 +70,7 @@ export default function AllRoomsFilterModal({
     return calculateResultCount(safeFilterCounts);
   }, [filters, safeFilterCounts, calculateResultCount, actualFilteredCount]);
 
-  const displayResultCount = hasActiveFilters ? resultCount : (safeFilterCounts.totalRooms || 0);
+  const displayResultCount = hasActiveFilters ? resultCount : 0;
 
   const handleApply = () => {
     if (filters) {
