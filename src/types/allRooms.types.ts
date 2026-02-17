@@ -44,6 +44,8 @@ export interface GuestInfo {
   isVacant?: boolean; // For turndown vacant state
   /** ISO date string (YYYY-MM-DD) of guest arrival; used for Stayover linen calculation (every 2nd day = linen change) */
   arrivalDate?: string;
+  /** Optional guest portrait URL for two-column layout (image left, info right) on room cards */
+  imageUrl?: string;
 }
 
 export interface StaffInfo {

@@ -4,6 +4,9 @@
   "main": "expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
+    "seed:departments": "node scripts/seedDepartments.js",
+    "seed:roles": "node scripts/seedRolesAndPermissions.js",
+    "seed:users": "node scripts/seedUsers.js",
     "start:tunnel": "expo start --tunnel",
     "start:lan": "expo start --lan",
     "start:localhost": "expo start --localhost",
@@ -12,9 +15,12 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-navigation/bottom-tabs": "^6.5.11",
     "@react-navigation/native": "^6.1.9",
     "@react-navigation/native-stack": "^6.9.17",
+    "@supabase/supabase-js": "^2.95.3",
+    "base64-arraybuffer": "^1.0.2",
     "expo": "~54.0.33",
     "expo-av": "^16.0.8",
     "expo-blur": "^15.0.8",
@@ -32,7 +38,8 @@
     "react-native-gesture-handler": "~2.28.0",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
-    "react-native-svg": "15.12.1"
+    "react-native-svg": "15.12.1",
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

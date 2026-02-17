@@ -9,7 +9,6 @@ interface StatusButtonProps {
   isPriority?: boolean;
   isArrivalDeparture?: boolean;
   hasNotes?: boolean;
-  flagged?: boolean;
 }
 
 const StatusButton = forwardRef<any, StatusButtonProps>(({ 
@@ -18,7 +17,6 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
   isPriority = false,
   isArrivalDeparture = false,
   hasNotes = false,
-  flagged = false,
 }, ref) => {
   // Safety check: ensure status is valid and config exists
   if (!status || !STATUS_CONFIGS[status]) {
@@ -53,43 +51,7 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
     return null;
   }
 
-  // Flagged: same position/size and edge spacing as in-progress/dropdown status button (chevron.right = 12px); only background, borderRadius and icons differ
-  if (flagged) {
-    return (
-      <TouchableOpacity
-        ref={ref}
-        style={[
-          styles.containerFlagged,
-          {
-            right: buttonRight * scaleX,
-            top: buttonTop * scaleX,
-            width: STATUS_BUTTON.width * scaleX,
-            height: STATUS_BUTTON.height * scaleX,
-            borderRadius: STATUS_BUTTON.flagged.borderRadius * scaleX,
-            backgroundColor: STATUS_BUTTON.flagged.background,
-            paddingHorizontal: STATUS_BUTTON.chevron.right * scaleX,
-          },
-        ]}
-        onPress={onPress}
-        activeOpacity={0.8}
-      >
-        <Image
-          source={require('../../../assets/icons/flag.png')}
-          style={styles.flagIcon}
-          resizeMode="contain"
-          tintColor={STATUS_BUTTON.flagged.iconTint}
-        />
-        <Image
-          source={require('../../../assets/icons/dropdown-arrow.png')}
-          style={styles.dropdownIcon}
-          resizeMode="contain"
-          tintColor={STATUS_BUTTON.flagged.iconTint}
-        />
-      </TouchableOpacity>
-    );
-  }
-
-  // Default: icon-only status button
+  // Icon-only status button - always displays houseKeepingStatus (Dirty, In Progress, Cleaned, Inspected)
   if (!config.icon) {
     return null;
   }

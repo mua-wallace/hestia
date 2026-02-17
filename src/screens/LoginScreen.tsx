@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity, Image, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity, Image, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 import { colors, typography } from '../theme';
+import { useAuth } from '../contexts/AuthContext';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -23,14 +24,35 @@ const LANGUAGES = [
 export default function LoginScreen() {
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const insets = useSafeAreaInsets();
-  const [email, setEmail] = useState('Stellakitou@mandarinorientalsavoy.ch');
-  const [password, setPassword] = useState('**********************');
+  const { signIn } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('EN');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = () => {
-    // TODO: Implement login logic
-    navigation.replace('Main');
+  const handleLogin = async () => {
+    if (!email.trim() || !password) {
+      setError('Please enter your email and password.');
+      return;
+    }
+    setError(null);
+    setIsSigningIn(true);
+    try {
+      const { error: signInError } = await signIn(email.trim(), password);
+      if (signInError) {
+        console.error('[Login] signIn error:', signInError);
+        setError(signInError.message ?? 'Invalid email or password.');
+        return;
+      }
+      navigation.replace('Main');
+    } catch (err) {
+      console.error('[Login] signIn unexpected error:', err);
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
+    } finally {
+      setIsSigningIn(false);
+    }
   };
 
   // Calculate safe top padding for Android
@@ -151,9 +173,24 @@ export default function LoginScreen() {
         />
       </View>
 
+      {/* Error message */}
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
       {/* Sign In Button (Rectangle 115) - x=35, y=568, 370×70px */}
-      <TouchableOpacity style={styles.signInButton} onPress={handleLogin}>
-        <Text style={styles.signInText}>Sign In</Text>
+      <TouchableOpacity
+        style={[styles.signInButton, isSigningIn && styles.signInButtonDisabled]}
+        onPress={handleLogin}
+        disabled={isSigningIn}
+      >
+        {isSigningIn ? (
+          <ActivityIndicator color={colors.text.white} />
+        ) : (
+          <Text style={styles.signInText}>Sign In</Text>
+        )}
       </TouchableOpacity>
 
       {/* Recover Password Section */}
@@ -410,6 +447,20 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.regular as any,
     color: colors.text.white,
+  },
+  signInButtonDisabled: {
+    opacity: 0.7,
+  },
+  errorContainer: {
+    position: 'absolute',
+    left: 35 * scaleX,
+    top: 535 * scaleX,
+    width: 370 * scaleX,
+  },
+  errorText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: '#c53030',
   },
   // Recover Password Container (Rectangle 116) - x=36, y=665, 370×70px
   recoverPasswordContainer: {

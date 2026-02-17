@@ -13,7 +13,8 @@ import { colors, typography } from '../../theme';
 import FilterSection from './FilterSection';
 import FilterCheckbox from './FilterCheckbox';
 import SeeRoomsButton from '../shared/SeeRoomsButton';
-import { FilterState, FilterCounts, FilterOption, FloorFilter } from '../../types/filter.types';
+import { FilterState, FilterCounts, FilterOption } from '../../types/filter.types';
+import { getFloorLabel } from '../../utils/formatting';
 import { ShiftType } from '../../types/home.types';
 import { useHomeFilters } from '../../hooks/useHomeFilters';
 
@@ -72,13 +73,7 @@ export default function HomeFilterModal({
       turnDown: 0,
       stayOver: 0,
     },
-    floors: {
-      all: 0,
-      first: 0,
-      second: 0,
-      third: 0,
-      fourth: 0,
-    },
+    floors: { all: 0 },
     totalRooms: 0,
   };
   // Calculate position below filter button
@@ -124,7 +119,6 @@ export default function HomeFilterModal({
   // HomeScreen doesn't provide onApplyFilters, AllRoomsScreen does
   const isHomeScreen = !onApplyFilters;
   const shouldShowAMStyle = isAMShift || isHomeScreen;
-  const floorKeys: FloorFilter[] = ['all', 'first', 'second', 'third', 'fourth'];
 
   const derivedTotalRooms = useMemo(() => {
     const roomStateTotal = safeFilterCounts?.roomStates
@@ -134,17 +128,11 @@ export default function HomeFilterModal({
   }, [safeFilterCounts]);
 
   const defaultFloorCounts = useMemo(() => {
-    if (safeFilterCounts.floors) {
+    if (safeFilterCounts.floors && Object.keys(safeFilterCounts.floors).length > 0) {
       return safeFilterCounts.floors;
     }
     const fallback = derivedTotalRooms || 24;
-    return {
-      all: fallback,
-      first: fallback,
-      second: fallback,
-      third: fallback,
-      fourth: fallback,
-    };
+    return { all: fallback };
   }, [safeFilterCounts.floors, derivedTotalRooms]);
 
   // Reset filters when modal closes
@@ -165,25 +153,35 @@ export default function HomeFilterModal({
   }, [filters, safeFilterCounts, calculateResultCount, actualFilteredCount]);
 
   const floorOptions = useMemo(() => {
-    const currentFloors =
-      filters?.floors || {
-        all: false,
-        first: false,
-        second: false,
-        third: false,
-        fourth: false,
-      };
+    const currentFloors = filters?.floors || { all: false };
+    const floorCounts = defaultFloorCounts;
+    const totalCount = floorCounts.all ?? derivedTotalRooms;
 
-    return [
-      { id: 'all', label: 'All', count: defaultFloorCounts.all ?? derivedTotalRooms, selected: currentFloors.all },
-      { id: 'first', label: '1st Floor', count: defaultFloorCounts.first ?? derivedTotalRooms, selected: currentFloors.first },
-      { id: 'second', label: '2nd Floor', count: defaultFloorCounts.second ?? derivedTotalRooms, selected: currentFloors.second },
-      { id: 'third', label: '3rd Floor', count: defaultFloorCounts.third ?? derivedTotalRooms, selected: currentFloors.third },
-      { id: 'fourth', label: '4th Floor', count: defaultFloorCounts.fourth ?? derivedTotalRooms, selected: currentFloors.fourth },
+    const options = [
+      { id: 'all', label: 'All', count: totalCount, selected: !!currentFloors.all },
     ];
+
+    // Add floor options dynamically from floor counts (sorted: 1st, 2nd, 3rd, ...)
+    const floorNumbers = Object.keys(floorCounts)
+      .filter((k) => k !== 'all')
+      .map((k) => parseInt(k, 10))
+      .filter((n) => !isNaN(n))
+      .sort((a, b) => a - b);
+
+    floorNumbers.forEach((floorNum) => {
+      const key = String(floorNum);
+      options.push({
+        id: key,
+        label: getFloorLabel(floorNum),
+        count: floorCounts[key] ?? 0,
+        selected: !!currentFloors[key],
+      });
+    });
+
+    return options;
   }, [filters?.floors, defaultFloorCounts, derivedTotalRooms]);
 
-  const displayResultCount = hasActiveFilters ? resultCount : (safeFilterCounts.totalRooms || defaultFloorCounts.all || derivedTotalRooms);
+  const displayResultCount = hasActiveFilters ? resultCount : 0;
 
   // Room State filter options
   const roomStateOptions: FilterOption[] = useMemo(
@@ -296,22 +294,16 @@ export default function HomeFilterModal({
   };
 
   const handleToggleFloor = (id: string) => {
-    const currentFloors =
-      filters?.floors || {
-        all: false,
-        first: false,
-        second: false,
-        third: false,
-        fourth: false,
-      };
+    const currentFloors = filters?.floors || { all: false };
+    const floorIds = floorOptions.map((o) => o.id).filter((k) => k !== 'all');
 
     // When toggling "All", set all floors to the same value
     if (id === 'all') {
       const nextValue = !currentFloors.all;
-      const updatedFloors = floorKeys.reduce<Record<FloorFilter, boolean>>((acc, key) => {
-        acc[key] = nextValue;
-        return acc;
-      }, {} as Record<FloorFilter, boolean>);
+      const updatedFloors: Record<string, boolean> = { all: nextValue };
+      floorIds.forEach((key) => {
+        updatedFloors[key] = nextValue;
+      });
       setFilters((prev) => ({
         ...prev,
         floors: updatedFloors,
@@ -320,17 +312,16 @@ export default function HomeFilterModal({
     }
 
     // Toggle individual floor and unset "All" when a child is toggled off
-    const nextValue = !currentFloors[id as FloorFilter];
-    const updatedFloors: Record<FloorFilter, boolean> = {
+    const nextValue = !currentFloors[id];
+    const updatedFloors: Record<string, boolean> = {
       ...currentFloors,
       [id]: nextValue,
     };
 
     // If any child is off, "all" is false; if every child (except all) is on, "all" becomes true
-    const allChildrenSelected = floorKeys
-      .filter((key) => key !== 'all')
-      .every((key) => key === id ? nextValue : currentFloors[key]);
-
+    const allChildrenSelected = floorIds.every((key) =>
+      key === id ? nextValue : !!currentFloors[key]
+    );
     updatedFloors.all = allChildrenSelected;
 
     setFilters((prev) => ({

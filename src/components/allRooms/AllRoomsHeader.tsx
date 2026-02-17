@@ -10,6 +10,7 @@ interface AllRoomsHeaderProps {
   selectedShift: ShiftType;
   onShiftToggle: (shift: ShiftType) => void;
   onSearch: (text: string) => void;
+  searchQuery?: string; // Controlled search value
   onFilterPress?: () => void; // Optional - filter handler
   onBackPress?: () => void; // Optional - navigation handler
   searchPlaceholder?: string | { bold: string; normal: string }; // Optional dynamic placeholder
@@ -20,14 +21,12 @@ export default function AllRoomsHeader({
   selectedShift,
   onShiftToggle,
   onSearch,
+  searchQuery = '',
   onFilterPress,
   onBackPress,
-  searchPlaceholder = { bold: 'Search ', normal: 'Rooms, Guests, etc' },
+  searchPlaceholder = { bold: 'Search ', normal: 'by room number, guest name' },
   showFilterModal = false,
 }: AllRoomsHeaderProps) {
-  const handleSearchChange = (text: string) => {
-    onSearch(text);
-  };
 
   return (
     <View style={[
@@ -100,7 +99,9 @@ export default function AllRoomsHeader({
             </TouchableOpacity>
             <SearchInput
               placeholder={searchPlaceholder}
-              onSearch={handleSearchChange}
+              value={searchQuery}
+              onChangeText={onSearch}
+              onSearch={onSearch}
               inputStyle={[
                 styles.searchInput,
                 selectedShift === 'PM' && styles.searchInputPM

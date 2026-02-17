@@ -15,6 +15,8 @@ interface CategoryCardProps {
   onPress?: () => void;
   /** When a status badge with count >= 1 is tapped (e.g. cleaned[2] under Flagged). */
   onStatusPress?: (category: CategorySection, status: keyof RoomStatus) => void;
+  /** When the priority badge is tapped - filter and show priority rooms. */
+  onPriorityPress?: (category: CategorySection) => void;
   selectedShift?: ShiftType;
 }
 
@@ -52,43 +54,34 @@ const STATUS_CONFIG: Record<
 
 const CARD_RADIUS = 12 * scaleX;
 
-export default function CategoryCard({ category, onPress, onStatusPress, selectedShift }: CategoryCardProps) {
+export default function CategoryCard({ category, onPress, onStatusPress, onPriorityPress, selectedShift }: CategoryCardProps) {
   const statusKeys: (keyof RoomStatus)[] = ['dirty', 'inProgress', 'cleaned', 'inspected'];
   return (
     <TouchableOpacity
-      style={[
-        styles.container,
-        selectedShift === 'PM' && styles.containerPM,
-      ]}
+      style={styles.container}
       onPress={onPress}
       activeOpacity={0.7}
     >
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={[
-            styles.totalCount,
-            selectedShift === 'PM' && styles.totalCountPM
-          ]}>
+          <Text style={styles.totalCount}>
             {category.total}{' '}
           </Text>
-          <Text style={[
-            styles.categoryName,
-            selectedShift === 'PM' && styles.categoryNamePM
-          ]}>
+          <Text style={styles.categoryName}>
             {category.name}
           </Text>
         </View>
         {category.priority !== undefined && category.priority > 0 && (
-          <PriorityBadge count={category.priority} />
+          <PriorityBadge
+            count={category.priority}
+            onPress={onPriorityPress ? () => onPriorityPress(category) : undefined}
+          />
         )}
       </View>
 
       {/* Divider */}
-      <View style={[
-        styles.divider,
-        selectedShift === 'PM' && styles.dividerPM
-      ]} />
+      <View style={styles.divider} />
 
       {/* Status Indicators - tappable when count >= 1 to filter by category + status */}
       <View style={styles.statusGrid}>
@@ -102,7 +95,7 @@ export default function CategoryCard({ category, onPress, onStatusPress, selecte
             iconWidth={29.478}
             iconHeight={30.769}
             rightLabelIcon={STATUS_CONFIG[statusKey].rightLabelIcon}
-            isPM={selectedShift === 'PM'}
+            isPM={false}
             onPress={category.status[statusKey] >= 1 && onStatusPress ? () => onStatusPress(category, statusKey) : undefined}
           />
         ))}

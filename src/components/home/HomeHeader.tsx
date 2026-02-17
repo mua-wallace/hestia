@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { UserProfile, ShiftType } from '../../types/home.types';
 import { colors, typography } from '../../theme';
+import { getInitialsFromFullName } from '../../utils/formatting';
 import AMPMToggle from './AMPMToggle';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -14,6 +15,7 @@ interface HomeHeaderProps {
   date: string;
   onShiftToggle: (shift: ShiftType) => void;
   onBellPress: () => void;
+  onProfilePress?: () => void;
 }
 
 export default function HomeHeader({
@@ -22,21 +24,35 @@ export default function HomeHeader({
   date,
   onShiftToggle,
   onBellPress,
+  onProfilePress,
 }: HomeHeaderProps) {
+  const ProfileWrapper = onProfilePress ? TouchableOpacity : View;
+  const profileWrapperProps = onProfilePress ? { onPress: onProfilePress, activeOpacity: 0.8 } : {};
 
   return (
     <View style={[
       styles.container,
       selectedShift === 'PM' && styles.containerPM
     ]}>
-      {/* Profile Section */}
-      <View style={styles.profileSection}>
+      {/* Profile Section - tappable to open profile */}
+      <ProfileWrapper style={styles.profileSection} {...profileWrapperProps}>
         <View style={styles.profileImageContainer}>
-          <Image
-            source={require('../../../assets/icons/profile-image.png')}
-            style={styles.profileImage}
-            resizeMode="cover"
-          />
+          {user.avatar ? (
+            <Image
+              source={{ uri: user.avatar }}
+              style={styles.profileImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.initialsCircle}>
+              <Text style={[
+                styles.initialsText,
+                selectedShift === 'PM' && styles.initialsTextPM
+              ]}>
+                {getInitialsFromFullName(user.name)}
+              </Text>
+            </View>
+          )}
           {user.hasFlag && (
             <View style={styles.flagContainer}>
               <View style={styles.flagCircle}>
@@ -63,7 +79,7 @@ export default function HomeHeader({
             {user.role}
           </Text>
         </View>
-      </View>
+      </ProfileWrapper>
 
       {/* AM/PM Toggle */}
       <View style={styles.toggleContainer}>
@@ -108,40 +124,59 @@ const styles = StyleSheet.create({
     height: 51 * scaleX,
     borderRadius: 25.5 * scaleX,
   },
+  initialsCircle: {
+    width: 51 * scaleX,
+    height: 51 * scaleX,
+    borderRadius: 25.5 * scaleX,
+    backgroundColor: colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  initialsText: {
+    fontSize: 22 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.bold as any,
+    color: colors.text.white,
+  },
+  initialsTextPM: {
+    color: colors.text.white,
+  },
   flagContainer: {
     position: 'absolute',
-    right: -7 * scaleX,
-    bottom: -3 * scaleX,
+    right: -4 * scaleX,
+    bottom: -2 * scaleX,
   },
   flagCircle: {
-    width: 30.708 * scaleX,
-    height: 30.708 * scaleX,
-    borderRadius: 15.354 * scaleX,
+    width: 20 * scaleX,
+    height: 20 * scaleX,
+    borderRadius: 10 * scaleX,
     backgroundColor: '#2a2a2a',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#f1f6fc',
   },
   flagIcon: {
-    width: 11.071 * scaleX,
-    height: 11.071 * scaleX,
+    width: 10 * scaleX,
+    height: 10 * scaleX,
   },
   profileInfo: {
-    marginLeft: 25 * scaleX,
+    marginLeft: 12 * scaleX,
   },
   userName: {
-    fontSize: 17 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
-    color: colors.text.primary,
+    color: '#000',
+    fontFamily: 'Helvetica',
+    fontSize: 20 * scaleX,
+    fontStyle: 'normal',
+    fontWeight: '300',
+    lineHeight: 24 * scaleX,
     marginBottom: 2 * scaleX,
   },
   userRole: {
+    color: '#000',
+    fontFamily: 'Helvetica',
     fontSize: 14 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular as any,
-    color: colors.text.primary,
+    fontStyle: 'normal',
+    fontWeight: '700',
+    lineHeight: 17 * scaleX,
   },
   toggleContainer: {
     position: 'absolute',

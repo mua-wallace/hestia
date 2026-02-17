@@ -1,7 +1,10 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, StyleSheet, Modal, TouchableOpacity, Dimensions, StatusBar } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { GUEST_INFO as ROOM_DETAIL_GUEST_INFO, CONTENT_AREA } from '../../constants/roomDetailStyles';
+import { GUEST_INFO } from '../../constants/allRoomsStyles';
 import { normalizedScaleX } from '../../utils/responsive';
+import { formatGuestCount, formatDatesOfStay } from '../../utils/formatting';
 import GuestInfoDisplay from '../shared/GuestInfoDisplay';
 import type { GuestInfo } from '../../types/allRooms.types';
 
@@ -30,6 +33,9 @@ export default function GuestInfoCard({
   specialInstructionsTextTop,
   roomCategory,
 }: GuestInfoCardProps) {
+  // State for image modal
+  const [isImageModalVisible, setIsImageModalVisible] = useState(false);
+  
   // Calculate relative position from content area start
   const containerTop = absoluteTop - contentAreaTop;
 
@@ -60,154 +66,213 @@ export default function GuestInfoCard({
   // So we need to use RELATIVE offsets, not absolute positions.
   
   // Vertical spacing: use rowGap from constants for consistent spacing between name and date row
-  const rowGap = (ROOM_DETAIL_GUEST_INFO as { rowGap?: number }).rowGap ?? 8;
-  const nameTopRelative = 0;
+  const rowGap = 8; // Default spacing between name and date row
+  const nameLineHeight = 21; // From guestName style lineHeight
+  // Category badge on first row, name on second row
+  // Category badge is now text-only (no background), so height is just font size + line height
+  const categoryBadgeHeight = config.categoryBadge.fontSize * 1.2; // Approximate text height (fontSize * line-height ratio)
+  const categoryBadgeGap = 4; // Gap between badge and name (matches Figma spacing)
+  const categoryBadgeTopRelative = 0; // First row
+  const nameTopRelative = categoryBadgeHeight + categoryBadgeGap; // Second row: badge height + gap
   // Date/time/count row: same baseline, with consistent spacing below name (28 + rowGap)
-  const dateRowOffset = (configKey === 'departure' ? 26 : 28) + rowGap;
+  const dateRowOffset = nameTopRelative + nameLineHeight + rowGap; // Below name row
   const dateTopRelative = dateRowOffset;
   const timeTopRelative = dateRowOffset;
   const countTopRelative = dateRowOffset;
   
+  // Calculate Special Instructions spacing from date row to match Figma
+  // From Figma: dates top = 377px, Special Instructions title top = 417px
+  // Gap = 417 - 377 = 40px
+  // Date row height (lineHeight) = ~17px, so spacing after date row = 40 - 17 = 23px
+  const dateRowHeight = GUEST_INFO.dateRange.lineHeight || 17; // Use dateRange lineHeight
+  const specialInstructionsGap = 23; // Spacing between date row bottom and Special Instructions title (matches Figma)
+  const specialInstructionsTitleTopRelative = dateTopRelative + dateRowHeight + specialInstructionsGap;
+  // Calculate text position only if specialInstructions config exists
+  const specialInstructionsTextGap = 8; // Gap between title and text (from Figma: 442 - 417 - titleHeight ≈ 8px)
+  const specialInstructionsTitleHeight = config.specialInstructions?.title?.fontSize 
+    ? config.specialInstructions.title.fontSize * 1.2 
+    : 13 * 1.2; // Default to fontSize 13 if not available
+  const specialInstructionsTextTopRelative = specialInstructionsTitleTopRelative + specialInstructionsTitleHeight + specialInstructionsTextGap;
+  
   const containerLeft = 0;
-  const iconLeftRelative = config.icon.left;
+  const hasGuestImage = !!guest.imageUrl;
+  // Room detail screen: image size 73.019×73.019 (different from All Rooms cards)
+  const guestImageWidthDetail = 73.019;
+  const guestImageHeightDetail = 73.019;
+  const iconLeftRelative = config.icon.left; // 21px from Figma
   
-  // Center-align icon vertically with the name row
-  // Name has lineHeight of 21px (from guestName style), so center is at 21/2 = 10.5px
-  // Icon height is 29.919px, so center is at 29.919/2 = 14.9595px
-  // To align centers: iconTop = nameCenter - iconCenter = 10.5 - 14.9595 = -4.4595px
-  const nameLineHeight = 21; // From guestName style lineHeight
+  // Calculate gap to match Figma design exactly
+  // Original design: icon at 21px, width 28.371px, name at 77px
+  // Gap = 77 - 21 - 28.371 = 27.629px
+  // With larger image (73.019px), maintain the same visual spacing from Figma
+  // Use the original gap value to match Figma spacing
+  const guestImageGap = 27.629;
+  
+  // When guest image: name/info starts after image + gap
+  const infoColumnLeft = hasGuestImage ? iconLeftRelative + guestImageWidthDetail + guestImageGap : config.name.left;
+  
+  // Vertical alignment: align image top with category badge top (not centered)
+  // This matches Figma where image aligns with the top of the text column
+  const totalContentHeight = categoryBadgeHeight + categoryBadgeGap + nameLineHeight;
+  const contentCenter = totalContentHeight / 2;
   const iconHeight = config.icon.height; // 29.919px
-  const nameCenter = nameLineHeight / 2;
-  const iconCenter = iconHeight / 2;
-  const iconTopRelative = nameCenter - iconCenter; // Center-align icon with name
+  const iconTopRelative = hasGuestImage
+    ? categoryBadgeTopRelative // Align image top with category badge top
+    : contentCenter - iconHeight / 2; // Center icon with content when no image
   
-  // Calculate name left position based on icon position and width
-  // Icon left: 21px, Icon width: 28.371px
-  // Name left from Figma: 77px (arrival) or 77px (departure)
-  // Gap = name.left - (icon.left + icon.width) = 77 - (21 + 28.371) = 27.629px
-  // Use the exact Figma value for consistency
-  const nameLeftRelative = config.name.left; // Use exact Figma value (77px)
+  const nameLeftRelative = infoColumnLeft;
   // Badge position from Figma: exact left position (189 for arrival, 157 for departure)
   const badgeLeftRelative = config.numberBadge.left; // Exact Figma position
-  const badgeTopRelative = config.numberBadge.top - absoluteTop; // Position relative to name (350 - 349 = 1px for arrival)
-  const dateLeftRelative = config.dates.left; // 79 or 78
-  const timeLeftRelative = configKey === 'departure' ? config.edt.left : config.eta.left; // 222 or 215
-  // Person icon should be horizontally and vertically aligned with ETA/EDT
-  // Use original horizontal positions from roomDetailStyles to avoid overlapping with date
-  // Keep icon at original left (164) but align top with ETA/EDT (23px)
-  const countIconLeftRelative = config.occupancy.iconLeft; // 164 - original position to avoid date overlap
-  const countTextLeftRelative = config.occupancy.textLeft; // 183 - original position
+  const badgeTopRelative = nameTopRelative; // Same row as name
+  // Date/time/count row: align with name (same left as name) when hasGuestImage
+  const dateLeftRelative = hasGuestImage ? infoColumnLeft : config.dates.left;
+  // Time and count positions: inline within the date row, so they flow naturally
+  // We don't need separate left positions - they're in a flex row
+  const timeLeftRelative = configKey === 'departure' ? config.edt.left : config.eta.left; // Not used when hasGuestImage
+  const countIconLeftRelative = config.occupancy.iconLeft; // Not used when hasGuestImage
+  const countTextLeftRelative = config.occupancy.textLeft; // Not used when hasGuestImage
   
-  // Calculate badge vertical alignment
-  // The category badge should align with the name (same top position)
-  // From Figma: badge top = name top (349 for arrival, 542 for departure in combined screen)
-  // In relative terms: badge is at the same level as name, so top = 0
-  const categoryBadgeTopRelative = 0; // Align with name (same baseline)
+  // Category badge position: first row, aligned with info column
+  const categoryBadgeLeftRelative = infoColumnLeft;
   
   return (
     <View style={[styles.container, { top: containerTop * normalizedScaleX }]}>
-      {/* Guest Icon */}
+      {/* Guest Image or Icon */}
       {iconLeftRelative !== undefined && (
-        <Image
-          source={
-            category === 'Departure'
-              ? require('../../../assets/icons/guest-departure-icon.png')
-              : category === 'Stayover'
-              ? require('../../../assets/icons/stayover-guest-icon.png')
-              : category === 'Turndown'
-              ? require('../../../assets/icons/turndown-guest-icon.png')
-              : require('../../../assets/icons/guest-arrival-icon.png')
-          }
-          style={[
-            styles.guestIcon,
-            {
-              left: iconLeftRelative * normalizedScaleX,
-              top: iconTopRelative * normalizedScaleX,
-            },
-          ]}
-          resizeMode="contain"
-        />
+        hasGuestImage ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setIsImageModalVisible(true)}
+          >
+            <Image
+              source={{ uri: guest.imageUrl }}
+              style={[
+                styles.guestImage,
+                {
+                  left: iconLeftRelative * normalizedScaleX,
+                  top: iconTopRelative * normalizedScaleX,
+                  width: guestImageWidthDetail * normalizedScaleX,
+                  height: guestImageHeightDetail * normalizedScaleX,
+                  borderRadius: GUEST_INFO.guestImage.borderRadius * normalizedScaleX,
+                },
+              ]}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+        ) : (
+          <Image
+            source={
+              category === 'Departure'
+                ? require('../../../assets/icons/guest-departure-icon.png')
+                : category === 'Stayover'
+                ? require('../../../assets/icons/stayover-guest-icon.png')
+                : category === 'Turndown'
+                ? require('../../../assets/icons/turndown-guest-icon.png')
+                : require('../../../assets/icons/guest-arrival-icon.png')
+            }
+            style={[
+              styles.guestIcon,
+              {
+                left: iconLeftRelative * normalizedScaleX,
+                top: iconTopRelative * normalizedScaleX,
+              },
+            ]}
+            resizeMode="contain"
+          />
+        )
       )}
 
-      {/* Name and Badge Row - using flexbox for dynamic spacing */}
-      <View
-        style={[
-          styles.nameAndBadgeRow,
-          {
-            left: nameLeftRelative * normalizedScaleX,
-            top: nameTopRelative * normalizedScaleX,
-          },
-        ]}
-      >
-        <Text style={styles.guestName} numberOfLines={2}>
-          {guest.name}
-        </Text>
-        
-        {/* Number Badge (if provided) */}
-        {numberBadge && (
-          <Text style={styles.numberBadge}>{numberBadge}</Text>
-        )}
-        
-        {/* Category Pill Badge - show for all room types */}
-        {(category === 'Arrival' || category === 'Departure' || category === 'Stayover' || category === 'Turndown') && (
-          <View
+      {/* Category Badge Row - First row above name */}
+      {(category === 'Arrival' || category === 'Departure' || category === 'Stayover' || category === 'Turndown') && (
+        <View
+          style={[
+            styles.categoryBadgeRow,
+            {
+              left: categoryBadgeLeftRelative * normalizedScaleX,
+              top: categoryBadgeTopRelative * normalizedScaleX,
+            },
+          ]}
+        >
+          <Text
             style={[
-              styles.categoryBadge,
+              styles.categoryBadgeText,
               {
-                backgroundColor: category === 'Arrival' 
+                fontSize: config.categoryBadge.fontSize * normalizedScaleX,
+                color: category === 'Arrival' 
                   ? '#41d541' // Green for Arrival
                   : category === 'Departure'
                   ? '#f92424' // Red for Departure
                   : category === 'Stayover'
                   ? '#3BC1F6' // Light blue for Stayover
                   : '#9b51e0', // Purple for Turndown
-                paddingHorizontal: config.categoryBadge.paddingHorizontal * normalizedScaleX,
-                paddingVertical: config.categoryBadge.paddingVertical * normalizedScaleX,
-                borderRadius: config.categoryBadge.borderRadius * normalizedScaleX,
               },
             ]}
           >
-            <Text
-              style={[
-                styles.categoryBadgeText,
-                {
-                  fontSize: config.categoryBadge.fontSize * normalizedScaleX,
-                },
-              ]}
-            >
-              {category}
+            {category}
+          </Text>
+        </View>
+      )}
+
+      {/* Guest Info Container - Name, Dates, GuestCount, ETA/EDT all in same container */}
+      <View
+        style={[
+          styles.guestInfoContainer,
+          {
+            left: nameLeftRelative * normalizedScaleX,
+            top: nameTopRelative * normalizedScaleX,
+            paddingLeft: 0,
+            marginLeft: 0,
+            paddingStart: 0,
+            marginStart: 0,
+          },
+        ]}
+      >
+        {/* Name and Number Badge Row */}
+        <View style={styles.nameAndBadgeRow}>
+          <Text style={[styles.guestName, { paddingLeft: 0, marginLeft: 0, paddingStart: 0, marginStart: 0 }]} numberOfLines={2}>
+            {guest.name}
+          </Text>
+          
+          {/* Number Badge (if provided) */}
+          {numberBadge && (
+            <Text style={styles.numberBadge}>{numberBadge}</Text>
+          )}
+        </View>
+
+        {/* Date, GuestCount, ETA/EDT Row - aligned with name */}
+        <View style={styles.detailsRowContainer}>
+          {/* Dates of Stay */}
+          {guest.datesOfStay && (
+            <Text style={[styles.dateRange, { marginRight: 12 * normalizedScaleX, paddingLeft: 0, marginLeft: 0, paddingStart: 0, marginStart: 0, textAlign: 'left' }]}>
+              {formatDatesOfStay(guest.datesOfStay)}
             </Text>
-          </View>
-        )}
+          )}
+          
+          {/* Guest Count - inline if available */}
+          {guest.guestCount && guest.guestCount.adults !== undefined && (
+            <>
+              <Image
+                source={require('../../../assets/icons/people-icon.png')}
+                style={[styles.countIconInline, { marginLeft: 0, marginRight: 4 * normalizedScaleX }]}
+                resizeMode="contain"
+              />
+              <Text style={[styles.countTextInline, { marginRight: 12 * normalizedScaleX }]}>
+                {formatGuestCount(guest.guestCount)}
+              </Text>
+            </>
+          )}
+          
+          {/* Time (ETA/EDT) - inline if available and not N/A */}
+          {guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && (
+            <Text style={styles.timeInline}>
+              {`${guest.timeLabel}: ${guest.time}`}
+            </Text>
+          )}
+        </View>
       </View>
 
-      {/* Date, Time, Occupancy - rendered by GuestInfoDisplay */}
-      <GuestInfoDisplay
-        guest={guest}
-        numberBadge={undefined} // Don't render number badge here - we render it above
-        category={category}
-        isArrivalDeparture={false}
-        isSecondGuest={isSecondGuest}
-        containerLeft={containerLeft}
-        nameTop={nameTopRelative}
-        dateTop={dateTopRelative}
-        iconLeft={undefined} // Don't render icon here - we render it above
-        iconTop={undefined}
-        nameLeft={nameLeftRelative}
-        badgeLeft={badgeLeftRelative}
-        badgeTop={badgeTopRelative}
-        dateLeft={dateLeftRelative}
-        timeLeft={timeLeftRelative}
-        timeTop={timeTopRelative}
-        countIconLeft={countIconLeftRelative}
-        countTextLeft={countTextLeftRelative}
-        countTop={countTopRelative}
-        absolutePositioning={false}
-        hideNameRow={true} // Don't render name/icon/badge - we render them above in flexbox
-      />
-
       {/* Special Instructions - show for all guests if available */}
-      {specialInstructions && config.specialInstructions && (
+      {specialInstructions && config.specialInstructions && config.specialInstructions.title && config.specialInstructions.text && (
         <>
           <Text
             style={[
@@ -216,7 +281,7 @@ export default function GuestInfoCard({
                 left: config.specialInstructions.title.left * normalizedScaleX,
                 top: specialInstructionsTitleTop !== undefined 
                   ? (specialInstructionsTitleTop - absoluteTop) * normalizedScaleX
-                  : (config.specialInstructions.title.top - absoluteTop) * normalizedScaleX,
+                  : (containerTop + specialInstructionsTitleTopRelative) * normalizedScaleX,
               },
             ]}
           >
@@ -229,7 +294,7 @@ export default function GuestInfoCard({
                 left: config.specialInstructions.text.left * normalizedScaleX,
                 top: specialInstructionsTextTop !== undefined
                   ? (specialInstructionsTextTop - absoluteTop) * normalizedScaleX
-                  : (config.specialInstructions.text.top - absoluteTop) * normalizedScaleX,
+                  : (containerTop + specialInstructionsTextTopRelative) * normalizedScaleX,
                 width: config.specialInstructions.text.width * normalizedScaleX,
               },
             ]}
@@ -238,6 +303,37 @@ export default function GuestInfoCard({
           </Text>
         </>
       )}
+
+      {/* Image Modal - Enlarged Guest Image with Blur Background */}
+      <Modal
+        visible={isImageModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsImageModalVisible(false)}
+      >
+        <StatusBar hidden={isImageModalVisible} />
+        <BlurView intensity={80} style={styles.modalBlurOverlay} tint="light">
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setIsImageModalVisible(false)}
+          >
+            <View style={styles.modalContent} pointerEvents="box-none">
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => {}}
+                style={styles.enlargedImageContainer}
+              >
+                <Image
+                  source={{ uri: guest.imageUrl }}
+                  style={styles.enlargedImage}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </BlurView>
+      </Modal>
     </View>
   );
 }
@@ -254,37 +350,98 @@ const styles = StyleSheet.create({
     width: 28.371 * normalizedScaleX,
     height: 29.919 * normalizedScaleX,
   },
-  nameAndBadgeRow: {
+  guestImage: {
+    position: 'absolute',
+  },
+  categoryBadgeRow: {
     position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
     zIndex: 30,
-    gap: 8 * normalizedScaleX, // Spacing between name, number badge, category badge
+  },
+  guestInfoContainer: {
+    position: 'absolute',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    zIndex: 30,
+    paddingLeft: 0,
+    marginLeft: 0,
+    paddingStart: 0,
+    marginStart: 0,
+  },
+  nameAndBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8 * normalizedScaleX, // Spacing between name and number badge
+    paddingLeft: 0,
+    marginLeft: 0,
+    paddingStart: 0,
+    marginStart: 0,
+    marginBottom: 8 * normalizedScaleX, // Spacing between name and date row (rowGap)
+  },
+  detailsRowContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    paddingLeft: 0,
+    marginLeft: 0,
+    paddingStart: 0,
+    marginStart: 0,
+  },
+  dateRange: {
+    fontSize: ROOM_DETAIL_GUEST_INFO.arrival.dates.fontSize * normalizedScaleX, // 14px from Figma
+    fontFamily: 'Helvetica',
+    fontWeight: ROOM_DETAIL_GUEST_INFO.arrival.dates.fontWeight as any, // 'light' from Figma
+    color: ROOM_DETAIL_GUEST_INFO.arrival.dates.color,
+    lineHeight: 17 * normalizedScaleX,
+    includeFontPadding: false,
+    paddingLeft: 0,
+    marginLeft: 0,
+    paddingStart: 0,
+    marginStart: 0,
+  },
+  countIconInline: {
+    width: GUEST_INFO.guestCount.icon.width * normalizedScaleX,
+    height: GUEST_INFO.guestCount.icon.height * normalizedScaleX,
+    tintColor: '#334866',
+  },
+  countTextInline: {
+    fontSize: ROOM_DETAIL_GUEST_INFO.arrival.occupancy.fontSize * normalizedScaleX, // 14px from Figma
+    fontFamily: 'Helvetica',
+    fontWeight: ROOM_DETAIL_GUEST_INFO.arrival.occupancy.fontWeight as any, // 'light' from Figma
+    color: ROOM_DETAIL_GUEST_INFO.arrival.occupancy.color,
+    lineHeight: 17 * normalizedScaleX,
+  },
+  timeInline: {
+    fontSize: ROOM_DETAIL_GUEST_INFO.arrival.eta.fontSize * normalizedScaleX, // 14px from Figma
+    fontFamily: 'Helvetica',
+    fontWeight: ROOM_DETAIL_GUEST_INFO.arrival.eta.fontWeight as any, // 'regular' from Figma
+    color: ROOM_DETAIL_GUEST_INFO.arrival.eta.color,
+    lineHeight: 17 * normalizedScaleX,
   },
   guestName: {
-    fontSize: 14 * normalizedScaleX,
+    fontSize: ROOM_DETAIL_GUEST_INFO.arrival.name.fontSize * normalizedScaleX, // 14px from Figma
     fontFamily: 'Helvetica',
-    fontWeight: 'bold' as any,
-    color: '#000000',
+    fontWeight: ROOM_DETAIL_GUEST_INFO.arrival.name.fontWeight as any, // 'bold' from Figma
+    color: ROOM_DETAIL_GUEST_INFO.arrival.name.color,
     lineHeight: 21 * normalizedScaleX,
     flexShrink: 0,
+    paddingLeft: 0,
+    marginLeft: 0,
+    paddingStart: 0,
+    marginStart: 0,
+    includeFontPadding: false, // Remove extra font padding
   },
   numberBadge: {
-    fontSize: 12 * normalizedScaleX,
+    fontSize: ROOM_DETAIL_GUEST_INFO.arrival.numberBadge.fontSize * normalizedScaleX, // 12px from Figma
     fontFamily: 'Helvetica',
-    fontWeight: 'light' as any,
-    color: '#334866',
-    flexShrink: 0,
-  },
-  categoryBadge: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    fontWeight: ROOM_DETAIL_GUEST_INFO.arrival.numberBadge.fontWeight as any, // 'light' from Figma
+    color: ROOM_DETAIL_GUEST_INFO.arrival.numberBadge.color,
     flexShrink: 0,
   },
   categoryBadgeText: {
     fontFamily: 'Helvetica',
     fontWeight: 'bold' as any,
-    color: '#ffffff',
   },
   specialInstructionsTitle: {
     position: 'absolute',
@@ -302,6 +459,45 @@ const styles = StyleSheet.create({
     color: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.text.color,
     lineHeight: 18 * normalizedScaleX,
     zIndex: 2, // Above divider
+  },
+  modalBlurOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: Dimensions.get('window').width * 0.85,
+    aspectRatio: 1, // Square image as per Figma
+    justifyContent: 'center',
+    alignItems: 'center',
+    maxWidth: 350,
+    maxHeight: 350,
+  },
+  enlargedImageContainer: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10, // Slightly rounded corners as per Figma
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  enlargedImage: {
+    width: '100%',
+    height: '100%',
   },
 });
 

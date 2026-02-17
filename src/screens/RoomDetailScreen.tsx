@@ -10,6 +10,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ROOM_DETAIL_HEADER, scaleX } from '../constants/roomDetailStyles';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
+import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
 import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
 import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal';
@@ -49,6 +50,8 @@ export default function RoomDetailScreen() {
   // Get room type configuration
   const config = React.useMemo(() => getRoomTypeConfig(roomType), [roomType]);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showInspectedModal, setShowInspectedModal] = useState(false);
+  const [buttonPositionForInspection, setButtonPositionForInspection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
   const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
   const [showRefuseServiceModal, setShowRefuseServiceModal] = useState(false);
@@ -255,12 +258,6 @@ export default function RoomDetailScreen() {
     }
   };
 
-  const handleFlagToggle = (flagged: boolean) => {
-    setLocalRoom((prev) => ({ ...prev, flagged }));
-    // TODO: Save to backend/API
-    console.log('Flag toggled for room:', localRoom.roomNumber, 'flagged:', flagged);
-  };
-
   const handleStatusSelect = (statusOption: StatusChangeOption) => {
     const statusOptionConfig = STATUS_OPTIONS.find(opt => opt.id === statusOption);
     const statusLabel = statusOptionConfig?.label || '';
@@ -309,8 +306,13 @@ export default function RoomDetailScreen() {
 
     const newStatus = mapStatusOptionToRoomStatus(statusOption);
     setCurrentStatus(newStatus);
-    
-    if (statusOption === 'Pause') {
+
+    // Priority: set room as priority and show "In Progress" (not "Priority")
+    if (statusOption === 'Priority') {
+      setLocalRoom((prev) => ({ ...prev, isPriority: true }));
+      setSelectedStatusText(undefined);
+      setPausedAt(undefined);
+    } else if (statusOption === 'Pause') {
       const now = new Date();
       const hours = now.getHours().toString().padStart(2, '0');
       const minutes = now.getMinutes().toString().padStart(2, '0');
@@ -546,7 +548,7 @@ export default function RoomDetailScreen() {
         roomNumber={room.roomNumber}
         roomCode={`${room.roomCategory} - ${room.credit}`}
         status={currentStatus}
-        flagged={room.flagged === true}
+        isPriority={localRoom.isPriority === true}
         frontOfficeStatus={room.frontOfficeStatus}
         roomType={roomType}
         guests={guestsWithTypes}
@@ -559,7 +561,6 @@ export default function RoomDetailScreen() {
         onBackPress={handleBackPress}
         onStatusPress={handleStatusPress}
         onStatusChange={handleStatusSelect}
-        onFlagToggle={handleFlagToggle}
         onReassign={handleReassign}
         onAddNote={handleAddNote}
         onSaveNote={handleSaveNote}
@@ -589,11 +590,30 @@ export default function RoomDetailScreen() {
           setStatusButtonPosition(null);
         }}
         onStatusSelect={handleStatusSelect}
-        onFlagToggle={handleFlagToggle}
+        onInspectedSelect={() => {
+          setButtonPositionForInspection(statusButtonPosition);
+          setShowInspectedModal(true);
+        }}
         currentStatus={currentStatus}
         room={localRoom}
         buttonPosition={statusButtonPosition}
         showTriangle={false}
+      />
+
+      <InspectedStatusSlideModal
+        visible={showInspectedModal}
+        onClose={() => {
+          setShowInspectedModal(false);
+          setButtonPositionForInspection(null);
+        }}
+        onComplete={() => {
+          handleStatusSelect('Inspected');
+          setShowInspectedModal(false);
+          setButtonPositionForInspection(null);
+        }}
+        buttonPosition={buttonPositionForInspection}
+        headerHeight={232}
+        showTriangle={!!buttonPositionForInspection}
       />
 
       <ReturnLaterModal
