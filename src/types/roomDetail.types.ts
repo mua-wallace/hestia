@@ -80,6 +80,7 @@ export interface RoomDetailScreenProps {
   // Room status
   status: RoomStatus;
   isPriority?: boolean;
+  flagged?: boolean; // When true, show flag badge (flag room)
   frontOfficeStatus?: 'Arrival' | 'Departure' | 'Arrival/Departure' | 'Stayover' | 'Turndown' | 'No Task';
   
   // Room type determines layout structure

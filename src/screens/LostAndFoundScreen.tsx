@@ -4,7 +4,6 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
 import BottomTabBar from '../components/navigation/BottomTabBar';
-import MorePopup from '../components/more/MorePopup';
 import LostAndFoundHeader from '../components/lostAndFound/LostAndFoundHeader';
 import LostAndFoundTabs from '../components/lostAndFound/LostAndFoundTabs';
 import LostAndFoundItemCard from '../components/lostAndFound/LostAndFoundItemCard';
@@ -13,7 +12,6 @@ import ItemRegisteredSuccessModal from '../components/lostAndFound/ItemRegistere
 import { mockHomeData } from '../data/mockHomeData';
 import { mockLostAndFoundData } from '../data/mockLostAndFoundData';
 import { mockChatData } from '../data/mockChatData';
-import { MoreMenuItemId } from '../types/more.types';
 import { LostAndFoundTab, LostAndFoundItem } from '../types/lostAndFound.types';
 import {
   LOST_AND_FOUND_SPACING,
@@ -40,7 +38,6 @@ export default function LostAndFoundScreen() {
   const route = useRoute();
   const params = route.params as { openRegisterModal?: boolean } | undefined;
   const [activeTab, setActiveTab] = useState('LostAndFound');
-  const [showMorePopup, setShowMorePopup] = useState(false);
   const [selectedTab, setSelectedTab] = useState<LostAndFoundTab>('created');
   const [items] = useState<LostAndFoundItem[]>(mockLostAndFoundData);
   const [refreshing, setRefreshing] = useState(false);
@@ -78,7 +75,7 @@ export default function LostAndFoundScreen() {
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab); // Update immediately
-    setShowMorePopup(false);
+    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
@@ -87,33 +84,13 @@ export default function LostAndFoundScreen() {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
       navigation.navigate('Tickets' as any);
+    } else if (tab === 'LostAndFound') {
+      navigation.navigate('LostAndFound', { returnToTab });
+    } else if (tab === 'Staff') {
+      navigation.navigate('Staff', { returnToTab });
+    } else if (tab === 'Settings') {
+      navigation.navigate('Settings', { returnToTab });
     }
-  };
-
-  const handleMorePress = () => {
-    setShowMorePopup(true);
-  };
-
-  const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
-    setShowMorePopup(false);
-    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
-    switch (menuItem) {
-      case 'lostAndFound':
-        navigation.navigate('LostAndFound', { returnToTab });
-        break;
-      case 'staff':
-        navigation.navigate('Staff', { returnToTab });
-        break;
-      case 'settings':
-        navigation.navigate('Settings', { returnToTab });
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleClosePopup = () => {
-    setShowMorePopup(false);
   };
 
   const handleBackPress = () => {
@@ -193,7 +170,7 @@ export default function LostAndFoundScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          scrollEnabled={!showMorePopup}
+          scrollEnabled={true}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -215,11 +192,6 @@ export default function LostAndFoundScreen() {
         </ScrollView>
 
         {/* Blur Overlay for content only */}
-        {showMorePopup && (
-          <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
-            <View style={styles.blurOverlayDarkener} />
-          </BlurView>
-        )}
       </View>
 
       {/* Header - Fixed at top */}
@@ -235,15 +207,7 @@ export default function LostAndFoundScreen() {
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
-        onMorePress={handleMorePress}
         chatBadgeCount={chatBadgeCount}
-      />
-
-      {/* More Popup */}
-      <MorePopup
-        visible={showMorePopup}
-        onClose={handleClosePopup}
-        onMenuItemPress={handleMenuItemPress}
       />
 
       {/* Register Modal */}

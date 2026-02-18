@@ -13,6 +13,7 @@ import type {
   RoomStatus,
   ReservationStatus,
   PromisedTime,
+  NoteMadeBy,
 } from '../types/allRooms.types';
 
 type RoomRow = {
@@ -25,6 +26,7 @@ type RoomRow = {
   flagged: boolean | null;
   special_instructions: string | null;
   notes: string | null;
+  note_made_by: string | null;
   house_keeping_status: string | null;
 };
 
@@ -130,7 +132,19 @@ function mapRoomToCard(
     flagged: room.flagged ?? false,
     specialInstructions: room.special_instructions ?? null,
     roomNotes: room.notes ?? null,
-    noteMadeBy: null,
+    noteMadeBy:
+      room.note_made_by
+        ? ({
+            name: room.note_made_by,
+          } as NoteMadeBy)
+        : null,
+    notes:
+      room.notes && room.notes.trim()
+        ? {
+            count: Math.max(1, room.notes.trim().split(/\n/).filter(Boolean).length),
+            hasRushed: false,
+          }
+        : undefined,
   };
 }
 
@@ -139,10 +153,32 @@ function mapRoomToCard(
  * Uses room + first reservation for front_office_status/reservation_status when not on room.
  */
 export async function fetchAllRoomsFromSupabase(shift: 'AM' | 'PM'): Promise<AllRoomsScreenData> {
-  const { data: roomsData, error: roomsError } = await supabase
+  // Try with note_made_by first, fallback if column doesn't exist (migration not run)
+  let roomsData: RoomRow[] | null = null;
+  let roomsError: any = null;
+  
+  const { data, error } = await supabase
     .from('rooms')
-    .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, notes, house_keeping_status')
+    .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, notes, note_made_by, house_keeping_status')
     .order('room_number', { ascending: true });
+  
+  roomsData = data as RoomRow[] | null;
+  roomsError = error;
+
+  // If note_made_by column doesn't exist, retry without it
+  if (roomsError?.code === '42703' && roomsError.message?.includes('note_made_by')) {
+    const retry = await supabase
+      .from('rooms')
+      .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, notes, house_keeping_status')
+      .order('room_number', { ascending: true });
+    if (retry.error) {
+      roomsError = retry.error;
+    } else {
+      // Map retry data to RoomRow format (add note_made_by: null)
+      roomsData = (retry.data ?? []).map((r: any) => ({ ...r, note_made_by: null })) as RoomRow[];
+      roomsError = null;
+    }
+  }
 
   if (roomsError) throw roomsError;
   const rooms = (roomsData ?? []) as RoomRow[];
@@ -208,20 +244,41 @@ export type RoomStateUpdate = {
   house_keeping_status?: RoomStatus;
   priority?: 'high' | 'normal';
   flagged?: boolean;
+  notes?: string | null;
+  note_made_by?: string | null;
+  special_instructions?: string | null;
 };
 
 /**
- * Update room state in Supabase (house_keeping_status, priority, flagged).
- * No-op if updates object is empty. Throws on Supabase error.
+ * Check if a string is a valid UUID format (for Supabase room IDs)
+ */
+function isValidUUID(id: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+}
+
+/**
+ * Update room state in Supabase (house_keeping_status, priority, flagged, notes, special_instructions).
+ * No-op if updates object is empty or roomId is not a valid UUID (e.g., mock data IDs like "room-106").
+ * Throws on Supabase error.
  */
 export async function updateRoomInSupabase(
   roomId: string,
   updates: RoomStateUpdate
 ): Promise<void> {
+  // Skip Supabase update if roomId is not a UUID (e.g., mock data IDs like "room-106")
+  if (!isValidUUID(roomId)) {
+    console.log(`Skipping Supabase update for mock room ID: ${roomId}`);
+    return;
+  }
+
   const payload: Record<string, unknown> = {};
   if (updates.house_keeping_status != null) payload.house_keeping_status = updates.house_keeping_status;
   if (updates.priority != null) payload.priority = updates.priority;
   if (updates.flagged != null) payload.flagged = updates.flagged;
+  if (updates.notes !== undefined) payload.notes = updates.notes;
+  if (updates.note_made_by !== undefined) payload.note_made_by = updates.note_made_by;
+  if (updates.special_instructions !== undefined) payload.special_instructions = updates.special_instructions;
   if (Object.keys(payload).length === 0) return;
   const { error } = await supabase.from('rooms').update(payload).eq('id', roomId);
   if (error) throw error;

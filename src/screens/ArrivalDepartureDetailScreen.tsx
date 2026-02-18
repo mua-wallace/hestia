@@ -28,6 +28,7 @@ import type { RoomDetailData, DetailTab, Note, Task } from '../types/roomDetail.
 import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
 import { dataService } from '../services/data';
+import { authService } from '../services/auth';
 import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
 
 type ArrivalDepartureDetailScreenNavigationProp = NativeStackNavigationProp<
@@ -53,7 +54,7 @@ export default function ArrivalDepartureDetailScreen() {
   const [showViewTaskModal, setShowViewTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const statusButtonRef = useRef<TouchableOpacity>(null);
+  const statusButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   // Track current status to update header background color
   const [currentStatus, setCurrentStatus] = useState<RoomCardData['houseKeepingStatus']>(room.houseKeepingStatus);
   // Track selected status option text to display in header
@@ -67,18 +68,19 @@ export default function ArrivalDepartureDetailScreen() {
   // Track room data locally to allow updates (e.g., flagged status)
   const [localRoom, setLocalRoom] = useState<RoomCardData>(room);
   // Track notes and assigned staff in state
-  // Initial notes: room note (roomNotes + noteMadeBy) if present, else default InProgress notes or empty
+  // Initial notes: parse room notes (split by \n\n) if present, else default InProgress notes or empty
   const [notes, setNotes] = useState<Note[]>(() => {
-    const roomNote: Note[] = room.roomNotes && room.noteMadeBy
-      ? [{
-          id: 'room-note',
-          text: room.roomNotes,
+    // Parse notes from Supabase: split by \n\n to get individual notes
+    const roomNote: Note[] = room.roomNotes && room.roomNotes.trim()
+      ? room.roomNotes.split(/\n\n+/).filter(text => text.trim()).map((text, index) => ({
+          id: `room-note-${index}`,
+          text: text.trim(),
           staff: {
-            name: room.noteMadeBy.name,
-            avatar: room.noteMadeBy.avatar ?? require('../../assets/icons/profile-avatar.png'),
+            name: room.noteMadeBy?.name || 'Staff',
+            avatar: room.noteMadeBy?.avatar ?? require('../../assets/icons/profile-avatar.png'),
           },
           createdAt: new Date().toISOString(),
-        }]
+        }))
       : [];
     if (room.houseKeepingStatus === 'InProgress' && roomNote.length === 0) {
       return [
@@ -139,6 +141,7 @@ export default function ArrivalDepartureDetailScreen() {
   // In a real app, this would come from an API or be passed directly
   const roomDetail: RoomDetailData = {
     ...room,
+    roomType: 'ArrivalDeparture',
     specialInstructions: room.specialInstructions ?? undefined,
     notes: notes,
     tasks: tasks,
@@ -152,14 +155,14 @@ export default function ArrivalDepartureDetailScreen() {
       navigation.goBack();
     } else {
       // Fallback: navigate to AllRooms if can't go back
-      navigation.navigate('AllRooms');
+      navigation.navigate('AllRooms' as any, {} as any);
     }
   };
 
   const handleStatusPress = () => {
     // Measure the status button position
     if (statusButtonRef.current) {
-      statusButtonRef.current.measure((x, y, width, height, pageX, pageY) => {
+      statusButtonRef.current.measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
         setStatusButtonPosition({
           x: pageX,
           y: pageY,
@@ -236,9 +239,10 @@ export default function ArrivalDepartureDetailScreen() {
     // Update local status state to change header background color
     setCurrentStatus(newStatus);
 
-    // Priority: set room as priority and show "In Progress" (not "Priority")
+    // Priority toggles: if already priority, clicking Priority resets to normal
     if (statusOption === 'Priority') {
-      setLocalRoom((prev) => (prev ? { ...prev, isPriority: true } : prev));
+      const newIsPriority = !localRoom?.isPriority;
+      setLocalRoom((prev) => (prev ? { ...prev, isPriority: newIsPriority } : prev));
       setSelectedStatusText(undefined);
       setPausedAt(undefined);
     } else if (statusOption === 'Pause') {
@@ -252,11 +256,12 @@ export default function ArrivalDepartureDetailScreen() {
       setPausedAt(undefined);
     }
 
-    // Persist to Supabase
+    // Persist to Supabase (Priority: toggle high/normal)
+    const priorityPayload = statusOption === 'Priority' ? (!localRoom?.isPriority ? 'high' : 'normal') : undefined;
     dataService
       .updateRoomState(room.id, {
         house_keeping_status: newStatus,
-        ...(statusOption === 'Priority' && { priority: 'high' }),
+        ...(priorityPayload !== undefined && { priority: priorityPayload }),
       })
       .catch((e) => console.warn('Failed to update room status in Supabase', e));
 
@@ -333,24 +338,47 @@ export default function ArrivalDepartureDetailScreen() {
     console.log('Task added for room:', room.roomNumber, 'task:', taskText);
   };
 
-  const handleSaveNote = (noteText: string) => {
-    // Get current logged-in user (default to first staff member)
-    // In real app, get from auth context
-    const currentUser = mockStaffData[0]; // Default logged-in user
-    
-    // Create a new note with current user info
+  const handleSaveNote = async (noteText: string): Promise<void> => {
+    const [noteAuthorLabel, avatarUrl] = await Promise.all([
+      authService.getCurrentUserNoteLabel(),
+      authService.getCurrentUserAvatarUrl(),
+    ]);
     const newNote: Note = {
       id: Date.now().toString(),
       text: noteText,
       staff: {
-        name: currentUser.name,
-        avatar: currentUser.avatar || require('../../assets/icons/profile-avatar.png'),
+        name: noteAuthorLabel,
+        avatar: avatarUrl || require('../../assets/icons/profile-avatar.png'),
       },
       createdAt: new Date().toISOString(),
     };
-    setNotes([...notes, newNote]);
-    // TODO: Save note to backend/API
-    console.log('Note saved:', noteText);
+    const updatedNotes = [...notes, newNote];
+    setNotes(updatedNotes);
+    // Join all notes with double newline separator, filter empty notes
+    const notesText = updatedNotes.map((n) => n.text.trim()).filter(Boolean).join('\n\n');
+    const noteCount = updatedNotes.length;
+    console.log('Saving notes to Supabase:', { noteCount, notesText });
+    // Update local room state: notes text, notes count for badge, and note author with avatar
+    setLocalRoom((prev) =>
+      prev
+        ? {
+            ...prev,
+            roomNotes: notesText,
+            notes: { count: noteCount, hasRushed: prev.notes?.hasRushed || false },
+            noteMadeBy: {
+              name: noteAuthorLabel,
+              avatar: avatarUrl || undefined,
+            },
+          }
+        : prev
+    );
+    dataService
+      .updateRoomState(room.id, {
+        notes: notesText,
+        note_made_by: noteAuthorLabel,
+      })
+      .then(() => console.log('Notes saved successfully'))
+      .catch((e) => console.warn('Failed to save note to Supabase', e));
   };
 
   const handleAddPhotos = () => {
@@ -441,6 +469,7 @@ export default function ArrivalDepartureDetailScreen() {
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceReason={refuseServiceReason}
         isPriority={localRoom?.isPriority === true}
+        flagged={localRoom?.flagged === true}
         frontOfficeLabel={room.frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}
         showWithLinenBadge={room.frontOfficeStatus === 'Stayover' && showStayoverWithLinenBadge(localRoom)}
       />
@@ -558,6 +587,7 @@ export default function ArrivalDepartureDetailScreen() {
 
             {/* Lost and Found Section */}
             <LostAndFoundSection 
+              displayType="empty"
               onAddPhotosPress={handleAddPhotos}
               onTitlePress={handleLostAndFoundTitlePress}
             />

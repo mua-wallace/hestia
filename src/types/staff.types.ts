@@ -6,6 +6,7 @@ export interface StaffMember {
   avatar?: any; // Image source
   initials?: string; // Single letter for avatar
   avatarColor?: string; // Background color for initial circle
+  department?: string; // e.g. HSK, F&B
   progressRatio: {
     completed: number;
     total: number;

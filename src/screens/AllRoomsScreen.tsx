@@ -13,10 +13,8 @@ import { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import AllRoomsHeader from '../components/allRooms/AllRoomsHeader';
 import RoomCard from '../components/allRooms/RoomCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
-import MorePopup from '../components/more/MorePopup';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
-import { MoreMenuItemId } from '../types/more.types';
 import type { RootStackParamList } from '../navigation/types';
 import { BlurView } from 'expo-blur';
 import { FilterState, FilterCounts } from '../types/filter.types';
@@ -79,7 +77,6 @@ export default function AllRoomsScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('Rooms');
-  const [showMorePopup, setShowMorePopup] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showInspectedModal, setShowInspectedModal] = useState(false);
   const [roomForInspection, setRoomForInspection] = useState<RoomCardData | null>(null);
@@ -482,7 +479,11 @@ export default function AllRoomsScreen() {
     // Map status option to RoomStatus
     const newStatus = mapStatusOptionToRoomStatus(statusOption);
 
-    // Update room status in state; Priority option also sets isPriority true
+    // Priority toggles: if already priority, clicking Priority resets to normal
+    const isPriorityToggle = statusOption === 'Priority';
+    const newIsPriority = isPriorityToggle ? !roomToUpdate.isPriority : roomToUpdate.isPriority;
+    const priorityPayload = isPriorityToggle ? (newIsPriority ? 'high' : 'normal') : undefined;
+
     setAllRoomsData((prev) => ({
       ...prev,
       rooms: prev.rooms.map((room) =>
@@ -490,18 +491,20 @@ export default function AllRoomsScreen() {
           ? {
               ...room,
               houseKeepingStatus: newStatus,
-              ...(statusOption === 'Priority' && { isPriority: true }),
+              ...(isPriorityToggle && { isPriority: newIsPriority }),
             }
           : room
       ),
     }));
 
-    // Persist to Supabase
+    const supabaseUpdates: Parameters<typeof dataService.updateRoomState>[1] = {
+      house_keeping_status: newStatus,
+    };
+    if (priorityPayload !== undefined) {
+      supabaseUpdates.priority = priorityPayload;
+    }
     dataService
-      .updateRoomState(roomToUpdate.id, {
-        house_keeping_status: newStatus,
-        ...(statusOption === 'Priority' && { priority: 'high' }),
-      })
+      .updateRoomState(roomToUpdate.id, supabaseUpdates)
       .catch((e) => console.warn('Failed to update room status in Supabase', e));
 
     // Reset state
@@ -529,7 +532,8 @@ export default function AllRoomsScreen() {
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab); // Update immediately
-    setShowMorePopup(false);
+    const currentScreen = (route.params as any)?.showBackButton ? 'Rooms' : (route.name as string);
+    const returnToTab = currentScreen as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
@@ -538,34 +542,13 @@ export default function AllRoomsScreen() {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
       navigation.navigate('Tickets' as any);
+    } else if (tab === 'LostAndFound') {
+      navigation.navigate('LostAndFound', { returnToTab });
+    } else if (tab === 'Staff') {
+      navigation.navigate('Staff', { returnToTab });
+    } else if (tab === 'Settings') {
+      navigation.navigate('Settings', { returnToTab });
     }
-  };
-
-  const handleMorePress = () => {
-    setShowMorePopup(true);
-  };
-
-  const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
-    setShowMorePopup(false);
-    const currentScreen = (route.params as any)?.showBackButton ? 'Rooms' : (route.name as string);
-    const returnToTab = currentScreen as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
-    switch (menuItem) {
-      case 'lostAndFound':
-        navigation.navigate('LostAndFound', { returnToTab });
-        break;
-      case 'staff':
-        navigation.navigate('Staff', { returnToTab });
-        break;
-      case 'settings':
-        navigation.navigate('Settings', { returnToTab });
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleClosePopup = () => {
-    setShowMorePopup(false);
   };
 
   const onRefresh = React.useCallback(async () => {
@@ -725,7 +708,7 @@ export default function AllRoomsScreen() {
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            scrollEnabled={!showMorePopup && !showStatusModal}
+            scrollEnabled={!showStatusModal}
             clipsToBounds={false}
             contentInsetAdjustmentBehavior="automatic"
             keyboardShouldPersistTaps="handled"
@@ -787,13 +770,6 @@ export default function AllRoomsScreen() {
           )}
         </ScrollView>
         
-        {/* Blur Overlay for More Popup - covers content area */}
-        {showMorePopup && (
-          <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
-            <View style={styles.blurOverlayDarkener} />
-          </BlurView>
-        )}
-        
         {/* Blur Overlay for Status Modal - starts from bottom of target card, covers everything below including tabs */}
         {showStatusModal && selectedCardTop > 0 && (
           <BlurView 
@@ -825,15 +801,7 @@ export default function AllRoomsScreen() {
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
-        onMorePress={handleMorePress}
         chatBadgeCount={chatBadgeCount}
-      />
-
-      {/* More Popup */}
-      <MorePopup
-        visible={showMorePopup}
-        onClose={handleClosePopup}
-        onMenuItemPress={handleMenuItemPress}
       />
 
       {/* Status Change Modal */}

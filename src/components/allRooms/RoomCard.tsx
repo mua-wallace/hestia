@@ -55,6 +55,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
   const isVacant = room.guests?.[0]?.isVacant === true;
   const isVacantTurndown = isTurndown && isVacant;
   const hasNotes = !!room.notes;
+  const hasNotesOrPriority = hasNotes || !!room.isPriority;
 
   // Check if any guest names wrap (longer than 23 characters)
   const MAX_NAME_LENGTH = 23;
@@ -75,21 +76,18 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         : wrappedGuestCount * WRAP_SPACING * scaleX) // For single guest cards, add for each wrapped name
     : 0;
 
-  // Calculate card height based on type - matching Figma exactly
+  // Calculate card height based on type - matching Figma; notes/priority always get withNotes height so section fits
   const getCardHeight = (): number => {
     let baseHeight: number;
     if (isArrivalDeparture) {
       baseHeight = CARD_DIMENSIONS.heights.arrivalDeparture * scaleX; // 292px
-    } else if (hasNotes) {
-      baseHeight = CARD_DIMENSIONS.heights.withNotes * scaleX; // 222px
+    } else if (hasNotesOrPriority) {
+      baseHeight = CARD_DIMENSIONS.heights.withNotes * scaleX; // 222px – same for all cards with notes or priority
     } else if (isDeparture) {
       baseHeight = CARD_DIMENSIONS.heights.standard * scaleX; // 177px
     } else {
-      // Arrival, Stayover, Turndown use 185px
       baseHeight = CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 185px
     }
-    
-    // Add extra height if names wrap
     return baseHeight + wrappedNameExtraHeight;
   };
 
@@ -111,8 +109,8 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
   // Note: Arrival, Stayover, and Turndown all use the same positioning (height: 100, top: 74)
   // Departure uses different positioning (height: 101, top: 70)
   const getGuestContainerBgStyle = () => {
-    if (isArrivalDeparture || hasNotes) {
-      return null; // No background for Arrival/Departure or cards with notes
+    if (isArrivalDeparture || hasNotesOrPriority) {
+      return null; // No background when notes section is shown (notes or priority)
     }
     if (isDeparture) {
       return styles.guestContainerBgDeparture;
@@ -166,7 +164,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           </Text>
         </View>
         
-        {/* Room Type + Credit display: "ST2K - 45", "ST2K - 60", etc. + red flag when priority */}
+        {/* Room Type + Credit display: "ST2K - 45", "ST2K - 60", etc. + red flag when room is flagged */}
         <View style={[
           styles.roomTypeRow,
           !room.isPriority && styles.roomTypeRowStandard,
@@ -174,7 +172,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           <Text style={styles.roomTypeText}>
             {`${room.roomCategory} - ${room.credit}`}
           </Text>
-          {room.isPriority && (
+          {room.flagged && (
             <Image
               source={require('../../../assets/icons/flag.png')}
               style={styles.roomTypeFlagIcon}
@@ -305,11 +303,12 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         />
       )}
 
-      {/* Notes Section - shown for cards with notes */}
-      {hasNotes && (
+      {/* Notes Section - shown for cards with notes OR priority rooms */}
+      {hasNotesOrPriority && (
         <NotesSection 
-          notes={room.notes!} 
-          isArrivalDeparture={isArrivalDeparture} 
+          notes={room.notes || { count: 0, hasRushed: false }} 
+          isArrivalDeparture={isArrivalDeparture}
+          isPriority={room.isPriority}
         />
       )}
     </TouchableOpacity>

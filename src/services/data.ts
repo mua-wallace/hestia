@@ -42,7 +42,7 @@ class DataService {
   }
 
   /**
-   * Update room state in Supabase (house_keeping_status, priority, flagged).
+   * Update room state in Supabase (house_keeping_status, priority, flagged, notes, special_instructions).
    * No-op when Supabase is not configured. Errors are thrown so callers can catch.
    */
   async updateRoomState(roomId: string, updates: RoomStateUpdate): Promise<void> {

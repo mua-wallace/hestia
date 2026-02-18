@@ -24,7 +24,6 @@ import type { RootStackParamList } from '../navigation/types';
 import HomeHeader from '../components/home/HomeHeader';
 import CategoryCard from '../components/home/CategoryCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
-import MorePopup from '../components/more/MorePopup';
 import HomeFilterModal from '../components/home/HomeFilterModal';
 import { FilterState, FilterCounts } from '../types/filter.types';
 import type { CategorySection } from '../types/home.types';
@@ -57,7 +56,6 @@ export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('Home');
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [showMorePopup, setShowMorePopup] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   // Sync user profile from auth session when logged in
@@ -185,7 +183,7 @@ export default function HomeScreen() {
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab); // Update immediately
-    setShowMorePopup(false); // Close popup when switching tabs
+    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     // Navigate to the respective screen
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
@@ -195,33 +193,13 @@ export default function HomeScreen() {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
       navigation.navigate('Tickets' as any);
+    } else if (tab === 'LostAndFound') {
+      navigation.navigate('LostAndFound', { returnToTab });
+    } else if (tab === 'Staff') {
+      navigation.navigate('Staff', { returnToTab });
+    } else if (tab === 'Settings') {
+      navigation.navigate('Settings', { returnToTab });
     }
-  };
-
-  const handleMorePress = () => {
-    setShowMorePopup(true);
-  };
-
-  const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
-    setShowMorePopup(false);
-    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
-    switch (menuItem) {
-      case 'lostAndFound':
-        navigation.navigate('LostAndFound', { returnToTab });
-        break;
-      case 'staff':
-        navigation.navigate('Staff', { returnToTab });
-        break;
-      case 'settings':
-        navigation.navigate('Settings', { returnToTab });
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleClosePopup = () => {
-    setShowMorePopup(false);
   };
 
   const handleCategoryPress = () => {
@@ -376,6 +354,13 @@ export default function HomeScreen() {
     loadRoomsForHome(homeData.selectedShift);
   }, [homeData.selectedShift, loadRoomsForHome]);
 
+  // Refetch rooms from Supabase when Home gains focus so stats (e.g. flagged count) reflect latest data
+  useFocusEffect(
+    React.useCallback(() => {
+      loadRoomsForHome(homeData.selectedShift);
+    }, [homeData.selectedShift, loadRoomsForHome])
+  );
+
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     await loadRoomsForHome(homeData.selectedShift);
@@ -495,7 +480,7 @@ export default function HomeScreen() {
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            scrollEnabled={!showMorePopup}
+            scrollEnabled={true}
             keyboardShouldPersistTaps="handled"
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -513,12 +498,6 @@ export default function HomeScreen() {
             ))}
           </ScrollView>
           
-          {/* Blur Overlay for content only */}
-          {showMorePopup && (
-            <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
-              <View style={styles.blurOverlayDarkener} />
-            </BlurView>
-          )}
         </View>
 
         {/* Header - Fixed at top (no blur) */}
@@ -598,15 +577,7 @@ export default function HomeScreen() {
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
-        onMorePress={handleMorePress}
         chatBadgeCount={chatBadgeCount}
-      />
-
-      {/* More Popup */}
-      <MorePopup
-        visible={showMorePopup}
-        onClose={handleClosePopup}
-        onMenuItemPress={handleMenuItemPress}
       />
 
       {/* Filter Modal */}

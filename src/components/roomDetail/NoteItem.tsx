@@ -63,7 +63,11 @@ export default function NoteItem({ note, absoluteTop, contentAreaTop, onHeightMe
       {textHeight > 0 && (
         <>
           <Image
-            source={note.staff.avatar || require('../../../assets/icons/profile-avatar.png')}
+            source={
+              typeof note.staff.avatar === 'string'
+                ? { uri: note.staff.avatar }
+                : (note.staff.avatar || require('../../../assets/icons/profile-avatar.png'))
+            }
             style={[styles.profilePicture, { top: profileTop }]}
             resizeMode="cover"
           />

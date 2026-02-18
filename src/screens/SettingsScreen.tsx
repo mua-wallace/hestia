@@ -6,10 +6,8 @@ import { BlurView } from 'expo-blur';
 import { colors, typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import { useAuth } from '../contexts/AuthContext';
-import MorePopup from '../components/more/MorePopup';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockChatData } from '../data/mockChatData';
-import { MoreMenuItemId } from '../types/more.types';
 import type { ReturnToTab } from '../navigation/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -32,8 +30,7 @@ export default function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const route = useRoute();
   const { signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState('Home');
-  const [showMorePopup, setShowMorePopup] = useState(false);
+  const [activeTab, setActiveTab] = useState('Settings');
 
   const handleSignOut = () => {
     Alert.alert(
@@ -71,34 +68,10 @@ export default function SettingsScreen() {
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab); // Update immediately
-    setShowMorePopup(false);
-    navigation.navigate(tab as keyof MainTabsParamList);
-  };
-
-  const handleMorePress = () => {
-    setShowMorePopup(true);
-  };
-
-  const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
-    setShowMorePopup(false);
     const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
-    switch (menuItem) {
-      case 'lostAndFound':
-        navigation.navigate('LostAndFound', { returnToTab });
-        break;
-      case 'staff':
-        navigation.navigate('Staff', { returnToTab });
-        break;
-      case 'settings':
-        navigation.navigate('Settings', { returnToTab });
-        break;
-      default:
-        break;
+    if (tab === 'Home' || tab === 'Rooms' || tab === 'Chat' || tab === 'Tickets' || tab === 'LostAndFound' || tab === 'Staff' || tab === 'Settings') {
+      navigation.navigate(tab as keyof MainTabsParamList);
     }
-  };
-
-  const handleClosePopup = () => {
-    setShowMorePopup(false);
   };
 
   const handleBack = () => {
@@ -122,24 +95,12 @@ export default function SettingsScreen() {
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
         
-        {showMorePopup && (
-          <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
-            <View style={styles.blurOverlayDarkener} />
-          </BlurView>
-        )}
       </View>
       
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
-        onMorePress={handleMorePress}
         chatBadgeCount={chatBadgeCount}
-      />
-      
-      <MorePopup
-        visible={showMorePopup}
-        onClose={handleClosePopup}
-        onMenuItemPress={handleMenuItemPress}
       />
     </View>
   );

@@ -81,12 +81,12 @@ export default function GuestInfoDisplay({
   const isNoTask = category === 'No Task';
   
   // Determine which guest icon to use based on card category
-  // For individual guests in ArrivalDeparture rooms, check timeLabel to determine icon
+  // For Arrival/Departure cards: first guest = Arrival icon, second guest = Departure icon (Figma)
   let guestIconSource;
   if (isArrivalDeparture || category === 'ArrivalDeparture') {
-    guestIconSource = guest.timeLabel === 'ETA' 
-      ? require('../../../assets/icons/guest-arrival-icon.png')
-      : require('../../../assets/icons/guest-departure-icon.png');
+    guestIconSource = isSecondGuest
+      ? require('../../../assets/icons/guest-departure-icon.png')
+      : require('../../../assets/icons/guest-arrival-icon.png');
   } else if (isStayover || isNoTask) {
     guestIconSource = require('../../../assets/icons/stayover-guest_icon.png');
   } else if (isTurndown) {
@@ -455,9 +455,9 @@ export default function GuestInfoDisplay({
                 style={[
                   styles.imageBadge,
                   {
-                    backgroundColor: (isArrival || ((isArrivalDeparture || category === 'ArrivalDeparture') && guest.timeLabel === 'ETA'))
+                    backgroundColor: (isArrival || ((isArrivalDeparture || category === 'ArrivalDeparture') && isFirstGuest))
                       ? '#41D541' // Green for Arrival
-                      : (isDeparture || ((isArrivalDeparture || category === 'ArrivalDeparture') && guest.timeLabel === 'EDT'))
+                      : (isDeparture || ((isArrivalDeparture || category === 'ArrivalDeparture') && isSecondGuest))
                       ? '#f92424' // Red for Departure
                       : isStayover
                       ? '#3BC1F6' // Light blue for Stayover
@@ -467,9 +467,9 @@ export default function GuestInfoDisplay({
               >
                 <Image
                   source={
-                    (isArrival || ((isArrivalDeparture || category === 'ArrivalDeparture') && guest.timeLabel === 'ETA'))
+                    (isArrival || ((isArrivalDeparture || category === 'ArrivalDeparture') && isFirstGuest))
                       ? require('../../../assets/icons/arrow-forward.png')
-                      : (isDeparture || ((isArrivalDeparture || category === 'ArrivalDeparture') && guest.timeLabel === 'EDT'))
+                      : (isDeparture || ((isArrivalDeparture || category === 'ArrivalDeparture') && isSecondGuest))
                       ? require('../../../assets/icons/departure-spear.png')
                       : isStayover
                       ? require('../../../assets/icons/stayover-guest_icon.png')

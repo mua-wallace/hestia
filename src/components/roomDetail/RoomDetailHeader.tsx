@@ -18,7 +18,8 @@ interface RoomDetailHeaderProps {
   returnLaterAtTimestamp?: number; // Epoch ms when user will return; header shows time only + countdown
   promiseTimeAtTimestamp?: number; // Epoch ms when room will be ready; header shows time + countdown
   refuseServiceReason?: string; // Selected reason or custom reason when Refuse Service is confirmed
-  isPriority?: boolean; // When true, show red flag in circular white badge after room number
+  isPriority?: boolean; // Reserved for future priority UI
+  flagged?: boolean; // When true, show red flag in circular white badge after room number (flag room)
   frontOfficeLabel?: string; // Front office status e.g. "Stayover" - shown below room code for Stayover rooms
   showWithLinenBadge?: boolean; // When true, show "with Linen" badge next to Stayover label
 }
@@ -37,6 +38,7 @@ export default function RoomDetailHeader({
   promiseTimeAtTimestamp,
   refuseServiceReason,
   isPriority = false,
+  flagged = false,
   frontOfficeLabel,
   showWithLinenBadge = false,
 }: RoomDetailHeaderProps) {
@@ -187,7 +189,7 @@ export default function RoomDetailHeader({
         />
       </TouchableOpacity>
 
-      {/* Room Number + optional priority flag badge */}
+      {/* Room Number + optional flag badge (when room is flagged) */}
       <View style={styles.roomNumberRow}>
         <Text
           style={[
@@ -198,7 +200,7 @@ export default function RoomDetailHeader({
         >
           Room {roomNumber}
         </Text>
-        {isPriority && (
+        {flagged && (
           <View style={styles.priorityBadge}>
             <Image
               source={require('../../../assets/icons/flag.png')}

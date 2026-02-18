@@ -6,14 +6,12 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { BlurView } from 'expo-blur';
 import BottomTabBar from '../components/navigation/BottomTabBar';
-import MorePopup from '../components/more/MorePopup';
 import TicketsHeader from '../components/tickets/TicketsHeader';
 import TicketsTabs from '../components/tickets/TicketsTabs';
 import TicketCard from '../components/tickets/TicketCard';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockTicketsData } from '../data/mockTicketsData';
 import { mockChatData } from '../data/mockChatData';
-import { MoreMenuItemId } from '../types/more.types';
 import { TicketTab, TicketData } from '../types/tickets.types';
 import {
   TICKETS_HEADER,
@@ -42,7 +40,6 @@ export default function TicketsScreen() {
   const stackNavigation = useNavigation<StackNavigationProp>();
   const route = useRoute();
   const [activeTab, setActiveTab] = useState('Tickets');
-  const [showMorePopup, setShowMorePopup] = useState(false);
   const [selectedTab, setSelectedTab] = useState<TicketTab>('myTickets');
   const [tickets] = useState<TicketData[]>(mockTicketsData.tickets);
   const [refreshing, setRefreshing] = useState(false);
@@ -64,7 +61,7 @@ export default function TicketsScreen() {
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab); // Update immediately
-    setShowMorePopup(false);
+    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
@@ -73,33 +70,13 @@ export default function TicketsScreen() {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
       navigation.navigate('Tickets' as any);
+    } else if (tab === 'LostAndFound') {
+      navigation.navigate('LostAndFound', { returnToTab });
+    } else if (tab === 'Staff') {
+      navigation.navigate('Staff', { returnToTab });
+    } else if (tab === 'Settings') {
+      navigation.navigate('Settings', { returnToTab });
     }
-  };
-
-  const handleMorePress = () => {
-    setShowMorePopup(true);
-  };
-
-  const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
-    setShowMorePopup(false);
-    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
-    switch (menuItem) {
-      case 'lostAndFound':
-        navigation.navigate('LostAndFound', { returnToTab });
-        break;
-      case 'staff':
-        navigation.navigate('Staff', { returnToTab });
-        break;
-      case 'settings':
-        navigation.navigate('Settings', { returnToTab });
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleClosePopup = () => {
-    setShowMorePopup(false);
   };
 
   const handleBackPress = () => {
@@ -154,7 +131,7 @@ export default function TicketsScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          scrollEnabled={!showMorePopup}
+          scrollEnabled={true}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -176,11 +153,6 @@ export default function TicketsScreen() {
         </ScrollView>
 
         {/* Blur Overlay for content only */}
-        {showMorePopup && (
-          <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
-            <View style={styles.blurOverlayDarkener} />
-          </BlurView>
-        )}
       </View>
 
       {/* Header - Fixed at top */}
@@ -196,15 +168,7 @@ export default function TicketsScreen() {
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
-        onMorePress={handleMorePress}
         chatBadgeCount={chatBadgeCount}
-      />
-
-      {/* More Popup */}
-      <MorePopup
-        visible={showMorePopup}
-        onClose={handleClosePopup}
-        onMenuItemPress={handleMenuItemPress}
       />
     </View>
   );

@@ -55,6 +55,7 @@ export interface StaffInfo {
   statusText: string; // "Not Started", "Started: 40 mins", "Finished: 60 mins", etc.
   statusColor: string; // Color for the status text
   promiseTime?: string; // Optional, for departure rooms: "Promise time: 18:00"
+  avatarColor?: string; // Optional, for initial circle when no avatar
 }
 
 export interface NotesInfo {

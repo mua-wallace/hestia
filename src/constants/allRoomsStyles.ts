@@ -386,22 +386,17 @@ export const NOTES_SECTION = {
     // Container at x=5, so icon at 45.03-5=40.03 from container edge (absolute positioning, padding doesn't affect)
     // Container top is now 233 (was 238), so icon top relative to container: 245-233=12
     positions: {
-      arrivalDeparture: { left: 40.03, top: 12 }, // 45.03-5=40.03 from container left, 245-233=12 from container top
-      withNotes: { left: 4, top: 11 }, // Room 203: maintained relative positioning
+      arrivalDeparture: { left: 40.03, top: 10 }, // Figma: notes at 45.03; top (54-34)/2 for alignment
+      withNotes: { left: 40.03, top: 10 }, // Same as arrival for consistent Figma alignment
     },
   },
   rushedIcon: {
-    width: 33.974, // Increased by 2px from notes icon (31.974 + 2 = 33.974)
-    height: 33.974, // Increased by 2px from notes icon (31.974 + 2 = 33.974)
-    // Priority icon (rushed) should overlap with notes icon
-    // Notes icon at x=45.03, priority icon at x=19 (card coordinates)
-    // Container at x=5, so priority icon at 19-5=14 from container edge
-    // To overlap: position priority icon so it overlaps with notes icon
-    // Notes icon is at left: 40.03, so priority should be positioned to overlap
-    // Container top is now 233 (was 238), so icon top relative to container: 245-233=12
+    width: 33.974,
+    height: 33.974,
+    // Figma: priority at x=19 → 14 from container; same top as notes for alignment
     positions: {
-      arrivalDeparture: { left: 14, top: 12 }, // 19-5=14 from container left, 245-233=12 from container top (overlaps with notes icon at 40.03)
-      withNotes: { left: 14.03, top: 11 }, // Same horizontal, adjusted vertical
+      arrivalDeparture: { left: 14, top: 10 },
+      withNotes: { left: 14, top: 10 },
     },
   },
   badge: {
@@ -409,12 +404,10 @@ export const NOTES_SECTION = {
     height: 20.455,
     borderRadius: 10.2275,
     backgroundColor: '#FF46A3',
-    // Badge position: From Figma - badge at x=75, y=247 (card coordinates)
-    // Container at x=5, so badge at 75-5=70 from container edge
-    // Container top is now 233 (was 238), so badge top relative to container: 247-233=14
+    // Figma: badge at x=75 y=247 → left 70, top 14
     positions: {
-      arrivalDeparture: { left: 70, top: 14 }, // 75-5=70 from container left, 247-233=14 from container top
-      withNotes: { left: 31, top: 15 }, // Room 203: 43-12=31, 15 maintained
+      arrivalDeparture: { left: 70, top: 14 },
+      withNotes: { left: 70, top: 14 }, // Align with notes icon (40.03 + 31.97 - 10.23 ≈ 62, use 70 for Figma)
     },
     fontSize: 15,
     fontWeight: 'light' as const,
@@ -429,11 +422,13 @@ export const NOTES_SECTION = {
     // Container at x=5, so text at 112-5=107 from container edge
     // Container top is now 233 (was 238), so text top relative to container: 252-233=19
     positions: {
-      arrivalDeparture: { left: 107, top: 19 }, // 112-5=107 from container left, 252-233=19 from container top
-      withNotes: { left: 72, top: 17 }, // Room 203: 84-12=72, 17 maintained
+      arrivalDeparture: { left: 107, top: 18 }, // Figma: text at 112; top (54-17)/2 for vertical center
+      withNotes: { left: 107, top: 18 },
     },
     lineHeight: 17,
   },
+  // Priority badge: top-right of priority icon, vertically centered on icon (14+33.97-10.23, 10+(33.97-20.46)/2)
+  priorityBadge: { left: 37.74, top: 17 },
 } as const;
 
 // Guest Container Background - Exact values from Figma

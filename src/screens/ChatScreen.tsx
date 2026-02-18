@@ -7,13 +7,11 @@ import { CompositeNavigationProp } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { colors } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
-import MorePopup from '../components/more/MorePopup';
 import ChatHeader from '../components/chat/ChatHeader';
 import ChatItem, { ChatItemData } from '../components/chat/ChatItem';
 import NewChatMenu, { NewChatMenuOption } from '../components/chat/NewChatMenu';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockChatData } from '../data/mockChatData';
-import { MoreMenuItemId } from '../types/more.types';
 import {
   CHAT_SPACING,
   CHAT_COLORS,
@@ -42,7 +40,6 @@ type ChatScreenNavigationProp = CompositeNavigationProp<
 export default function ChatScreen() {
   const navigation = useNavigation<ChatScreenNavigationProp>();
   const [activeTab, setActiveTab] = useState('Chat');
-  const [showMorePopup, setShowMorePopup] = useState(false);
   const [showNewChatMenu, setShowNewChatMenu] = useState(false);
   const [chats] = useState<ChatItemData[]>(mockChatData);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,7 +47,7 @@ export default function ChatScreen() {
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab); // Update immediately
-    setShowMorePopup(false);
+    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
@@ -59,33 +56,13 @@ export default function ChatScreen() {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
       navigation.navigate('Tickets' as any);
+    } else if (tab === 'LostAndFound') {
+      navigation.navigate('LostAndFound', { returnToTab });
+    } else if (tab === 'Staff') {
+      navigation.navigate('Staff', { returnToTab });
+    } else if (tab === 'Settings') {
+      navigation.navigate('Settings', { returnToTab });
     }
-  };
-
-  const handleMorePress = () => {
-    setShowMorePopup(true);
-  };
-
-  const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
-    setShowMorePopup(false);
-    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
-    switch (menuItem) {
-      case 'lostAndFound':
-        navigation.navigate('LostAndFound', { returnToTab });
-        break;
-      case 'staff':
-        navigation.navigate('Staff', { returnToTab });
-        break;
-      case 'settings':
-        navigation.navigate('Settings', { returnToTab });
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleClosePopup = () => {
-    setShowMorePopup(false);
   };
 
   const handleSearch = (text: string) => {
@@ -157,7 +134,7 @@ export default function ChatScreen() {
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            scrollEnabled={!showMorePopup && !showNewChatMenu}
+            scrollEnabled={!showNewChatMenu}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
@@ -179,7 +156,7 @@ export default function ChatScreen() {
           </ScrollView>
 
           {/* Blur Overlay for content only */}
-          {(showMorePopup || showNewChatMenu) && (
+          {showNewChatMenu && (
             <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
               <View style={styles.blurOverlayDarkener} />
             </BlurView>
@@ -198,15 +175,7 @@ export default function ChatScreen() {
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
-        onMorePress={handleMorePress}
         chatBadgeCount={chatBadgeCount}
-      />
-
-      {/* More Popup */}
-      <MorePopup
-        visible={showMorePopup}
-        onClose={handleClosePopup}
-        onMenuItemPress={handleMenuItemPress}
       />
 
       {/* New Chat Menu */}

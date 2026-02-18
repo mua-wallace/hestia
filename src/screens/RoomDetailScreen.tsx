@@ -23,9 +23,11 @@ import { getRoomTypeConfig } from '../constants/roomTypeConfigs';
 import type { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import { STATUS_OPTIONS } from '../types/allRooms.types';
 import type { Note, Task, RoomType, HistoryEvent, HistoryGroup } from '../types/roomDetail.types';
+import type { LostAndFoundItem } from '../types/lostAndFound.types';
 import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
 import { dataService } from '../services/data';
+import { authService } from '../services/auth';
 import { getMockHistoryEvents } from '../data/mockHistoryData';
 import { generateHistoryReport } from '../utils/generateHistoryReport';
 import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
@@ -62,7 +64,7 @@ export default function RoomDetailScreen() {
   const [showViewTaskModal, setShowViewTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const statusButtonRef = useRef<TouchableOpacity>(null);
+  const statusButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   
   // Track current status to update header background color
   const [currentStatus, setCurrentStatus] = useState<RoomCardData['houseKeepingStatus']>(room.houseKeepingStatus);
@@ -78,21 +80,22 @@ export default function RoomDetailScreen() {
   const [refuseServiceReason, setRefuseServiceReason] = useState<string | undefined>(undefined);
 
   // Track notes and assigned staff in state
-  // Initial notes: room note (roomNotes + noteMadeBy) if present
+  // Initial notes: parse room notes (split by \n\n) if present
   const [notes, setNotes] = useState<Note[]>(() => {
-    // Always use actual room notes if available
-    if (room.roomNotes && room.noteMadeBy) {
-      return [{
-        id: 'room-note',
-        text: room.roomNotes,
+    // Parse notes from Supabase: split by \n\n to get individual notes
+    if (room.roomNotes && room.roomNotes.trim()) {
+      const noteTexts = room.roomNotes.split(/\n\n+/).filter(text => text.trim());
+      return noteTexts.map((text, index) => ({
+        id: `room-note-${index}`,
+        text: text.trim(),
         staff: {
-          name: room.noteMadeBy.name,
-          avatar: room.noteMadeBy.avatar ?? require('../../assets/icons/profile-avatar.png'),
+          name: room.noteMadeBy?.name || 'Staff',
+          avatar: room.noteMadeBy?.avatar ?? require('../../assets/icons/profile-avatar.png'),
         },
         createdAt: new Date().toISOString(),
-      }];
+      }));
     }
-    // Return empty array if no room notes - don't use default notes
+    // Return empty array if no room notes
     return [];
   });
   
@@ -233,13 +236,13 @@ export default function RoomDetailScreen() {
     if (navigation.canGoBack()) {
       navigation.goBack();
     } else {
-      navigation.navigate('AllRooms');
+      navigation.navigate('AllRooms' as any, {} as any);
     }
   };
 
   const handleStatusPress = () => {
     if (statusButtonRef.current) {
-      statusButtonRef.current.measure((x, y, width, height, pageX, pageY) => {
+      statusButtonRef.current.measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
         setStatusButtonPosition({
           x: pageX,
           y: pageY,
@@ -310,9 +313,10 @@ export default function RoomDetailScreen() {
     const newStatus = mapStatusOptionToRoomStatus(statusOption);
     setCurrentStatus(newStatus);
 
-    // Priority: set room as priority and show "In Progress" (not "Priority")
+    // Priority toggles: if already priority, clicking Priority resets to normal
     if (statusOption === 'Priority') {
-      setLocalRoom((prev) => ({ ...prev, isPriority: true }));
+      const newIsPriority = !localRoom.isPriority;
+      setLocalRoom((prev) => ({ ...prev, isPriority: newIsPriority }));
       setSelectedStatusText(undefined);
       setPausedAt(undefined);
     } else if (statusOption === 'Pause') {
@@ -326,11 +330,12 @@ export default function RoomDetailScreen() {
       setPausedAt(undefined);
     }
 
-    // Persist to Supabase
+    // Persist to Supabase (Priority: toggle high/normal)
+    const priorityPayload = statusOption === 'Priority' ? (!localRoom.isPriority ? 'high' : 'normal') : undefined;
     dataService
       .updateRoomState(room.id, {
         house_keeping_status: newStatus,
-        ...(statusOption === 'Priority' && { priority: 'high' }),
+        ...(priorityPayload !== undefined && { priority: priorityPayload }),
       })
       .catch((e) => console.warn('Failed to update room status in Supabase', e));
 
@@ -369,10 +374,6 @@ export default function RoomDetailScreen() {
     setShowRefuseServiceModal(false);
   };
 
-  const handleTabPress = (tab: DetailTab) => {
-    setActiveTab(tab);
-  };
-
   const handleAddNote = () => {
     setShowAddNoteModal(true);
   };
@@ -401,19 +402,43 @@ export default function RoomDetailScreen() {
     console.log('Task added for room:', room.roomNumber, 'task:', taskText);
   };
 
-  const handleSaveNote = (noteText: string) => {
-    const currentUser = mockStaffData[0];
+  const handleSaveNote = async (noteText: string) => {
+    const [noteAuthorLabel, avatarUrl] = await Promise.all([
+      authService.getCurrentUserNoteLabel(),
+      authService.getCurrentUserAvatarUrl(),
+    ]);
     const newNote: Note = {
       id: Date.now().toString(),
       text: noteText,
       staff: {
-        name: currentUser.name,
-        avatar: currentUser.avatar || require('../../assets/icons/profile-avatar.png'),
+        name: noteAuthorLabel,
+        avatar: avatarUrl || require('../../assets/icons/profile-avatar.png'),
       },
       createdAt: new Date().toISOString(),
     };
-    setNotes([...notes, newNote]);
-    console.log('Note saved:', noteText);
+    const updatedNotes = [...notes, newNote];
+    setNotes(updatedNotes);
+    // Join all notes with double newline separator
+    const notesText = updatedNotes.map((n) => n.text.trim()).filter(Boolean).join('\n\n');
+    const noteCount = updatedNotes.length;
+    console.log('Saving notes to Supabase:', { noteCount, notesText });
+    // Update local room state: notes text, notes count for badge, and note author with avatar
+    setLocalRoom((prev) => ({
+      ...prev,
+      roomNotes: notesText,
+      notes: { count: noteCount, hasRushed: prev.notes?.hasRushed || false },
+      noteMadeBy: {
+        name: noteAuthorLabel,
+        avatar: avatarUrl || undefined,
+      },
+    }));
+    dataService
+      .updateRoomState(room.id, {
+        notes: notesText,
+        note_made_by: noteAuthorLabel,
+      })
+      .then(() => console.log('Notes saved successfully'))
+      .catch((e) => console.warn('Failed to save note to Supabase', e));
   };
 
   const handleAddPhotos = () => {
@@ -559,7 +584,8 @@ export default function RoomDetailScreen() {
         roomCode={`${room.roomCategory} - ${room.credit}`}
         status={currentStatus}
         isPriority={localRoom.isPriority === true}
-        frontOfficeStatus={room.frontOfficeStatus}
+        flagged={localRoom.flagged}
+        frontOfficeStatus={room.frontOfficeStatus === 'Refresh' ? undefined : room.frontOfficeStatus}
         roomType={roomType}
         guests={guestsWithTypes}
         specialInstructions={room.specialInstructions ?? undefined}

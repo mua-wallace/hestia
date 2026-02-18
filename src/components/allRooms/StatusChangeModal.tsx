@@ -120,6 +120,25 @@ export default function StatusChangeModal({
     });
   };
 
+  const handleFlagToggle = (value: boolean) => {
+    onFlagToggle?.(value);
+    // Animate out before closing
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onClose();
+    });
+  };
+
   const handleClose = () => {
     // Animate out before closing
     Animated.parallel([
@@ -310,7 +329,7 @@ export default function StatusChangeModal({
               <Text style={styles.flagRoomText}>Flag room</Text>
               <Switch
                 value={room.flagged}
-                onValueChange={(value) => onFlagToggle?.(value)}
+                onValueChange={handleFlagToggle}
                 trackColor={{ false: '#e3e3e3', true: '#F92424' }}
                 thumbColor="#ffffff"
                 style={styles.toggleSwitch}

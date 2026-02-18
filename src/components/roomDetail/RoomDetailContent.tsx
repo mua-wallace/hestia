@@ -27,6 +27,7 @@ export default function RoomDetailContent({
   roomCode,
   status,
   isPriority = false,
+  flagged = false,
   frontOfficeStatus,
   roomType,
   guests,
@@ -200,6 +201,7 @@ export default function RoomDetailContent({
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceReason={refuseServiceReason}
         isPriority={isPriority}
+        flagged={flagged}
         frontOfficeLabel={frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}
         showWithLinenBadge={showWithLinenBadge}
       />
