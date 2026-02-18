@@ -94,9 +94,10 @@ function mapRoomToCard(
   reservations: Array<{ res: ReservationRow; guest: GuestRow | null }>,
   attendant: StaffInfo
 ): RoomCardData {
-  const frontOffice = reservations[0]?.res.front_office_status ?? 'Stayover';
-  const reservationStatus = reservations[0]?.res.reservation_status ?? 'Occupied';
-  const promisedTime = (reservations[0]?.res as { promised_time?: string | null }).promised_time ?? null;
+  const firstRes = reservations[0]?.res;
+  const frontOffice = firstRes?.front_office_status ?? 'Stayover';
+  const reservationStatus = firstRes?.reservation_status ?? 'Occupied';
+  const promisedTime = firstRes?.promised_time ?? null;
 
   const guests: GuestInfo[] = reservations.map(({ res, guest }, i) =>
     mapToGuestInfo(res, guest, i, room.id)
