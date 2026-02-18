@@ -9,6 +9,7 @@ interface StatusButtonProps {
   isPriority?: boolean;
   isArrivalDeparture?: boolean;
   hasNotes?: boolean;
+  frontOfficeStatus?: string; // To identify Arrival vs Departure vs Stayover etc.
 }
 
 const StatusButton = forwardRef<any, StatusButtonProps>(({ 
@@ -17,6 +18,7 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
   isPriority = false,
   isArrivalDeparture = false,
   hasNotes = false,
+  frontOfficeStatus = '',
 }, ref) => {
   // Safety check: ensure status is valid and config exists
   if (!status || !STATUS_CONFIGS[status]) {
@@ -32,15 +34,24 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
   let buttonRight: number;
   let buttonTop: number;
   
+  const isArrival = frontOfficeStatus === 'Arrival';
+  const isDeparture = frontOfficeStatus === 'Departure';
+  
   if (isArrivalDeparture) {
     buttonRight = RIGHT_MARGIN;
     buttonTop = STATUS_BUTTON.positions.arrivalDeparture.top;
   } else if (hasNotes) {
     buttonRight = RIGHT_MARGIN;
     buttonTop = STATUS_BUTTON.positions.arrivalWithNotes.top;
-  } else if (status === 'Dirty') {
+  } else if (isDeparture || status === 'Dirty') {
     buttonRight = RIGHT_MARGIN;
     buttonTop = STATUS_BUTTON.positions.departure.top;
+  } else if (isArrival) {
+    // For Arrival cards, vertically center status button with guest image
+    // Guest image: top: 87px, height: 65px, so center is at 87 + 32.5 = 119.5px
+    // Status button height: 70px, so to center it with image: top = 119.5 - 35 = 84.5px ≈ 85px
+    buttonRight = RIGHT_MARGIN;
+    buttonTop = 85; // Vertically centered with guest image (image center at 119.5px, button center at 119.5px)
   } else {
     buttonRight = RIGHT_MARGIN;
     buttonTop = STATUS_BUTTON.positions.standard.top;

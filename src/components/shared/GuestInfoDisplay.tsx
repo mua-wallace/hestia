@@ -88,9 +88,9 @@ export default function GuestInfoDisplay({
       ? require('../../../assets/icons/guest-arrival-icon.png')
       : require('../../../assets/icons/guest-departure-icon.png');
   } else if (isStayover || isNoTask) {
-    guestIconSource = require('../../../assets/icons/stayover-guest-icon.png');
+    guestIconSource = require('../../../assets/icons/stayover-guest_icon.png');
   } else if (isTurndown) {
-    guestIconSource = require('../../../assets/icons/turndown-guest-icon.png');
+    guestIconSource = require('../../../assets/icons/moon.png');
   } else if (isArrival || guest.timeLabel === 'ETA') {
     // Use arrival icon if category is Arrival OR guest has ETA timeLabel
     guestIconSource = require('../../../assets/icons/guest-arrival-icon.png');
@@ -243,7 +243,8 @@ export default function GuestInfoDisplay({
       left: GUEST_INFO.iconStandardDeparture.left,
       top: GUEST_INFO.iconStandardDeparture.top,
     };
-  } else if (isArrival && !isPriority && !hasNotes) {
+  } else if (isArrival && !hasNotes) {
+    // For Arrival cards (priority or standard), use standard Arrival icon positioning
     guestIconPos = {
       left: GUEST_INFO.iconStandardArrival.left,
       top: GUEST_INFO.iconStandardArrival.top,
@@ -303,6 +304,12 @@ export default function GuestInfoDisplay({
   // For Room Detail screen, guest count is shown inline (not below)
   const hasTime = guest.timeLabel && guest.time && guest.timeLabel !== 'N/A';
   const hasGuestCount = guest.guestCount && guest.guestCount.adults !== undefined;
+  const hasDatesOfStay = guest.datesOfStay && guest.datesOfStay.from && guest.datesOfStay.to;
+  
+  // Determine layout pattern:
+  // - If datesOfStay, guest count, and ETA/EDT are all present: datesOfStay + guest count on first line, ETA/EDT on second line
+  // - If ETA/EDT is missing: datesOfStay + guest count on same line
+  const shouldSplitTimeToNewLine = hasDatesOfStay && hasGuestCount && hasTime;
   const shouldShowGuestCountBelow = countPos && 
     !(timeLeft !== undefined && timeTop !== undefined) && // Not Room Detail screen
     !(isArrivalDeparture || category === 'ArrivalDeparture') && // Not Arrival/Departure
@@ -429,19 +436,51 @@ export default function GuestInfoDisplay({
             },
           ]}
         >
-          <Image
-            source={{ uri: guest.imageUrl! }}
-            style={[
-              styles.guestImage,
-              {
-                width: guestImageWidth,
-                height: guestImageHeight,
-                borderRadius: guestImageRadius,
-                marginRight: guestImageGap,
-              },
-            ]}
-            resizeMode="cover"
-          />
+          <View style={[styles.guestImageContainer, { marginRight: guestImageGap }]}>
+            <Image
+              source={{ uri: guest.imageUrl! }}
+              style={[
+                styles.guestImage,
+                {
+                  width: guestImageWidth,
+                  height: guestImageHeight,
+                  borderRadius: guestImageRadius,
+                },
+              ]}
+              resizeMode="cover"
+            />
+            {/* Category Badge at bottom right */}
+            {((isArrival || isDeparture || isStayover || isTurndown) || (isArrivalDeparture || category === 'ArrivalDeparture')) && (
+              <View
+                style={[
+                  styles.imageBadge,
+                  {
+                    backgroundColor: (isArrival || ((isArrivalDeparture || category === 'ArrivalDeparture') && guest.timeLabel === 'ETA'))
+                      ? '#41D541' // Green for Arrival
+                      : (isDeparture || ((isArrivalDeparture || category === 'ArrivalDeparture') && guest.timeLabel === 'EDT'))
+                      ? '#f92424' // Red for Departure
+                      : isStayover
+                      ? '#3BC1F6' // Light blue for Stayover
+                      : '#9b51e0', // Purple for Turndown
+                  },
+                ]}
+              >
+                <Image
+                  source={
+                    (isArrival || ((isArrivalDeparture || category === 'ArrivalDeparture') && guest.timeLabel === 'ETA'))
+                      ? require('../../../assets/icons/arrow-forward.png')
+                      : (isDeparture || ((isArrivalDeparture || category === 'ArrivalDeparture') && guest.timeLabel === 'EDT'))
+                      ? require('../../../assets/icons/departure-spear.png')
+                      : isStayover
+                      ? require('../../../assets/icons/stayover-guest_icon.png')
+                      : guestIconSource
+                  }
+                  style={isTurndown ? styles.imageBadgeIconNoTint : styles.imageBadgeIcon}
+                  resizeMode="contain"
+                />
+              </View>
+            )}
+          </View>
           <View style={[styles.guestInfoColumn, { marginTop: 0 }]}>
             <View style={styles.guestNameContainer}>
               {/* First line: First 23 characters (or full name if <= 23 chars) */}
@@ -494,60 +533,95 @@ export default function GuestInfoDisplay({
             </View>
             {/* Date + guest count + ETA/EDT row (inside info column when two-column) */}
             {timeLeft !== undefined && timeTop !== undefined ? (
-              // ROOM DETAIL SCREEN: dateOfStay, guestcount, EDT/ETA all in one line
-              <View style={[styles.detailsRow, styles.detailsRowFlex, { marginTop: infoGap, alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap' }]}>
-                <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM, { marginRight: 8 * normalizedScaleX }]}>
-                  {formatDatesOfStay(guest.datesOfStay)}
-                </Text>
-                {/* Guest Count - inline if available */}
-                {guest.guestCount && guest.guestCount.adults !== undefined && (
-                  <>
-                    <Image
-                      source={require('../../../assets/icons/people-icon.png')}
-                      style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM, { marginLeft: 0, marginRight: 4 * normalizedScaleX }]}
-                      resizeMode="contain"
-                    />
-                    <Text style={[styles.countTextInline, { marginRight: 8 * normalizedScaleX }]}>
-                      {formatGuestCount(guest.guestCount)}
+              // ROOM DETAIL SCREEN: Apply layout pattern
+              <>
+                {/* First line: datesOfStay + guest count (if both present) */}
+                <View style={[styles.detailsRow, styles.detailsRowFlex, { marginTop: infoGap, alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap' }]}>
+                  {hasDatesOfStay && (
+                    <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM, { marginRight: 8 * normalizedScaleX }]}>
+                      {formatDatesOfStay(guest.datesOfStay)}
                     </Text>
-                  </>
-                )}
-                {/* Time (ETA/EDT) - inline if available and not N/A */}
-                {guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && (
-                  <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
+                  )}
+                  {/* Guest Count - inline if available */}
+                  {hasGuestCount && (
+                    <>
+                      <Image
+                        source={require('../../../assets/icons/people-icon.png')}
+                        style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM, { marginLeft: 0, marginRight: 4 * normalizedScaleX }]}
+                        resizeMode="contain"
+                      />
+                      <Text style={[styles.countTextInline, { marginRight: shouldSplitTimeToNewLine ? 0 : 8 * normalizedScaleX }]}>
+                        {formatGuestCount(guest.guestCount)}
+                      </Text>
+                    </>
+                  )}
+                  {/* Time (ETA/EDT) - inline if available and not N/A, but only if NOT splitting to new line */}
+                  {hasTime && !shouldSplitTimeToNewLine && (
+                    <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
+                      {`${guest.timeLabel}: ${guest.time}`}
+                    </Text>
+                  )}
+                </View>
+                {/* Second line: ETA/EDT (only if splitting to new line) */}
+                {shouldSplitTimeToNewLine && (
+                  <Text style={[styles.time, styles.timeFlex, isPMTheme && styles.timePM, { marginTop: infoGap }]}>
                     {`${guest.timeLabel}: ${guest.time}`}
                   </Text>
                 )}
-              </View>
+              </>
             ) : (isArrivalDeparture || category === 'ArrivalDeparture') ? (
-              <View style={[styles.detailsRowWithCount, styles.detailsRowFlex, { marginTop: infoGap }]}>
-                <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
-                {countPos && guest.guestCount && guest.guestCount.adults !== undefined && (
-                  <>
-                    <Image source={require('../../../assets/icons/people-icon.png')} style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM]} resizeMode="contain" />
-                    <Text style={styles.countTextInline}>{formatGuestCount(guest.guestCount)}</Text>
-                  </>
+              <>
+                {/* First line: datesOfStay + guest count */}
+                <View style={[styles.detailsRowWithCount, styles.detailsRowFlex, { marginTop: infoGap }]}>
+                  {hasDatesOfStay && (
+                    <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
+                  )}
+                  {countPos && hasGuestCount && (
+                    <>
+                      <Image source={require('../../../assets/icons/people-icon.png')} style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM]} resizeMode="contain" />
+                      <Text style={styles.countTextInline}>{formatGuestCount(guest.guestCount)}</Text>
+                    </>
+                  )}
+                </View>
+                {/* Second line: ETA/EDT (if splitting to new line) */}
+                {shouldSplitTimeToNewLine && (
+                  <Text style={[styles.time, styles.timeFlex, isPMTheme && styles.timePM, { marginTop: infoGap }]}>
+                    {`${guest.timeLabel}: ${guest.time}`}
+                  </Text>
                 )}
-              </View>
+              </>
             ) : (
-              <View style={[styles.detailsRow, styles.detailsRowFlex, { marginTop: infoGap, alignItems: 'center' }]}>
-                <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
-                {guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && (
-                  <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>{`${guest.timeLabel}: ${guest.time}`}</Text>
+              <>
+                {/* First line: datesOfStay + guest count */}
+                <View style={[styles.detailsRow, styles.detailsRowFlex, { marginTop: infoGap, alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap' }]}>
+                  {hasDatesOfStay && (
+                    <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM, { marginRight: 8 * normalizedScaleX }]}>
+                      {formatDatesOfStay(guest.datesOfStay)}
+                    </Text>
+                  )}
+                  {/* Guest Count - inline if available */}
+                  {hasGuestCount && (
+                    <>
+                      <Image source={require('../../../assets/icons/people-icon.png')} style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM, { marginRight: 4 * normalizedScaleX }]} resizeMode="contain" />
+                      <Text style={[styles.countTextInline, { marginRight: shouldSplitTimeToNewLine ? 0 : 8 * normalizedScaleX }]}>
+                        {formatGuestCount(guest.guestCount)}
+                      </Text>
+                    </>
+                  )}
+                  {/* Time (ETA/EDT) - inline if available and not N/A, but only if NOT splitting to new line */}
+                  {hasTime && !shouldSplitTimeToNewLine && (
+                    <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
+                      {`${guest.timeLabel}: ${guest.time}`}
+                    </Text>
+                  )}
+                </View>
+                {/* Second line: ETA/EDT (only if splitting to new line) */}
+                {shouldSplitTimeToNewLine && (
+                  <Text style={[styles.time, styles.timeFlex, isPMTheme && styles.timePM, { marginTop: infoGap }]}>
+                    {`${guest.timeLabel}: ${guest.time}`}
+                  </Text>
                 )}
-                {guest.guestCount && guest.guestCount.adults !== undefined && (
-                  <>
-                    <Image source={require('../../../assets/icons/people-icon.png')} style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM]} resizeMode="contain" />
-                    <Text style={styles.countTextInline}>{formatGuestCount(guest.guestCount)}</Text>
-                  </>
-                )}
-              </View>
-            )}
-            {/* Arrival/Departure line 2: ETA/EDT (only when NOT room detail screen) */}
-            {timeLeft === undefined && timeTop === undefined && (isArrivalDeparture || category === 'ArrivalDeparture') && guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && (
-              <Text style={[styles.time, styles.timeFlex, isPMTheme && styles.timePM, { marginTop: infoGap }]}>
-                {`${guest.timeLabel}: ${guest.time}`}
-              </Text>
+              </>
             )}
           </View>
         </View>
@@ -555,46 +629,72 @@ export default function GuestInfoDisplay({
         /* Room Detail Screen: Two-column layout but name rendered by parent (GuestInfoCard) */
         /* Render date/time/count row aligned with info column (after image + gap) */
         /* Position: left aligns with name (infoColumnLeft), top is below name row */
-        <View
-          style={[
-            styles.detailsRow,
-            {
-              top: dateTop !== undefined ? dateTop * normalizedScaleX : adjustedDateTop * normalizedScaleX,
-              left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
-              alignItems: 'flex-start', // Align items to start for proper alignment with name
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              zIndex: 10,
-              paddingLeft: 0, // Remove any left padding
-              marginLeft: 0, // Remove any left margin
-              paddingStart: 0, // Remove any start padding (for RTL)
-              marginStart: 0, // Remove any start margin (for RTL)
-            },
-          ]}
-        >
-          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM, { marginRight: 12 * normalizedScaleX, paddingLeft: 0, marginLeft: 0, paddingStart: 0, marginStart: 0, textAlign: 'left' }]}>
-            {formatDatesOfStay(guest.datesOfStay)}
-          </Text>
-          {/* Guest Count - inline if available */}
-          {guest.guestCount && guest.guestCount.adults !== undefined && (
-            <>
-              <Image
-                source={require('../../../assets/icons/people-icon.png')}
-                style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM, { marginLeft: 0, marginRight: 4 * normalizedScaleX }]}
-                resizeMode="contain"
-              />
-              <Text style={[styles.countTextInline, { marginRight: 12 * normalizedScaleX }]}>
-                {formatGuestCount(guest.guestCount)}
+        <>
+          {/* First line: datesOfStay + guest count */}
+          <View
+            style={[
+              styles.detailsRow,
+              {
+                top: dateTop !== undefined ? dateTop * normalizedScaleX : adjustedDateTop * normalizedScaleX,
+                left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+                alignItems: 'flex-start', // Align items to start for proper alignment with name
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                zIndex: 10,
+                paddingLeft: 0, // Remove any left padding
+                marginLeft: 0, // Remove any left margin
+                paddingStart: 0, // Remove any start padding (for RTL)
+                marginStart: 0, // Remove any start margin (for RTL)
+              },
+            ]}
+          >
+            {hasDatesOfStay && (
+              <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM, { marginRight: 12 * normalizedScaleX, paddingLeft: 0, marginLeft: 0, paddingStart: 0, marginStart: 0, textAlign: 'left' }]}>
+                {formatDatesOfStay(guest.datesOfStay)}
               </Text>
-            </>
-          )}
-          {/* Time (ETA/EDT) - inline if available and not N/A */}
-          {guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && (
-            <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
+            )}
+            {/* Guest Count - inline if available */}
+            {hasGuestCount && (
+              <>
+                <Image
+                  source={require('../../../assets/icons/people-icon.png')}
+                  style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM, { marginLeft: 0, marginRight: 4 * normalizedScaleX }]}
+                  resizeMode="contain"
+                />
+                <Text style={[styles.countTextInline, { marginRight: shouldSplitTimeToNewLine ? 0 : 12 * normalizedScaleX }]}>
+                  {formatGuestCount(guest.guestCount)}
+                </Text>
+              </>
+            )}
+            {/* Time (ETA/EDT) - inline if available and not N/A, but only if NOT splitting to new line */}
+            {hasTime && !shouldSplitTimeToNewLine && (
+              <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
+                {`${guest.timeLabel}: ${guest.time}`}
+              </Text>
+            )}
+          </View>
+          {/* Second line: ETA/EDT (only if splitting to new line) */}
+          {shouldSplitTimeToNewLine && (
+            <Text
+              style={[
+                styles.time,
+                styles.timeFlex,
+                isPMTheme && styles.timePM,
+                {
+                  top: (dateTop !== undefined ? dateTop : adjustedDateTop) * normalizedScaleX + (GUEST_INFO.dateRange.lineHeight + infoGap) * normalizedScaleX,
+                  left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+                  paddingLeft: 0,
+                  marginLeft: 0,
+                  paddingStart: 0,
+                  marginStart: 0,
+                  textAlign: 'left',
+                },
+              ]}
+            >
               {`${guest.timeLabel}: ${guest.time}`}
             </Text>
           )}
-        </View>
+        </>
       ) : (
         /* Original layout when no guest image */
         <>
@@ -652,129 +752,157 @@ export default function GuestInfoDisplay({
       {!hasGuestImage && (
       <>
       {timeLeft !== undefined && timeTop !== undefined ? (
-        // ROOM DETAIL SCREEN: dateOfStay, guestcount, EDT/ETA all in one line
-        // If any is N/A or null, display whatever is available
-        <View style={[
-          styles.detailsRow, 
-          { 
-            top: adjustedDateTop * normalizedScaleX,
-            left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
-            zIndex: 10,
-            alignItems: 'center',
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-          }
-        ]}>
-          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM, { marginRight: 8 * normalizedScaleX }]}>
-            {formatDatesOfStay(guest.datesOfStay)}
-          </Text>
-          {/* Guest Count - inline if available */}
-          {guest.guestCount && guest.guestCount.adults !== undefined && (
-            <>
-              <Image
-                source={require('../../../assets/icons/people-icon.png')}
-                style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM, { marginLeft: 0, marginRight: 4 * normalizedScaleX }]}
-                resizeMode="contain"
-              />
-              <Text style={[styles.countTextInline, { marginRight: 8 * normalizedScaleX }]}>
-                {formatGuestCount(guest.guestCount)}
+        // ROOM DETAIL SCREEN: Apply layout pattern
+        <>
+          {/* First line: datesOfStay + guest count */}
+          <View style={[
+            styles.detailsRow, 
+            { 
+              top: adjustedDateTop * normalizedScaleX,
+              left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+              zIndex: 10,
+              alignItems: 'center',
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+            }
+          ]}>
+            {hasDatesOfStay && (
+              <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM, { marginRight: 8 * normalizedScaleX }]}>
+                {formatDatesOfStay(guest.datesOfStay)}
               </Text>
-            </>
-          )}
-          {/* Time (ETA/EDT) - inline if available and not N/A */}
-          {guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && (
-            <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
+            )}
+            {/* Guest Count - inline if available */}
+            {hasGuestCount && (
+              <>
+                <Image
+                  source={require('../../../assets/icons/people-icon.png')}
+                  style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM, { marginLeft: 0, marginRight: 4 * normalizedScaleX }]}
+                  resizeMode="contain"
+                />
+                <Text style={[styles.countTextInline, { marginRight: shouldSplitTimeToNewLine ? 0 : 8 * normalizedScaleX }]}>
+                  {formatGuestCount(guest.guestCount)}
+                </Text>
+              </>
+            )}
+            {/* Time (ETA/EDT) - inline if available and not N/A, but only if NOT splitting to new line */}
+            {hasTime && !shouldSplitTimeToNewLine && (
+              <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
+                {`${guest.timeLabel}: ${guest.time}`}
+              </Text>
+            )}
+          </View>
+          {/* Second line: ETA/EDT (only if splitting to new line) */}
+          {shouldSplitTimeToNewLine && (
+            <Text
+              style={[
+                styles.time,
+                styles.timeFlex,
+                isPMTheme && styles.timePM,
+                {
+                  top: adjustedDateTop * normalizedScaleX + (GUEST_INFO.dateRange.lineHeight + infoGap) * normalizedScaleX,
+                  left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+                  zIndex: 10,
+                },
+              ]}
+            >
               {`${guest.timeLabel}: ${guest.time}`}
             </Text>
           )}
-        </View>
+        </>
       ) : (isArrivalDeparture || category === 'ArrivalDeparture') ? (
-        // ALL ROOMS - Arrival/Departure: Line 1 = dateOfStay + guestcount
-        <View style={[
-          styles.detailsRowWithCount, 
-          { 
-            top: adjustedDateTop * normalizedScaleX,
-            left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
-            zIndex: 10,
-          }
-        ]}>
-          <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
-          {countPos && guest.guestCount && guest.guestCount.adults !== undefined && (
-            <>
-              <Image
-                source={require('../../../assets/icons/people-icon.png')}
-                style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM]}
-                resizeMode="contain"
-              />
-              <Text style={styles.countTextInline}>
-                {formatGuestCount(guest.guestCount)}
+        // ALL ROOMS - Arrival/Departure: Apply layout pattern
+        <>
+          {/* First line: datesOfStay + guest count */}
+          <View
+            style={[
+              styles.detailsRowWithCount,
+              {
+                top: adjustedDateTop * normalizedScaleX,
+                left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+                zIndex: 10,
+              },
+            ]}
+          >
+            {hasDatesOfStay && (
+              <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>
+                {formatDatesOfStay(guest.datesOfStay)}
               </Text>
-            </>
+            )}
+            {countPos && hasGuestCount && (
+              <>
+                <Image
+                  source={require('../../../assets/icons/people-icon.png')}
+                  style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM]}
+                  resizeMode="contain"
+                />
+                <Text style={styles.countTextInline}>{formatGuestCount(guest.guestCount)}</Text>
+              </>
+            )}
+          </View>
+          {/* Second line: ETA/EDT (only if splitting to new line) */}
+          {shouldSplitTimeToNewLine && (
+            <Text style={[styles.time, styles.timeFlex, isPMTheme && styles.timePM, { marginTop: infoGap }]}>
+              {`${guest.timeLabel}: ${guest.time}`}
+            </Text>
           )}
-        </View>
+        </>
       ) : (isArrival || isStayover || isTurndown || isDeparture) ? (
-        // ALL ROOMS - Other types (Arrival, Stayover, Turndown, Departure)
-        // Check if time is N/A/null OR guestcount is null/N/A - if so, display all on Line 1
-        (() => {
-          const checkHasTime = guest.timeLabel && guest.time && guest.timeLabel !== 'N/A';
-          const checkHasGuestCount = guest.guestCount && guest.guestCount.adults !== undefined;
-          const showAllOnOneLine = !checkHasTime || !checkHasGuestCount;
-          
-          if (showAllOnOneLine) {
-            // Line 1: dateOfStay + EDT/ETA + guestcount (whatever is available)
-            return (
-              <View style={[
-                styles.detailsRow, 
-                { 
-                  top: adjustedDateTop * normalizedScaleX,
+        // ALL ROOMS - Other types (Arrival, Stayover, Turndown, Departure): Apply layout pattern
+        <>
+          {/* First line: datesOfStay + guest count */}
+          <View style={[
+            styles.detailsRow, 
+            { 
+              top: adjustedDateTop * normalizedScaleX,
+              left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
+              zIndex: 10,
+              alignItems: 'center',
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+            }
+          ]}>
+            {hasDatesOfStay && (
+              <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM, { marginRight: 8 * normalizedScaleX }]}>
+                {formatDatesOfStay(guest.datesOfStay)}
+              </Text>
+            )}
+            {hasGuestCount && (
+              <>
+                <Image
+                  source={require('../../../assets/icons/people-icon.png')}
+                  style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM, { marginRight: 4 * normalizedScaleX }]}
+                  resizeMode="contain"
+                />
+                <Text style={[styles.countTextInline, { marginRight: shouldSplitTimeToNewLine ? 0 : 8 * normalizedScaleX }]}>
+                  {formatGuestCount(guest.guestCount)}
+                </Text>
+              </>
+            )}
+            {/* Time (ETA/EDT) - inline if available and not N/A, but only if NOT splitting to new line */}
+            {hasTime && !shouldSplitTimeToNewLine && (
+              <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
+                {`${guest.timeLabel}: ${guest.time}`}
+              </Text>
+            )}
+          </View>
+          {/* Second line: ETA/EDT (only if splitting to new line) */}
+          {shouldSplitTimeToNewLine && (
+            <Text
+              style={[
+                styles.time,
+                styles.timeFlex,
+                isPMTheme && styles.timePM,
+                {
+                  top: adjustedDateTop * normalizedScaleX + (GUEST_INFO.dateRange.lineHeight + infoGap) * normalizedScaleX,
                   left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
                   zIndex: 10,
-                  alignItems: 'center',
-                }
-              ]}>
-                <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>
-                  {formatDatesOfStay(guest.datesOfStay)}
-                </Text>
-                {checkHasTime && (
-                  <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
-                    {`${guest.timeLabel}: ${guest.time}`}
-                  </Text>
-                )}
-                {checkHasGuestCount && (
-                  <>
-                    <Image
-                      source={require('../../../assets/icons/people-icon.png')}
-                      style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM]}
-                      resizeMode="contain"
-                    />
-                    <Text style={styles.countTextInline}>
-                      {formatGuestCount(guest.guestCount)}
-                    </Text>
-                  </>
-                )}
-              </View>
-            );
-          } else {
-            // Line 1: dateOfStay + EDT/ETA (guestcount will be on Line 2)
-            return (
-              <View style={[
-                styles.detailsRowWithTime, 
-                { 
-                  top: adjustedDateTop * normalizedScaleX,
-                  left: dateLeft !== undefined ? dateLeft * normalizedScaleX : 0,
-                  zIndex: 10,
-                }
-              ]}>
-                <Text style={[styles.dateRange, styles.dateRangeWithTime, isPMTheme && styles.dateRangePM]}>
-                  {formatDatesOfStay(guest.datesOfStay)}
-                </Text>
-                <Text style={[styles.timeInline, isPMTheme && styles.timeInlinePM]}>
-                  {`${guest.timeLabel}: ${guest.time}`}
-                </Text>
-              </View>
-            );
-          }
-        })()
+                },
+              ]}
+            >
+              {`${guest.timeLabel}: ${guest.time}`}
+            </Text>
+          )}
+        </>
       ) : (
         // Fallback - just date
         <View style={[
@@ -896,8 +1024,32 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 30,
   },
+  guestImageContainer: {
+    position: 'relative',
+  },
   guestImage: {
     flexShrink: 0,
+  },
+  imageBadge: {
+    position: 'absolute',
+    bottom: -2 * normalizedScaleX,
+    right: -2 * normalizedScaleX,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  imageBadgeIcon: {
+    width: 12 * normalizedScaleX,
+    height: 12 * normalizedScaleX,
+    tintColor: '#ffffff',
+  },
+  imageBadgeIconNoTint: {
+    width: 12 * normalizedScaleX,
+    height: 12 * normalizedScaleX,
+    tintColor: '#FFEA80',
   },
   guestInfoColumn: {
     flex: 1,

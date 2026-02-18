@@ -301,6 +301,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           isPriority={room.isPriority}
           isArrivalDeparture={isArrivalDeparture}
           hasNotes={hasNotes}
+          frontOfficeStatus={room.frontOfficeStatus}
         />
       )}
 

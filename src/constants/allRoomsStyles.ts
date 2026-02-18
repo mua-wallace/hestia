@@ -115,10 +115,10 @@ export const GUEST_INFO = {
   },
   /** Two-column layout: image left, info right (Figma) */
   guestImage: {
-    width: 53,
-    height: 53,
+    width: 65, // Increased to be taller than guest info height
+    height: 65, // Increased to be taller than guest info height
     borderRadius: 5,
-    marginRight: 8, // Gap between image and info column
+    marginRight: 12, // Gap between image and info column (increased for better spacing)
   },
   infoColumn: {
     marginTop: 0,

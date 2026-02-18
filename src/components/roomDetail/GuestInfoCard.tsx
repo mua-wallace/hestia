@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, Modal, TouchableOpacity, Dimensions, StatusBar } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { GUEST_INFO as ROOM_DETAIL_GUEST_INFO, CONTENT_AREA } from '../../constants/roomDetailStyles';
+import { GUEST_INFO as ROOM_DETAIL_GUEST_INFO, CONTENT_AREA, ROOM_DETAIL_HEADER, DETAIL_TABS } from '../../constants/roomDetailStyles';
 import { GUEST_INFO } from '../../constants/allRoomsStyles';
 import { normalizedScaleX } from '../../utils/responsive';
 import { formatGuestCount, formatDatesOfStay } from '../../utils/formatting';
@@ -140,38 +140,78 @@ export default function GuestInfoCard({
       {/* Guest Image or Icon */}
       {iconLeftRelative !== undefined && (
         hasGuestImage ? (
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setIsImageModalVisible(true)}
+          <View
+            style={{
+              position: 'absolute',
+              left: iconLeftRelative * normalizedScaleX,
+              top: iconTopRelative * normalizedScaleX,
+              width: guestImageWidthDetail * normalizedScaleX,
+              height: guestImageHeightDetail * normalizedScaleX,
+            }}
           >
-            <Image
-              source={{ uri: guest.imageUrl }}
-              style={[
-                styles.guestImage,
-                {
-                  left: iconLeftRelative * normalizedScaleX,
-                  top: iconTopRelative * normalizedScaleX,
-                  width: guestImageWidthDetail * normalizedScaleX,
-                  height: guestImageHeightDetail * normalizedScaleX,
-                  borderRadius: GUEST_INFO.guestImage.borderRadius * normalizedScaleX,
-                },
-              ]}
-              resizeMode="cover"
-            />
-          </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setIsImageModalVisible(true)}
+            >
+              <Image
+                source={{ uri: guest.imageUrl }}
+                style={[
+                  styles.guestImage,
+                  {
+                    width: guestImageWidthDetail * normalizedScaleX,
+                    height: guestImageHeightDetail * normalizedScaleX,
+                    borderRadius: GUEST_INFO.guestImage.borderRadius * normalizedScaleX,
+                  },
+                ]}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
+            {/* Category Badge at bottom right */}
+            {(category === 'Arrival' || category === 'Departure' || category === 'Stayover' || category === 'Turndown' || category === 'ArrivalDeparture') && (
+              <View
+                style={[
+                  styles.imageBadge,
+                  {
+                    backgroundColor: (category === 'Arrival' || (category === 'ArrivalDeparture' && guest.timeLabel === 'ETA'))
+                      ? '#41D541' // Green for Arrival
+                      : (category === 'Departure' || (category === 'ArrivalDeparture' && guest.timeLabel === 'EDT'))
+                      ? '#f92424' // Red for Departure
+                      : category === 'Stayover'
+                      ? '#3BC1F6' // Light blue for Stayover
+                      : '#9b51e0', // Purple for Turndown
+                  },
+                ]}
+              >
+                <Image
+                  source={
+                    (category === 'Arrival' || (category === 'ArrivalDeparture' && guest.timeLabel === 'ETA'))
+                      ? require('../../../assets/icons/arrow-forward.png')
+                      : (category === 'Departure' || (category === 'ArrivalDeparture' && guest.timeLabel === 'EDT'))
+                      ? require('../../../assets/icons/departure-spear.png')
+                      : category === 'Stayover'
+                      ? require('../../../assets/icons/stayover-guest_icon.png')
+                      : require('../../../assets/icons/moon.png')
+                  }
+                  style={category === 'Turndown' ? styles.imageBadgeIconNoTint : styles.imageBadgeIcon}
+                  resizeMode="contain"
+                />
+              </View>
+            )}
+          </View>
         ) : (
           <Image
             source={
               category === 'Departure'
                 ? require('../../../assets/icons/guest-departure-icon.png')
                 : category === 'Stayover'
-                ? require('../../../assets/icons/stayover-guest-icon.png')
+                ? require('../../../assets/icons/stayover-guest_icon.png')
                 : category === 'Turndown'
-                ? require('../../../assets/icons/turndown-guest-icon.png')
+                ? require('../../../assets/icons/moon.png')
                 : require('../../../assets/icons/guest-arrival-icon.png')
             }
             style={[
               styles.guestIcon,
+              category === 'Turndown' ? styles.guestIconNoTint : null,
               {
                 left: iconLeftRelative * normalizedScaleX,
                 top: iconTopRelative * normalizedScaleX,
@@ -312,7 +352,8 @@ export default function GuestInfoCard({
         onRequestClose={() => setIsImageModalVisible(false)}
       >
         <StatusBar hidden={isImageModalVisible} />
-        <BlurView intensity={80} style={styles.modalBlurOverlay} tint="light">
+        {/* BlurView starts below header and tabs - header remains unblurred */}
+        <BlurView intensity={20} style={styles.modalBlurOverlay} tint="light">
           <TouchableOpacity
             style={styles.modalOverlay}
             activeOpacity={1}
@@ -350,8 +391,32 @@ const styles = StyleSheet.create({
     width: 28.371 * normalizedScaleX,
     height: 29.919 * normalizedScaleX,
   },
+  guestIconNoTint: {
+    tintColor: '#FFEA80',
+  },
   guestImage: {
     position: 'absolute',
+  },
+  imageBadge: {
+    position: 'absolute',
+    bottom: -2 * normalizedScaleX,
+    right: -2 * normalizedScaleX,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  imageBadgeIcon: {
+    width: 12 * normalizedScaleX,
+    height: 12 * normalizedScaleX,
+    tintColor: '#ffffff',
+  },
+  imageBadgeIconNoTint: {
+    width: 12 * normalizedScaleX,
+    height: 12 * normalizedScaleX,
+    tintColor: '#FFEA80',
   },
   categoryBadgeRow: {
     position: 'absolute',
@@ -461,7 +526,11 @@ const styles = StyleSheet.create({
     zIndex: 2, // Above divider
   },
   modalBlurOverlay: {
-    flex: 1,
+    position: 'absolute',
+    top: (DETAIL_TABS.container.top + DETAIL_TABS.container.height) * normalizedScaleX, // Start below header and tabs (281px)
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -470,6 +539,7 @@ const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   modalContent: {
     width: Dimensions.get('window').width * 0.85,
