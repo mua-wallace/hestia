@@ -17,7 +17,7 @@ export type RoomStatus = 'Dirty' | 'InProgress' | 'Cleaned' | 'Inspected';
 /** Promised ready time for the room: 12:00, 13:00, or null */
 export type PromisedTime = '12:00' | '13:00' | null;
 
-export type StatusChangeOption = 'Priority' | 'Dirty' | 'Cleaned' | 'Inspected' | 'Pause' | 'ReturnLater' | 'RefuseService' | 'PromisedTime';
+export type StatusChangeOption = 'Priority' | 'Dirty' | 'InProgress' | 'Cleaned' | 'Inspected' | 'Pause' | 'ReturnLater' | 'RefuseService' | 'PromisedTime';
 
 /** Guest count: adults/kids. For ETA (arrival) = checking in; for EDT (departure) = checking out */
 export interface GuestCount {
@@ -119,7 +119,7 @@ export const STATUS_CONFIGS: Record<RoomStatus, StatusConfig> = {
     label: 'Dirty',
   },
   InProgress: {
-    color: '#ffc107',
+    color: '#F0BE1B',
     icon: require('../../assets/icons/in-progess-state-icon.png'),
     label: 'In Progress',
   },
@@ -161,6 +161,11 @@ export const STATUS_OPTIONS: StatusOptionConfig[] = [
     id: 'Dirty',
     label: 'Dirty',
     icon: require('../../assets/icons/dirty-status.png'),
+  },
+  {
+    id: 'InProgress',
+    label: 'In Progress',
+    icon: require('../../assets/icons/in-progress-icon.png'),
   },
   {
     id: 'Cleaned',

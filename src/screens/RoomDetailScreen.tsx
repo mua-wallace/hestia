@@ -25,6 +25,7 @@ import { STATUS_OPTIONS } from '../types/allRooms.types';
 import type { Note, Task, RoomType, HistoryEvent, HistoryGroup } from '../types/roomDetail.types';
 import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
+import { dataService } from '../services/data';
 import { getMockHistoryEvents } from '../data/mockHistoryData';
 import { generateHistoryReport } from '../utils/generateHistoryReport';
 import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
@@ -289,6 +290,8 @@ export default function RoomDetailScreen() {
       switch (option) {
         case 'Dirty':
           return 'Dirty';
+        case 'InProgress':
+          return 'InProgress';
         case 'Cleaned':
           return 'Cleaned';
         case 'Inspected':
@@ -323,7 +326,14 @@ export default function RoomDetailScreen() {
       setPausedAt(undefined);
     }
 
-    console.log('Status changed for room:', room.roomNumber, 'to:', newStatus);
+    // Persist to Supabase
+    dataService
+      .updateRoomState(room.id, {
+        house_keeping_status: newStatus,
+        ...(statusOption === 'Priority' && { priority: 'high' }),
+      })
+      .catch((e) => console.warn('Failed to update room status in Supabase', e));
+
     setShowStatusModal(false);
     setStatusButtonPosition(null);
   };
@@ -598,7 +608,12 @@ export default function RoomDetailScreen() {
         room={localRoom}
         buttonPosition={statusButtonPosition}
         showTriangle={false}
-        onFlagToggle={(flagged) => setLocalRoom((prev) => ({ ...prev, flagged }))}
+        onFlagToggle={(flagged) => {
+          setLocalRoom((prev) => ({ ...prev, flagged }));
+          dataService
+            .updateRoomState(room.id, { flagged })
+            .catch((e) => console.warn('Failed to update room flag in Supabase', e));
+        }}
       />
 
       <InspectedStatusSlideModal

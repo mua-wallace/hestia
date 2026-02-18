@@ -454,10 +454,12 @@ export default function AllRoomsScreen() {
     }
   };
 
-  const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['status'] => {
+  const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['houseKeepingStatus'] => {
     switch (option) {
       case 'Dirty':
         return 'Dirty';
+      case 'InProgress':
+        return 'InProgress';
       case 'Cleaned':
         return 'Cleaned';
       case 'Inspected':
@@ -467,8 +469,6 @@ export default function AllRoomsScreen() {
       case 'ReturnLater':
       case 'RefuseService':
       case 'PromisedTime':
-        // These might be actions/metadata, not status changes
-        // For now, keep InProgress status
         return 'InProgress';
       default:
         return 'InProgress';
@@ -496,15 +496,20 @@ export default function AllRoomsScreen() {
       ),
     }));
 
+    // Persist to Supabase
+    dataService
+      .updateRoomState(roomToUpdate.id, {
+        house_keeping_status: newStatus,
+        ...(statusOption === 'Priority' && { priority: 'high' }),
+      })
+      .catch((e) => console.warn('Failed to update room status in Supabase', e));
+
     // Reset state
     setShowStatusModal(false);
     setSelectedRoomForStatusChange(null);
     setShowInspectedModal(false);
     setRoomForInspection(null);
     setButtonPositionForInspection(null);
-
-    // TODO: Save to backend/API
-    console.log('Status changed for room:', roomToUpdate.roomNumber, 'to:', newStatus);
   };
 
   // Sync activeTab with current route
@@ -871,6 +876,9 @@ export default function AllRoomsScreen() {
               ),
             }));
             setSelectedRoomForStatusChange((prev) => (prev ? { ...prev, flagged } : null));
+            dataService
+              .updateRoomState(selectedRoomForStatusChange.id, { flagged })
+              .catch((e) => console.warn('Failed to update room flag in Supabase', e));
           }
         }}
       />

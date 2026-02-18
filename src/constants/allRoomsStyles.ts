@@ -338,7 +338,7 @@ export const STATUS_BUTTON = {
   iconGap: 8,
   colors: {
     dirty: '#f92424',
-    inProgress: '#ffc107',
+    inProgress: '#F0BE1B',
     cleaned: '#5a759d',
     inspected: '#41d541',
   },

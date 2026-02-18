@@ -201,7 +201,7 @@ export default function HomeFilterModal({
         {
           id: 'inProgress',
           label: 'In Progress',
-          icon: require('../../../assets/icons/in-progess-state-icon.png'),
+          icon: require('../../../assets/icons/in-progress-icon.png'),
           iconColor: '#f0be1b',
           count: safeFilterCounts.roomStates.inProgress || 0,
           selected: filters.roomStates.inProgress || false,

@@ -202,3 +202,27 @@ export async function fetchAllRoomsFromSupabase(shift: 'AM' | 'PM'): Promise<All
     roomsPM: cards,
   };
 }
+
+/** Fields that can be updated on a room in Supabase (rooms table) */
+export type RoomStateUpdate = {
+  house_keeping_status?: RoomStatus;
+  priority?: 'high' | 'normal';
+  flagged?: boolean;
+};
+
+/**
+ * Update room state in Supabase (house_keeping_status, priority, flagged).
+ * No-op if updates object is empty. Throws on Supabase error.
+ */
+export async function updateRoomInSupabase(
+  roomId: string,
+  updates: RoomStateUpdate
+): Promise<void> {
+  const payload: Record<string, unknown> = {};
+  if (updates.house_keeping_status != null) payload.house_keeping_status = updates.house_keeping_status;
+  if (updates.priority != null) payload.priority = updates.priority;
+  if (updates.flagged != null) payload.flagged = updates.flagged;
+  if (Object.keys(payload).length === 0) return;
+  const { error } = await supabase.from('rooms').update(payload).eq('id', roomId);
+  if (error) throw error;
+}

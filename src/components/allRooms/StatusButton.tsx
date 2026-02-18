@@ -71,11 +71,15 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
     <TouchableOpacity
       ref={ref}
       style={[
-        styles.containerIconOnly, 
-        { 
+        styles.containerIconOnly,
+        {
+          width: STATUS_BUTTON.width * scaleX,
+          height: STATUS_BUTTON.height * scaleX,
+          borderRadius: STATUS_BUTTON.borderRadius * scaleX,
+          backgroundColor: config.color,
           right: buttonRight * scaleX,
           top: buttonTop * scaleX,
-        }
+        },
       ]}
       onPress={onPress}
       activeOpacity={0.8}

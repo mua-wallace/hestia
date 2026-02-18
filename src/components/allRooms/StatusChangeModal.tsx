@@ -2,10 +2,36 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text, Animated, Platform, Switch, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RoomStatus, StatusChangeOption, STATUS_OPTIONS, RoomCardData } from '../../types/allRooms.types';
+import { RoomStatus, StatusChangeOption, STATUS_OPTIONS, STATUS_CONFIGS, RoomCardData } from '../../types/allRooms.types';
 import { STATUS_BUTTON, CARD_DIMENSIONS, scaleX } from '../../constants/allRoomsStyles';
 import { typography } from '../../theme';
 import StatusOptionItem from './StatusOptionItem';
+
+/** Option ids that map to a single room status; hide the one that matches currentStatus */
+const STATUS_OPTION_IDS: StatusChangeOption[] = ['Dirty', 'InProgress', 'Cleaned', 'Inspected'];
+
+/** Circular background color per option – matches Figma Change Status modal */
+function getOptionBackgroundColor(optionId: StatusChangeOption): string {
+  switch (optionId) {
+    case 'Priority':
+      return '#FFEBEB'; // Light pink / off-white with red tint (Figma)
+    case 'Dirty':
+      return '#f92424'; // Solid red (Figma)
+    case 'InProgress':
+      return '#F0BE1B'; // Gold / In Progress (Figma)
+    case 'Cleaned':
+      return '#B8D4F0'; // Light blue (Figma)
+    case 'Inspected':
+      return '#C8E6C9'; // Light green (Figma)
+    case 'Pause':
+    case 'ReturnLater':
+    case 'RefuseService':
+    case 'PromisedTime':
+      return '#FCF1CF'; // Light yellow (Figma – second row)
+    default:
+      return '#e8e8e8';
+  }
+}
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -254,12 +280,17 @@ export default function StatusChangeModal({
             <Text style={styles.headerText}>Change status</Text>
             
             <View style={styles.optionsGrid}>
-              {STATUS_OPTIONS.map((option) => (
+              {STATUS_OPTIONS.filter((option) => {
+                if (!STATUS_OPTION_IDS.includes(option.id)) return true;
+                return option.id !== currentStatus;
+              }).map((option) => (
                 <StatusOptionItem
                   key={option.id}
                   icon={option.icon}
                   label={option.label}
                   onPress={() => handleStatusSelect(option.id)}
+                  tintColor={option.id === 'InProgress' ? '#FFFFFF' : undefined}
+                  backgroundColor={getOptionBackgroundColor(option.id)}
                 />
               ))}
             </View>

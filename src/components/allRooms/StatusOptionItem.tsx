@@ -10,20 +10,39 @@ interface StatusOptionItemProps {
   icon: any;
   label: string;
   onPress: () => void;
+  /** Optional tint for the icon (e.g. for white-on-black assets to match status color) */
+  tintColor?: string;
+  /** Optional circular background color (same style as Dirty, Cleaned, etc.) */
+  backgroundColor?: string;
+  /** Optional scale so icon matches visual size of others (e.g. 1.2 for assets with more padding) */
+  iconScale?: number;
 }
 
-export default function StatusOptionItem({ icon, label, onPress }: StatusOptionItemProps) {
+const ICON_SIZE = 50 * scaleX;
+/** Icon drawn smaller so it fits with padding inside the circle (same as Dirty, Cleaned) */
+const ICON_FIT_SIZE = ICON_SIZE * 0.5;
+
+export default function StatusOptionItem({ icon, label, onPress, tintColor, backgroundColor }: StatusOptionItemProps) {
   return (
     <TouchableOpacity
       style={styles.container}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={styles.iconContainer}>
+      <View
+        style={[
+          styles.iconContainer,
+          backgroundColor != null && {
+            backgroundColor,
+            borderRadius: ICON_SIZE / 2,
+          },
+        ]}
+      >
         <Image
           source={icon}
           style={styles.icon}
           resizeMode="contain"
+          {...(tintColor != null && { tintColor })}
         />
       </View>
       <Text style={styles.label} numberOfLines={2}>{label}</Text>
@@ -39,15 +58,15 @@ const styles = StyleSheet.create({
     marginBottom: 16 * scaleX,
   },
   iconContainer: {
-    width: 50 * scaleX,
-    height: 50 * scaleX,
+    width: ICON_SIZE,
+    height: ICON_SIZE,
     marginBottom: 8 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
   },
   icon: {
-    width: 50 * scaleX,
-    height: 50 * scaleX,
+    width: ICON_FIT_SIZE,
+    height: ICON_FIT_SIZE,
   },
   label: {
     fontFamily: typography.fontFamily.primary,

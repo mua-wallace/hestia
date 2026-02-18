@@ -27,6 +27,7 @@ import { STATUS_OPTIONS } from '../types/allRooms.types';
 import type { RoomDetailData, DetailTab, Note, Task } from '../types/roomDetail.types';
 import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
+import { dataService } from '../services/data';
 import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
 
 type ArrivalDepartureDetailScreenNavigationProp = NativeStackNavigationProp<
@@ -209,10 +210,12 @@ export default function ArrivalDepartureDetailScreen() {
     }
 
     // Map status option to RoomStatus
-    const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['status'] => {
+    const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['houseKeepingStatus'] => {
       switch (option) {
         case 'Dirty':
           return 'Dirty';
+        case 'InProgress':
+          return 'InProgress';
         case 'Cleaned':
           return 'Cleaned';
         case 'Inspected':
@@ -222,8 +225,6 @@ export default function ArrivalDepartureDetailScreen() {
         case 'ReturnLater':
         case 'RefuseService':
         case 'PromisedTime':
-          // These might be actions/metadata, not status changes
-          // For now, keep InProgress status
           return 'InProgress';
         default:
           return 'InProgress';
@@ -251,8 +252,13 @@ export default function ArrivalDepartureDetailScreen() {
       setPausedAt(undefined);
     }
 
-    // TODO: Update room status in backend/API
-    console.log('Status changed for room:', room.roomNumber, 'to:', newStatus);
+    // Persist to Supabase
+    dataService
+      .updateRoomState(room.id, {
+        house_keeping_status: newStatus,
+        ...(statusOption === 'Priority' && { priority: 'high' }),
+      })
+      .catch((e) => console.warn('Failed to update room status in Supabase', e));
 
     // Close modal
     setShowStatusModal(false);
@@ -591,7 +597,12 @@ export default function ArrivalDepartureDetailScreen() {
         room={localRoom}
         buttonPosition={statusButtonPosition}
         showTriangle={false}
-        onFlagToggle={(flagged) => setLocalRoom((prev) => ({ ...prev, flagged }))}
+        onFlagToggle={(flagged) => {
+          setLocalRoom((prev) => ({ ...prev, flagged }));
+          dataService
+            .updateRoomState(room.id, { flagged })
+            .catch((e) => console.warn('Failed to update room flag in Supabase', e));
+        }}
       />
 
       <InspectedStatusSlideModal

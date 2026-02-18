@@ -12,7 +12,7 @@ import type { AllRoomsScreenData } from '../types/allRooms.types';
 import type { TicketsScreenData } from '../types/tickets.types';
 import type { ChatItemData } from '../components/chat/ChatItem';
 import { isSupabaseConfigured } from '../lib/supabase';
-import { fetchAllRoomsFromSupabase } from './allRooms';
+import { fetchAllRoomsFromSupabase, updateRoomInSupabase, type RoomStateUpdate } from './allRooms';
 import { getShiftFromTime } from '../utils/shiftUtils';
 
 class DataService {
@@ -39,6 +39,15 @@ class DataService {
       }
     }
     return Promise.resolve(mockAllRoomsData);
+  }
+
+  /**
+   * Update room state in Supabase (house_keeping_status, priority, flagged).
+   * No-op when Supabase is not configured. Errors are thrown so callers can catch.
+   */
+  async updateRoomState(roomId: string, updates: RoomStateUpdate): Promise<void> {
+    if (!isSupabaseConfigured) return;
+    await updateRoomInSupabase(roomId, updates);
   }
 
   /**
