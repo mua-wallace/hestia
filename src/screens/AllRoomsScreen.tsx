@@ -6,6 +6,7 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme';
 import { ShiftType } from '../types/home.types';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
+import { dataService } from '../services/data';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockChatData } from '../data/mockChatData';
 import { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
@@ -60,11 +61,22 @@ export default function AllRoomsScreen() {
   const route = useRoute();
   // Get shift from route params if provided (from HomeScreen), otherwise use time-based shift
   const routeShift = (route.params as any)?.selectedShift as ShiftType | undefined;
+  const initialShift = routeShift || getShiftFromTime();
   const [allRoomsData, setAllRoomsData] = useState(() => ({
     ...mockAllRoomsData,
-    selectedShift: routeShift || getShiftFromTime(),
+    selectedShift: initialShift,
   }));
   const [refreshing, setRefreshing] = useState(false);
+
+  const loadRoomsData = React.useCallback(async (shift: ShiftType) => {
+    const data = await dataService.getAllRoomsData(shift);
+    setAllRoomsData((prev) => ({ ...data, selectedShift: shift }));
+  }, []);
+
+  React.useEffect(() => {
+    loadRoomsData(initialShift);
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('Rooms');
   const [showMorePopup, setShowMorePopup] = useState(false);
@@ -112,14 +124,13 @@ export default function AllRoomsScreen() {
     React.useCallback(() => {
       const params = route.params as any;
       const currentRouteShift = params?.selectedShift as ShiftType | undefined;
-      // Only update if shift is provided and different from current
       if (currentRouteShift && currentRouteShift !== allRoomsData?.selectedShift) {
-        setAllRoomsData(prev => ({ ...prev, selectedShift: currentRouteShift }));
-        // Reset filters when shift changes via navigation
+        setAllRoomsData((prev) => ({ ...prev, selectedShift: currentRouteShift }));
+        loadRoomsData(currentRouteShift);
         setLocalFilters(undefined);
         setSearchQuery('');
       }
-    }, [route.params, allRoomsData?.selectedShift])
+    }, [route.params, allRoomsData?.selectedShift, loadRoomsData])
   );
 
   // Sync local filters with route params when navigating (e.g. from Home with categoryFilter)
@@ -155,10 +166,10 @@ export default function AllRoomsScreen() {
   }, [activeFilters, searchQuery]);
 
   const handleShiftToggle = (shift: ShiftType) => {
-    setAllRoomsData(prev => ({ ...prev, selectedShift: shift }));
-    // Reset filters when shift changes - filters should be per shift
+    setAllRoomsData((prev) => ({ ...prev, selectedShift: shift }));
+    loadRoomsData(shift);
     setLocalFilters(undefined);
-    setSearchQuery(''); // Also reset search query
+    setSearchQuery('');
   };
 
   const handleSearch = (text: string) => {
@@ -552,12 +563,11 @@ export default function AllRoomsScreen() {
     setShowMorePopup(false);
   };
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  }, []);
+    await loadRoomsData(allRoomsData?.selectedShift ?? getShiftFromTime());
+    setRefreshing(false);
+  }, [loadRoomsData, allRoomsData?.selectedShift]);
 
   // Filter rooms based on search query and filters
   const filteredRooms = useMemo(() => {
