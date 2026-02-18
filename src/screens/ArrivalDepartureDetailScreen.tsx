@@ -591,6 +591,7 @@ export default function ArrivalDepartureDetailScreen() {
         room={localRoom}
         buttonPosition={statusButtonPosition}
         showTriangle={false}
+        onFlagToggle={(flagged) => setLocalRoom((prev) => ({ ...prev, flagged }))}
       />
 
       <InspectedStatusSlideModal

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text, Animated, Platform } from 'react-native';
+import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text, Animated, Platform, Switch, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoomStatus, StatusChangeOption, STATUS_OPTIONS, RoomCardData } from '../../types/allRooms.types';
@@ -21,6 +21,8 @@ interface StatusChangeModalProps {
   buttonPosition?: { x: number; y: number; width: number; height: number } | null; // Status button position on screen
   showTriangle?: boolean; // Whether to show the triangle pointer (default: true)
   headerHeight?: number; // Header height in design pixels (default: 232, use 217 for AllRoomsScreen)
+  /** When provided, shows the Flag room row and calls this when the user toggles it */
+  onFlagToggle?: (flagged: boolean) => void;
 }
 
 export default function StatusChangeModal({
@@ -33,6 +35,7 @@ export default function StatusChangeModal({
   buttonPosition,
   showTriangle = true,
   headerHeight = 232, // Default to 232px
+  onFlagToggle,
 }: StatusChangeModalProps) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -113,7 +116,7 @@ export default function StatusChangeModal({
 
   // Modal width (scaled) - full card width
   const modalWidth = CARD_DIMENSIONS.width * scaleX; // 426px scaled (full card width)
-  const modalHeight = 300 * scaleX; // Modal height for status options only
+  const modalHeight = 368 * scaleX; // Modal height: status options grid + Flag room row (Figma)
   
   let modalTopPosition: number;
   let modalLeft: number;
@@ -259,6 +262,29 @@ export default function StatusChangeModal({
                   onPress={() => handleStatusSelect(option.id)}
                 />
               ))}
+            </View>
+
+            <View style={styles.divider} />
+
+            {/* Flag room row - matches Figma (red icon, "Flag room" label, toggle) */}
+            <View style={styles.flagRoomContainer}>
+              <View style={styles.flagIconCircle}>
+                <Image
+                  source={require('../../../assets/icons/flag.png')}
+                  style={styles.flagIcon}
+                  resizeMode="contain"
+                  tintColor="#F92424"
+                />
+              </View>
+              <Text style={styles.flagRoomText}>Flag room</Text>
+              <Switch
+                value={room.flagged}
+                onValueChange={(value) => onFlagToggle?.(value)}
+                trackColor={{ false: '#e3e3e3', true: '#F92424' }}
+                thumbColor="#ffffff"
+                style={styles.toggleSwitch}
+                disabled={!onFlagToggle}
+              />
             </View>
 
           </TouchableOpacity>

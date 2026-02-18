@@ -862,6 +862,17 @@ export default function AllRoomsScreen() {
         room={selectedRoomForStatusChange || undefined}
         buttonPosition={statusButtonPosition}
         headerHeight={217} // AllRoomsScreen header height
+        onFlagToggle={(flagged) => {
+          if (selectedRoomForStatusChange) {
+            setAllRoomsData((prev) => ({
+              ...prev,
+              rooms: prev.rooms.map((r) =>
+                r.id === selectedRoomForStatusChange.id ? { ...r, flagged } : r
+              ),
+            }));
+            setSelectedRoomForStatusChange((prev) => (prev ? { ...prev, flagged } : null));
+          }
+        }}
       />
 
       {/* Inspection Checklist Modal - shown when changing to Inspected */}
