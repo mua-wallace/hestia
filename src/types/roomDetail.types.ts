@@ -29,9 +29,10 @@ export interface Task {
   createdAt: string;
 }
 
-export interface RoomDetailData extends RoomCardData {
+export interface RoomDetailData extends Omit<RoomCardData, 'notes'> {
   roomType: RoomType; // NEW: Room type for dynamic layout
   specialInstructions?: string; // Special instructions for arrival guest
+  /** Full note objects for detail view (card view uses NotesInfo with count) */
   notes: Note[];
   tasks?: Task[]; // Tasks for the room
   assignedTo?: {

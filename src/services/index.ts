@@ -1,10 +1,12 @@
 /**
- * Services index
- * Central export point for all services
+ * Services – all data from Supabase
+ * auth: Supabase Auth
+ * user: profile, avatar, list users (Supabase users table)
+ * rooms: rooms + reservations + guests (Supabase)
+ * dashboard: screen data aggregation (rooms from Supabase, rest mock until migrated)
  */
 
-export * from './api';
 export * from './auth';
-export * from './data';
-export * from './allRooms';
-
+export * from './user';
+export * from './rooms';
+export * from './dashboard';

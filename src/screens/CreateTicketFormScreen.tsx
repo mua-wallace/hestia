@@ -190,8 +190,8 @@ export default function CreateTicketFormScreen() {
     });
   };
 
-  const selectedDepartmentName = DEPARTMENT_NAMES[departmentId];
-  const selectedDepartmentIcon = DEPARTMENT_ICONS[departmentId];
+  const selectedDepartmentName = DEPARTMENT_NAMES[departmentId as DepartmentId];
+  const selectedDepartmentIcon = DEPARTMENT_ICONS[departmentId as DepartmentId];
 
   // Calculate the bottom position of description field dynamically
   const getDescriptionBottom = () => {

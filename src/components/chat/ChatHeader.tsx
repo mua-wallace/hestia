@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: CHAT_TYPOGRAPHY.searchPlaceholder.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.semiBold as any,
+    fontWeight: typography.fontWeights.semibold as any,
     color: CHAT_COLORS.textPlaceholder,
     opacity: CHAT_TYPOGRAPHY.searchPlaceholder.opacity,
   },

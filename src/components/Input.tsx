@@ -1,5 +1,5 @@
 import React from 'react';
-import { TextInput, StyleSheet, View, Text, ViewStyle, TextInputProps } from 'react-native';
+import { TextInput, StyleSheet, View, Text, ViewStyle, TextStyle, TextInputProps } from 'react-native';
 import { colors, typography } from '../theme';
 
 interface InputProps extends TextInputProps {
@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: parseInt(typography.fontSizes['2xl']),
     fontFamily: 'Helvetica',
-    fontWeight: typography.fontWeights.regular,
+    fontWeight: typography.fontWeights.regular as TextStyle['fontWeight'],
     color: colors.text.primary,
     marginBottom: 8,
   },

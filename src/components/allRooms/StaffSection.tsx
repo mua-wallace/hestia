@@ -46,7 +46,7 @@ export default function StaffSection({ staff, isPriority = false, frontOfficeSta
       <View style={[styles.avatarContainer, { left: avatarLeft * scaleX, top: avatarTop * scaleX }]}>
         {staff.avatar ? (
           <Image
-            source={staff.avatar}
+            source={typeof staff.avatar === 'string' ? { uri: staff.avatar } : (staff.avatar as any)}
             style={styles.avatar}
             resizeMode="cover"
           />

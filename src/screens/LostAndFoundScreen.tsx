@@ -20,6 +20,7 @@ import {
   scaleX,
 } from '../constants/lostAndFoundStyles';
 import type { ReturnToTab } from '../navigation/types';
+import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 
 type MainTabsParamList = {
   Home: undefined;
@@ -85,11 +86,11 @@ export default function LostAndFoundScreen() {
     } else if (tab === 'Tickets') {
       navigation.navigate('Tickets' as any);
     } else if (tab === 'LostAndFound') {
-      navigation.navigate('LostAndFound', { returnToTab });
+      (navigation as any).navigate('LostAndFound', { returnToTab });
     } else if (tab === 'Staff') {
-      navigation.navigate('Staff', { returnToTab });
+      (navigation as any).navigate('Staff', { returnToTab });
     } else if (tab === 'Settings') {
-      navigation.navigate('Settings', { returnToTab });
+      (navigation as any).navigate('Settings', { returnToTab });
     }
   };
 
@@ -164,7 +165,7 @@ export default function LostAndFoundScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Scrollable Content */}
+      {refreshing && <LoadingOverlay fullScreen message="Refreshing…" />}
       <View style={styles.scrollContainer}>
         <ScrollView
           style={styles.scrollView}

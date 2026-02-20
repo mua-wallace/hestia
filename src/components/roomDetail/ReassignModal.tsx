@@ -41,7 +41,7 @@ export default function ReassignModal({
     const filteredStaff = getFilteredStaff();
     if (filteredStaff.length > 0) {
       // Sort by workload and select the one with lowest workload
-      const sortedStaff = [...filteredStaff].sort((a, b) => a.workload - b.workload);
+      const sortedStaff = [...filteredStaff].sort((a, b) => (a.workload ?? 0) - (b.workload ?? 0));
       handleStaffSelect(sortedStaff[0].id);
     } else {
       // Fallback: call the onAutoAssign callback
@@ -71,7 +71,7 @@ export default function ReassignModal({
       filtered = filtered.filter(
         (s) =>
           s.name.toLowerCase().includes(lowerQuery) ||
-          s.department.toLowerCase().includes(lowerQuery)
+          (s.department ?? '').toLowerCase().includes(lowerQuery)
       );
     }
     

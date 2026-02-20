@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme';
@@ -27,7 +27,7 @@ import { STATUS_OPTIONS } from '../types/allRooms.types';
 import type { RoomDetailData, DetailTab, Note, Task } from '../types/roomDetail.types';
 import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
-import { dataService } from '../services/data';
+import { useRoomsStore } from '../store/useRoomsStore';
 import { authService } from '../services/auth';
 import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
 
@@ -40,6 +40,8 @@ export default function ArrivalDepartureDetailScreen() {
   const navigation = useNavigation<ArrivalDepartureDetailScreenNavigationProp>();
   const route = useRoute();
   const room = (route.params as any)?.room as RoomCardData;
+  const { updateRoom, updatingRoomId } = useRoomsStore();
+  const isUpdating = room && updatingRoomId === room.id;
 
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -256,14 +258,11 @@ export default function ArrivalDepartureDetailScreen() {
       setPausedAt(undefined);
     }
 
-    // Persist to Supabase (Priority: toggle high/normal)
     const priorityPayload = statusOption === 'Priority' ? (!localRoom?.isPriority ? 'high' : 'normal') : undefined;
-    dataService
-      .updateRoomState(room.id, {
-        house_keeping_status: newStatus,
-        ...(priorityPayload !== undefined && { priority: priorityPayload }),
-      })
-      .catch((e) => console.warn('Failed to update room status in Supabase', e));
+    updateRoom(room.id, {
+      house_keeping_status: newStatus,
+      ...(priorityPayload !== undefined && { priority: priorityPayload }),
+    }).catch((e) => console.warn('Failed to update room status in Supabase', e));
 
     // Close modal
     setShowStatusModal(false);
@@ -372,13 +371,10 @@ export default function ArrivalDepartureDetailScreen() {
           }
         : prev
     );
-    dataService
-      .updateRoomState(room.id, {
-        notes: notesText,
-        note_made_by: noteAuthorLabel,
-      })
-      .then(() => console.log('Notes saved successfully'))
-      .catch((e) => console.warn('Failed to save note to Supabase', e));
+    updateRoom(room.id, {
+      notes: notesText,
+      note_made_by: noteAuthorLabel,
+    }).then(() => console.log('Notes saved successfully')).catch((e) => console.warn('Failed to save note to Supabase', e));
   };
 
   const handleAddPhotos = () => {
@@ -446,7 +442,11 @@ export default function ArrivalDepartureDetailScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Gray Background - Behind everything (0-285px) */}
+      {isUpdating && (
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(255,255,255,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }]}>
+          <ActivityIndicator size="large" color={colors.primary.main} />
+        </View>
+      )}
       <View style={styles.backgroundTop} />
 
       {/* Header - Yellow (0-232px) */}
@@ -629,9 +629,7 @@ export default function ArrivalDepartureDetailScreen() {
         showTriangle={false}
         onFlagToggle={(flagged) => {
           setLocalRoom((prev) => ({ ...prev, flagged }));
-          dataService
-            .updateRoomState(room.id, { flagged })
-            .catch((e) => console.warn('Failed to update room flag in Supabase', e));
+          updateRoom(room.id, { flagged }).catch((e) => console.warn('Failed to update room flag in Supabase', e));
         }}
       />
 

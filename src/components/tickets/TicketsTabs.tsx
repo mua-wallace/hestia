@@ -40,7 +40,7 @@ export default function TicketsTabs({ selectedTab, onTabPress }: TicketsTabsProp
 
   // Calculate indicator position based on measured tab positions
   const getIndicatorPosition = () => {
-    const selectedTabConfig = TICKETS_TABS.tabs[selectedTab];
+    const selectedTabConfig = TICKETS_TABS.tabs[selectedTab] as { width: number; indicatorWidth?: number };
     const selectedTabPos = tabPositions[selectedTab];
     
     if (selectedTabPos.width === 0) {

@@ -63,7 +63,7 @@ export default function RoomDetailContent({
   const positions = useMemo(() => calculatePositions(config, hasSpecialInstructionsData, firstGuestName), [config, hasSpecialInstructionsData, firstGuestName]);
 
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
-  const statusButtonRef = useRef<TouchableOpacity>(null);
+  const statusButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   
   // Track current status - sync with parent when status changes (e.g. from StatusChangeModal)
   const [currentStatus, setCurrentStatus] = useState<RoomStatus>(status);
@@ -76,6 +76,9 @@ export default function RoomDetailContent({
     setCurrentStatus(newStatus);
     onStatusChange?.(newStatus);
   };
+
+  const handleStatusPress: () => void = onStatusPress ?? (() => {});
+  const handleBackPressSafe: () => void = onBackPress ?? (() => {});
 
   // "See More" functionality for task description
   const MAX_LINES = 2;
@@ -192,8 +195,8 @@ export default function RoomDetailContent({
         roomNumber={roomNumber}
         roomCode={roomCode}
         status={currentStatus}
-        onBackPress={onBackPress}
-        onStatusPress={onStatusPress}
+        onBackPress={handleBackPressSafe}
+        onStatusPress={handleStatusPress}
         statusButtonRef={statusButtonRef}
         customStatusText={customStatusText}
         pausedAt={pausedAt}
@@ -254,9 +257,9 @@ export default function RoomDetailContent({
                     specialInstructions={
                       // Show special instructions after Arrival guest for Arrival/Departure
                       // Or after first guest for other types if present
-                      (roomType === 'ArrivalDeparture' && firstGuest.type === 'Arrival') || 
+                      (roomType === 'ArrivalDeparture' && firstGuest.type === 'Arrival') ||
                       (roomType !== 'ArrivalDeparture')
-                        ? specialInstructions
+                        ? (specialInstructions ?? undefined)
                         : undefined
                     }
                     absoluteTop={positions.firstGuestTop}

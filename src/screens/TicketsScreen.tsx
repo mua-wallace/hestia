@@ -3,9 +3,10 @@ import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import type { RootStackParamList } from '../navigation/types';
 import { BlurView } from 'expo-blur';
 import BottomTabBar from '../components/navigation/BottomTabBar';
+import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import TicketsHeader from '../components/tickets/TicketsHeader';
 import TicketsTabs from '../components/tickets/TicketsTabs';
 import TicketCard from '../components/tickets/TicketCard';
@@ -71,11 +72,11 @@ export default function TicketsScreen() {
     } else if (tab === 'Tickets') {
       navigation.navigate('Tickets' as any);
     } else if (tab === 'LostAndFound') {
-      navigation.navigate('LostAndFound', { returnToTab });
+      (navigation as any).navigate('LostAndFound', { returnToTab });
     } else if (tab === 'Staff') {
-      navigation.navigate('Staff', { returnToTab });
+      (navigation as any).navigate('Staff', { returnToTab });
     } else if (tab === 'Settings') {
-      navigation.navigate('Settings', { returnToTab });
+      (navigation as any).navigate('Settings', { returnToTab });
     }
   };
 
@@ -125,7 +126,7 @@ export default function TicketsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Scrollable Content */}
+      {refreshing && <LoadingOverlay fullScreen message="Refreshing…" />}
       <View style={styles.scrollContainer}>
         <ScrollView
           style={styles.scrollView}

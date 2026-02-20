@@ -89,8 +89,8 @@ export default function GuestInfoCard({
   const specialInstructionsTitleTopRelative = dateTopRelative + dateRowHeight + specialInstructionsGap;
   // Calculate text position only if specialInstructions config exists
   const specialInstructionsTextGap = 8; // Gap between title and text (from Figma: 442 - 417 - titleHeight ≈ 8px)
-  const specialInstructionsTitleHeight = config.specialInstructions?.title?.fontSize 
-    ? config.specialInstructions.title.fontSize * 1.2 
+  const specialInstructionsTitleHeight = 'specialInstructions' in config && config.specialInstructions?.title?.fontSize
+    ? config.specialInstructions.title.fontSize * 1.2
     : 13 * 1.2; // Default to fontSize 13 if not available
   const specialInstructionsTextTopRelative = specialInstructionsTitleTopRelative + specialInstructionsTitleHeight + specialInstructionsTextGap;
   
@@ -128,7 +128,9 @@ export default function GuestInfoCard({
   const dateLeftRelative = hasGuestImage ? infoColumnLeft : config.dates.left;
   // Time and count positions: inline within the date row, so they flow naturally
   // We don't need separate left positions - they're in a flex row
-  const timeLeftRelative = configKey === 'departure' ? config.edt.left : config.eta.left; // Not used when hasGuestImage
+  const timeLeftRelative = configKey === 'departure'
+    ? ('edt' in config ? config.edt.left : 0)
+    : ('eta' in config ? config.eta.left : 0); // Not used when hasGuestImage
   const countIconLeftRelative = config.occupancy.iconLeft; // Not used when hasGuestImage
   const countTextLeftRelative = config.occupancy.textLeft; // Not used when hasGuestImage
   
@@ -312,13 +314,13 @@ export default function GuestInfoCard({
       </View>
 
       {/* Special Instructions - show for all guests if available */}
-      {specialInstructions && config.specialInstructions && config.specialInstructions.title && config.specialInstructions.text && (
+      {specialInstructions && 'specialInstructions' in config && config.specialInstructions?.title && config.specialInstructions?.text && (
         <>
           <Text
             style={[
               styles.specialInstructionsTitle,
               {
-                left: config.specialInstructions.title.left * normalizedScaleX,
+                left: config.specialInstructions!.title.left * normalizedScaleX,
                 top: specialInstructionsTitleTop !== undefined 
                   ? (specialInstructionsTitleTop - absoluteTop) * normalizedScaleX
                   : (containerTop + specialInstructionsTitleTopRelative) * normalizedScaleX,
@@ -331,11 +333,11 @@ export default function GuestInfoCard({
             style={[
               styles.specialInstructionsText,
               {
-                left: config.specialInstructions.text.left * normalizedScaleX,
+                left: config.specialInstructions!.text.left * normalizedScaleX,
                 top: specialInstructionsTextTop !== undefined
                   ? (specialInstructionsTextTop - absoluteTop) * normalizedScaleX
                   : (containerTop + specialInstructionsTextTopRelative) * normalizedScaleX,
-                width: config.specialInstructions.text.width * normalizedScaleX,
+                width: config.specialInstructions!.text.width * normalizedScaleX,
               },
             ]}
           >

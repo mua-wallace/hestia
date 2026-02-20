@@ -138,8 +138,8 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
                 width: statusConfig.iconWidth * scaleX,
                 height: statusConfig.iconHeight * scaleX,
                 tintColor: ticket.status === 'done' ? '#ffffff' : '#f92424',
-                transform: statusConfig.iconRotate
-                  ? [{ rotate: `${statusConfig.iconRotate}deg` }]
+                transform: 'iconRotate' in statusConfig && statusConfig.iconRotate != null
+                  ? [{ rotate: `${(statusConfig as { iconRotate: number }).iconRotate}deg` }]
                   : [],
               },
             ]}

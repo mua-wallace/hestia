@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.secondary, // Inter
     fontWeight: '300', // Inter Light
     color: CREATE_TICKET_TYPOGRAPHY.departmentLabel.color,
-    textAlign: CREATE_TICKET_TYPOGRAPHY.departmentLabel.textAlign as any,
+    textAlign: 'left',
   },
   divider: {
     position: 'absolute',

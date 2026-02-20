@@ -233,6 +233,9 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: 'transparent',
   },
+  searchInputPM: {
+    color: '#000000',
+  },
   placeholderText: {
     fontFamily: 'Inter',
     color: 'rgba(0,0,0,0.6)',
@@ -298,27 +301,6 @@ const styles = StyleSheet.create({
   },
   backArrowPM: {
     // Tint color handled inline
-  },
-  searchBarPM: {
-    backgroundColor: '#ffffff',
-  },
-  searchInputPM: {
-    color: '#000000',
-  },
-  placeholderTextPM: {
-    color: 'rgba(0,0,0,0.6)',
-  },
-  placeholderBoldPM: {
-    color: 'rgba(0,0,0,0.6)',
-  },
-  placeholderNormalPM: {
-    color: 'rgba(0,0,0,0.6)',
-  },
-  searchIconPM: {
-    tintColor: colors.primary.main,
-  },
-  filterIconPM: {
-    tintColor: colors.primary.main,
   },
 });
 

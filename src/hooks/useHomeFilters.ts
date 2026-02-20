@@ -61,13 +61,17 @@ export function useHomeFilters(initialFilters?: FilterState) {
   }, []);
 
   const toggleReservation = useCallback((reservation: keyof NonNullable<FilterState['reservations']>) => {
-    setFilters((prev) => ({
-      ...prev,
-      reservations: {
-        ...(prev.reservations || defaultFilterState.reservations),
-        [reservation]: !(prev.reservations || defaultFilterState.reservations)?.[reservation],
-      },
-    }));
+    setFilters((prev) => {
+      const baseRes = prev.reservations ?? defaultFilterState.reservations!;
+      return {
+        ...prev,
+        reservations: {
+          occupied: baseRes.occupied,
+          vacant: baseRes.vacant,
+          [reservation]: !baseRes[reservation],
+        },
+      };
+    });
   }, []);
 
   const toggleFloor = useCallback((floor: string) => {
@@ -87,10 +91,10 @@ export function useHomeFilters(initialFilters?: FilterState) {
   const calculateResultCount = useCallback(
     (filterCounts: FilterCounts): number => {
       let hasAnyFilter = false;
-      const floorSelections = filters.floors || defaultFilterState.floors;
+      const floorSelections = filters.floors ?? defaultFilterState.floors ?? {};
       
       // Check if "All" floors is selected
-      const isAllFloorsSelected = floorSelections.all;
+      const isAllFloorsSelected = floorSelections.all === true;
       
       // Count room states
       const selectedRoomStates: string[] = [];
@@ -112,7 +116,7 @@ export function useHomeFilters(initialFilters?: FilterState) {
 
       // Count floors (exclude "all" since it's redundant when individual floors are selected)
       const selectedFloors: string[] = [];
-      if (filterCounts.floors) {
+      if (filterCounts.floors && floorSelections) {
         Object.entries(floorSelections).forEach(([key, selected]) => {
           if (selected && key !== 'all') {
             hasAnyFilter = true;

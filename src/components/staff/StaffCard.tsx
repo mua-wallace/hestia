@@ -48,14 +48,14 @@ export default function StaffCard({ staff }: StaffCardProps) {
 
       {/* Progress Ratio */}
       <Text style={styles.progressRatio}>
-        {staff.progressRatio.completed}/{staff.progressRatio.total}
+        {staff.progressRatio?.completed ?? 0}/{staff.progressRatio?.total ?? 0}
       </Text>
 
       {/* Progress Bar */}
       <View style={styles.progressBarContainer}>
         <StaffCardProgressBar
-          completed={staff.progressRatio.completed}
-          total={staff.progressRatio.total}
+          completed={staff.progressRatio?.completed ?? 0}
+          total={staff.progressRatio?.total ?? 0}
         />
       </View>
 
@@ -63,20 +63,20 @@ export default function StaffCard({ staff }: StaffCardProps) {
       <View style={styles.taskStatsContainer}>
         <Text style={styles.taskStat}>
           <Text style={styles.taskStatLabel}>Inprogress. </Text>
-          <Text style={styles.taskStatValue}>{staff.taskStats.inProgress}</Text>
+          <Text style={styles.taskStatValue}>{staff.taskStats?.inProgress ?? 0}</Text>
         </Text>
         <Text style={[styles.taskStat, styles.taskStatCleaned]}>
           <Text style={styles.taskStatLabel}>Cleaned. </Text>
-          <Text style={styles.taskStatValue}>{staff.taskStats.cleaned}</Text>
+          <Text style={styles.taskStatValue}>{staff.taskStats?.cleaned ?? 0}</Text>
         </Text>
         <Text style={[styles.taskStat, styles.taskStatDirty]}>
           <Text style={styles.taskStatLabel}>Dirty. </Text>
-          <Text style={styles.taskStatValue}>{staff.taskStats.dirty}</Text>
+          <Text style={styles.taskStatValue}>{staff.taskStats?.dirty ?? 0}</Text>
         </Text>
       </View>
 
       {/* Current Task */}
-      {hasCurrentTask && (
+      {hasCurrentTask && staff.currentTask && (
         <View style={styles.currentTaskContainer}>
           <View style={styles.currentTaskCircle}>
             <Image

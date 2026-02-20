@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Image, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
@@ -56,6 +56,11 @@ export default function SplashScreen() {
 
       {/* Pagination indicator - absolute position: x=193, y=909, centered */}
       <View style={styles.indicator} />
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={colors.text.white} />
+        </View>
+      )}
     </View>
   );
 }
@@ -124,6 +129,16 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   // Pagination indicator - absolute position: x=193, y=909, width=54, height=8
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(93, 121, 155, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   indicator: {
     position: 'absolute',
     left: 193 * scaleX, // Centered: (440 - 54) / 2 = 193

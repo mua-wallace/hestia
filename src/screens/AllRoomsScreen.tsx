@@ -6,7 +6,9 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme';
 import { ShiftType } from '../types/home.types';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
-import { dataService } from '../services/data';
+import { type RoomStateUpdate } from '../services/dashboard';
+import { useRoomsStore } from '../store/useRoomsStore';
+import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockChatData } from '../data/mockChatData';
 import { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
@@ -57,23 +59,15 @@ type AllRoomsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, '
 export default function AllRoomsScreen() {
   const navigation = useNavigation<AllRoomsScreenNavigationProp>();
   const route = useRoute();
-  // Get shift from route params if provided (from HomeScreen), otherwise use time-based shift
   const routeShift = (route.params as any)?.selectedShift as ShiftType | undefined;
   const initialShift = routeShift || getShiftFromTime();
-  const [allRoomsData, setAllRoomsData] = useState(() => ({
-    ...mockAllRoomsData,
-    selectedShift: initialShift,
-  }));
-  const [refreshing, setRefreshing] = useState(false);
-
-  const loadRoomsData = React.useCallback(async (shift: ShiftType) => {
-    const data = await dataService.getAllRoomsData(shift);
-    setAllRoomsData((prev) => ({ ...data, selectedShift: shift }));
-  }, []);
+  const { data: allRoomsData, loading, refreshing, fetchRooms, updateRoom, setSelectedShift } = useRoomsStore();
 
   React.useEffect(() => {
-    loadRoomsData(initialShift);
-  }, []);
+    fetchRooms(initialShift);
+  }, [initialShift]);
+
+  const loadRoomsData = React.useCallback((shift: ShiftType) => { fetchRooms(shift); }, [fetchRooms]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('Rooms');
@@ -115,20 +109,20 @@ export default function AllRoomsScreen() {
     return rf;
   });
 
-  // Sync shift from route params when navigating from HomeScreen
-  // Use useFocusEffect to ensure it works properly on both iOS and Android
   useFocusEffect(
     React.useCallback(() => {
       const params = route.params as any;
       const currentRouteShift = params?.selectedShift as ShiftType | undefined;
       if (currentRouteShift && currentRouteShift !== allRoomsData?.selectedShift) {
-        setAllRoomsData((prev) => ({ ...prev, selectedShift: currentRouteShift }));
-        loadRoomsData(currentRouteShift);
+        setSelectedShift(currentRouteShift);
+        fetchRooms(currentRouteShift);
         setLocalFilters(undefined);
         setSearchQuery('');
       }
-    }, [route.params, allRoomsData?.selectedShift, loadRoomsData])
+    }, [route.params, allRoomsData?.selectedShift, fetchRooms, setSelectedShift])
   );
+
+  const displayData = allRoomsData ?? { ...mockAllRoomsData, selectedShift: initialShift };
 
   // Sync local filters with route params when navigating (e.g. from Home with categoryFilter)
   React.useEffect(() => {
@@ -163,8 +157,8 @@ export default function AllRoomsScreen() {
   }, [activeFilters, searchQuery]);
 
   const handleShiftToggle = (shift: ShiftType) => {
-    setAllRoomsData((prev) => ({ ...prev, selectedShift: shift }));
-    loadRoomsData(shift);
+    setSelectedShift(shift);
+    fetchRooms(shift);
     setLocalFilters(undefined);
     setSearchQuery('');
   };
@@ -179,9 +173,9 @@ export default function AllRoomsScreen() {
 
   // Calculate filter counts from current shift's room list (AM: rooms, PM: roomsPM)
   const filterCounts: FilterCounts = useMemo(() => {
-    const roomsPM = allRoomsData?.roomsPM ?? [];
-    const usePMRooms = allRoomsData?.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    const sourceRooms = usePMRooms ? roomsPM : (allRoomsData?.rooms ?? []);
+    const roomsPM = displayData.roomsPM ?? [];
+    const usePMRooms = displayData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const sourceRooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
 
     const roomStates = {
       dirty: 0,
@@ -266,7 +260,7 @@ export default function AllRoomsScreen() {
     };
 
     return { roomStates, guests, reservations, floors, totalRooms };
-  }, [allRoomsData?.rooms, allRoomsData?.roomsPM, allRoomsData?.selectedShift]);
+  }, [displayData.rooms, displayData.roomsPM, displayData.selectedShift]);
 
   const handleApplyFilters = (appliedFilters: FilterState) => {
     setLocalFilters(appliedFilters);
@@ -484,28 +478,15 @@ export default function AllRoomsScreen() {
     const newIsPriority = isPriorityToggle ? !roomToUpdate.isPriority : roomToUpdate.isPriority;
     const priorityPayload = isPriorityToggle ? (newIsPriority ? 'high' : 'normal') : undefined;
 
-    setAllRoomsData((prev) => ({
-      ...prev,
-      rooms: prev.rooms.map((room) =>
-        room.id === roomToUpdate.id
-          ? {
-              ...room,
-              houseKeepingStatus: newStatus,
-              ...(isPriorityToggle && { isPriority: newIsPriority }),
-            }
-          : room
-      ),
-    }));
-
-    const supabaseUpdates: Parameters<typeof dataService.updateRoomState>[1] = {
+    const supabaseUpdates: RoomStateUpdate = {
       house_keeping_status: newStatus,
     };
     if (priorityPayload !== undefined) {
       supabaseUpdates.priority = priorityPayload;
     }
-    dataService
-      .updateRoomState(roomToUpdate.id, supabaseUpdates)
-      .catch((e) => console.warn('Failed to update room status in Supabase', e));
+    updateRoom(roomToUpdate.id, supabaseUpdates).catch((e) =>
+      console.warn('Failed to update room status in Supabase', e)
+    );
 
     // Reset state
     setShowStatusModal(false);
@@ -543,26 +524,22 @@ export default function AllRoomsScreen() {
     } else if (tab === 'Tickets') {
       navigation.navigate('Tickets' as any);
     } else if (tab === 'LostAndFound') {
-      navigation.navigate('LostAndFound', { returnToTab });
+      (navigation as any).navigate('LostAndFound', { returnToTab });
     } else if (tab === 'Staff') {
-      navigation.navigate('Staff', { returnToTab });
+      (navigation as any).navigate('Staff', { returnToTab });
     } else if (tab === 'Settings') {
-      navigation.navigate('Settings', { returnToTab });
+      (navigation as any).navigate('Settings', { returnToTab });
     }
   };
 
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    await loadRoomsData(allRoomsData?.selectedShift ?? getShiftFromTime());
-    setRefreshing(false);
-  }, [loadRoomsData, allRoomsData?.selectedShift]);
+  const onRefresh = React.useCallback(() => {
+    fetchRooms(allRoomsData?.selectedShift ?? getShiftFromTime());
+  }, [fetchRooms, allRoomsData?.selectedShift]);
 
-  // Filter rooms based on search query and filters
   const filteredRooms = useMemo(() => {
-    // PM: use roomsPM from pm-operational-data.csv when available; else filter AM rooms
-    const roomsPM = allRoomsData?.roomsPM ?? [];
-    const usePMRooms = allRoomsData?.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    let rooms = usePMRooms ? roomsPM : (allRoomsData?.rooms ?? []);
+    const roomsPM = displayData.roomsPM ?? [];
+    const usePMRooms = displayData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    let rooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
 
     // When user tapped a status badge or priority badge on Home
     if (routeCategoryFilter) {
@@ -674,8 +651,7 @@ export default function AllRoomsScreen() {
       );
     }
 
-    // PM mode: when using roomsPM list it's already Turndown/No Task/Vacant; else filter to those
-    if (allRoomsData?.selectedShift === 'PM' && !usePMRooms) {
+    if (displayData.selectedShift === 'PM' && !usePMRooms) {
       rooms = rooms.filter(
         (room) =>
           room.frontOfficeStatus === 'Turndown' ||
@@ -683,19 +659,19 @@ export default function AllRoomsScreen() {
           room.reservationStatus === 'Vacant'
       );
     }
-    // AM mode: hide Turndown cards entirely
-    if (allRoomsData?.selectedShift === 'AM') {
+    if (displayData.selectedShift === 'AM') {
       rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');
     }
 
     return rooms;
-  }, [allRoomsData?.rooms, allRoomsData?.roomsPM, allRoomsData?.selectedShift, activeFilters, searchQuery, routeCategoryFilter]);
+  }, [displayData.rooms, displayData.roomsPM, displayData.selectedShift, activeFilters, searchQuery, routeCategoryFilter]);
 
   return (
     <View style={[
       styles.container,
-      allRoomsData?.selectedShift === 'PM' && styles.containerPM
+      displayData?.selectedShift === 'PM' && styles.containerPM
     ]}>
+      {loading && !allRoomsData && <LoadingOverlay fullScreen message="Loading rooms…" />}
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -709,7 +685,6 @@ export default function AllRoomsScreen() {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             scrollEnabled={!showStatusModal}
-            clipsToBounds={false}
             contentInsetAdjustmentBehavior="automatic"
             keyboardShouldPersistTaps="handled"
             onScroll={(event) => {
@@ -764,7 +739,7 @@ export default function AllRoomsScreen() {
                     statusButtonRefs.current[room.id] = ref;
                   }
                 }}
-                selectedShift={allRoomsData?.selectedShift ?? 'AM'}
+                selectedShift={displayData.selectedShift}
               />
             ))
           )}
@@ -787,7 +762,7 @@ export default function AllRoomsScreen() {
 
         {/* Header - Fixed at top (no blur) */}
         <AllRoomsHeader
-          selectedShift={allRoomsData?.selectedShift ?? 'AM'}
+          selectedShift={displayData.selectedShift}
           onShiftToggle={handleShiftToggle}
           onSearch={handleSearch}
           searchQuery={searchQuery}
@@ -837,16 +812,10 @@ export default function AllRoomsScreen() {
         headerHeight={217} // AllRoomsScreen header height
         onFlagToggle={(flagged) => {
           if (selectedRoomForStatusChange) {
-            setAllRoomsData((prev) => ({
-              ...prev,
-              rooms: prev.rooms.map((r) =>
-                r.id === selectedRoomForStatusChange.id ? { ...r, flagged } : r
-              ),
-            }));
             setSelectedRoomForStatusChange((prev) => (prev ? { ...prev, flagged } : null));
-            dataService
-              .updateRoomState(selectedRoomForStatusChange.id, { flagged })
-              .catch((e) => console.warn('Failed to update room flag in Supabase', e));
+            updateRoom(selectedRoomForStatusChange.id, { flagged }).catch((e) =>
+              console.warn('Failed to update room flag in Supabase', e)
+            );
           }
         }}
       />

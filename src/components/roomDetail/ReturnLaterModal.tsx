@@ -877,6 +877,10 @@ const styles = StyleSheet.create({
     color: RETURN_LATER_MODAL.timePicker.unselectedColor,
     opacity: 0.5,
   },
+  wheelNumberTextDisabled: {
+    color: RETURN_LATER_MODAL.timePicker.unselectedColor,
+    opacity: 0.5,
+  },
   wheelNumberText: {
     fontSize: RETURN_LATER_MODAL.timePicker.unselectedFontSize * scaleX,
     color: RETURN_LATER_MODAL.timePicker.unselectedColor,

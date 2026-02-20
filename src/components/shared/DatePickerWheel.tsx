@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, TextStyle } from 'react-native';
 import { typography } from '../../theme';
 import { scaleX } from '../../constants/roomDetailStyles';
 
@@ -110,7 +110,7 @@ export default function DatePickerWheel({
                 {
                   fontSize,
                   color: textColor,
-                  fontWeight: isSelected ? typography.fontWeights.bold : typography.fontWeights.light,
+                  fontWeight: (isSelected ? typography.fontWeights.bold : typography.fontWeights.light) as TextStyle['fontWeight'],
                 },
               ]}
             >

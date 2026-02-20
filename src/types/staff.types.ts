@@ -1,5 +1,8 @@
 export type StaffTab = 'onShift' | 'am' | 'pm' | 'departments';
 
+/** Tab for reassign modal: On Shift, AM, PM, Departments */
+export type ReassignTab = 'OnShift' | 'AM' | 'PM' | 'departments';
+
 export interface StaffMember {
   id: string;
   name: string;
@@ -7,11 +10,15 @@ export interface StaffMember {
   initials?: string; // Single letter for avatar
   avatarColor?: string; // Background color for initial circle
   department?: string; // e.g. HSK, F&B
-  progressRatio: {
+  workload?: number;
+  maxWorkload?: number;
+  onShift?: boolean;
+  shift?: string;
+  progressRatio?: {
     completed: number;
     total: number;
   };
-  taskStats: {
+  taskStats?: {
     inProgress: number;
     cleaned: number;
     dirty: number;

@@ -40,7 +40,7 @@ export default function StaffListContainer({
     return staffList.filter(
       (s) =>
         s.name.toLowerCase().includes(lowerQuery) ||
-        s.department.toLowerCase().includes(lowerQuery)
+        (s.department ?? '').toLowerCase().includes(lowerQuery)
     );
   };
 
@@ -51,7 +51,7 @@ export default function StaffListContainer({
   );
 
   // Sort by workload (lowest first) for better assignment suggestions
-  const sortedStaff = [...filteredStaff].sort((a, b) => a.workload - b.workload);
+  const sortedStaff = [...filteredStaff].sort((a, b) => (a.workload ?? 0) - (b.workload ?? 0));
 
   return (
     <ScrollView

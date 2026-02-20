@@ -12,13 +12,15 @@ import SearchInput from '../components/SearchInput';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
-import type { ShiftType, UserProfile } from '../types/home.types';
+import type { ShiftType } from '../types/home.types';
 import { mockHomeData } from '../data/mockHomeData';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { useUserStore } from '../store/useUserStore';
+import { userProfileFromSession } from '../services/user';
 import { mockChatData } from '../data/mockChatData';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
-import { dataService } from '../services/data';
+import { useRoomsStore } from '../store/useRoomsStore';
+import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import type { MoreMenuItemId } from '../types/more.types';
 import type { RootStackParamList } from '../navigation/types';
 import HomeHeader from '../components/home/HomeHeader';
@@ -46,10 +48,14 @@ export default function HomeScreen() {
     ...mockHomeData,
     selectedShift: getShiftFromTime(),
   }));
-  const [roomsForHome, setRoomsForHome] = useState<{ rooms: RoomCardData[]; roomsPM: RoomCardData[] }>({
-    rooms: mockAllRoomsData?.rooms ?? [],
-    roomsPM: mockAllRoomsData?.roomsPM ?? [],
-  });
+  const { data: roomsStoreData, loading: roomsLoading, fetchRooms } = useRoomsStore();
+  const roomsForHome = useMemo(
+    () => ({
+      rooms: roomsStoreData?.rooms ?? mockAllRoomsData?.rooms ?? [],
+      roomsPM: roomsStoreData?.roomsPM ?? mockAllRoomsData?.roomsPM ?? [],
+    }),
+    [roomsStoreData?.rooms, roomsStoreData?.roomsPM]
+  );
   const [activeFilters, setActiveFilters] = useState<FilterState | undefined>(
     (route.params as any)?.filters as FilterState | undefined
   );
@@ -58,89 +64,28 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
 
-  // Sync user profile from auth session when logged in
+  const { profile, loading: userLoading, fetchProfile } = useUserStore();
+  const sessionFallback = useMemo(
+    () =>
+      session?.user
+        ? userProfileFromSession(session.user.user_metadata, session.user.email, mockHomeData.user.hasFlag)
+        : mockHomeData.user,
+    [session?.user]
+  );
   useEffect(() => {
-    if (!session?.user) return;
-
-    const buildUserProfile = async (): Promise<UserProfile> => {
-      const metadata = session.user.user_metadata;
-      let fullName = metadata?.full_name || session.user.email?.split('@')[0] || 'User';
-      let avatarUrl: string | undefined = metadata?.avatar_url || undefined;
-      let role = metadata?.role_name || metadata?.role || 'Staff';
-      let department: string | undefined = metadata?.department || undefined;
-
-      if (isSupabaseConfigured) {
-        try {
-          const { data, error } = await supabase
-            .from('users')
-            .select('full_name, avatar_url, roles(name), departments(name)')
-            .eq('id', session.user.id)
-            .single();
-
-          if (!error && data) {
-            const row = data as {
-              full_name?: string;
-              avatar_url?: string;
-              roles?: { name: string } | null;
-              departments?: { name: string } | null;
-            };
-            if (row.full_name) fullName = row.full_name;
-            if (row.avatar_url) avatarUrl = row.avatar_url;
-            if (row.roles?.name) role = row.roles.name;
-            else if (row.departments?.name) role = row.departments.name;
-            if (row.departments?.name) department = row.departments.name;
-          }
-        } catch {
-          // Use session metadata / fallback
-        }
-      }
-
-      return {
-        name: fullName,
-        role,
-        department,
-        avatar: avatarUrl,
-        hasFlag: mockHomeData.user.hasFlag,
-      };
-    };
-
-    buildUserProfile().then((user) => {
-      setHomeData((prev) => ({ ...prev, user }));
-    });
-  }, [session?.user?.id]);
-
-  // Refetch user profile when returning to screen (e.g. after updating avatar)
+    if (session?.user) fetchProfile(session.user.id, sessionFallback);
+  }, [session?.user?.id, fetchProfile]);
   useFocusEffect(
     React.useCallback(() => {
-      if (!session?.user) return;
-      const buildUserProfile = async (): Promise<UserProfile> => {
-        const metadata = session.user.user_metadata;
-        let fullName = metadata?.full_name || session.user.email?.split('@')[0] || 'User';
-        let avatarUrl: string | undefined = metadata?.avatar_url || undefined;
-        let role = metadata?.role_name || metadata?.role || 'Staff';
-        let department: string | undefined = metadata?.department || undefined;
-        if (isSupabaseConfigured) {
-          try {
-            const { data, error } = await supabase
-              .from('users')
-              .select('full_name, avatar_url, roles(name), departments(name)')
-              .eq('id', session.user.id)
-              .single();
-            if (!error && data) {
-              const row = data as { full_name?: string; avatar_url?: string; roles?: { name: string } | null; departments?: { name: string } | null };
-              if (row.full_name) fullName = row.full_name;
-              if (row.avatar_url) avatarUrl = row.avatar_url;
-              if (row.roles?.name) role = row.roles.name;
-              else if (row.departments?.name) role = row.departments.name;
-              if (row.departments?.name) department = row.departments.name;
-            }
-          } catch { /* ignore */ }
-        }
-        return { name: fullName, role, department, avatar: avatarUrl, hasFlag: mockHomeData.user.hasFlag };
-      };
-      buildUserProfile().then((user) => setHomeData((prev) => ({ ...prev, user })));
-    }, [session?.user?.id])
+      if (session?.user) fetchProfile(session.user.id, sessionFallback);
+    }, [session?.user?.id, sessionFallback, fetchProfile])
   );
+  useEffect(() => {
+    setHomeData((prev) => ({
+      ...prev,
+      user: session ? (profile ?? sessionFallback) : mockHomeData.user,
+    }));
+  }, [session, profile, sessionFallback]);
 
   // Sync activeTab with current route
   useFocusEffect(
@@ -345,27 +290,21 @@ export default function HomeScreen() {
     setHomeData((prev) => ({ ...prev, categories: derivedCategories }));
   }, [derivedCategories]);
 
-  const loadRoomsForHome = React.useCallback(async (shift: ShiftType) => {
-    const data = await dataService.getAllRoomsData(shift);
-    setRoomsForHome({ rooms: data.rooms ?? [], roomsPM: data.roomsPM ?? [] });
-  }, []);
-
   React.useEffect(() => {
-    loadRoomsForHome(homeData.selectedShift);
-  }, [homeData.selectedShift, loadRoomsForHome]);
+    fetchRooms(homeData.selectedShift);
+  }, [homeData.selectedShift, fetchRooms]);
 
-  // Refetch rooms from Supabase when Home gains focus so stats (e.g. flagged count) reflect latest data
   useFocusEffect(
     React.useCallback(() => {
-      loadRoomsForHome(homeData.selectedShift);
-    }, [homeData.selectedShift, loadRoomsForHome])
+      fetchRooms(homeData.selectedShift);
+    }, [homeData.selectedShift, fetchRooms])
   );
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    await loadRoomsForHome(homeData.selectedShift);
+    await fetchRooms(homeData.selectedShift);
     setRefreshing(false);
-  }, [loadRoomsForHome, homeData.selectedShift]);
+  }, [fetchRooms, homeData.selectedShift]);
 
   // Calculate filter counts from homeData (use derivedCategories when categories not yet synced for current shift)
   const filterCounts: FilterCounts = useMemo(() => {
@@ -469,6 +408,8 @@ export default function HomeScreen() {
       styles.container,
       homeData.selectedShift === 'PM' && styles.containerPM
     ]}>
+      {(roomsLoading && !roomsStoreData) && <LoadingOverlay fullScreen message="Loading…" />}
+      {session && userLoading && !profile && <LoadingOverlay fullScreen message="Loading profile…" />}
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

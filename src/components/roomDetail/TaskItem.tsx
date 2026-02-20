@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   seeMoreText: {
     fontSize: 13 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.medium as any,
+    fontWeight: typography.fontWeights.regular as any,
     color: '#5a759d',
   },
 });

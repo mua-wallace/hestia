@@ -8,12 +8,12 @@ interface StaffListItemProps {
   staff: {
     id: string;
     name: string;
-    department: string;
+    department?: string;
     avatar?: any;
     initials?: string;
-    workload: number;
+    workload?: number;
     maxWorkload?: number;
-    onShift: boolean;
+    onShift?: boolean;
   };
   isSelected: boolean;
   onPress: () => void;
@@ -58,7 +58,7 @@ export default function StaffListItem({
       {/* Name and Department */}
       <View style={styles.infoContainer}>
         <Text style={styles.name}>{staff.name}</Text>
-        <Text style={styles.department}>{staff.department}</Text>
+        <Text style={styles.department}>{staff.department ?? ''}</Text>
       </View>
 
       {/* Workload Progress Bar - Always show for all staff */}

@@ -7,6 +7,7 @@ import { CompositeNavigationProp } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { colors } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
+import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import ChatHeader from '../components/chat/ChatHeader';
 import ChatItem, { ChatItemData } from '../components/chat/ChatItem';
 import NewChatMenu, { NewChatMenuOption } from '../components/chat/NewChatMenu';
@@ -39,6 +40,7 @@ type ChatScreenNavigationProp = CompositeNavigationProp<
 
 export default function ChatScreen() {
   const navigation = useNavigation<ChatScreenNavigationProp>();
+  const route = useRoute();
   const [activeTab, setActiveTab] = useState('Chat');
   const [showNewChatMenu, setShowNewChatMenu] = useState(false);
   const [chats] = useState<ChatItemData[]>(mockChatData);
@@ -57,11 +59,11 @@ export default function ChatScreen() {
     } else if (tab === 'Tickets') {
       navigation.navigate('Tickets' as any);
     } else if (tab === 'LostAndFound') {
-      navigation.navigate('LostAndFound', { returnToTab });
+      (navigation as any).navigate('LostAndFound', { returnToTab });
     } else if (tab === 'Staff') {
-      navigation.navigate('Staff', { returnToTab });
+      (navigation as any).navigate('Staff', { returnToTab });
     } else if (tab === 'Settings') {
-      navigation.navigate('Settings', { returnToTab });
+      (navigation as any).navigate('Settings', { returnToTab });
     }
   };
 
@@ -123,7 +125,7 @@ export default function ChatScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Scrollable Content */}
+      {refreshing && <LoadingOverlay fullScreen message="Refreshing…" />}
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

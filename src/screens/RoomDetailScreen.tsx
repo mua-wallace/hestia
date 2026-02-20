@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ROOM_DETAIL_HEADER, scaleX } from '../constants/roomDetailStyles';
@@ -26,8 +26,9 @@ import type { Note, Task, RoomType, HistoryEvent, HistoryGroup } from '../types/
 import type { LostAndFoundItem } from '../types/lostAndFound.types';
 import type { RootStackParamList } from '../navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
-import { dataService } from '../services/data';
+import { useRoomsStore } from '../store/useRoomsStore';
 import { authService } from '../services/auth';
+import { colors } from '../theme';
 import { getMockHistoryEvents } from '../data/mockHistoryData';
 import { generateHistoryReport } from '../utils/generateHistoryReport';
 import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
@@ -44,13 +45,14 @@ export default function RoomDetailScreen() {
   const room = (route.params as any)?.room as RoomCardData;
   const roomType = (route.params as any)?.roomType as RoomType || 'ArrivalDeparture'; // Default to ArrivalDeparture
 
-  // Safety check: ensure room data exists
+  const { updateRoom, updatingRoomId } = useRoomsStore();
+
   if (!room) {
     console.warn('RoomDetailScreen: No room data provided');
     return null;
   }
 
-  // Get room type configuration
+  const isUpdating = updatingRoomId === room.id;
   const config = React.useMemo(() => getRoomTypeConfig(roomType), [roomType]);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showInspectedModal, setShowInspectedModal] = useState(false);
@@ -330,14 +332,11 @@ export default function RoomDetailScreen() {
       setPausedAt(undefined);
     }
 
-    // Persist to Supabase (Priority: toggle high/normal)
     const priorityPayload = statusOption === 'Priority' ? (!localRoom.isPriority ? 'high' : 'normal') : undefined;
-    dataService
-      .updateRoomState(room.id, {
-        house_keeping_status: newStatus,
-        ...(priorityPayload !== undefined && { priority: priorityPayload }),
-      })
-      .catch((e) => console.warn('Failed to update room status in Supabase', e));
+    updateRoom(room.id, {
+      house_keeping_status: newStatus,
+      ...(priorityPayload !== undefined && { priority: priorityPayload }),
+    }).catch((e) => console.warn('Failed to update room status in Supabase', e));
 
     setShowStatusModal(false);
     setStatusButtonPosition(null);
@@ -432,13 +431,10 @@ export default function RoomDetailScreen() {
         avatar: avatarUrl || undefined,
       },
     }));
-    dataService
-      .updateRoomState(room.id, {
-        notes: notesText,
-        note_made_by: noteAuthorLabel,
-      })
-      .then(() => console.log('Notes saved successfully'))
-      .catch((e) => console.warn('Failed to save note to Supabase', e));
+    updateRoom(room.id, {
+      notes: notesText,
+      note_made_by: noteAuthorLabel,
+    }).then(() => console.log('Notes saved successfully')).catch((e) => console.warn('Failed to save note to Supabase', e));
   };
 
   const handleAddPhotos = () => {
@@ -578,7 +574,11 @@ export default function RoomDetailScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Reusable Room Detail Content Component */}
+      {isUpdating && (
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(255,255,255,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }]}>
+          <ActivityIndicator size="large" color={colors.primary.main} />
+        </View>
+      )}
       <RoomDetailContent
         roomNumber={room.roomNumber}
         roomCode={`${room.roomCategory} - ${room.credit}`}
@@ -636,9 +636,7 @@ export default function RoomDetailScreen() {
         showTriangle={false}
         onFlagToggle={(flagged) => {
           setLocalRoom((prev) => ({ ...prev, flagged }));
-          dataService
-            .updateRoomState(room.id, { flagged })
-            .catch((e) => console.warn('Failed to update room flag in Supabase', e));
+          updateRoom(room.id, { flagged }).catch((e) => console.warn('Failed to update room flag in Supabase', e));
         }}
       />
 

@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Text,
-  SafeAreaView,
   Image,
   Alert,
   Modal,
@@ -16,7 +15,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
@@ -29,16 +29,10 @@ import MessageBubble from '../components/chat/MessageBubble';
 import ChatHeader from '../components/chat/ChatHeader';
 import { scaleX, CHAT_HEADER } from '../constants/chatStyles';
 
-type ChatDetailScreenRouteProp = {
-  params: {
-    chatId: string;
-  };
-};
-
 type ChatDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatDetail'>;
 
 export default function ChatDetailScreen() {
-  const route = useRoute<ChatDetailScreenRouteProp>();
+  const route = useRoute<RouteProp<RootStackParamList, 'ChatDetail'>>();
   const navigation = useNavigation<ChatDetailScreenNavigationProp>();
   const { chatId } = route.params;
   const scrollViewRef = useRef<ScrollView>(null);

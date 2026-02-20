@@ -261,7 +261,7 @@ export default function StaffSelectorModal({
     return staffList.filter(
       (s) =>
         s.name.toLowerCase().includes(lowerQuery) ||
-        s.department.toLowerCase().includes(lowerQuery)
+        (s.department ?? '').toLowerCase().includes(lowerQuery)
     );
   }, [searchQuery, showMeOption, currentUserId]);
 

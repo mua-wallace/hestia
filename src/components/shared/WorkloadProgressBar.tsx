@@ -66,7 +66,7 @@ export default function WorkloadProgressBar({
       </View>
       {/* Workload number - Always show */}
       {showNumber && (
-        <Text style={styles.number} collapsable={false}>{current}</Text>
+        <Text style={styles.number}>{current}</Text>
       )}
     </View>
   );
