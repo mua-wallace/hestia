@@ -9,16 +9,14 @@
     "splash": {
       "image": "./assets/app/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#5a759d"
+      "backgroundColor": "#e4eefe"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hestia.app",
       "icon": "./assets/app/icon.png",
-      "backgroundColor": "#5a759d",
+      "backgroundColor": "#e4eefe",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -27,14 +25,13 @@
       "icon": "./assets/app/icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/app/adaptive-icon.png",
-        "backgroundColor": "#5a759d",
-        "monochromeImage": "./assets/app/adaptive-icon.png"
+        "backgroundColor": "#000000"
       },
       "package": "com.hestia.app",
       "splash": {
         "image": "./assets/app/splash.png",
         "resizeMode": "contain",
-        "backgroundColor": "#5a759d"
+        "backgroundColor": "#e4eefe"
       },
       "softwareKeyboardLayoutMode": "pan"
     },
@@ -47,8 +44,6 @@
       }
     },
     "owner": "wallice-dev",
-    "plugins": [
-      "expo-font"
-    ]
+    "plugins": ["expo-font"]
   }
 }
