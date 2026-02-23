@@ -232,6 +232,7 @@ export type Database = {
           created_at: string | null
           full_name: string
           id: string
+          image_url: string | null
           updated_at: string | null
           vip_code: string | null
         }
@@ -239,6 +240,7 @@ export type Database = {
           created_at?: string | null
           full_name: string
           id?: string
+          image_url?: string | null
           updated_at?: string | null
           vip_code?: string | null
         }
@@ -246,6 +248,7 @@ export type Database = {
           created_at?: string | null
           full_name?: string
           id?: string
+          image_url?: string | null
           updated_at?: string | null
           vip_code?: string | null
         }
@@ -676,6 +679,45 @@ export type Database = {
           },
         ]
       }
+      room_notes: {
+        Row: {
+          id: string
+          room_id: string
+          created_by_id: string | null
+          text: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          room_id: string
+          created_by_id?: string | null
+          text: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          room_id?: string
+          created_by_id?: string | null
+          text?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_notes_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_notes_created_by_id_fkey"
+            columns: ["created_by_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           category: string | null
@@ -685,7 +727,6 @@ export type Database = {
           house_keeping_status: string | null
           id: string
           linen_status: string | null
-          notes: string | null
           priority: string | null
           room_number: string
           special_instructions: string | null
@@ -699,7 +740,6 @@ export type Database = {
           house_keeping_status?: string | null
           id?: string
           linen_status?: string | null
-          notes?: string | null
           priority?: string | null
           room_number: string
           special_instructions?: string | null
@@ -713,7 +753,6 @@ export type Database = {
           house_keeping_status?: string | null
           id?: string
           linen_status?: string | null
-          notes?: string | null
           priority?: string | null
           room_number?: string
           special_instructions?: string | null

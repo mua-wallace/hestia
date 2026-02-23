@@ -25,9 +25,13 @@ type RoomRow = {
   priority: string | null;
   flagged: boolean | null;
   special_instructions: string | null;
-  notes: string | null;
-  note_made_by: string | null;
   house_keeping_status: string | null;
+};
+
+/** Aggregated note info per room (from room_notes table) */
+type RoomNotesAggregate = {
+  count: number;
+  lastNoteBy: { name: string; avatar?: string } | null;
 };
 
 type ReservationRow = {
@@ -47,6 +51,7 @@ type GuestRow = {
   id: string;
   full_name: string;
   vip_code: string | null;
+  image_url: string | null;
 };
 
 type ReservationGuestRow = {
@@ -71,8 +76,8 @@ function safeStatus<T extends string>(value: string | null | undefined, allowed:
 function mapToGuestInfo(
   res: ReservationRow,
   guest: GuestRow | null,
-  index: number,
-  roomId: string
+  _index: number,
+  _roomId: string
 ): GuestInfo {
   const name = guest?.full_name ?? 'Guest';
   const from = res.arrival_date ?? '';
@@ -87,14 +92,15 @@ function mapToGuestInfo(
     guestCount: { adults: res.adults ?? 0, kids: res.kids ?? 0 },
     vipCode: guest?.vip_code != null ? parseInt(String(guest.vip_code), 10) : undefined,
     arrivalDate: res.arrival_date,
-    imageUrl: `https://i.pravatar.cc/96?u=${encodeURIComponent(roomId)}-${index}`,
+    imageUrl: guest?.image_url ?? undefined,
   };
 }
 
 function mapRoomToCard(
   room: RoomRow,
   reservations: Array<{ res: ReservationRow; guest: GuestRow | null }>,
-  attendant: StaffInfo
+  attendant: StaffInfo,
+  notesAgg: RoomNotesAggregate | null
 ): RoomCardData {
   const firstRes = reservations[0]?.res;
   const frontOffice = firstRes?.front_office_status ?? 'Stayover';
@@ -114,6 +120,7 @@ function mapRoomToCard(
     });
   }
 
+  const noteCount = notesAgg?.count ?? 0;
   return {
     id: room.id,
     roomNumber: room.room_number,
@@ -131,57 +138,70 @@ function mapRoomToCard(
     isPriority: room.priority === 'high',
     flagged: room.flagged ?? false,
     specialInstructions: room.special_instructions ?? null,
-    roomNotes: room.notes ?? null,
-    noteMadeBy:
-      room.note_made_by
-        ? ({ name: room.note_made_by } as NoteMadeBy)
-        : null,
-    notes:
-      room.notes && room.notes.trim()
-        ? {
-            count: Math.max(1, room.notes.trim().split(/\n/).filter(Boolean).length),
-            hasRushed: false,
-          }
-        : undefined,
+    roomNotes: noteCount > 0 ? undefined : null,
+    noteMadeBy: notesAgg?.lastNoteBy ? ({ name: notesAgg.lastNoteBy.name, avatar: notesAgg.lastNoteBy.avatar } as NoteMadeBy) : null,
+    notes: noteCount > 0 ? { count: noteCount, hasRushed: false } : undefined,
   };
 }
+
+/**
+ * Fetch note count and last note author per room (for list/cards).
+ * Defined before fetchAllRooms so it is always in scope when the module loads.
+ */
+const fetchRoomNotesAggregate = async (roomIds: string[]): Promise<Map<string, RoomNotesAggregate>> => {
+  const map = new Map<string, RoomNotesAggregate>();
+  if (roomIds.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from('room_notes')
+    .select('id, room_id, created_at, users(full_name, avatar_url)')
+    .in('room_id', roomIds)
+    .order('created_at', { ascending: false });
+
+  if (error) return map;
+
+  const rows = (data ?? []) as Array<{
+    room_id: string;
+    users: { full_name: string | null; avatar_url: string | null } | null;
+  }>;
+  for (const roomId of roomIds) {
+    const roomRows = rows.filter((r) => r.room_id === roomId);
+    const count = roomRows.length;
+    const last = roomRows[0];
+    map.set(roomId, {
+      count,
+      lastNoteBy:
+        count && last?.users
+          ? {
+              name: last.users.full_name ?? 'Staff',
+              avatar: last.users.avatar_url ?? undefined,
+            }
+          : null,
+    });
+  }
+  return map;
+};
 
 /**
  * Fetch all rooms with reservations and guests (Supabase).
  */
 export async function fetchAllRooms(shift: 'AM' | 'PM'): Promise<AllRoomsScreenData> {
-  let roomsData: RoomRow[] | null = null;
-  let roomsError: unknown = null;
-
   const { data, error } = await supabase
     .from('rooms')
-    .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, notes, note_made_by, house_keeping_status')
+    .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status')
     .order('room_number', { ascending: true });
 
-  roomsData = data as RoomRow[] | null;
-  roomsError = error;
-
-  if (roomsError && typeof roomsError === 'object' && 'code' in roomsError && (roomsError as { code?: string }).code === '42703' && String((roomsError as { message?: string }).message || '').includes('note_made_by')) {
-    const retry = await supabase
-      .from('rooms')
-      .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, notes, house_keeping_status')
-      .order('room_number', { ascending: true });
-    if (retry.error) {
-      roomsError = retry.error;
-    } else {
-      roomsData = ((retry.data ?? []).map((r: Record<string, unknown>) => ({ ...r, note_made_by: null })) as RoomRow[]);
-      roomsError = null;
-    }
-  }
-
-  if (roomsError) throw roomsError;
-  const rooms = (roomsData ?? []) as RoomRow[];
+  if (error) throw error;
+  const rooms = (data ?? []) as RoomRow[];
 
   if (rooms.length === 0) {
     return { selectedShift: shift, rooms: [], roomsPM: [] };
   }
 
   const roomIds = rooms.map((r) => r.id);
+
+  const notesByRoom = await fetchRoomNotesAggregate(roomIds);
+
   const { data: resData, error: resError } = await supabase
     .from('reservations')
     .select('id, room_id, arrival_date, departure_date, eta, adults, kids, reservation_status, front_office_status, promised_time')
@@ -200,7 +220,7 @@ export async function fetchAllRooms(shift: 'AM' | 'PM'): Promise<AllRoomsScreenD
         reservation_id,
         guest_id,
         reservations (id, room_id, arrival_date, departure_date, eta, adults, kids, reservation_status, front_office_status, promised_time),
-        guests (id, full_name, vip_code)
+        guests (id, full_name, vip_code, image_url)
       `)
       .in('reservation_id', resIds);
     if (!rgError) reservationGuests = (rgData ?? []) as ReservationGuestRow[];
@@ -223,7 +243,8 @@ export async function fetchAllRooms(shift: 'AM' | 'PM'): Promise<AllRoomsScreenD
 
   const cards: RoomCardData[] = rooms.map((room) => {
     const resList = resByRoom.get(room.id) ?? [];
-    return mapRoomToCard(room, resList, DEFAULT_STAFF);
+    const notesAgg = notesByRoom.get(room.id) ?? null;
+    return mapRoomToCard(room, resList, DEFAULT_STAFF, notesAgg);
   });
 
   return {
@@ -233,19 +254,101 @@ export async function fetchAllRooms(shift: 'AM' | 'PM'): Promise<AllRoomsScreenD
   };
 }
 
-/** Fields that can be updated on a room (Supabase rooms table) */
+/** Fields that can be updated on a room (Supabase rooms table). Notes are in room_notes table. */
 export type RoomStateUpdate = {
   house_keeping_status?: RoomStatus;
   priority?: 'high' | 'normal';
   flagged?: boolean;
-  notes?: string | null;
-  note_made_by?: string | null;
   special_instructions?: string | null;
 };
 
 function isValidUUID(id: string): boolean {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(id);
+}
+
+/** Room note row from Supabase with author info */
+type RoomNoteRow = {
+  id: string;
+  room_id: string;
+  text: string;
+  created_at: string;
+  created_by_id: string | null;
+  users: { full_name: string | null; avatar_url: string | null } | null;
+};
+
+/** Note shape for room detail (matches roomDetail.types.Note) */
+export interface RoomNote {
+  id: string;
+  text: string;
+  staff: { name: string; avatar?: unknown };
+  createdAt: string;
+}
+
+/**
+ * Fetch all notes for a room (for room detail screen), with author info.
+ */
+export async function getRoomNotes(roomId: string): Promise<RoomNote[]> {
+  if (!isValidUUID(roomId)) return [];
+
+  const { data, error } = await supabase
+    .from('room_notes')
+    .select('id, text, created_at, users(full_name, avatar_url)')
+    .eq('room_id', roomId)
+    .order('created_at', { ascending: false });
+
+  if (error) return [];
+
+  const rows = (data ?? []) as RoomNoteRow[];
+  return rows.map((row) => ({
+    id: row.id,
+    text: row.text,
+    staff: {
+      name: row.users?.full_name ?? 'Staff',
+      avatar: row.users?.avatar_url ?? undefined,
+    },
+    createdAt: row.created_at,
+  }));
+}
+
+/**
+ * Add a note to a room. Uses current authenticated user as author.
+ * Returns the created note (with id, createdAt) or throws.
+ */
+export async function addRoomNote(roomId: string, text: string): Promise<RoomNote> {
+  const { data } = await supabase.auth.getSession();
+  const userId = data?.session?.user?.id ?? null;
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('room_notes')
+    .insert({
+      room_id: roomId,
+      text: text.trim(),
+      created_by_id: userId,
+    })
+    .select('id')
+    .single();
+
+  if (insertError) throw insertError;
+  if (!inserted?.id) throw new Error('Failed to create note');
+
+  const { data: full, error: fetchError } = await supabase
+    .from('room_notes')
+    .select('id, text, created_at, users(full_name, avatar_url)')
+    .eq('id', inserted.id)
+    .single();
+
+  if (fetchError || !full) throw fetchError ?? new Error('Failed to fetch created note');
+  const row = full as RoomNoteRow;
+  return {
+    id: row.id,
+    text: row.text,
+    staff: {
+      name: row.users?.full_name ?? 'Staff',
+      avatar: row.users?.avatar_url ?? undefined,
+    },
+    createdAt: row.created_at,
+  };
 }
 
 /**
@@ -260,8 +363,6 @@ export async function updateRoom(roomId: string, updates: RoomStateUpdate): Prom
   if (updates.house_keeping_status != null) payload.house_keeping_status = updates.house_keeping_status;
   if (updates.priority != null) payload.priority = updates.priority;
   if (updates.flagged != null) payload.flagged = updates.flagged;
-  if (updates.notes !== undefined) payload.notes = updates.notes;
-  if (updates.note_made_by !== undefined) payload.note_made_by = updates.note_made_by;
   if (updates.special_instructions !== undefined) payload.special_instructions = updates.special_instructions;
   if (Object.keys(payload).length === 0) return;
   const { error } = await supabase.from('rooms').update(payload).eq('id', roomId);

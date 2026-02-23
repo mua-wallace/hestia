@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -30,6 +30,7 @@ import { mockStaffData } from '../data/mockStaffData';
 import { useRoomsStore } from '../store/useRoomsStore';
 import { authService } from '../services/auth';
 import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
+import { getRoomNotes, addRoomNote } from '../services/rooms';
 
 type ArrivalDepartureDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -108,6 +109,17 @@ export default function ArrivalDepartureDetailScreen() {
     }
     return roomNote;
   });
+
+  // Load notes from room_notes when room is from Supabase (valid UUID)
+  useEffect(() => {
+    if (!room?.id) return;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(room.id)) return;
+    getRoomNotes(room.id).then((loaded) => {
+      if (loaded.length > 0) setNotes(loaded);
+    }).catch(() => {});
+  }, [room?.id]);
+
   const [assignedStaff, setAssignedStaff] = useState<{
     id: string;
     name: string;
@@ -338,6 +350,25 @@ export default function ArrivalDepartureDetailScreen() {
   };
 
   const handleSaveNote = async (noteText: string): Promise<void> => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (room.id && uuidRegex.test(room.id)) {
+      try {
+        const newNote = await addRoomNote(room.id, noteText);
+        setNotes((prev) => [...prev, newNote]);
+        setLocalRoom((prev) =>
+          prev
+            ? {
+                ...prev,
+                notes: { count: (prev.notes?.count ?? 0) + 1, hasRushed: prev.notes?.hasRushed || false },
+                noteMadeBy: { name: newNote.staff.name, avatar: newNote.staff.avatar },
+              }
+            : prev
+        );
+      } catch (e) {
+        console.warn('Failed to save note to Supabase', e);
+      }
+      return;
+    }
     const [noteAuthorLabel, avatarUrl] = await Promise.all([
       authService.getCurrentUserNoteLabel(),
       authService.getCurrentUserAvatarUrl(),
@@ -353,28 +384,15 @@ export default function ArrivalDepartureDetailScreen() {
     };
     const updatedNotes = [...notes, newNote];
     setNotes(updatedNotes);
-    // Join all notes with double newline separator, filter empty notes
-    const notesText = updatedNotes.map((n) => n.text.trim()).filter(Boolean).join('\n\n');
-    const noteCount = updatedNotes.length;
-    console.log('Saving notes to Supabase:', { noteCount, notesText });
-    // Update local room state: notes text, notes count for badge, and note author with avatar
     setLocalRoom((prev) =>
       prev
         ? {
             ...prev,
-            roomNotes: notesText,
-            notes: { count: noteCount, hasRushed: prev.notes?.hasRushed || false },
-            noteMadeBy: {
-              name: noteAuthorLabel,
-              avatar: avatarUrl || undefined,
-            },
+            notes: { count: updatedNotes.length, hasRushed: prev.notes?.hasRushed || false },
+            noteMadeBy: { name: noteAuthorLabel, avatar: avatarUrl || undefined },
           }
         : prev
     );
-    updateRoom(room.id, {
-      notes: notesText,
-      note_made_by: noteAuthorLabel,
-    }).then(() => console.log('Notes saved successfully')).catch((e) => console.warn('Failed to save note to Supabase', e));
   };
 
   const handleAddPhotos = () => {

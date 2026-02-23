@@ -75,8 +75,6 @@ export const useRoomsStore = create<RoomsState>((set, get) => ({
           ...(updates.priority != null && { isPriority: updates.priority === 'high' }),
           ...(updates.flagged != null && { flagged: updates.flagged }),
           ...(updates.special_instructions !== undefined && { specialInstructions: updates.special_instructions }),
-          ...(updates.notes !== undefined && { roomNotes: updates.notes }),
-          ...(updates.note_made_by !== undefined && { noteMadeBy: updates.note_made_by as RoomCardData['noteMadeBy'] }),
         };
       };
       set({

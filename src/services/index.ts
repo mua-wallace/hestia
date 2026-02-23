@@ -9,4 +9,5 @@
 export * from './auth';
 export * from './user';
 export * from './rooms';
+export * from './guests';
 export * from './dashboard';

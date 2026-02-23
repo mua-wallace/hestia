@@ -47,7 +47,27 @@ This document describes how to set up Supabase for the Hestia app, including con
 - **Sign up:** Use Supabase Dashboard → **Authentication** → **Users** → **Add user** to create users manually
 - **Or:** Implement a sign-up flow in the app (Supabase Auth supports `signUp` with email/password)
 
-## 6. Run the App
+## 6. Supabase MCP (Cursor)
+
+To connect Cursor to your Supabase project via MCP (so the AI can run SQL, list tables, generate types, etc.):
+
+1. **Config is already in the repo:** `.cursor/mcp.json` points Cursor at the Supabase MCP server (`https://mcp.supabase.com/mcp`).
+
+2. **Enable in Cursor:** Open **Settings → Cursor Settings → Tools & MCP** and ensure the Supabase MCP server is enabled. Restart Cursor if it doesn’t appear.
+
+3. **Log in when prompted:** The first time you use a Supabase MCP tool, Cursor will open a browser so you can log in to Supabase and grant access to the org that contains your Hestia project.
+
+4. **Optional – scope to one project:** To limit MCP to a single project, change the URL in `.cursor/mcp.json` to:
+   ```json
+   "url": "https://mcp.supabase.com/mcp?project_ref=YOUR_PROJECT_REF"
+   ```
+   Your project ref is the subdomain of your Supabase URL (e.g. `https://abcdefgh.supabase.co` → `project_ref=abcdefgh`).
+
+5. **Optional – read-only:** Add `&read_only=true` to the URL to run all SQL as a read-only user.
+
+See [Supabase MCP docs](https://supabase.com/docs/guides/getting-started/mcp) for security notes and all tools.
+
+## 7. Run the App
 
 ```bash
 npm start
@@ -76,7 +96,7 @@ src/
 3. **Main** → Protected app screens
 4. **Settings** → Sign Out option to clear session and return to Login
 
-## 7. Database Schema
+## 8. Database Schema
 
 The schema is in `supabase/migrations/`. To apply it:
 
@@ -105,6 +125,8 @@ npx supabase link --project-ref YOUR_PROJECT_REF
 npx supabase db push
 ```
 
+**Guest portrait images:** Run `20250620000000_guest_images_bucket.sql` to create the `guest-images` Storage bucket. Then use `uploadGuestImage(guestId, base64, ext)` from `src/services/guests` to upload a photo; it updates `guests.image_url` and room cards use that URL.
+
 ### Schema Overview
 
 | Table | Purpose |
@@ -116,7 +138,7 @@ npx supabase db push
 | `rooms` | Hotel rooms |
 | `shifts` | AM/PM/Night work shifts |
 | `room_assignments` | Which staff cleans which room |
-| `guests` | People staying in rooms |
+| `guests` | People staying in rooms (includes `image_url` for portrait; use Storage bucket `guest-images`) |
 | `reservations` | Bookings with arrival/departure |
 | `tickets` | Issues, maintenance, requests |
 | `consumables` | Billable items (mini bar, etc.) |
@@ -127,7 +149,7 @@ npx supabase db push
 | `messages` | Chat messages |
 | `room_history` | Audit log per room |
 
-## 8. Generate TypeScript Types
+## 9. Generate TypeScript Types
 
 After running migrations:
 

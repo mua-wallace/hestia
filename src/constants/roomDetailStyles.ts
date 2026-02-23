@@ -339,23 +339,29 @@ export const NOTES_SECTION = {
     text: {
       left: 27, // From Figma: calc(50%-185px) = 220-185 = 35px, but visually ~27px for left padding
       top: 1169, // From Figma: first note text at top: 1169px (absolute position)
+      fontFamily: 'Helvetica',
       fontSize: 13,
-      fontWeight: 'light' as const,
-      color: '#000000',
+      fontStyle: 'normal' as const,
+      fontWeight: '300' as const,
+      color: '#000',
       width: 353,
+      // line-height: normal (omit lineHeight for default)
     },
     profilePicture: {
       left: 36, // From Figma: left: 36px (absolute position for profile picture)
       top: 1230, // From Figma: top: 1230px (absolute position for first profile picture)
-      width: 25,
-      height: 25,
+      width: 25,  // 25px
+      height: 25, // 25px
     },
     staffName: {
       left: 70, // From Figma: left: 70px (absolute position for staff name)
       top: 1235, // From Figma: top: 1235px (absolute position for first staff name)
+      fontFamily: 'Helvetica',
       fontSize: 11,
-      fontWeight: 'regular' as const,
-      color: '#000000',
+      fontStyle: 'normal' as const,
+      fontWeight: '700' as const, // bold
+      color: '#000',
+      // line-height: normal (omit for default)
     },
     note2: {
       textTop: 1265, // Second note text (if any - from visual spacing)

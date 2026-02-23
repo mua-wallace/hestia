@@ -4,7 +4,7 @@
  * Supports: Arrival, Departure, ArrivalDeparture, Stayover, Turndown
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -33,6 +33,7 @@ import { getMockHistoryEvents } from '../data/mockHistoryData';
 import { generateHistoryReport } from '../utils/generateHistoryReport';
 import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
 import { getDefaultTaskText } from '../utils/defaultTasks';
+import { getRoomNotes, addRoomNote } from '../services/rooms';
 
 type RoomDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -81,13 +82,11 @@ export default function RoomDetailScreen() {
   // Track Refuse Service: selected reason or custom reason to show in header
   const [refuseServiceReason, setRefuseServiceReason] = useState<string | undefined>(undefined);
 
-  // Track notes and assigned staff in state
-  // Initial notes: parse room notes (split by \n\n) if present
+  // Track notes in state. For Supabase rooms we load via getRoomNotes; for mock we use room.roomNotes.
   const [notes, setNotes] = useState<Note[]>(() => {
-    // Parse notes from Supabase: split by \n\n to get individual notes
     if (room.roomNotes && room.roomNotes.trim()) {
-      const noteTexts = room.roomNotes.split(/\n\n+/).filter(text => text.trim());
-      return noteTexts.map((text, index) => ({
+      const noteTexts = room.roomNotes.split(/\n\n+/).filter((text: string) => text.trim());
+      return noteTexts.map((text: string, index: number) => ({
         id: `room-note-${index}`,
         text: text.trim(),
         staff: {
@@ -97,9 +96,15 @@ export default function RoomDetailScreen() {
         createdAt: new Date().toISOString(),
       }));
     }
-    // Return empty array if no room notes
     return [];
   });
+
+  // Load notes from room_notes when room is from Supabase (valid UUID)
+  useEffect(() => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!room?.id || !uuidRegex.test(room.id)) return;
+    getRoomNotes(room.id).then((loaded) => setNotes(loaded)).catch(() => {});
+  }, [room?.id]);
   
   const [assignedStaff, setAssignedStaff] = useState<{
     id: string;
@@ -402,6 +407,22 @@ export default function RoomDetailScreen() {
   };
 
   const handleSaveNote = async (noteText: string) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (room.id && uuidRegex.test(room.id)) {
+      try {
+        const newNote = await addRoomNote(room.id, noteText);
+        setNotes((prev) => [...prev, newNote]);
+        setLocalRoom((prev) => ({
+          ...prev,
+          notes: { count: (prev.notes?.count ?? 0) + 1, hasRushed: prev.notes?.hasRushed || false },
+          noteMadeBy: { name: newNote.staff.name, avatar: newNote.staff.avatar },
+        }));
+      } catch (e) {
+        console.warn('Failed to save note to Supabase', e);
+      }
+      return;
+    }
+    // Mock path: append note with current user as author
     const [noteAuthorLabel, avatarUrl] = await Promise.all([
       authService.getCurrentUserNoteLabel(),
       authService.getCurrentUserAvatarUrl(),
@@ -417,24 +438,11 @@ export default function RoomDetailScreen() {
     };
     const updatedNotes = [...notes, newNote];
     setNotes(updatedNotes);
-    // Join all notes with double newline separator
-    const notesText = updatedNotes.map((n) => n.text.trim()).filter(Boolean).join('\n\n');
-    const noteCount = updatedNotes.length;
-    console.log('Saving notes to Supabase:', { noteCount, notesText });
-    // Update local room state: notes text, notes count for badge, and note author with avatar
     setLocalRoom((prev) => ({
       ...prev,
-      roomNotes: notesText,
-      notes: { count: noteCount, hasRushed: prev.notes?.hasRushed || false },
-      noteMadeBy: {
-        name: noteAuthorLabel,
-        avatar: avatarUrl || undefined,
-      },
+      notes: { count: updatedNotes.length, hasRushed: prev.notes?.hasRushed || false },
+      noteMadeBy: { name: noteAuthorLabel, avatar: avatarUrl || undefined },
     }));
-    updateRoom(room.id, {
-      notes: notesText,
-      note_made_by: noteAuthorLabel,
-    }).then(() => console.log('Notes saved successfully')).catch((e) => console.warn('Failed to save note to Supabase', e));
   };
 
   const handleAddPhotos = () => {

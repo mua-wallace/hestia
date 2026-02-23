@@ -18,6 +18,7 @@ Documentation is organized by purpose. Start with [guides](guides/) for setup an
 - **Design system & Figma** → [design/](design/)
 - **Implementation roadmap** → [implementation/IMPLEMENTATION_PLAN.md](implementation/IMPLEMENTATION_PLAN.md)
 - **Architecture overview** → [architecture/ARCHITECTURE_REFACTOR.md](architecture/ARCHITECTURE_REFACTOR.md)
+- **Cursor MCP catalog** → [Cursor MCP Directory](https://cursor.com/docs/context/mcp/directory) — browse and add MCP servers (e.g. Supabase) in **Settings → Tools & MCP**
 
 ## Design
 
