@@ -7,7 +7,7 @@ import { colors, typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import { useAuth } from '../contexts/AuthContext';
 import { mockHomeData } from '../data/mockHomeData';
-import { mockChatData } from '../data/mockChatData';
+import { useChatStore } from '../store/useChatStore';
 import type { ReturnToTab } from '../navigation/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -62,9 +62,11 @@ export default function SettingsScreen() {
   );
 
   // Calculate total unread chat messages for badge
-  const chatBadgeCount = React.useMemo(() => {
-    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
-  }, []);
+  const { chats } = useChatStore();
+  const chatBadgeCount = React.useMemo(
+    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
+    [chats]
+  );
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab); // Update immediately

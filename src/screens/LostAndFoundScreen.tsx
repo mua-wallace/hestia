@@ -11,7 +11,7 @@ import RegisterLostAndFoundModal from '../components/lostAndFound/RegisterLostAn
 import ItemRegisteredSuccessModal from '../components/lostAndFound/ItemRegisteredSuccessModal';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockLostAndFoundData } from '../data/mockLostAndFoundData';
-import { mockChatData } from '../data/mockChatData';
+import { useChatStore } from '../store/useChatStore';
 import { LostAndFoundTab, LostAndFoundItem } from '../types/lostAndFound.types';
 import {
   LOST_AND_FOUND_SPACING,
@@ -70,9 +70,11 @@ export default function LostAndFoundScreen() {
   );
 
   // Calculate total unread chat messages for badge
-  const chatBadgeCount = React.useMemo(() => {
-    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
-  }, []);
+  const { chats } = useChatStore();
+  const chatBadgeCount = React.useMemo(
+    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
+    [chats]
+  );
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab); // Update immediately

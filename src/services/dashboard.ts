@@ -5,7 +5,6 @@
 
 import { mockHomeData } from '../data/mockHomeData';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
-import { mockChatData } from '../data/mockChatData';
 import { mockTicketsData } from '../data/mockTicketsData';
 import type { HomeScreenData } from '../types/home.types';
 import type { AllRoomsScreenData } from '../types/allRooms.types';
@@ -41,7 +40,7 @@ const dashboard = {
   },
 
   async getChatData(): Promise<ChatItemData[]> {
-    return Promise.resolve(mockChatData);
+    return Promise.resolve([]);
   },
 
   async getTicketsData(): Promise<TicketsScreenData> {

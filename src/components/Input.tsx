@@ -17,13 +17,17 @@ export default function Input({
 }: InputProps) {
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label != null && label !== '' ? (
+        <Text style={styles.label}>{typeof label === 'string' ? label : String(label)}</Text>
+      ) : null}
       <TextInput
-        style={[styles.input, style, error && styles.inputError]}
+        style={[styles.input, style, error ? styles.inputError : null]}
         placeholderTextColor={colors.text.tertiary}
         {...props}
       />
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error != null && error !== '' ? (
+        <Text style={styles.error}>{typeof error === 'string' ? error : String(error)}</Text>
+      ) : null}
     </View>
   );
 }

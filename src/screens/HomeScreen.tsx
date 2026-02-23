@@ -17,7 +17,7 @@ import { mockHomeData } from '../data/mockHomeData';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserStore } from '../store/useUserStore';
 import { userProfileFromSession } from '../services/user';
-import { mockChatData } from '../data/mockChatData';
+import { useChatStore } from '../store/useChatStore';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
 import { useRoomsStore } from '../store/useRoomsStore';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
@@ -97,10 +97,11 @@ export default function HomeScreen() {
     }, [route.name])
   );
 
-  // Calculate total unread chat messages for badge
-  const chatBadgeCount = useMemo(() => {
-    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
-  }, []);
+  const { chats } = useChatStore();
+  const chatBadgeCount = useMemo(
+    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
+    [chats]
+  );
 
   const handleShiftToggle = (shift: ShiftType) => {
     setHomeData(prev => ({ ...prev, selectedShift: shift }));
@@ -408,8 +409,8 @@ export default function HomeScreen() {
       styles.container,
       homeData.selectedShift === 'PM' && styles.containerPM
     ]}>
-      {(roomsLoading && !roomsStoreData) && <LoadingOverlay fullScreen message="Loading…" />}
-      {session && userLoading && !profile && <LoadingOverlay fullScreen message="Loading profile…" />}
+      {(roomsLoading && !roomsStoreData) ? <LoadingOverlay fullScreen message="Loading…" /> : null}
+      {(session && userLoading && !profile) ? <LoadingOverlay fullScreen message="Loading profile…" /> : null}
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

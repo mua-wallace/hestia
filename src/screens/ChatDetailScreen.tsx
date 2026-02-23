@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, Fragment } from 'react';
+import React, { useState, useRef, useEffect, Fragment, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -22,48 +22,112 @@ import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { RootStackParamList } from '../navigation/types';
 import { ChatMessage } from '../types';
-import { mockChatMessages, CURRENT_USER_ID } from '../data/mockChatMessages';
-import { mockChatData } from '../data/mockChatData';
 import { mockStaffData } from '../data/mockStaffData';
 import MessageBubble from '../components/chat/MessageBubble';
 import ChatHeader from '../components/chat/ChatHeader';
 import { scaleX, CHAT_HEADER } from '../constants/chatStyles';
+import {
+  getCurrentUserId,
+  getChatById,
+  getMyRoleInChat,
+  getGroupParticipants,
+  setParticipantRole,
+  subscribeToMessages,
+  updateGroupChat,
+  deleteGroupChat,
+  type GroupParticipant,
+} from '../services/chat';
+import { useChatStore } from '../store/useChatStore';
 
 type ChatDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatDetail'>;
 
 export default function ChatDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'ChatDetail'>>();
   const navigation = useNavigation<ChatDetailScreenNavigationProp>();
-  const { chatId } = route.params;
+  const { chatId, chat: chatParam } = route.params;
   const scrollViewRef = useRef<ScrollView>(null);
-  
-  const chat = mockChatData.find((c) => c.id === chatId);
-  const initialMessages = mockChatMessages[chatId] || [];
-  const isGroup = chat?.isGroup || false;
-  
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+
+  const isSupabaseChat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chatId);
+  const [fetchedChat, setFetchedChat] = useState<{ name: string; isGroup: boolean; created_by_id: string } | null>(null);
+  const baseChat = chatParam ?? (isSupabaseChat ? { id: chatId, name: 'Chat', lastMessage: '', isGroup: false } : null);
+  const isGroup = fetchedChat ? fetchedChat.isGroup : (baseChat?.isGroup ?? false);
+  const chat = baseChat
+    ? {
+        ...baseChat,
+        name: (fetchedChat?.name != null && fetchedChat.name !== '' ? fetchedChat.name : baseChat.name) ?? 'Chat',
+        isGroup,
+      }
+    : null;
+
+  const [myRole, setMyRole] = useState<'admin' | 'member' | null>(null);
+  const isGroupAdmin = isGroup && myRole === 'admin';
+  const isGroupCreator = Boolean(isGroup && currentUserId && fetchedChat?.created_by_id && currentUserId === fetchedChat.created_by_id);
+
+  const { messagesByChatId, loadMessages, appendMessage, sendMessage: sendMessageToStore, removeChat, updateChatName, clearMessages } = useChatStore();
+  const messages = messagesByChatId[chatId] ?? [];
+
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [showTagModal, setShowTagModal] = useState(false);
   const [taggedUser, setTaggedUser] = useState<{ id: string; name: string } | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showEditGroupModal, setShowEditGroupModal] = useState(false);
+  const [editGroupName, setEditGroupName] = useState('');
+  const [showGroupMembersModal, setShowGroupMembersModal] = useState(false);
+  const [groupParticipants, setGroupParticipants] = useState<GroupParticipant[]>([]);
+  const [replyToMessage, setReplyToMessage] = useState<ChatMessage | null>(null);
+  const [tagParticipantsList, setTagParticipantsList] = useState<GroupParticipant[]>([]);
+
+  useEffect(() => {
+    if (!isSupabaseChat) return;
+    getCurrentUserId().then(setCurrentUserId);
+    loadMessages(chatId);
+  }, [chatId, isSupabaseChat, loadMessages]);
+
+  useEffect(() => {
+    if (!isSupabaseChat) return;
+    getChatById(chatId).then((row) => {
+      if (row) {
+        setFetchedChat({
+          name: row.type === 'group' && row.name && row.name.trim() ? row.name.trim() : (row.name ?? ''),
+          isGroup: row.type === 'group',
+          created_by_id: row.created_by_id,
+        });
+      }
+    });
+  }, [chatId, isSupabaseChat]);
+
+  useEffect(() => {
+    if (!isSupabaseChat || !isGroup) return;
+    getMyRoleInChat(chatId).then(setMyRole);
+  }, [chatId, isSupabaseChat, isGroup]);
+
+  useEffect(() => {
+    if (!isSupabaseChat) return;
+    const unsub = subscribeToMessages(chatId, (msg) => {
+      appendMessage(chatId, msg);
+    });
+    return () => {
+      unsub?.();
+    };
+  }, [chatId, isSupabaseChat, appendMessage]);
 
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const responsiveScale = screenWidth / 440;
   const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 8);
   
-  // Get participants for tagging (mock data - in real app, get from chat participants)
-  const getParticipants = () => {
-    if (isGroup) {
-      // For group chats, return all staff members
-      return mockStaffData.map(staff => ({ id: staff.id, name: staff.name }));
-    } else {
-      // For one-on-one, return the other person
-      const otherPerson = mockStaffData.find(s => s.id !== CURRENT_USER_ID) || mockStaffData[0];
-      return [{ id: otherPerson.id, name: otherPerson.name }];
+  const uid = currentUserId ?? '';
+  /** Participants for tag modal: real group members when group, else mock for DM */
+  const getParticipantsForTag = () => {
+    if (isGroup && tagParticipantsList.length > 0) {
+      return tagParticipantsList.map((p) => ({ id: p.user_id, name: p.full_name || 'Unknown' }));
     }
+    if (isGroup) return [];
+    const otherPerson = mockStaffData.find((s) => s.id !== uid) || mockStaffData[0];
+    return [{ id: otherPerson.id, name: otherPerson.name }];
   };
 
   const scrollToBottom = () => {
@@ -89,33 +153,38 @@ export default function ChatDetailScreen() {
     return () => clearInterval(interval);
   }, [isRecording]);
 
-  const handleSend = () => {
-    if ((inputText.trim() || selectedImage) && chat) {
-      // Create new message
-      const newMessage: ChatMessage = {
-        id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        chatId: chatId,
-        senderId: CURRENT_USER_ID,
-        senderName: 'You',
-        message: inputText.trim() || (selectedImage ? '📷 Image' : ''),
-        timestamp: new Date().toISOString(),
-        type: selectedImage ? 'image' : 'text',
-        imageUri: selectedImage || undefined,
-        taggedUserId: taggedUser?.id,
-        taggedUserName: taggedUser?.name,
-      };
-      
-      // Add message to the messages list
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
-      setInputText('');
-      setSelectedImage(null);
-      setTaggedUser(null);
-      
-      // Scroll to bottom after sending
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+  const handleSend = async () => {
+    if (!(inputText.trim() || selectedImage) || !chat) return;
+
+    if (isSupabaseChat) {
+      try {
+        const content = inputText.trim() || (selectedImage ? '📷 Image' : '');
+        const options: import('../services/chat').SendMessageOptions = {};
+        if (taggedUser) {
+          options.taggedUserId = taggedUser.id;
+          options.taggedUserName = taggedUser.name;
+        }
+        if (replyToMessage) {
+          options.replyToMessageId = replyToMessage.id;
+          options.replyToSenderName = replyToMessage.senderName;
+          options.replyToMessagePreview = (replyToMessage.message || '').slice(0, 80) + ((replyToMessage.message || '').length > 80 ? '…' : '');
+        }
+        await sendMessageToStore(chatId, content, selectedImage ? 'image' : 'text', Object.keys(options).length > 0 ? options : undefined);
+        setInputText('');
+        setSelectedImage(null);
+        setTaggedUser(null);
+        setReplyToMessage(null);
+        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+      } catch (e) {
+        console.warn('Send failed', e);
+      }
+      return;
     }
+
+    setInputText('');
+    setSelectedImage(null);
+    setTaggedUser(null);
+    setReplyToMessage(null);
   };
 
   const showImageSourceOptions = () => {
@@ -206,11 +275,11 @@ export default function ChatDetailScreen() {
           setIsRecording(false);
           setRecordingSeconds(0);
 
-          if (uri && durationSec > 0) {
+          if (uri && durationSec > 0 && isSupabaseChat) {
             const newMessage: ChatMessage = {
               id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               chatId: chatId,
-              senderId: CURRENT_USER_ID,
+              senderId: uid,
               senderName: 'You',
               message: '🎤 Voice message',
               timestamp: new Date().toISOString(),
@@ -220,7 +289,7 @@ export default function ChatDetailScreen() {
               taggedUserId: taggedUser?.id,
               taggedUserName: taggedUser?.name,
             };
-            setMessages((prev) => [...prev, newMessage]);
+            appendMessage(chatId, newMessage);
             setTaggedUser(null);
             scrollToBottom();
           } else {
@@ -264,13 +333,29 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const handleTagUser = () => {
+  const handleTagUser = async () => {
+    if (isGroup && isSupabaseChat) {
+      const participants = await getGroupParticipants(chatId);
+      setTagParticipantsList(participants);
+    } else {
+      setTagParticipantsList([]);
+    }
     setShowTagModal(true);
   };
 
   const handleSelectTaggedUser = (userId: string, userName: string) => {
     setTaggedUser({ id: userId, name: userName });
     setShowTagModal(false);
+  };
+
+  /** When user types @ in the input, open the tag modal to pick a member */
+  const handleInputChange = (text: string) => {
+    if (text.endsWith('@')) {
+      setInputText(text.slice(0, -1));
+      handleTagUser();
+    } else {
+      setInputText(text);
+    }
   };
 
   const removeTaggedUser = () => {
@@ -318,9 +403,83 @@ export default function ChatDetailScreen() {
     navigation.goBack();
   };
 
-  if (!chat) {
+  const handleGroupOptionsPress = () => {
+    const options: Parameters<typeof Alert.alert>[2] = [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Edit group name',
+        onPress: () => {
+          setEditGroupName(typeof chat?.name === 'string' ? chat.name : '');
+          setShowEditGroupModal(true);
+        },
+      },
+      {
+        text: 'Group members',
+        onPress: async () => {
+          const participants = await getGroupParticipants(chatId);
+          setGroupParticipants(participants);
+          setShowGroupMembersModal(true);
+        },
+      },
+    ];
+    if (isGroupCreator) {
+      options.push({
+        text: 'Delete group',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert(
+            'Delete group?',
+            'This will permanently delete the group and all messages. This cannot be undone.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                  const ok = await deleteGroupChat(chatId);
+                  if (ok) {
+                    removeChat(chatId);
+                    clearMessages(chatId);
+                    navigation.goBack();
+                  } else {
+                    Alert.alert('Error', 'Could not delete the group.');
+                  }
+                },
+              },
+            ]
+          );
+        },
+      });
+    }
+    Alert.alert('Group options', undefined, options);
+  };
+
+  const handleMakeAdmin = async (participantUserId: string) => {
+    const ok = await setParticipantRole(chatId, participantUserId, 'admin');
+    if (ok) {
+      const participants = await getGroupParticipants(chatId);
+      setGroupParticipants(participants);
+    } else {
+      Alert.alert('Error', 'Could not make admin.');
+    }
+  };
+
+  const handleEditGroupSave = async () => {
+    const name = editGroupName.trim();
+    if (!name) return;
+    const ok = await updateGroupChat(chatId, { name });
+    if (ok) {
+      updateChatName(chatId, name);
+      setFetchedChat((prev) => (prev ? { ...prev, name } : null));
+      setShowEditGroupModal(false);
+    } else {
+      Alert.alert('Error', 'Could not update group name.');
+    }
+  };
+
+  if (!chat || !chatId) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text>Chat not found</Text>
       </View>
     );
@@ -343,11 +502,12 @@ export default function ChatDetailScreen() {
         <ChatHeader
           onBackPress={handleBackPress}
           showSearch={false}
-          title={chat.name}
+          title={typeof chat.name === 'string' ? chat.name : 'Chat'}
           isGroup={isGroup}
           avatar={chat.avatar}
           showAvatar={true}
           showMessageButton={false}
+          onGroupOptionsPress={isGroupAdmin ? handleGroupOptionsPress : undefined}
         />
 
         {/* Messages List */}
@@ -361,13 +521,14 @@ export default function ChatDetailScreen() {
           }}
         >
         {messages.map((message, index) => {
-          const isCurrentUser = message.senderId === CURRENT_USER_ID;
+          const effectiveCurrentId = currentUserId ?? '';
+          const isCurrentUser = message.senderId === effectiveCurrentId;
           const prevMessage = index > 0 ? messages[index - 1] : null;
           const showDateSeparator = shouldShowDateSeparator(message, prevMessage);
-          
+          // Key: id + index so duplicate ids (e.g. from realtime race) don't break React
           return (
-            <Fragment key={message.id}>
-              {showDateSeparator && (
+            <Fragment key={`${message.id}-${index}`}>
+              {showDateSeparator ? (
                 <View style={styles.dateSeparator}>
                   <View style={styles.dateSeparatorLine} />
                   <Text style={styles.dateSeparatorText}>
@@ -375,11 +536,13 @@ export default function ChatDetailScreen() {
                   </Text>
                   <View style={styles.dateSeparatorLine} />
                 </View>
-              )}
+              ) : null}
               <MessageBubble
                 message={message}
                 isCurrentUser={isCurrentUser}
                 isGroup={isGroup}
+                onLongPress={(msg) => setReplyToMessage(msg)}
+                onSwipeReply={(msg) => setReplyToMessage(msg)}
               />
             </Fragment>
           );
@@ -395,6 +558,19 @@ export default function ChatDetailScreen() {
                 <Image source={{ uri: selectedImage }} style={styles.imagePreview} resizeMode="cover" />
                 <TouchableOpacity style={styles.removeImageButton} onPress={removeImage}>
                   <Text style={styles.removeImageText}>×</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Reply-to preview */}
+            {replyToMessage && (
+              <View style={styles.replyPreviewBar}>
+                <View style={styles.replyPreviewContent}>
+                  <Text style={styles.replyPreviewLabel}>Replying to {replyToMessage.senderName}</Text>
+                  <Text style={styles.replyPreviewSnippet} numberOfLines={1}>{replyToMessage.message}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setReplyToMessage(null)} style={styles.replyPreviewDismiss}>
+                  <Text style={styles.replyPreviewDismissText}>×</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -432,8 +608,8 @@ export default function ChatDetailScreen() {
                 </Text>
               ) : null}
 
-              {/* Tag Button - Only show if group chat or has participants */}
-              {!isRecording && (isGroup || getParticipants().length > 0) && (
+              {/* Tag Button - Only show if group chat or has participants to tag */}
+              {!isRecording && (isGroup || getParticipantsForTag().length > 0) && (
                 <TouchableOpacity
                   style={styles.tagButton}
                   onPress={handleTagUser}
@@ -446,15 +622,14 @@ export default function ChatDetailScreen() {
               {!isRecording && (
               <TextInput
                 style={styles.input}
-                placeholder="Type a message..."
+                placeholder="Type a message... (use @ to tag)"
                 placeholderTextColor="#999999"
                 value={inputText}
-                onChangeText={setInputText}
-                onSubmitEditing={handleSend}
+                onChangeText={handleInputChange}
                 onFocus={scrollToBottom}
                 multiline
                 maxLength={500}
-                returnKeyType="send"
+                returnKeyType="default"
                 blurOnSubmit={false}
                 textAlignVertical={Platform.OS === 'android' ? 'center' : 'top'}
                 underlineColorAndroid="transparent"
@@ -506,7 +681,7 @@ export default function ChatDetailScreen() {
                 </TouchableOpacity>
               </View>
               <FlatList
-                data={getParticipants()}
+                data={getParticipantsForTag()}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                   <TouchableOpacity
@@ -516,6 +691,96 @@ export default function ChatDetailScreen() {
                   >
                     <Text style={styles.participantName}>{item.name}</Text>
                   </TouchableOpacity>
+                )}
+                ListEmptyComponent={isGroup ? <Text style={styles.emptyTagList}>Loading members…</Text> : null}
+              />
+            </View>
+          </View>
+        </Modal>
+
+        {/* Edit Group Name Modal (admin only) */}
+        <Modal
+          visible={showEditGroupModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowEditGroupModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Edit group name</Text>
+                <TouchableOpacity onPress={() => setShowEditGroupModal(false)}>
+                  <Text style={styles.modalCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                style={styles.editGroupNameInput}
+                placeholder="Group name"
+                placeholderTextColor="#999"
+                value={editGroupName}
+                onChangeText={setEditGroupName}
+                maxLength={64}
+                autoFocus
+              />
+              <TouchableOpacity
+                style={[styles.editGroupSaveBtn, !editGroupName.trim() && styles.editGroupSaveBtnDisabled]}
+                onPress={handleEditGroupSave}
+                disabled={!editGroupName.trim()}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.editGroupSaveBtnText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Group members modal (admins): list participants, creator can Make admin */}
+        <Modal
+          visible={showGroupMembersModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowGroupMembersModal(false)}
+          statusBarTranslucent={Platform.OS === 'android'}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Group members</Text>
+                <TouchableOpacity onPress={() => setShowGroupMembersModal(false)}>
+                  <Text style={styles.modalCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={groupParticipants}
+                keyExtractor={(item) => item.user_id}
+                renderItem={({ item }) => (
+                  <View style={styles.groupMemberRow}>
+                    {item.avatar_url ? (
+                      <Image source={{ uri: item.avatar_url }} style={styles.groupMemberAvatar} />
+                    ) : (
+                      <View style={styles.groupMemberAvatarPlaceholder}>
+                        <Text style={styles.groupMemberInitial}>
+                          {(item.full_name || '?').charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.groupMemberInfo}>
+                      <Text style={styles.groupMemberName} numberOfLines={1}>
+                        {item.full_name || 'Unknown'}
+                        {item.is_creator ? ' (creator)' : ''}
+                      </Text>
+                      <Text style={styles.groupMemberRole}>{item.role === 'admin' ? 'Admin' : 'Member'}</Text>
+                    </View>
+                    {isGroupCreator && item.role === 'member' && item.user_id !== currentUserId ? (
+                      <TouchableOpacity
+                        style={styles.makeAdminBtn}
+                        onPress={() => handleMakeAdmin(item.user_id)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.makeAdminBtnText}>Make admin</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
                 )}
               />
             </View>
@@ -828,6 +1093,120 @@ const styles = StyleSheet.create({
     fontSize: 16 * scaleX,
     fontFamily: 'Helvetica',
     color: '#1E1E1E',
+  },
+  emptyTagList: {
+    padding: 20,
+    textAlign: 'center',
+    color: '#999',
+  },
+  replyPreviewBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F6FC',
+    borderRadius: 8 * scaleX,
+    paddingVertical: 8 * scaleX,
+    paddingLeft: 12 * scaleX,
+    paddingRight: 8 * scaleX,
+    marginBottom: 8 * scaleX,
+    borderLeftWidth: 3,
+    borderLeftColor: '#5A759D',
+  },
+  replyPreviewContent: { flex: 1 },
+  replyPreviewLabel: {
+    fontSize: 12 * scaleX,
+    fontWeight: '600',
+    color: '#5A759D',
+    marginBottom: 2,
+  },
+  replyPreviewSnippet: {
+    fontSize: 13 * scaleX,
+    color: '#666',
+  },
+  replyPreviewDismiss: {
+    padding: 4,
+  },
+  replyPreviewDismissText: {
+    fontSize: 20,
+    color: '#999',
+  },
+  editGroupNameInput: {
+    height: 48 * scaleX,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 8 * scaleX,
+    paddingHorizontal: 12 * scaleX,
+    marginHorizontal: 20 * scaleX,
+    marginTop: 16 * scaleX,
+    fontSize: 16,
+    color: '#1E1E1E',
+  },
+  editGroupSaveBtn: {
+    marginHorizontal: 20 * scaleX,
+    marginTop: 20 * scaleX,
+    height: 48 * scaleX,
+    borderRadius: 8 * scaleX,
+    backgroundColor: '#5A759D',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editGroupSaveBtnDisabled: {
+    opacity: 0.5,
+  },
+  editGroupSaveBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  groupMemberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20 * scaleX,
+    paddingVertical: 12 * scaleX,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F5',
+  },
+  groupMemberAvatar: {
+    width: 40 * scaleX,
+    height: 40 * scaleX,
+    borderRadius: 20 * scaleX,
+  },
+  groupMemberAvatarPlaceholder: {
+    width: 40 * scaleX,
+    height: 40 * scaleX,
+    borderRadius: 20 * scaleX,
+    backgroundColor: '#E3ECF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  groupMemberInitial: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#5A759D',
+  },
+  groupMemberInfo: {
+    flex: 1,
+    marginLeft: 12 * scaleX,
+  },
+  groupMemberName: {
+    fontSize: 16 * scaleX,
+    fontFamily: 'Helvetica',
+    color: '#1E1E1E',
+  },
+  groupMemberRole: {
+    fontSize: 13 * scaleX,
+    color: '#666',
+    marginTop: 2,
+  },
+  makeAdminBtn: {
+    paddingHorizontal: 12 * scaleX,
+    paddingVertical: 6 * scaleX,
+    borderRadius: 6 * scaleX,
+    backgroundColor: '#5A759D',
+  },
+  makeAdminBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
 

@@ -23,6 +23,8 @@ interface ChatHeaderProps {
   avatar?: any; // Avatar image source (same as in chat list)
   showAvatar?: boolean; // Whether to show avatar instead of back arrow (default: false)
   showMessageButton?: boolean; // Whether to show the create chat/message button (default: true)
+  /** When set, show a group options (⋮) button; used for group admin (edit/delete) */
+  onGroupOptionsPress?: () => void;
 }
 
 export default function ChatHeader({
@@ -37,6 +39,7 @@ export default function ChatHeader({
   avatar,
   showAvatar = false,
   showMessageButton = true,
+  onGroupOptionsPress,
 }: ChatHeaderProps) {
   const handleSearchChange = (text: string) => {
     onSearch?.(text);
@@ -67,7 +70,7 @@ export default function ChatHeader({
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarInitial}>
-                  {title.charAt(0).toUpperCase()}
+                  {(typeof title === 'string' ? title : 'Chat').charAt(0).toUpperCase()}
                 </Text>
               </View>
             )
@@ -82,10 +85,18 @@ export default function ChatHeader({
         </TouchableOpacity>
 
         {/* Title */}
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title}>{typeof title === 'string' ? title : 'Chat'}</Text>
 
-        {/* Message Button */}
-        {showMessageButton && (
+        {/* Group options (edit/delete) or Message button */}
+        {onGroupOptionsPress ? (
+          <TouchableOpacity
+            style={styles.messageButton}
+            onPress={onGroupOptionsPress}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.groupOptionsIcon}>⋮</Text>
+          </TouchableOpacity>
+        ) : showMessageButton ? (
           <TouchableOpacity
             style={styles.messageButton}
             onPress={onMessagePress || (() => {})}
@@ -95,7 +106,7 @@ export default function ChatHeader({
               <Text style={styles.messageIconText}>+</Text>
             </View>
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
 
       {/* Search bar section */}
@@ -209,6 +220,12 @@ const styles = StyleSheet.create({
     flex: 1,
     includeFontPadding: false,
     textAlignVertical: 'center',
+  },
+  groupOptionsIcon: {
+    fontSize: 24 * scaleX,
+    fontWeight: '700' as any,
+    color: '#607AA1',
+    lineHeight: 28 * scaleX,
   },
   messageButton: {
     position: 'absolute',

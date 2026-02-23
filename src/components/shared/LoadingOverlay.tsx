@@ -15,7 +15,9 @@ export function LoadingOverlay({ fullScreen = false, message }: LoadingOverlayPr
   return (
     <View style={[styles.container, fullScreen && styles.fullScreen]}>
       <ActivityIndicator size="large" color={colors.primary.main} />
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      {message != null && message !== '' ? (
+        <Text style={styles.message}>{typeof message === 'string' ? message : String(message)}</Text>
+      ) : null}
     </View>
   );
 }

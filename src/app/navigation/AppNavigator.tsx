@@ -16,6 +16,8 @@ import UserProfileScreen from '../../screens/UserProfileScreen';
 import CreateTicketScreen from '../../screens/CreateTicketScreen';
 import CreateTicketFormScreen from '../../screens/CreateTicketFormScreen';
 import ChatDetailScreen from '../../screens/ChatDetailScreen';
+import NewChatScreen from '../../screens/NewChatScreen';
+import CreateChatGroupScreen from '../../screens/CreateChatGroupScreen';
 import type { RootStackParamList, MainTabsParamList } from './types';
 import { colors } from '../../theme';
 
@@ -89,6 +91,8 @@ export default function AppNavigator() {
         }}
       />
       <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
+      <Stack.Screen name="NewChat" component={NewChatScreen} />
+      <Stack.Screen name="CreateChatGroup" component={CreateChatGroupScreen} />
       <Stack.Screen
         name="UserProfile"
         component={UserProfileScreen}

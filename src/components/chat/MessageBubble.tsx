@@ -1,26 +1,60 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform, Image, TouchableOpacity } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { ChatMessage } from '../../types';
 import { scaleX } from '../../constants/chatStyles';
 import { typography } from '../../theme';
+
+const SWIPE_REPLY_THRESHOLD = 50;
 
 interface MessageBubbleProps {
   message: ChatMessage;
   isCurrentUser: boolean;
   isGroup: boolean;
+  onLongPress?: (message: ChatMessage) => void;
+  onSwipeReply?: (message: ChatMessage) => void;
 }
 
-export default function MessageBubble({ message, isCurrentUser, isGroup }: MessageBubbleProps) {
-  return (
-    <View
+export default function MessageBubble({ message, isCurrentUser, isGroup, onLongPress, onSwipeReply }: MessageBubbleProps) {
+  const handleLongPress = () => {
+    onLongPress?.(message);
+  };
+
+  const panGesture = React.useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-20, 20])
+        .failOffsetY([-25, 25])
+        .minDistance(15)
+        .onEnd((e) => {
+          if (e.translationX < -SWIPE_REPLY_THRESHOLD) {
+            onSwipeReply?.(message);
+          }
+        }),
+    [message, onSwipeReply]
+  );
+
+  const Wrapper = onLongPress ? TouchableOpacity : View;
+  const wrapperProps = onLongPress ? { onLongPress: handleLongPress, activeOpacity: 1 } : {};
+
+  const content = (
+    <Wrapper
       style={[
         styles.container,
         isCurrentUser ? styles.currentUserContainer : styles.otherUserContainer,
       ]}
+      {...wrapperProps}
     >
+      {/* Reply-to quote */}
+      {message.replyTo && (
+        <View style={[styles.replyToBlock, isCurrentUser ? styles.replyToBlockCurrent : styles.replyToBlockOther]}>
+          <Text style={[styles.replyToSender, isCurrentUser ? styles.replyToTextCurrent : styles.replyToTextOther]} numberOfLines={1}>{message.replyTo.senderName}</Text>
+          <Text style={[styles.replyToPreview, isCurrentUser ? styles.replyToTextCurrent : styles.replyToTextOther]} numberOfLines={2}>{message.replyTo.message}</Text>
+        </View>
+      )}
       {/* Sender name for group chats (only for other users) */}
       {isGroup && !isCurrentUser && (
-        <Text style={styles.senderName}>{message.senderName}</Text>
+        <Text style={styles.senderName}>{typeof message.senderName === 'string' ? message.senderName : ''}</Text>
       )}
       
       {/* Tagged User Indicator */}
@@ -95,14 +129,14 @@ export default function MessageBubble({ message, isCurrentUser, isGroup }: Messa
         )}
 
         {/* Text Message */}
-        {message.message && (
+        {message.message != null && message.message !== '' && (
           <Text
             style={[
               styles.messageText,
               isCurrentUser ? styles.currentUserText : styles.otherUserText,
             ]}
           >
-            {message.message}
+            {typeof message.message === 'string' ? message.message : String(message.message)}
           </Text>
         )}
       </View>
@@ -111,8 +145,17 @@ export default function MessageBubble({ message, isCurrentUser, isGroup }: Messa
       <Text style={styles.timestamp}>
         {formatTime(message.timestamp)}
       </Text>
-    </View>
+    </Wrapper>
   );
+
+  if (onSwipeReply) {
+    return (
+      <GestureDetector gesture={panGesture}>
+        <View style={styles.slideWrapper}>{content}</View>
+      </GestureDetector>
+    );
+  }
+  return content;
 }
 
 function formatTime(timestamp: string): string {
@@ -153,10 +196,40 @@ function formatTime(timestamp: string): string {
 }
 
 const styles = StyleSheet.create({
+  slideWrapper: {
+    alignSelf: 'stretch',
+  },
   container: {
     marginVertical: 2 * scaleX,
     maxWidth: '80%',
     paddingHorizontal: 16 * scaleX,
+  },
+  replyToBlock: {
+    marginBottom: 6 * scaleX,
+    paddingLeft: 10 * scaleX,
+    borderLeftWidth: 3,
+    paddingVertical: 2,
+  },
+  replyToBlockCurrent: {
+    borderLeftColor: 'rgba(255,255,255,0.8)',
+  },
+  replyToBlockOther: {
+    borderLeftColor: 'rgba(90, 117, 157, 0.5)',
+  },
+  replyToSender: {
+    fontSize: 12 * scaleX,
+    fontWeight: '600' as any,
+    marginBottom: 2,
+  },
+  replyToPreview: {
+    fontSize: 12 * scaleX,
+    opacity: 0.9,
+  },
+  replyToTextCurrent: {
+    color: '#1E1E1E',
+  },
+  replyToTextOther: {
+    color: '#1E1E1E',
   },
   currentUserContainer: {
     alignSelf: 'flex-end',

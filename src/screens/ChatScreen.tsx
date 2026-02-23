@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -11,8 +11,7 @@ import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import ChatHeader from '../components/chat/ChatHeader';
 import ChatItem, { ChatItemData } from '../components/chat/ChatItem';
 import NewChatMenu, { NewChatMenuOption } from '../components/chat/NewChatMenu';
-import { mockHomeData } from '../data/mockHomeData';
-import { mockChatData } from '../data/mockChatData';
+import { useChatStore } from '../store/useChatStore';
 import {
   CHAT_SPACING,
   CHAT_COLORS,
@@ -43,9 +42,23 @@ export default function ChatScreen() {
   const route = useRoute();
   const [activeTab, setActiveTab] = useState('Chat');
   const [showNewChatMenu, setShowNewChatMenu] = useState(false);
-  const [chats] = useState<ChatItemData[]>(mockChatData);
   const [searchQuery, setSearchQuery] = useState('');
+  const { chats, loading, fetchChats } = useChatStore();
   const [refreshing, setRefreshing] = useState(false);
+
+  const loadChats = useCallback(async () => {
+    await fetchChats();
+  }, [fetchChats]);
+
+  useEffect(() => {
+    loadChats();
+  }, [loadChats]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadChats();
+    }, [loadChats])
+  );
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab); // Update immediately
@@ -72,7 +85,7 @@ export default function ChatScreen() {
   };
 
   const handleChatPress = (chat: ChatItemData) => {
-    navigation.navigate('ChatDetail', { chatId: chat.id });
+    navigation.navigate('ChatDetail', { chatId: chat.id, chat });
   };
 
   const handleBackPress = () => {
@@ -88,26 +101,24 @@ export default function ChatScreen() {
   };
 
   const handleNewChatOptionPress = (option: NewChatMenuOption) => {
+    setShowNewChatMenu(false);
     switch (option) {
       case 'createGroup':
-        // TODO: Navigate to create group screen
-        console.log('Create Chat Group pressed');
-        // navigation.navigate('CreateChatGroup');
+        (navigation as any).navigate('CreateChatGroup');
         break;
       case 'newChat':
-        // TODO: Navigate to new chat screen
-        console.log('New Chat pressed');
-        // navigation.navigate('NewChat');
+        (navigation as any).navigate('NewChat');
         break;
     }
   };
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  }, []);
+    await loadChats();
+    setRefreshing(false);
+  }, [loadChats]);
+
+  const isLoading = loading && chats.length === 0;
 
   // Calculate total unread chat messages for badge
   const chatBadgeCount = React.useMemo(() => {
@@ -118,14 +129,14 @@ export default function ChatScreen() {
   const filteredChats = searchQuery
     ? chats.filter(
         (chat) =>
-          chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+          (typeof chat.name === 'string' && chat.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (typeof chat.lastMessage === 'string' && chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     : chats;
 
   return (
     <View style={styles.container}>
-      {refreshing && <LoadingOverlay fullScreen message="Refreshing…" />}
+      {refreshing || isLoading ? <LoadingOverlay fullScreen message={refreshing ? 'Refreshing…' : 'Loading chats…'} /> : null}
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -149,10 +160,9 @@ export default function ChatScreen() {
                   chat={chat}
                   onPress={() => handleChatPress(chat)}
                 />
-                {/* Divider */}
-                {index < filteredChats.length - 1 && (
+                {index < filteredChats.length - 1 ? (
                   <View style={styles.divider} />
-                )}
+                ) : null}
               </React.Fragment>
             ))}
           </ScrollView>

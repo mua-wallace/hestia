@@ -12,7 +12,7 @@ import TicketsTabs from '../components/tickets/TicketsTabs';
 import TicketCard from '../components/tickets/TicketCard';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockTicketsData } from '../data/mockTicketsData';
-import { mockChatData } from '../data/mockChatData';
+import { useChatStore } from '../store/useChatStore';
 import { TicketTab, TicketData } from '../types/tickets.types';
 import {
   TICKETS_HEADER,
@@ -56,9 +56,11 @@ export default function TicketsScreen() {
   );
 
   // Calculate total unread chat messages for badge
-  const chatBadgeCount = React.useMemo(() => {
-    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
-  }, []);
+  const { chats } = useChatStore();
+  const chatBadgeCount = React.useMemo(
+    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
+    [chats]
+  );
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab); // Update immediately

@@ -14,7 +14,9 @@ export type RootStackParamList = {
   RoomDetails: { roomId: string };
   RoomDetail: { room: any; roomType: RoomType };
   ArrivalDepartureDetail: { room: any };
-  ChatDetail: { chatId: string };
+  ChatDetail: { chatId: string; chat?: import('../../components/chat/ChatItem').ChatItemData };
+  NewChat: undefined;
+  CreateChatGroup: undefined;
   TicketDetail: { ticketId: string };
   CreateTicket: undefined;
   CreateTicketForm: { departmentId: string };

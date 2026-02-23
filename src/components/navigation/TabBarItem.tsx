@@ -44,13 +44,13 @@ export default function TabBarItem({ icon, label, active = false, badge, onPress
               style={iconStyle}
               resizeMode="contain"
             />
-            {badge !== undefined && badge > 0 && (
+            {(badge !== undefined && badge > 0) ? (
               <View style={styles.badgeContainer}>
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{badge}</Text>
+                  <Text style={styles.badgeText}>{String(badge)}</Text>
                 </View>
               </View>
-            )}
+            ) : null}
           </View>
         </View>
         <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>

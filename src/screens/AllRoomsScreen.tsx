@@ -10,7 +10,7 @@ import { type RoomStateUpdate } from '../services/dashboard';
 import { useRoomsStore } from '../store/useRoomsStore';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import { mockHomeData } from '../data/mockHomeData';
-import { mockChatData } from '../data/mockChatData';
+import { useChatStore } from '../store/useChatStore';
 import { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import AllRoomsHeader from '../components/allRooms/AllRoomsHeader';
 import RoomCard from '../components/allRooms/RoomCard';
@@ -507,9 +507,11 @@ export default function AllRoomsScreen() {
   );
 
   // Calculate total unread chat messages for badge
-  const chatBadgeCount = React.useMemo(() => {
-    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
-  }, []);
+  const { chats } = useChatStore();
+  const chatBadgeCount = React.useMemo(
+    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
+    [chats]
+  );
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab); // Update immediately

@@ -11,3 +11,5 @@ export * from './user';
 export * from './rooms';
 export * from './guests';
 export * from './dashboard';
+export * from './chat';
+export * from './chat';

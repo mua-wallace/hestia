@@ -47,6 +47,13 @@ export interface Ticket {
   createdAt: string;
 }
 
+/** Reply-to quote shown above the message content */
+export interface ChatMessageReplyTo {
+  id: string;
+  senderName: string;
+  message: string; // snippet, e.g. first 100 chars
+}
+
 export interface ChatMessage {
   id: string;
   chatId: string;
@@ -58,8 +65,10 @@ export interface ChatMessage {
   imageUri?: string;
   voiceUri?: string;
   voiceDuration?: number; // Duration in seconds
-  taggedUserId?: string; // User ID of the tagged person
-  taggedUserName?: string; // Name of the tagged person
+  taggedUserId?: string;
+  taggedUserName?: string;
+  /** When set, this message is a reply to another message */
+  replyTo?: ChatMessageReplyTo;
 }
 
 export interface Chat {

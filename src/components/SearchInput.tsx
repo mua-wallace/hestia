@@ -71,7 +71,7 @@ export default function SearchInput({
             </Text>
           ) : (
             <Text style={[styles.placeholderText, styles.placeholderBold, placeholderStyle]}>
-              {placeholder}
+              {typeof placeholder === 'string' ? placeholder : String(placeholder ?? '')}
             </Text>
           )}
         </View>

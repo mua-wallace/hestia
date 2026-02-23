@@ -12,7 +12,7 @@ import { BlurView } from 'expo-blur';
 import { colors, typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import { mockHomeData } from '../data/mockHomeData';
-import { mockChatData } from '../data/mockChatData';
+import { useChatStore } from '../store/useChatStore';
 import StaffHeader from '../components/staff/StaffHeader';
 import StaffTabs from '../components/staff/StaffTabs';
 import StaffCard from '../components/staff/StaffCard';
@@ -113,9 +113,11 @@ export default function StaffScreen() {
   );
 
   // Calculate total unread chat messages for badge
-  const chatBadgeCount = React.useMemo(() => {
-    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
-  }, []);
+  const { chats } = useChatStore();
+  const chatBadgeCount = React.useMemo(
+    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
+    [chats]
+  );
 
   const handleTabPress = (tab: string) => {
     setActiveTab(tab); // Update immediately
