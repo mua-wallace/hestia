@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Platform, Image, TouchableOpacity } from 'react
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { ChatMessage } from '../../types';
 import { scaleX } from '../../constants/chatStyles';
-import { typography } from '../../theme';
+import { typography, colors } from '../../theme';
 
 const SWIPE_REPLY_THRESHOLD = 50;
 
@@ -265,11 +265,11 @@ const styles = StyleSheet.create({
     }),
   },
   currentUserBubble: {
-    backgroundColor: '#5A759D',
+    backgroundColor: colors.primary.main,
     borderBottomRightRadius: 4 * scaleX,
   },
   otherUserBubble: {
-    backgroundColor: '#F1F6FC',
+    backgroundColor: colors.background.tertiary,
     borderBottomLeftRadius: 4 * scaleX,
   },
   messageText: {
@@ -279,17 +279,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   currentUserText: {
-    color: '#FFFFFF',
+    color: colors.text.white,
     fontWeight: '400' as any,
   },
   otherUserText: {
-    color: '#1E1E1E',
+    color: colors.text.primary,
     fontWeight: '400' as any,
   },
   timestamp: {
     fontSize: 11 * scaleX,
     fontFamily: 'Helvetica',
-    color: '#999999',
+    color: colors.text.tertiary,
     marginTop: 4 * scaleX,
     marginHorizontal: 4 * scaleX,
     fontWeight: '300' as any,
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   taggedText: {
     fontSize: 12 * scaleX,
     fontFamily: 'Helvetica',
-    color: '#5A759D',
+    color: colors.primary.main,
     fontWeight: '600' as any,
   },
   messageImage: {
@@ -334,10 +334,10 @@ const styles = StyleSheet.create({
     marginLeft: 2 * scaleX,
   },
   voicePlayIconCurrent: {
-    color: '#FFFFFF',
+    color: colors.text.white,
   },
   voicePlayIconOther: {
-    color: '#5A759D',
+    color: colors.primary.main,
   },
   voiceWaveform: {
     flexDirection: 'row',

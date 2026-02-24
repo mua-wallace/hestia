@@ -118,7 +118,7 @@ export async function getChatsForUser(): Promise<ChatItemData[]> {
     const lastMessageText = lastMsg?.content ?? '';
     const lastMessageAt = lastMsg?.created_at ?? chat.created_at ?? '';
     const lastMessageSender =
-      lastMsg?.sender_id === userId ? '' : lastMsg?.users?.full_name ? `${lastMsg.users.full_name}:` : '';
+      lastMsg?.sender_id === userId ? 'You:' : lastMsg?.users?.full_name ? `${lastMsg.users.full_name}:` : '';
 
     const { data: otherParticipants } = await supabase
       .from('chat_participants')

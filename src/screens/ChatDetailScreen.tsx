@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Text,
@@ -25,7 +26,8 @@ import { ChatMessage } from '../types';
 import { mockStaffData } from '../data/mockStaffData';
 import MessageBubble from '../components/chat/MessageBubble';
 import ChatHeader from '../components/chat/ChatHeader';
-import { scaleX, CHAT_HEADER } from '../constants/chatStyles';
+import { colors } from '../theme';
+import { scaleX, CHAT_HEADER, CHAT_HEADER_BAR_HEIGHT } from '../constants/chatStyles';
 import {
   getCurrentUserId,
   getChatById,
@@ -38,6 +40,7 @@ import {
   type GroupParticipant,
 } from '../services/chat';
 import { useChatStore } from '../store/useChatStore';
+import { Ionicons } from '@expo/vector-icons';
 
 type ChatDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatDetail'>;
 
@@ -105,6 +108,11 @@ export default function ChatDetailScreen() {
   }, [chatId, isSupabaseChat, isGroup]);
 
   useEffect(() => {
+    if (!isSupabaseChat || !isGroup) return;
+    getGroupParticipants(chatId).then(setTagParticipantsList);
+  }, [chatId, isSupabaseChat, isGroup]);
+
+  useEffect(() => {
     if (!isSupabaseChat) return;
     const unsub = subscribeToMessages(chatId, (msg) => {
       appendMessage(chatId, msg);
@@ -117,15 +125,37 @@ export default function ChatDetailScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const responsiveScale = screenWidth / 440;
-  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 8);
+  const bottomPadding = insets.bottom;
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  useEffect(() => {
+    const hide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+    return () => hide.remove();
+  }, []);
+  const handleInputFocus = useCallback(() => {
+    setKeyboardVisible(true);
+    scrollToBottom();
+  }, []);
   
   const uid = currentUserId ?? '';
-  /** Participants for tag modal: real group members when group, else mock for DM */
+  /** Exclude current user from participant lists (they shouldn't see themselves). */
+  const otherParticipants = tagParticipantsList.filter((p) => p.user_id !== uid);
+  /** Format participant names for header subtitle (WhatsApp-style: "Alice, Bob and 3 others") */
+  const formatParticipantsSubtitle = (participants: GroupParticipant[]): string => {
+    const names = participants
+      .map((p) => (p.full_name || '').trim())
+      .filter((n) => n.length > 0);
+    if (names.length === 0) return '';
+    if (names.length === 1) return names[0];
+    if (names.length === 2) return `${names[0]} and ${names[1]}`;
+    if (names.length === 3) return `${names[0]}, ${names[1]} and ${names[2]}`;
+    return `${names[0]}, ${names[1]} and ${names.length - 2} others`;
+  };
+  /** Participants for tag modal: real group members when group (excluding self), else mock for DM */
   const getParticipantsForTag = () => {
-    if (isGroup && tagParticipantsList.length > 0) {
-      return tagParticipantsList.map((p) => ({ id: p.user_id, name: p.full_name || 'Unknown' }));
-    }
-    if (isGroup) return [];
+    if (isGroup) return otherParticipants.map((p) => ({ id: p.user_id, name: p.full_name || 'Unknown' }));
     const otherPerson = mockStaffData.find((s) => s.id !== uid) || mockStaffData[0];
     return [{ id: otherPerson.id, name: otherPerson.name }];
   };
@@ -345,6 +375,7 @@ export default function ChatDetailScreen() {
 
   const handleSelectTaggedUser = (userId: string, userName: string) => {
     setTaggedUser({ id: userId, name: userName });
+    setInputText((prev) => prev + `@${userName} `);
     setShowTagModal(false);
   };
 
@@ -496,13 +527,14 @@ export default function ChatDetailScreen() {
       <KeyboardAvoidingView
         style={styles.container}
         behavior={keyboardBehavior}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        keyboardVerticalOffset={0}
       >
-        {/* Header */}
+        {/* Header - WhatsApp style */}
         <ChatHeader
           onBackPress={handleBackPress}
           showSearch={false}
           title={typeof chat.name === 'string' ? chat.name : 'Chat'}
+          subtitle={isGroup && otherParticipants.length > 0 ? formatParticipantsSubtitle(otherParticipants) : undefined}
           isGroup={isGroup}
           avatar={chat.avatar}
           showAvatar={true}
@@ -513,8 +545,11 @@ export default function ChatDetailScreen() {
         {/* Messages List */}
         <ScrollView
           ref={scrollViewRef}
-          style={[styles.messagesContainer, { marginTop: CHAT_HEADER.background.height * responsiveScale }]}
-          contentContainerStyle={[styles.messagesContent, { paddingVertical: 16 * responsiveScale, paddingBottom: 24 * responsiveScale }]}
+          style={[styles.messagesContainer, { marginTop: 0 }]}
+          contentContainerStyle={[
+            styles.messagesContent,
+            { paddingVertical: 16 * responsiveScale, paddingBottom: 12 * responsiveScale },
+          ]}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => {
             scrollViewRef.current?.scrollToEnd({ animated: false });
@@ -549,84 +584,83 @@ export default function ChatDetailScreen() {
         })}
         </ScrollView>
 
-        {/* Input Area - WhatsApp style: sits above home indicator / device nav */}
-        <View style={[styles.inputSafeArea, { paddingBottom: bottomPadding }]}>
-          <View style={[styles.inputContainer, { paddingHorizontal: 16 * responsiveScale, paddingTop: 12 * responsiveScale, paddingBottom: 12 * responsiveScale }]}>
-            {/* Selected Image Preview */}
-            {selectedImage && (
-              <View style={styles.imagePreviewContainer}>
-                <Image source={{ uri: selectedImage }} style={styles.imagePreview} resizeMode="cover" />
-                <TouchableOpacity style={styles.removeImageButton} onPress={removeImage}>
-                  <Text style={styles.removeImageText}>×</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+        {/* Input Area - minimal padding, flush above keyboard when open */}
+        <View style={[
+          styles.inputSafeArea,
+          {
+            paddingBottom: keyboardVisible ? 0 : bottomPadding,
+            paddingTop: keyboardVisible ? 0 : 6,
+          },
+        ]}>
+          {/* WhatsApp-style @ mention list: inline above input, no full-screen modal */}
+          {showTagModal && (
+            <View style={styles.tagListPanel}>
+              <FlatList
+                data={getParticipantsForTag()}
+                keyExtractor={(item) => item.id}
+                keyboardShouldPersistTaps="handled"
+                style={styles.tagListScroll}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.tagListItem}
+                    onPress={() => handleSelectTaggedUser(item.id, item.name)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.tagListAvatar}>
+                      <Text style={styles.tagListInitial} numberOfLines={1}>
+                        {(item.name || '?').charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={styles.tagListName} numberOfLines={1}>{item.name}</Text>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={isGroup ? <Text style={styles.emptyTagList}>No members to tag</Text> : null}
+              />
+            </View>
+          )}
 
-            {/* Reply-to preview */}
-            {replyToMessage && (
-              <View style={styles.replyPreviewBar}>
-                <View style={styles.replyPreviewContent}>
-                  <Text style={styles.replyPreviewLabel}>Replying to {replyToMessage.senderName}</Text>
-                  <Text style={styles.replyPreviewSnippet} numberOfLines={1}>{replyToMessage.message}</Text>
-                </View>
-                <TouchableOpacity onPress={() => setReplyToMessage(null)} style={styles.replyPreviewDismiss}>
-                  <Text style={styles.replyPreviewDismissText}>×</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Tagged User Display */}
-            {taggedUser && (
-              <View style={styles.taggedUserContainer}>
-                <Text style={styles.taggedUserText}>@{taggedUser.name}</Text>
-                <TouchableOpacity onPress={removeTaggedUser} style={styles.removeTagButton}>
-                  <Text style={styles.removeTagText}>×</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <View style={styles.inputWrapper}>
-              {/* Microphone Button - Tap to start/stop recording */}
-              <TouchableOpacity
-                style={[styles.micButton, isRecording && styles.micButtonRecording]}
-                onPress={handleVoiceRecord}
-                activeOpacity={0.7}
-              >
-                <View style={styles.micIcon}>
-                  <View style={[styles.micBody, isRecording && styles.micBodyRecording]} />
-                  <View style={[styles.micStand, isRecording && styles.micStandRecording]} />
-                </View>
+          {selectedImage && (
+            <View style={styles.imagePreviewContainer}>
+              <Image source={{ uri: selectedImage }} style={styles.imagePreview} resizeMode="cover" />
+              <TouchableOpacity style={styles.removeImageButton} onPress={removeImage}>
+                <Text style={styles.removeImageText}>×</Text>
               </TouchableOpacity>
+            </View>
+          )}
 
-              {/* Recording time - shown when recording */}
-              {isRecording ? (
-                <Text
-                  style={[styles.recordingTime, { fontSize: 14 * responsiveScale, marginLeft: 8 * responsiveScale }]}
-                  numberOfLines={1}
-                >
-                  {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}
-                </Text>
-              ) : null}
+          {replyToMessage && (
+            <View style={styles.replyPreviewBar}>
+              <View style={styles.replyPreviewContent}>
+                <Text style={styles.replyPreviewLabel}>Replying to {replyToMessage.senderName}</Text>
+                <Text style={styles.replyPreviewSnippet} numberOfLines={1}>{replyToMessage.message}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setReplyToMessage(null)} style={styles.replyPreviewDismiss}>
+                <Text style={styles.replyPreviewDismissText}>×</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-              {/* Tag Button - Only show if group chat or has participants to tag */}
-              {!isRecording && (isGroup || getParticipantsForTag().length > 0) && (
-                <TouchableOpacity
-                  style={styles.tagButton}
-                  onPress={handleTagUser}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.tagButtonText}>@</Text>
-                </TouchableOpacity>
-              )}
+          <View style={styles.inputRow}>
+            {!isRecording && (isGroup || getParticipantsForTag().length > 0) && (
+              <TouchableOpacity style={styles.iconButton} onPress={handleTagUser} activeOpacity={0.7}>
+                <Ionicons name="at-outline" size={22} color={colors.text.secondary} />
+              </TouchableOpacity>
+            )}
 
-              {!isRecording && (
+            {isRecording ? (
+              <Text style={styles.recordingTime} numberOfLines={1}>
+                {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}
+              </Text>
+            ) : null}
+
+            {!isRecording && (
               <TextInput
                 style={styles.input}
-                placeholder="Type a message... (use @ to tag)"
-                placeholderTextColor="#999999"
+                placeholder="Message"
+                placeholderTextColor={colors.text.tertiary}
                 value={inputText}
                 onChangeText={handleInputChange}
-                onFocus={scrollToBottom}
+                onFocus={handleInputFocus}
                 multiline
                 maxLength={500}
                 returnKeyType="default"
@@ -634,69 +668,37 @@ export default function ChatDetailScreen() {
                 textAlignVertical={Platform.OS === 'android' ? 'center' : 'top'}
                 underlineColorAndroid="transparent"
               />
-              )}
+            )}
 
-              {/* Camera/Image Button - Hidden when recording */}
-              {!isRecording && (
-              <TouchableOpacity
-                style={styles.cameraButton}
-                onPress={showImageSourceOptions}
-                activeOpacity={0.7}
-              >
-                {/* Camera Icon - WhatsApp style */}
-                <View style={styles.cameraIcon}>
-                  <View style={styles.cameraBody} />
-                  <View style={styles.cameraLens} />
-                  <View style={styles.cameraFlash} />
-                </View>
+            {!isRecording && (
+              <TouchableOpacity style={styles.iconButton} onPress={showImageSourceOptions} activeOpacity={0.7}>
+                <Ionicons name="attach-outline" size={24} color={colors.text.secondary} />
               </TouchableOpacity>
-              )}
+            )}
 
-              <TouchableOpacity
-                style={[styles.sendButton, (!inputText.trim() && !selectedImage && !isRecording) && styles.sendButtonDisabled]}
-                onPress={isRecording ? handleVoiceRecord : handleSend}
-                disabled={!inputText.trim() && !selectedImage && !isRecording}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.sendButtonText}>{isRecording ? 'Stop' : 'Send'}</Text>
+            {!isRecording && (
+              <TouchableOpacity style={styles.iconButton} onPress={handleTakePhoto} activeOpacity={0.7}>
+                <Ionicons name="camera-outline" size={24} color={colors.text.secondary} />
               </TouchableOpacity>
-            </View>
+            )}
+
+            <TouchableOpacity
+              style={[
+                styles.sendOrMicButton,
+                (inputText.trim() || selectedImage) && styles.sendButtonActive,
+                isRecording && styles.sendButtonRecording,
+              ]}
+              onPress={isRecording ? handleVoiceRecord : (inputText.trim() || selectedImage) ? handleSend : handleVoiceRecord}
+              activeOpacity={0.7}
+            >
+              {(inputText.trim() || selectedImage) && !isRecording ? (
+                <Ionicons name="arrow-up" size={22} color={colors.text.white} />
+              ) : (
+                <Ionicons name="mic-outline" size={22} color={isRecording ? colors.text.white : colors.text.secondary} />
+              )}
+            </TouchableOpacity>
           </View>
         </View>
-
-        {/* Tag User Modal */}
-        <Modal
-          visible={showTagModal}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowTagModal(false)}
-          statusBarTranslucent={Platform.OS === 'android'}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 24) }]}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Tag someone</Text>
-                <TouchableOpacity onPress={() => setShowTagModal(false)}>
-                  <Text style={styles.modalCloseText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-              <FlatList
-                data={getParticipantsForTag()}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.participantItem}
-                    onPress={() => handleSelectTaggedUser(item.id, item.name)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.participantName}>{item.name}</Text>
-                  </TouchableOpacity>
-                )}
-                ListEmptyComponent={isGroup ? <Text style={styles.emptyTagList}>Loading members…</Text> : null}
-              />
-            </View>
-          </View>
-        </Modal>
 
         {/* Edit Group Name Modal (admin only) */}
         <Modal
@@ -716,7 +718,7 @@ export default function ChatDetailScreen() {
               <TextInput
                 style={styles.editGroupNameInput}
                 placeholder="Group name"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.text.tertiary}
                 value={editGroupName}
                 onChangeText={setEditGroupName}
                 maxLength={64}
@@ -751,7 +753,7 @@ export default function ChatDetailScreen() {
                 </TouchableOpacity>
               </View>
               <FlatList
-                data={groupParticipants}
+                data={groupParticipants.filter((p) => p.user_id !== uid)}
                 keyExtractor={(item) => item.user_id}
                 renderItem={({ item }) => (
                   <View style={styles.groupMemberRow}>
@@ -794,73 +796,73 @@ export default function ChatDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.primary,
   },
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.primary,
   },
   inputSafeArea: {
-    backgroundColor: '#FFFFFF',
-    paddingTop: 0,
-    borderTopWidth: 0,
+    backgroundColor: colors.background.tertiary,
+    paddingTop: 6,
+    paddingHorizontal: 8 * scaleX,
+    paddingBottom: 0,
   },
   messagesContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingBottom: 10,
+    backgroundColor: colors.background.secondary,
   },
   messagesContent: {
     flexGrow: 1,
+    justifyContent: 'flex-end',
   },
-  inputContainer: {
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-  },
-  inputWrapper: {
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F6FC',
-    borderRadius: 24 * scaleX,
-    paddingLeft: 16 * scaleX,
-    paddingRight: 8 * scaleX,
-    paddingTop: Platform.OS === 'android' ? 8 * scaleX : 6 * scaleX,
-    paddingBottom: Platform.OS === 'android' ? 8 * scaleX : 6 * scaleX,
-    minHeight: Platform.OS === 'android' ? 48 * scaleX : 44 * scaleX,
-    maxHeight: 120 * scaleX,
-    marginTop: Platform.OS === 'android' ? 8 * scaleX : 6 * scaleX,
+  },
+  iconButton: {
+    width: 40 * scaleX,
+    height: 40 * scaleX,
+    borderRadius: 20 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 4 * scaleX,
   },
   input: {
     flex: 1,
     minWidth: 0,
-    fontSize: 14 * scaleX,
-    fontFamily: 'Helvetica',
-    color: '#1E1E1E',
+    fontSize: 16 * scaleX,
+    color: colors.text.primary,
+    backgroundColor: colors.background.primary,
+    borderRadius: 24 * scaleX,
     maxHeight: 104 * scaleX,
-    paddingVertical: Platform.OS === 'android' ? 10 * scaleX : 8 * scaleX,
-    paddingRight: 8 * scaleX,
+    paddingVertical: 10 * scaleX,
+    paddingHorizontal: 14 * scaleX,
     textAlignVertical: Platform.OS === 'android' ? 'center' : 'top',
     ...(Platform.OS === 'android' && { includeFontPadding: false }),
   },
-  sendButton: {
-    paddingHorizontal: 16 * scaleX,
-    paddingVertical: 10 * scaleX,
-    borderRadius: 20 * scaleX,
-    backgroundColor: '#5A759D',
+  recordingTime: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 15 * scaleX,
+    color: colors.text.secondary,
+    paddingHorizontal: 8 * scaleX,
+    ...(Platform.OS === 'android' && { includeFontPadding: false }),
+  },
+  sendOrMicButton: {
+    width: 44 * scaleX,
+    height: 44 * scaleX,
+    borderRadius: 22 * scaleX,
+    backgroundColor: colors.border.medium,
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: 36 * scaleX,
-    minWidth: 60 * scaleX,
+    marginLeft: 8 * scaleX,
   },
-  sendButtonDisabled: {
-    backgroundColor: '#CCCCCC',
-    opacity: 0.5,
+  sendButtonActive: {
+    backgroundColor: colors.primary.main,
   },
-  sendButtonText: {
-    fontSize: 14 * scaleX,
-    fontWeight: '600' as any,
-    color: '#FFFFFF',
+  sendButtonRecording: {
+    backgroundColor: colors.primary.main,
   },
   dateSeparator: {
     flexDirection: 'row',
@@ -871,12 +873,12 @@ const styles = StyleSheet.create({
   dateSeparatorLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E5E5E5',
+    backgroundColor: colors.border.medium,
   },
   dateSeparatorText: {
     fontSize: 12 * scaleX,
     fontFamily: 'Helvetica',
-    color: '#999999',
+    color: colors.text.tertiary,
     marginHorizontal: 12 * scaleX,
     fontWeight: '400' as any,
   },
@@ -898,19 +900,19 @@ const styles = StyleSheet.create({
     width: 24 * scaleX,
     height: 24 * scaleX,
     borderRadius: 12 * scaleX,
-    backgroundColor: '#ff4444',
+    backgroundColor: colors.status.dirty,
     justifyContent: 'center',
     alignItems: 'center',
   },
   removeImageText: {
-    color: '#FFFFFF',
+    color: colors.text.white,
     fontSize: 16 * scaleX,
     fontWeight: 'bold' as any,
   },
   taggedUserContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E3ECF5',
+    backgroundColor: colors.background.tertiary,
     paddingHorizontal: 12 * scaleX,
     paddingVertical: 6 * scaleX,
     borderRadius: 16 * scaleX,
@@ -921,7 +923,7 @@ const styles = StyleSheet.create({
   taggedUserText: {
     fontSize: 13 * scaleX,
     fontFamily: 'Helvetica',
-    color: '#5A759D',
+    color: colors.primary.main,
     fontWeight: '600' as any,
     marginRight: 8 * scaleX,
   },
@@ -929,128 +931,14 @@ const styles = StyleSheet.create({
     width: 18 * scaleX,
     height: 18 * scaleX,
     borderRadius: 9 * scaleX,
-    backgroundColor: '#5A759D',
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
   removeTagText: {
-    color: '#FFFFFF',
+    color: colors.text.white,
     fontSize: 12 * scaleX,
     fontWeight: 'bold' as any,
-  },
-  micButton: {
-    width: 32 * scaleX,
-    height: 32 * scaleX,
-    borderRadius: 16 * scaleX,
-    backgroundColor: '#E3ECF5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8 * scaleX,
-  },
-  micButtonRecording: {
-    backgroundColor: '#ff6b6b',
-  },
-  recordingTime: {
-    flex: 1,
-    minWidth: 0,
-    fontFamily: 'Helvetica',
-    color: '#ff6b6b',
-    fontWeight: '600' as any,
-    ...(Platform.OS === 'android' && { includeFontPadding: false }),
-  },
-  micBodyRecording: {
-    borderColor: '#FFFFFF',
-  },
-  micStandRecording: {
-    borderColor: '#FFFFFF',
-  },
-  tagButton: {
-    width: 32 * scaleX,
-    height: 32 * scaleX,
-    borderRadius: 16 * scaleX,
-    backgroundColor: '#E3ECF5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8 * scaleX,
-  },
-  cameraButton: {
-    width: 32 * scaleX,
-    height: 32 * scaleX,
-    borderRadius: 16 * scaleX,
-    backgroundColor: '#E3ECF5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8 * scaleX,
-  },
-  // Camera Icon - WhatsApp style (simplified line icon)
-  cameraIcon: {
-    width: 20 * scaleX,
-    height: 16 * scaleX,
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraBody: {
-    width: 16 * scaleX,
-    height: 12 * scaleX,
-    borderWidth: 2 * scaleX,
-    borderColor: '#5A759D',
-    borderRadius: 2 * scaleX,
-  },
-  cameraLens: {
-    position: 'absolute',
-    width: 6 * scaleX,
-    height: 6 * scaleX,
-    borderRadius: 3 * scaleX,
-    borderWidth: 2 * scaleX,
-    borderColor: '#5A759D',
-    backgroundColor: 'transparent',
-  },
-  cameraFlash: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 4 * scaleX,
-    height: 3 * scaleX,
-    borderTopRightRadius: 2 * scaleX,
-    backgroundColor: '#5A759D',
-  },
-  // Microphone Icon - WhatsApp style (simplified line icon)
-  micIcon: {
-    width: 14 * scaleX,
-    height: 18 * scaleX,
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  micBody: {
-    width: 10 * scaleX,
-    height: 14 * scaleX,
-    borderRadius: 5 * scaleX,
-    borderWidth: 2 * scaleX,
-    borderColor: '#5A759D',
-    backgroundColor: 'transparent',
-  },
-  micStand: {
-    position: 'absolute',
-    bottom: -1 * scaleX,
-    left: '50%',
-    marginLeft: -4 * scaleX,
-    width: 8 * scaleX,
-    height: 3 * scaleX,
-    borderTopWidth: 2 * scaleX,
-    borderLeftWidth: 2 * scaleX,
-    borderRightWidth: 2 * scaleX,
-    borderColor: '#5A759D',
-    borderBottomWidth: 0,
-    borderTopLeftRadius: 2 * scaleX,
-    borderTopRightRadius: 2 * scaleX,
-  },
-  tagButtonText: {
-    fontSize: 16 * scaleX,
-    fontFamily: 'Helvetica',
-    color: '#5A759D',
-    fontWeight: '600' as any,
   },
   modalOverlay: {
     flex: 1,
@@ -1058,7 +946,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background.primary,
     borderTopLeftRadius: 20 * scaleX,
     borderTopRightRadius: 20 * scaleX,
     maxHeight: '60%',
@@ -1071,81 +959,121 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20 * scaleX,
     paddingVertical: 16 * scaleX,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: colors.border.medium,
   },
   modalTitle: {
     fontSize: 18 * scaleX,
     fontFamily: 'Helvetica',
     fontWeight: '600' as any,
-    color: '#1E1E1E',
+    color: colors.text.primary,
   },
   modalCloseText: {
     fontSize: 24 * scaleX,
-    color: '#999999',
+    color: colors.text.tertiary,
   },
   participantItem: {
     paddingHorizontal: 20 * scaleX,
     paddingVertical: 16 * scaleX,
     borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
+    borderBottomColor: colors.border.light,
   },
   participantName: {
     fontSize: 16 * scaleX,
     fontFamily: 'Helvetica',
-    color: '#1E1E1E',
+    color: colors.text.primary,
+  },
+  tagListPanel: {
+    maxHeight: 200,
+    backgroundColor: colors.background.primary,
+    borderTopLeftRadius: 12 * scaleX,
+    borderTopRightRadius: 12 * scaleX,
+    marginHorizontal: 8 * scaleX,
+    marginBottom: 8 * scaleX,
+    borderWidth: 1,
+    borderColor: colors.border.light,
+    overflow: 'hidden',
+  },
+  tagListScroll: {
+    maxHeight: 200,
+  },
+  tagListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10 * scaleX,
+    paddingHorizontal: 12 * scaleX,
+  },
+  tagListAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.background.tertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12 * scaleX,
+  },
+  tagListInitial: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary.main,
+  },
+  tagListName: {
+    flex: 1,
+    fontSize: 16 * scaleX,
+    fontFamily: 'Helvetica',
+    color: colors.text.primary,
   },
   emptyTagList: {
     padding: 20,
     textAlign: 'center',
-    color: '#999',
+    color: colors.text.tertiary,
   },
   replyPreviewBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F6FC',
+    backgroundColor: colors.background.tertiary,
     borderRadius: 8 * scaleX,
     paddingVertical: 8 * scaleX,
     paddingLeft: 12 * scaleX,
     paddingRight: 8 * scaleX,
     marginBottom: 8 * scaleX,
     borderLeftWidth: 3,
-    borderLeftColor: '#5A759D',
+    borderLeftColor: colors.primary.main,
   },
   replyPreviewContent: { flex: 1 },
   replyPreviewLabel: {
     fontSize: 12 * scaleX,
     fontWeight: '600',
-    color: '#5A759D',
+    color: colors.primary.main,
     marginBottom: 2,
   },
   replyPreviewSnippet: {
     fontSize: 13 * scaleX,
-    color: '#666',
+    color: colors.text.secondary,
   },
   replyPreviewDismiss: {
     padding: 4,
   },
   replyPreviewDismissText: {
     fontSize: 20,
-    color: '#999',
+    color: colors.text.tertiary,
   },
   editGroupNameInput: {
     height: 48 * scaleX,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: colors.border.medium,
     borderRadius: 8 * scaleX,
     paddingHorizontal: 12 * scaleX,
     marginHorizontal: 20 * scaleX,
     marginTop: 16 * scaleX,
     fontSize: 16,
-    color: '#1E1E1E',
+    color: colors.text.primary,
   },
   editGroupSaveBtn: {
     marginHorizontal: 20 * scaleX,
     marginTop: 20 * scaleX,
     height: 48 * scaleX,
     borderRadius: 8 * scaleX,
-    backgroundColor: '#5A759D',
+    backgroundColor: colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1155,7 +1083,7 @@ const styles = StyleSheet.create({
   editGroupSaveBtnText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.white,
   },
   groupMemberRow: {
     flexDirection: 'row',
@@ -1163,7 +1091,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20 * scaleX,
     paddingVertical: 12 * scaleX,
     borderBottomWidth: 1,
-    borderBottomColor: '#F5F5F5',
+    borderBottomColor: colors.border.light,
   },
   groupMemberAvatar: {
     width: 40 * scaleX,
@@ -1174,14 +1102,14 @@ const styles = StyleSheet.create({
     width: 40 * scaleX,
     height: 40 * scaleX,
     borderRadius: 20 * scaleX,
-    backgroundColor: '#E3ECF5',
+    backgroundColor: colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   groupMemberInitial: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#5A759D',
+    color: colors.primary.main,
   },
   groupMemberInfo: {
     flex: 1,
@@ -1190,23 +1118,23 @@ const styles = StyleSheet.create({
   groupMemberName: {
     fontSize: 16 * scaleX,
     fontFamily: 'Helvetica',
-    color: '#1E1E1E',
+    color: colors.text.primary,
   },
   groupMemberRole: {
     fontSize: 13 * scaleX,
-    color: '#666',
+    color: colors.text.secondary,
     marginTop: 2,
   },
   makeAdminBtn: {
     paddingHorizontal: 12 * scaleX,
     paddingVertical: 6 * scaleX,
     borderRadius: 6 * scaleX,
-    backgroundColor: '#5A759D',
+    backgroundColor: colors.primary.main,
   },
   makeAdminBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#fff',
+    color: colors.text.white,
   },
 });
 
