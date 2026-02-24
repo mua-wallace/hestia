@@ -12,6 +12,7 @@ import TicketsTabs from '../components/tickets/TicketsTabs';
 import TicketCard from '../components/tickets/TicketCard';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockTicketsData } from '../data/mockTicketsData';
+import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
 import { TicketTab, TicketData } from '../types/tickets.types';
 import {
@@ -40,6 +41,7 @@ export default function TicketsScreen() {
   const navigation = useNavigation<TicketsScreenNavigationProp>();
   const stackNavigation = useNavigation<StackNavigationProp>();
   const route = useRoute();
+  const { open: openAIChatOverlay } = useAIChatOverlay();
   const [activeTab, setActiveTab] = useState('Tickets');
   const [selectedTab, setSelectedTab] = useState<TicketTab>('myTickets');
   const [tickets] = useState<TicketData[]>(mockTicketsData.tickets);
@@ -63,6 +65,10 @@ export default function TicketsScreen() {
   );
 
   const handleTabPress = (tab: string) => {
+    if (tab === 'AIHome') {
+      openAIChatOverlay();
+      return;
+    }
     setActiveTab(tab); // Update immediately
     const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     if (tab === 'Home') {

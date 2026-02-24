@@ -7,6 +7,7 @@ import { colors, typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import { useAuth } from '../contexts/AuthContext';
 import { mockHomeData } from '../data/mockHomeData';
+import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
 import { useMessageModal } from '../contexts/MessageModalContext';
 import type { ReturnToTab } from '../navigation/types';
@@ -30,6 +31,7 @@ type SettingsScreenNavigationProp = NativeStackNavigationProp<MainTabsParamList,
 export default function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const route = useRoute();
+  const { open: openAIChatOverlay } = useAIChatOverlay();
   const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('Settings');
 
@@ -71,6 +73,10 @@ export default function SettingsScreen() {
   );
 
   const handleTabPress = (tab: string) => {
+    if (tab === 'AIHome') {
+      openAIChatOverlay();
+      return;
+    }
     setActiveTab(tab); // Update immediately
     const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     if (tab === 'Home' || tab === 'Rooms' || tab === 'Chat' || tab === 'Tickets' || tab === 'LostAndFound' || tab === 'Staff' || tab === 'Settings') {

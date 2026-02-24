@@ -11,6 +11,7 @@ import RegisterLostAndFoundModal from '../components/lostAndFound/RegisterLostAn
 import ItemRegisteredSuccessModal from '../components/lostAndFound/ItemRegisteredSuccessModal';
 import { mockHomeData } from '../data/mockHomeData';
 import { mockLostAndFoundData } from '../data/mockLostAndFoundData';
+import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
 import { LostAndFoundTab, LostAndFoundItem } from '../types/lostAndFound.types';
 import {
@@ -37,6 +38,7 @@ type LostAndFoundScreenNavigationProp = BottomTabNavigationProp<MainTabsParamLis
 export default function LostAndFoundScreen() {
   const navigation = useNavigation<LostAndFoundScreenNavigationProp>();
   const route = useRoute();
+  const { open: openAIChatOverlay } = useAIChatOverlay();
   const params = route.params as { openRegisterModal?: boolean } | undefined;
   const [activeTab, setActiveTab] = useState('LostAndFound');
   const [selectedTab, setSelectedTab] = useState<LostAndFoundTab>('created');
@@ -77,6 +79,10 @@ export default function LostAndFoundScreen() {
   );
 
   const handleTabPress = (tab: string) => {
+    if (tab === 'AIHome') {
+      openAIChatOverlay();
+      return;
+    }
     setActiveTab(tab); // Update immediately
     const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     if (tab === 'Home') {

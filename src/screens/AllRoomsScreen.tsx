@@ -10,6 +10,7 @@ import { type RoomStateUpdate } from '../services/dashboard';
 import { useRoomsStore } from '../store/useRoomsStore';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import { mockHomeData } from '../data/mockHomeData';
+import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
 import { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import AllRoomsHeader from '../components/allRooms/AllRoomsHeader';
@@ -58,6 +59,7 @@ type AllRoomsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, '
 
 export default function AllRoomsScreen() {
   const navigation = useNavigation<AllRoomsScreenNavigationProp>();
+  const { open: openAIChatOverlay } = useAIChatOverlay();
   const route = useRoute();
   const routeShift = (route.params as any)?.selectedShift as ShiftType | undefined;
   const initialShift = routeShift || getShiftFromTime();
@@ -514,6 +516,10 @@ export default function AllRoomsScreen() {
   );
 
   const handleTabPress = (tab: string) => {
+    if (tab === 'AIHome') {
+      openAIChatOverlay();
+      return;
+    }
     setActiveTab(tab); // Update immediately
     const currentScreen = (route.params as any)?.showBackButton ? 'Rooms' : (route.name as string);
     const returnToTab = currentScreen as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';

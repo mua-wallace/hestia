@@ -53,7 +53,7 @@ export default function TabBarItem({ icon, label, active = false, badge, onPress
             ) : null}
           </View>
         </View>
-        <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
+        {label ? <Text style={[styles.label, active && styles.labelActive]}>{label}</Text> : null}
       </View>
     </TouchableOpacity>
   );

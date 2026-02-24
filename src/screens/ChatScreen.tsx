@@ -11,6 +11,7 @@ import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import ChatHeader from '../components/chat/ChatHeader';
 import ChatItem, { ChatItemData } from '../components/chat/ChatItem';
 import NewChatMenu, { NewChatMenuOption } from '../components/chat/NewChatMenu';
+import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
 import {
   CHAT_SPACING,
@@ -40,6 +41,7 @@ type ChatScreenNavigationProp = CompositeNavigationProp<
 export default function ChatScreen() {
   const navigation = useNavigation<ChatScreenNavigationProp>();
   const route = useRoute();
+  const { open: openAIChatOverlay } = useAIChatOverlay();
   const [activeTab, setActiveTab] = useState('Chat');
   const [showNewChatMenu, setShowNewChatMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,6 +63,10 @@ export default function ChatScreen() {
   );
 
   const handleTabPress = (tab: string) => {
+    if (tab === 'AIHome') {
+      openAIChatOverlay();
+      return;
+    }
     setActiveTab(tab); // Update immediately
     const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     if (tab === 'Home') {

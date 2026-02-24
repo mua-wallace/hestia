@@ -48,7 +48,7 @@ const MAIN_TABS = [
   {
     id: 'AIHome',
     icon: require('../../../assets/icons/ai-home-icon.png'),
-    label: 'AI Home',
+    label: '', // Icon only, no label
     iconWidth: 56,
     iconHeight: 56,
   },

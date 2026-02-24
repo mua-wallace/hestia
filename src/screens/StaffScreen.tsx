@@ -12,6 +12,7 @@ import { BlurView } from 'expo-blur';
 import { colors, typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import { mockHomeData } from '../data/mockHomeData';
+import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
 import StaffHeader from '../components/staff/StaffHeader';
 import StaffTabs from '../components/staff/StaffTabs';
@@ -86,6 +87,7 @@ const mockStaffData: StaffMember[] = [
 export default function StaffScreen() {
   const navigation = useNavigation<StaffScreenNavigationProp>();
   const route = useRoute();
+  const { open: openAIChatOverlay } = useAIChatOverlay();
   const { width: SCREEN_WIDTH } = useWindowDimensions();
   const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
   
@@ -120,6 +122,10 @@ export default function StaffScreen() {
   );
 
   const handleTabPress = (tab: string) => {
+    if (tab === 'AIHome') {
+      openAIChatOverlay();
+      return;
+    }
     setActiveTab(tab); // Update immediately
     const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     if (tab === 'Home' || tab === 'Rooms' || tab === 'Chat' || tab === 'Tickets' || tab === 'LostAndFound' || tab === 'Staff' || tab === 'Settings') {

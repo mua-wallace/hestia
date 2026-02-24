@@ -17,6 +17,7 @@ import { mockHomeData } from '../data/mockHomeData';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserStore } from '../store/useUserStore';
 import { userProfileFromSession } from '../services/user';
+import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
 import { useRoomsStore } from '../store/useRoomsStore';
@@ -43,6 +44,7 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute();
+  const { open: openAIChatOverlay } = useAIChatOverlay();
   const { session } = useAuth();
   const [homeData, setHomeData] = useState(() => ({
     ...mockHomeData,
@@ -128,6 +130,10 @@ export default function HomeScreen() {
   };
 
   const handleTabPress = (tab: string) => {
+    if (tab === 'AIHome') {
+      openAIChatOverlay();
+      return;
+    }
     setActiveTab(tab); // Update immediately
     const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     // Navigate to the respective screen
