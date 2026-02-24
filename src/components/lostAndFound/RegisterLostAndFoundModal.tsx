@@ -9,9 +9,10 @@ import {
   TextInput,
   StyleSheet,
   Dimensions,
-  Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useToast } from '../../contexts/ToastContext';
+import { useMessageModal } from '../../contexts/MessageModalContext';
 import { typography } from '../../theme';
 import { REGISTER_FORM, scaleX, LOST_AND_FOUND_COLORS } from '../../constants/lostAndFoundStyles';
 import DatePickerModal from './DatePickerModal';
@@ -47,6 +48,8 @@ export default function RegisterLostAndFoundModal({
   onClose,
   onNext,
 }: RegisterLostAndFoundModalProps) {
+  const toast = useToast();
+  const messageModal = useMessageModal();
   const [selectedLocation, setSelectedLocation] = useState<'room' | 'publicArea'>('room');
   // Default to current date and time
   const getCurrentDateTime = () => {
@@ -127,23 +130,22 @@ export default function RegisterLostAndFoundModal({
   const handleAddPicture = async () => {
     setShowPictureError(false); // Clear error when user tries to add picture
     try {
-      // Show action sheet to choose camera or gallery
-      Alert.alert(
-        'Add Picture',
-        'Choose an option',
-        [
+      messageModal.show({
+        title: 'Add Picture',
+        message: 'Choose an option',
+        buttons: [
           {
             text: 'Camera',
             onPress: async () => {
               try {
                 const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
                 if (cameraStatus.status !== 'granted') {
-                  Alert.alert('Permission needed', 'We need camera permissions to take photos.');
+                  toast.show('We need camera permissions to take photos.', { type: 'error', title: 'Permission needed' });
                   return;
                 }
                 const result = await ImagePicker.launchCameraAsync({
                   mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                  allowsEditing: false, // No cropping - use full picture
+                  allowsEditing: false,
                   quality: 0.8,
                 });
                 if (!result.canceled && result.assets && result.assets[0]) {
@@ -151,7 +153,7 @@ export default function RegisterLostAndFoundModal({
                 }
               } catch (error) {
                 console.error('Camera error:', error);
-                Alert.alert('Error', 'Failed to open camera. Please try again.');
+                toast.show('Failed to open camera. Please try again.', { type: 'error', title: 'Error' });
               }
             },
           },
@@ -161,12 +163,12 @@ export default function RegisterLostAndFoundModal({
               try {
                 const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                 if (status !== 'granted') {
-                  Alert.alert('Permission needed', 'We need camera roll permissions to add pictures.');
+                  toast.show('We need camera roll permissions to add pictures.', { type: 'error', title: 'Permission needed' });
                   return;
                 }
                 const result = await ImagePicker.launchImageLibraryAsync({
                   mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                  allowsEditing: false, // No cropping - use full picture
+                  allowsEditing: false,
                   quality: 0.8,
                 });
                 if (!result.canceled && result.assets && result.assets[0]) {
@@ -174,17 +176,14 @@ export default function RegisterLostAndFoundModal({
                 }
               } catch (error) {
                 console.error('Gallery error:', error);
-                Alert.alert('Error', 'Failed to open gallery. Please try again.');
+                toast.show('Failed to open gallery. Please try again.', { type: 'error', title: 'Error' });
               }
             },
           },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
+          { text: 'Cancel', style: 'cancel' },
         ],
-        { cancelable: true }
-      );
+        cancelable: true,
+      });
     } catch (error) {
       console.error('Error showing picture options:', error);
     }
@@ -192,23 +191,18 @@ export default function RegisterLostAndFoundModal({
 
   // Handle removing a picture
   const handleRemovePicture = (index: number) => {
-    Alert.alert(
-      'Remove Picture',
-      'Are you sure you want to remove this picture?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+    messageModal.show({
+      title: 'Remove Picture',
+      message: 'Are you sure you want to remove this picture?',
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: () => {
-            setPictures(pictures.filter((_, i) => i !== index));
-          },
+          onPress: () => setPictures(pictures.filter((_, i) => i !== index)),
         },
-      ]
-    );
+      ],
+    });
   };
   
   // Refs for measuring input field positions

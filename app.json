@@ -16,7 +16,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.hestia.app",
       "icon": "./assets/app/icon.png",
-      "backgroundColor": "#e4eefe",
+      "backgroundColor": "#000000",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
@@ -8,6 +8,7 @@ import BottomTabBar from '../components/navigation/BottomTabBar';
 import { useAuth } from '../contexts/AuthContext';
 import { mockHomeData } from '../data/mockHomeData';
 import { useChatStore } from '../store/useChatStore';
+import { useMessageModal } from '../contexts/MessageModalContext';
 import type { ReturnToTab } from '../navigation/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -32,11 +33,12 @@ export default function SettingsScreen() {
   const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState('Settings');
 
+  const messageModal = useMessageModal();
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
+    messageModal.show({
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out?',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign Out',
@@ -47,8 +49,8 @@ export default function SettingsScreen() {
             rootNav?.reset({ index: 0, routes: [{ name: 'Login' }] });
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   // Sync activeTab with current route

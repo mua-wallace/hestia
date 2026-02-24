@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { useToast } from '../../contexts/ToastContext';
 import { typography } from '../../theme';
 import {
   LOST_AND_FOUND_CARD,
@@ -23,6 +24,7 @@ interface LostAndFoundItemCardProps {
 }
 
 export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: LostAndFoundItemCardProps) {
+  const toast = useToast();
   const statusConfig = item.status === 'shipped'
     ? LOST_AND_FOUND_STATUS.shipped
     : LOST_AND_FOUND_STATUS.stored;
@@ -33,10 +35,10 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
   const handleCopyId = async () => {
     try {
       await Clipboard.setStringAsync(item.itemId);
-      Alert.alert('Copied', `Item ID "${item.itemId}" copied to clipboard`);
+      toast.show(`Item ID "${item.itemId}" copied to clipboard`, { type: 'success', title: 'Copied' });
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
-      Alert.alert('Error', 'Failed to copy item ID');
+      toast.show('Failed to copy item ID', { type: 'error', title: 'Error' });
     }
   };
 

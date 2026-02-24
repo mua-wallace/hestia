@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   Dimensions,
   ScrollView,
@@ -21,6 +20,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { colors, typography, components } from '../theme';
 import { getInitialsFromFullName } from '../utils/formatting';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { useMessageModal } from '../contexts/MessageModalContext';
 import { useUserStore } from '../store/useUserStore';
 import { isSupabaseConfigured } from '../lib/supabase';
 import type { UserProfile } from '../types/home.types';
@@ -46,11 +47,13 @@ export default function UserProfileScreen() {
   }, [initialUser, setProfile]);
   const user = profile ?? initialUser ?? DEFAULT_USER;
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+  const toast = useToast();
+  const messageModal = useMessageModal();
 
   const handleChangeAvatar = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please allow access to your photo library to change your avatar.');
+      toast.show('Please allow access to your photo library to change your avatar.', { type: 'error', title: 'Permission required' });
       return;
     }
 
@@ -65,7 +68,7 @@ export default function UserProfileScreen() {
 
     const userId = session?.user?.id;
     if (!userId || !isSupabaseConfigured) {
-      Alert.alert('Update unavailable', 'Profile update requires an active session and backend.');
+      toast.show('Profile update requires an active session and backend.', { type: 'error', title: 'Update unavailable' });
       return;
     }
 
@@ -77,9 +80,9 @@ export default function UserProfileScreen() {
       await updateAvatarUrl(userId, base64, fileExt);
     } catch (err: unknown) {
       console.error('[UserProfile] Avatar update failed:', err);
-      Alert.alert(
-        'Update failed',
-        (err instanceof Error ? err.message : null) || 'Could not update avatar. Ensure the avatars storage bucket exists and has correct policies.'
+      toast.show(
+        (err instanceof Error ? err.message : null) || 'Could not update avatar. Ensure the avatars storage bucket exists and has correct policies.',
+        { type: 'error', title: 'Update failed' }
       );
     } finally {
       setIsUpdatingAvatar(false);
@@ -87,10 +90,10 @@ export default function UserProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
+    messageModal.show({
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out?',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign Out',
@@ -100,8 +103,8 @@ export default function UserProfileScreen() {
             (navigation as any).reset?.({ index: 0, routes: [{ name: 'Login' }] });
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   const handleBack = () => {

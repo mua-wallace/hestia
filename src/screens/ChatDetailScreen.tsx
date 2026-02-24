@@ -10,7 +10,6 @@ import {
   Platform,
   Text,
   Image,
-  Alert,
   Modal,
   FlatList,
   useWindowDimensions,
@@ -49,6 +48,8 @@ import {
 } from '../services/chat';
 import * as DocumentPicker from 'expo-document-picker';
 import { useChatStore } from '../store/useChatStore';
+import { useToast } from '../contexts/ToastContext';
+import { useMessageModal } from '../contexts/MessageModalContext';
 import { Ionicons } from '@expo/vector-icons';
 
 type ChatDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatDetail'>;
@@ -78,6 +79,8 @@ export default function ChatDetailScreen() {
 
   const { messagesByChatId, loadMessages, appendMessage, sendMessage: sendMessageToStore, removeChat, updateChatName, clearMessages } = useChatStore();
   const messages = messagesByChatId[chatId] ?? [];
+  const toast = useToast();
+  const messageModal = useMessageModal();
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(audioRecorder);
@@ -228,13 +231,14 @@ export default function ChatDetailScreen() {
         console.warn('Send failed', e);
         const message = e instanceof Error ? e.message : 'Could not send. Try again.';
         if (message.includes('Bucket not found') || message.includes('bucket')) {
-          Alert.alert(
-            'Storage not set up',
-            'Create a storage bucket named "chat-attachments" in your Supabase project (Dashboard → Storage → New bucket), then try again.',
-            [{ text: 'OK' }]
-          );
+          messageModal.show({
+            title: 'Storage not set up',
+            message:
+              'Create a storage bucket named "chat-attachments" in your Supabase project (Dashboard → Storage → New bucket), then try again.',
+            buttons: [{ text: 'OK' }],
+          });
         } else {
-          Alert.alert('Send failed', message);
+          toast.show(message, { type: 'error', title: 'Send failed' });
         }
       }
       return;
@@ -249,16 +253,15 @@ export default function ChatDetailScreen() {
 
   /** Camera icon: show Camera vs Choose from Library */
   const showPhotoOptions = () => {
-    Alert.alert(
-      'Photo',
-      undefined,
-      [
+    messageModal.show({
+      title: 'Photo',
+      buttons: [
         { text: 'Camera', onPress: handleTakePhoto },
         { text: 'Choose from Library', onPress: handlePickFromLibrary },
-        { text: 'Cancel', style: 'cancel' as const },
+        { text: 'Cancel', style: 'cancel' },
       ],
-      { cancelable: true }
-    );
+      cancelable: true,
+    });
   };
 
   const handlePickFile = async () => {
@@ -272,7 +275,7 @@ export default function ChatDetailScreen() {
       setSelectedFile({ uri: asset.uri, name: asset.name ?? 'file' });
     } catch (error) {
       console.error('Error picking file:', error);
-      Alert.alert('Error', 'Failed to pick file. Please try again.');
+      toast.show('Failed to pick file. Please try again.', { type: 'error', title: 'Error' });
     }
   };
 
@@ -280,7 +283,7 @@ export default function ChatDetailScreen() {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant camera permissions to take photos.');
+        toast.show('Please grant camera permissions to take photos.', { type: 'error', title: 'Permission needed' });
         return;
       }
 
@@ -295,7 +298,7 @@ export default function ChatDetailScreen() {
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      toast.show('Failed to take photo. Please try again.', { type: 'error', title: 'Error' });
     }
   };
 
@@ -303,7 +306,7 @@ export default function ChatDetailScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant camera roll permissions to upload images.');
+        toast.show('Please grant camera roll permissions to upload images.', { type: 'error', title: 'Permission needed' });
         return;
       }
 
@@ -318,7 +321,7 @@ export default function ChatDetailScreen() {
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
+      toast.show('Failed to pick image. Please try again.', { type: 'error', title: 'Error' });
     }
   };
 
@@ -350,11 +353,11 @@ export default function ChatDetailScreen() {
           setTaggedUser(null);
           scrollToBottom();
         } else {
-          Alert.alert('Recording too short', 'Please record for at least 1 second.');
+          toast.show('Please record for at least 1 second.', { type: 'error', title: 'Recording too short' });
         }
       } catch (error) {
         console.error('Error stopping recording:', error);
-        Alert.alert('Error', 'Failed to save voice message. Please try again.');
+        toast.show('Failed to save voice message. Please try again.', { type: 'error', title: 'Error' });
       }
       return;
     }
@@ -363,7 +366,7 @@ export default function ChatDetailScreen() {
     try {
       const { granted } = await requestRecordingPermissionsAsync();
       if (!granted) {
-        Alert.alert('Permission needed', 'Please grant microphone permissions to record voice messages.');
+        toast.show('Please grant microphone permissions to record voice messages.', { type: 'error', title: 'Permission needed' });
         return;
       }
 
@@ -376,7 +379,7 @@ export default function ChatDetailScreen() {
       audioRecorder.record();
     } catch (error) {
       console.error('Error starting recording:', error);
-      Alert.alert('Error', 'Failed to start recording. Please try again.');
+      toast.show('Failed to start recording. Please try again.', { type: 'error', title: 'Error' });
     }
   };
 
@@ -451,7 +454,7 @@ export default function ChatDetailScreen() {
   };
 
   const handleGroupOptionsPress = () => {
-    const options: Parameters<typeof Alert.alert>[2] = [
+    const buttons: { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }[] = [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Edit group name',
@@ -470,14 +473,14 @@ export default function ChatDetailScreen() {
       },
     ];
     if (isGroupCreator) {
-      options.push({
+      buttons.push({
         text: 'Delete group',
         style: 'destructive',
         onPress: () => {
-          Alert.alert(
-            'Delete group?',
-            'This will permanently delete the group and all messages. This cannot be undone.',
-            [
+          messageModal.show({
+            title: 'Delete group?',
+            message: 'This will permanently delete the group and all messages. This cannot be undone.',
+            buttons: [
               { text: 'Cancel', style: 'cancel' },
               {
                 text: 'Delete',
@@ -489,16 +492,16 @@ export default function ChatDetailScreen() {
                     clearMessages(chatId);
                     navigation.goBack();
                   } else {
-                    Alert.alert('Error', 'Could not delete the group.');
+                    toast.show('Could not delete the group.', { type: 'error', title: 'Error' });
                   }
                 },
               },
-            ]
-          );
+            ],
+          });
         },
       });
     }
-    Alert.alert('Group options', undefined, options);
+    messageModal.show({ title: 'Group options', buttons, cancelable: true });
   };
 
   const handleMakeAdmin = async (participantUserId: string) => {
@@ -507,7 +510,7 @@ export default function ChatDetailScreen() {
       const participants = await getGroupParticipants(chatId);
       setGroupParticipants(participants);
     } else {
-      Alert.alert('Error', 'Could not make admin.');
+      toast.show('Could not make admin.', { type: 'error', title: 'Error' });
     }
   };
 
@@ -520,7 +523,7 @@ export default function ChatDetailScreen() {
       setFetchedChat((prev) => (prev ? { ...prev, name } : null));
       setShowEditGroupModal(false);
     } else {
-      Alert.alert('Error', 'Could not update group name.');
+      toast.show('Could not update group name.', { type: 'error', title: 'Error' });
     }
   };
 

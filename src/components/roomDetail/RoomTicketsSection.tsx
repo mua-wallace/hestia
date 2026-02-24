@@ -8,10 +8,11 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
-  Alert,
   Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useToast } from '../../contexts/ToastContext';
+import { useMessageModal } from '../../contexts/MessageModalContext';
 import { typography } from '../../theme';
 import { CONTENT_AREA, scaleX } from '../../constants/roomDetailStyles';
 import TicketCard from '../tickets/TicketCard';
@@ -77,6 +78,8 @@ export default function RoomTicketsSection({
   roomNumber,
   onSubmit,
 }: RoomTicketsSectionProps) {
+  const toast = useToast();
+  const messageModal = useMessageModal();
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentId>('engineering');
   const [issue, setIssue] = useState('');
   const [location, setLocation] = useState(roomNumber);
@@ -121,17 +124,17 @@ export default function RoomTicketsSection({
 
   const handleAddPicture = async () => {
     try {
-      Alert.alert(
-        'Add Picture',
-        'Choose an option',
-        [
+      messageModal.show({
+        title: 'Add Picture',
+        message: 'Choose an option',
+        buttons: [
           {
             text: 'Camera',
             onPress: async () => {
               try {
                 const { status } = await ImagePicker.requestCameraPermissionsAsync();
                 if (status !== 'granted') {
-                  Alert.alert('Permission needed', 'We need camera permissions to take pictures.');
+                  toast.show('We need camera permissions to take pictures.', { type: 'error', title: 'Permission needed' });
                   return;
                 }
                 const result = await ImagePicker.launchCameraAsync({
@@ -144,7 +147,7 @@ export default function RoomTicketsSection({
                 }
               } catch (error) {
                 console.error('Camera error:', error);
-                Alert.alert('Error', 'Failed to open camera. Please try again.');
+                toast.show('Failed to open camera. Please try again.', { type: 'error', title: 'Error' });
               }
             },
           },
@@ -154,7 +157,7 @@ export default function RoomTicketsSection({
               try {
                 const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                 if (status !== 'granted') {
-                  Alert.alert('Permission needed', 'We need camera roll permissions to add pictures.');
+                  toast.show('We need camera roll permissions to add pictures.', { type: 'error', title: 'Permission needed' });
                   return;
                 }
                 const result = await ImagePicker.launchImageLibraryAsync({
@@ -167,20 +170,17 @@ export default function RoomTicketsSection({
                 }
               } catch (error) {
                 console.error('Gallery error:', error);
-                Alert.alert('Error', 'Failed to open gallery. Please try again.');
+                toast.show('Failed to open gallery. Please try again.', { type: 'error', title: 'Error' });
               }
             },
           },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
+          { text: 'Cancel', style: 'cancel' },
         ],
-        { cancelable: true }
-      );
+        cancelable: true,
+      });
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to open image picker. Please try again.');
+      toast.show('Failed to open image picker. Please try again.', { type: 'error', title: 'Error' });
     }
   };
 

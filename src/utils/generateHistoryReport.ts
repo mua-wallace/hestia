@@ -1,7 +1,8 @@
 import * as Print from 'expo-print';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
+import { getMessageModal, getToast } from './toast';
 import type { HistoryEvent, HistoryGroup } from '../types/roomDetail.types';
 
 interface GenerateReportOptions {
@@ -47,10 +48,10 @@ export async function generateHistoryReport({
     });
 
     // Show options to user: Download to Device or Share
-    Alert.alert(
-      'Download Report',
-      'Choose how you want to save the report:',
-      [
+    getMessageModal()?.show({
+      title: 'Download Report',
+      message: 'Choose how you want to save the report:',
+      buttons: [
         {
           text: 'Download to Device',
           onPress: async () => {
@@ -58,7 +59,7 @@ export async function generateHistoryReport({
               await downloadToDevice(documentsUri, filename, roomNumber);
             } catch (error) {
               console.error('Error downloading to device:', error);
-              Alert.alert('Error', 'Failed to download to device. Please try sharing instead.');
+              getToast()?.show('Failed to download to device. Please try sharing instead.', { type: 'error', title: 'Error' });
             }
           },
         },
@@ -72,21 +73,18 @@ export async function generateHistoryReport({
                   dialogTitle: `Room ${roomNumber} History Report`,
                 });
               } else {
-                Alert.alert('Sharing not available', 'Sharing is not available on this device.');
+                getToast()?.show('Sharing is not available on this device.', { type: 'error', title: 'Sharing not available' });
               }
             } catch (error) {
               console.error('Error sharing:', error);
-              Alert.alert('Error', 'Failed to share report. Please try again.');
+              getToast()?.show('Failed to share report. Please try again.', { type: 'error', title: 'Error' });
             }
           },
         },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
       ],
-      { cancelable: true }
-    );
+      cancelable: true,
+    });
   } catch (error) {
     console.error('Error generating PDF report:', error);
     throw error;
@@ -112,11 +110,11 @@ async function downloadToDevice(
           const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
           
           if (!permissions.granted) {
-            Alert.alert(
-              'Permission Required',
-              'Storage permission is required to save the file to Downloads.',
-              [{ text: 'OK' }]
-            );
+            getMessageModal()?.show({
+              title: 'Permission Required',
+              message: 'Storage permission is required to save the file to Downloads.',
+              buttons: [{ text: 'OK' }],
+            });
             return;
           }
 
@@ -137,44 +135,40 @@ async function downloadToDevice(
             encoding: FileSystem.EncodingType.Base64,
           });
 
-          Alert.alert(
-            'Download Complete',
-            `Report saved to Downloads folder as "${filename}"`,
-            [{ text: 'OK' }]
-          );
+          getMessageModal()?.show({
+            title: 'Download Complete',
+            message: `Report saved to Downloads folder as "${filename}"`,
+            buttons: [{ text: 'OK' }],
+          });
         } else {
-          // StorageAccessFramework not available, file is already saved
-          Alert.alert(
-            'Download Complete',
-            `Report saved to device storage as "${filename}".\n\nThe file has been saved to your device and you can access it through your file manager.`,
-            [{ text: 'OK' }]
-          );
+          getMessageModal()?.show({
+            title: 'Download Complete',
+            message: `Report saved to device storage as "${filename}".\n\nThe file has been saved to your device and you can access it through your file manager.`,
+            buttons: [{ text: 'OK' }],
+          });
         }
       } catch (error) {
         console.error('Error saving to Downloads:', error);
-        // Fallback: file is already saved in documents directory
-        Alert.alert(
-          'Download Complete',
-          `Report saved to device storage as "${filename}".\n\nThe file has been saved and you can access it through your device's file manager.`,
-          [{ text: 'OK' }]
-        );
+        getMessageModal()?.show({
+          title: 'Download Complete',
+          message: `Report saved to device storage as "${filename}".\n\nThe file has been saved and you can access it through your device's file manager.`,
+          buttons: [{ text: 'OK' }],
+        });
       }
     } else {
-      // For iOS, files are saved to app's document directory
-      // The file is already in the document directory, so we just confirm
-      Alert.alert(
-        'Download Complete',
-        `Report saved to device as "${filename}".\n\nYou can access it through the Files app or share it using the Share option.`,
-        [{ text: 'OK' }]
-      );
+      getMessageModal()?.show({
+        title: 'Download Complete',
+        message: `Report saved to device as "${filename}".\n\nYou can access it through the Files app or share it using the Share option.`,
+        buttons: [{ text: 'OK' }],
+      });
     }
   } catch (error) {
     console.error('Error in downloadToDevice:', error);
-    Alert.alert(
-      'Download Complete',
-      `Report saved to device storage as "${filename}".\n\nThe file has been saved and you can access it through your device's file manager.`,
-      [{ text: 'OK' }]
-    );
+    getMessageModal()?.show({
+      title: 'Download Complete',
+      message: `Report saved to device storage as "${filename}".\n\nThe file has been saved and you can access it through your device's file manager.`,
+      buttons: [{ text: 'OK' }],
+    });
   }
 }
 

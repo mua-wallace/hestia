@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { useToast } from '../../contexts/ToastContext';
 import { typography } from '../../theme';
 import { CHECKLIST_SECTION, scaleX } from '../../constants/checklistStyles';
 import { CONTENT_AREA } from '../../constants/roomDetailStyles';
@@ -28,6 +29,7 @@ export default function ChecklistSection({
   onCancel,
   initialData,
 }: ChecklistSectionProps) {
+  const toast = useToast();
   // Get current user (in real app, get from auth context)
   const currentUser = mockStaffData[0]; // Default to first staff member
 
@@ -95,7 +97,7 @@ export default function ChecklistSection({
       });
     } catch (error) {
       console.error('Error downloading checklist report:', error);
-      Alert.alert('Error', 'Failed to generate report. Please try again.');
+      toast.show('Failed to generate report. Please try again.', { type: 'error', title: 'Error' });
     } finally {
       setIsGeneratingReport(false);
     }

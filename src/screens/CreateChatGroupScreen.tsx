@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
   Image,
   TextInput,
-  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,6 +20,7 @@ import type { RootStackParamList } from '../navigation/types';
 import type { User } from '../types';
 import { getUsers } from '../services/user';
 import { createGroupChat, getCurrentUserId } from '../services/chat';
+import { useToast } from '../contexts/ToastContext';
 import { colors } from '../theme';
 import { scaleX } from '../constants/chatStyles';
 
@@ -28,6 +28,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList, 'CreateChatGroup'>;
 
 export default function CreateChatGroupScreen() {
   const navigation = useNavigation<Nav>();
+  const toast = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,11 +87,11 @@ export default function CreateChatGroupScreen() {
           },
         });
       } else {
-        Alert.alert('Could not create group', 'Please try again. If it keeps failing, check your connection.');
+        toast.show('Please try again. If it keeps failing, check your connection.', { type: 'error', title: 'Could not create group' });
       }
     } catch (e) {
       console.warn('Failed to create group', e);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      toast.show('Something went wrong. Please try again.', { type: 'error', title: 'Error' });
     } finally {
       setCreating(false);
     }

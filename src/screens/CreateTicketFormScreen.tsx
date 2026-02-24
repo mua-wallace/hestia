@@ -8,12 +8,13 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
-  Alert,
   Platform,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import { useToast } from '../contexts/ToastContext';
+import { useMessageModal } from '../contexts/MessageModalContext';
 import { typography } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -72,6 +73,8 @@ export default function CreateTicketFormScreen() {
   const navigation = useNavigation<CreateTicketFormScreenNavigationProp>();
   const route = useRoute<CreateTicketFormScreenRouteProp>();
   const departmentId = route.params?.departmentId || 'engineering';
+  const toast = useToast();
+  const messageModal = useMessageModal();
 
   const [issue, setIssue] = useState('');
   const [location, setLocation] = useState('');
@@ -109,23 +112,22 @@ export default function CreateTicketFormScreen() {
 
   const handleAddPicture = async () => {
     try {
-      // Show action sheet to choose camera or gallery
-      Alert.alert(
-        'Add Picture',
-        'Choose an option',
-        [
+      messageModal.show({
+        title: 'Add Picture',
+        message: 'Choose an option',
+        buttons: [
           {
             text: 'Camera',
             onPress: async () => {
               try {
                 const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
                 if (cameraStatus.status !== 'granted') {
-                  Alert.alert('Permission needed', 'We need camera permissions to take photos.');
+                  toast.show('We need camera permissions to take photos.', { type: 'error', title: 'Permission needed' });
                   return;
                 }
                 const result = await ImagePicker.launchCameraAsync({
                   mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                  allowsEditing: false, // No cropping - use full picture
+                  allowsEditing: false,
                   quality: 0.8,
                 });
                 if (!result.canceled && result.assets && result.assets[0]) {
@@ -133,7 +135,7 @@ export default function CreateTicketFormScreen() {
                 }
               } catch (error) {
                 console.error('Camera error:', error);
-                Alert.alert('Error', 'Failed to open camera. Please try again.');
+                toast.show('Failed to open camera. Please try again.', { type: 'error', title: 'Error' });
               }
             },
           },
@@ -143,12 +145,12 @@ export default function CreateTicketFormScreen() {
               try {
                 const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                 if (status !== 'granted') {
-                  Alert.alert('Permission needed', 'We need camera roll permissions to add pictures.');
+                  toast.show('We need camera roll permissions to add pictures.', { type: 'error', title: 'Permission needed' });
                   return;
                 }
                 const result = await ImagePicker.launchImageLibraryAsync({
                   mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                  allowsEditing: false, // No cropping - use full picture
+                  allowsEditing: false,
                   quality: 0.8,
                 });
                 if (!result.canceled && result.assets && result.assets[0]) {
@@ -156,20 +158,17 @@ export default function CreateTicketFormScreen() {
                 }
               } catch (error) {
                 console.error('Gallery error:', error);
-                Alert.alert('Error', 'Failed to open gallery. Please try again.');
+                toast.show('Failed to open gallery. Please try again.', { type: 'error', title: 'Error' });
               }
             },
           },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
+          { text: 'Cancel', style: 'cancel' },
         ],
-        { cancelable: true }
-      );
+        cancelable: true,
+      });
     } catch (error) {
       console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to open image picker. Please try again.');
+      toast.show('Failed to open image picker. Please try again.', { type: 'error', title: 'Error' });
     }
   };
 
