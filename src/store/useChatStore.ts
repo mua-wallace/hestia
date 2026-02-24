@@ -24,7 +24,7 @@ interface ChatState {
   /** Load messages for a chat from API and optionally subscribe to realtime */
   loadMessages: (chatId: string) => Promise<ChatMessage[]>;
   /** Send a message (optionally with tag/reply); appends to list */
-  sendMessage: (chatId: string, content: string, type?: 'text' | 'image', options?: SendMessageOptions) => Promise<ChatMessage | null>;
+  sendMessage: (chatId: string, content: string, type?: 'text' | 'image' | 'file', options?: SendMessageOptions) => Promise<ChatMessage | null>;
   /** Clear messages for a chat (e.g. on unmount to free memory, or keep for cache) */
   clearMessages: (chatId: string) => void;
   /** Remove a chat from the list (e.g. after delete) */
@@ -81,7 +81,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  sendMessage: async (chatId: string, content: string, type: 'text' | 'image' = 'text', options?: SendMessageOptions) => {
+  sendMessage: async (chatId: string, content: string, type: 'text' | 'image' | 'file' = 'text', options?: SendMessageOptions) => {
     try {
       const msg = await sendMessageApi(chatId, content, type, options);
       if (msg) get().appendMessage(chatId, msg);

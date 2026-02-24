@@ -100,12 +100,30 @@ export const authService = {
         error,
       } = await Promise.race([sessionPromise, timeoutPromise]);
       if (error) {
-        console.error('[Auth] getSession error:', error.message);
+        const msg = error.message ?? '';
+        const isInvalidRefreshToken =
+          /refresh token not found|invalid refresh token/i.test(msg);
+        if (isInvalidRefreshToken) {
+          await supabase.auth.signOut();
+        }
+        if (!isInvalidRefreshToken) {
+          console.error('[Auth] getSession error:', error.message);
+        }
         return null;
       }
       return session;
     } catch (err) {
-      console.error('[Auth] getSession error:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      const isInvalidRefreshToken =
+        /refresh token not found|invalid refresh token/i.test(message);
+      if (isInvalidRefreshToken) {
+        try {
+          await supabase.auth.signOut();
+        } catch (_) {}
+      }
+      if (!isInvalidRefreshToken) {
+        console.error('[Auth] getSession error:', err);
+      }
       return null;
     }
   },

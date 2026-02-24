@@ -61,10 +61,12 @@ export interface ChatMessage {
   senderName: string;
   message: string;
   timestamp: string;
-  type?: 'text' | 'image' | 'voice';
+  type?: 'text' | 'image' | 'voice' | 'file';
   imageUri?: string;
   voiceUri?: string;
   voiceDuration?: number; // Duration in seconds
+  fileUri?: string;
+  fileName?: string;
   taggedUserId?: string;
   taggedUserName?: string;
   /** When set, this message is a reply to another message */

@@ -1,14 +1,18 @@
 /**
  * Chat service (Supabase)
  * Real-time chat: list chats, load messages, send message, subscribe to new messages.
+ * Uploads images and files to Supabase Storage (bucket: chat-attachments).
  */
 
-import { supabase } from '../lib/supabase';
+import * as FileSystem from 'expo-file-system/legacy';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { ChatMessage } from '../types';
 import type { ChatItemData } from '../components/chat/ChatItem';
+import { base64ToArrayBuffer } from '../utils/encoding';
 
 const MESSAGE_TYPE = 'text'; // DB: text, image, system
+export const CHAT_ATTACHMENTS_BUCKET = 'chat-attachments';
 
 type MessageRow = {
   id: string;
@@ -36,6 +40,17 @@ function isValidUUID(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 }
 
+/** Content for file messages: "fileName|publicUrl" */
+export function formatFileContent(fileName: string, publicUrl: string): string {
+  return `${fileName}|${publicUrl}`;
+}
+
+export function parseFileContent(content: string | null): { fileName: string; fileUri: string } | null {
+  if (!content || !content.includes('|')) return null;
+  const i = content.indexOf('|');
+  return { fileName: content.slice(0, i), fileUri: content.slice(i + 1) };
+}
+
 function mapMessageRow(
   row: MessageRow,
   currentUserId: string,
@@ -47,18 +62,32 @@ function mapMessageRow(
       ? { id: row.reply_to_id, senderName: replyMap.get(row.reply_to_id)!.senderName, message: replyMap.get(row.reply_to_id)!.message }
       : undefined;
   const taggedUserName = row.tagged_user_id && taggedNameMap?.get(row.tagged_user_id) ? taggedNameMap.get(row.tagged_user_id) : undefined;
-  return {
+  const type = (row.type === 'image' ? 'image' : row.type === 'voice' ? 'voice' : row.type === 'file' ? 'file' : 'text') as ChatMessage['type'];
+  const msg: ChatMessage = {
     id: row.id,
     chatId: row.chat_id,
     senderId: row.sender_id,
     senderName: row.sender_id === currentUserId ? 'You' : (row.users?.full_name ?? 'Unknown'),
     message: row.content ?? '',
     timestamp: row.created_at ?? new Date().toISOString(),
-    type: (row.type === 'image' ? 'image' : row.type === 'voice' ? 'voice' : 'text') as ChatMessage['type'],
+    type,
     ...(row.tagged_user_id && { taggedUserId: row.tagged_user_id }),
     ...(taggedUserName && { taggedUserName }),
     ...(replyTo && { replyTo }),
   };
+  if (type === 'image' && row.content) {
+    msg.imageUri = row.content;
+    msg.message = '📷 Image';
+  }
+  if (type === 'file' && row.content) {
+    const parsed = parseFileContent(row.content);
+    if (parsed) {
+      msg.fileUri = parsed.fileUri;
+      msg.fileName = parsed.fileName;
+      msg.message = `📎 ${parsed.fileName}`;
+    }
+  }
+  return msg;
 }
 
 /**
@@ -67,6 +96,49 @@ function mapMessageRow(
 export async function getCurrentUserId(): Promise<string | null> {
   const { data } = await supabase.auth.getSession();
   return data?.session?.user?.id ?? null;
+}
+
+export type UploadChatAttachmentOptions = {
+  type: 'image' | 'file';
+  fileName?: string;
+  mimeType?: string;
+};
+
+/**
+ * Upload an image or file from a local URI to chat-attachments bucket.
+ * Returns the public URL. Caller should then send a message with that URL.
+ */
+export async function uploadChatAttachment(
+  localUri: string,
+  options: UploadChatAttachmentOptions
+): Promise<{ url: string }> {
+  if (!isSupabaseConfigured) throw new Error('Supabase not configured');
+  const userId = await getCurrentUserId();
+  if (!userId) throw new Error('Not authenticated');
+
+  // content:// and ph:// URIs (e.g. from Android picker) must be copied to cache before reading
+  let uriToRead = localUri;
+  if (!localUri.startsWith('file://')) {
+    const ext = options.type === 'image' ? 'jpg' : (options.fileName?.includes('.') ? options.fileName.replace(/^.*\./, '') : 'bin');
+    const tempPath = `${FileSystem.cacheDirectory}chat_upload_${Date.now()}.${ext}`;
+    await FileSystem.copyAsync({ from: localUri, to: tempPath });
+    uriToRead = tempPath;
+  }
+
+  const base64 = await FileSystem.readAsStringAsync(uriToRead, { encoding: FileSystem.EncodingType.Base64 });
+  const arrayBuffer = base64ToArrayBuffer(base64);
+  const ext = options.fileName?.includes('.') ? options.fileName.replace(/^.*\./, '') : (options.type === 'image' ? 'jpg' : 'bin');
+  const safeName = (options.fileName || `attachment.${ext}`).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `${userId}/${Date.now()}_${safeName}`;
+  const mimeType = options.mimeType ?? (options.type === 'image' ? `image/${ext === 'jpg' ? 'jpeg' : ext}` : 'application/octet-stream');
+
+  const { error } = await supabase.storage
+    .from(CHAT_ATTACHMENTS_BUCKET)
+    .upload(path, arrayBuffer, { contentType: mimeType, upsert: false });
+
+  if (error) throw error;
+  const { data: urlData } = supabase.storage.from(CHAT_ATTACHMENTS_BUCKET).getPublicUrl(path);
+  return { url: urlData.publicUrl };
 }
 
 /**
@@ -337,22 +409,26 @@ export type SendMessageOptions = {
 };
 
 /**
- * Send a text message to a chat. Supports tag and reply. Returns the created message.
+ * Send a text, image, or file message to a chat. Supports tag and reply.
+ * For image: content = image public URL.
+ * For file: content = formatFileContent(fileName, url).
+ * Returns the created message.
  */
 export async function sendMessage(
   chatId: string,
   content: string,
-  type: 'text' | 'image' = 'text',
+  type: 'text' | 'image' | 'file' = 'text',
   options?: SendMessageOptions
 ): Promise<ChatMessage> {
   const { data } = await supabase.auth.getSession();
   const userId = data?.session?.user?.id;
   if (!userId) throw new Error('Not authenticated');
 
+  const dbType = type === 'image' ? 'image' : type === 'file' ? 'file' : MESSAGE_TYPE;
   const insertPayload: Record<string, unknown> = {
     chat_id: chatId,
     sender_id: userId,
-    type: type === 'image' ? 'image' : MESSAGE_TYPE,
+    type: dbType,
     content: content.trim(),
   };
   if (options?.taggedUserId) insertPayload.tagged_user_id = options.taggedUserId;
@@ -373,8 +449,20 @@ export async function sendMessage(
     senderName: 'You',
     message: row.content ?? '',
     timestamp: row.created_at ?? new Date().toISOString(),
-    type: (type === 'image' ? 'image' : 'text') as ChatMessage['type'],
+    type: (type === 'image' ? 'image' : type === 'file' ? 'file' : 'text') as ChatMessage['type'],
   };
+  if (type === 'image' && row.content) {
+    msg.imageUri = row.content;
+    msg.message = '📷 Image';
+  }
+  if (type === 'file' && row.content) {
+    const parsed = parseFileContent(row.content);
+    if (parsed) {
+      msg.fileUri = parsed.fileUri;
+      msg.fileName = parsed.fileName;
+      msg.message = `📎 ${parsed.fileName}`;
+    }
+  }
   if (options?.taggedUserId && options?.taggedUserName) {
     msg.taggedUserId = options.taggedUserId;
     msg.taggedUserName = options.taggedUserName;
@@ -420,6 +508,7 @@ export function subscribeToMessages(
         let senderName = 'Unknown';
         const { data: u } = await supabase.from('users').select('full_name').eq('id', row.sender_id).single();
         if (u?.full_name) senderName = u.full_name;
+        const msgType = (row.type === 'image' ? 'image' : row.type === 'file' ? 'file' : 'text') as ChatMessage['type'];
         const msg: ChatMessage = {
           id: row.id,
           chatId: row.chat_id,
@@ -427,8 +516,20 @@ export function subscribeToMessages(
           senderName,
           message: row.content ?? '',
           timestamp: row.created_at ?? new Date().toISOString(),
-          type: (row.type === 'image' ? 'image' : 'text') as ChatMessage['type'],
+          type: msgType,
         };
+        if (msgType === 'image' && row.content) {
+          msg.imageUri = row.content;
+          msg.message = '📷 Image';
+        }
+        if (msgType === 'file' && row.content) {
+          const parsed = parseFileContent(row.content);
+          if (parsed) {
+            msg.fileUri = parsed.fileUri;
+            msg.fileName = parsed.fileName;
+            msg.message = `📎 ${parsed.fileName}`;
+          }
+        }
         if (row.tagged_user_id) {
           msg.taggedUserId = row.tagged_user_id;
           const { data: tu } = await supabase.from('users').select('full_name').eq('id', row.tagged_user_id).single();

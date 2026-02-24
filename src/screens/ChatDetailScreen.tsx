@@ -20,7 +20,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
-import { Audio } from 'expo-av';
+import {
+  useAudioRecorder,
+  useAudioRecorderState,
+  RecordingPresets,
+  setAudioModeAsync,
+  requestRecordingPermissionsAsync,
+} from 'expo-audio';
 import { RootStackParamList } from '../navigation/types';
 import { ChatMessage } from '../types';
 import { mockStaffData } from '../data/mockStaffData';
@@ -37,8 +43,11 @@ import {
   subscribeToMessages,
   updateGroupChat,
   deleteGroupChat,
+  uploadChatAttachment,
+  formatFileContent,
   type GroupParticipant,
 } from '../services/chat';
+import * as DocumentPicker from 'expo-document-picker';
 import { useChatStore } from '../store/useChatStore';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -62,6 +71,7 @@ export default function ChatDetailScreen() {
       }
     : null;
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [myRole, setMyRole] = useState<'admin' | 'member' | null>(null);
   const isGroupAdmin = isGroup && myRole === 'admin';
   const isGroupCreator = Boolean(isGroup && currentUserId && fetchedChat?.created_by_id && currentUserId === fetchedChat.created_by_id);
@@ -69,13 +79,15 @@ export default function ChatDetailScreen() {
   const { messagesByChatId, loadMessages, appendMessage, sendMessage: sendMessageToStore, removeChat, updateChatName, clearMessages } = useChatStore();
   const messages = messagesByChatId[chatId] ?? [];
 
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(audioRecorder);
+  const isRecording = recorderState.isRecording;
+  const recordingSeconds = Math.floor(recorderState.durationMillis / 1000);
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<{ uri: string; name: string } | null>(null);
   const [showTagModal, setShowTagModal] = useState(false);
   const [taggedUser, setTaggedUser] = useState<{ id: string; name: string } | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showEditGroupModal, setShowEditGroupModal] = useState(false);
   const [editGroupName, setEditGroupName] = useState('');
   const [showGroupMembersModal, setShowGroupMembersModal] = useState(false);
@@ -173,22 +185,12 @@ export default function ChatDetailScreen() {
     }, 100);
   }, [messages]);
 
-  // Recording timer - updates every second while recording
-  useEffect(() => {
-    if (!isRecording) return;
-    setRecordingSeconds(0);
-    const interval = setInterval(() => {
-      setRecordingSeconds((s) => s + 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isRecording]);
-
   const handleSend = async () => {
-    if (!(inputText.trim() || selectedImage) || !chat) return;
+    const hasContent = inputText.trim() || selectedImage || selectedFile;
+    if (!hasContent || !chat) return;
 
     if (isSupabaseChat) {
       try {
-        const content = inputText.trim() || (selectedImage ? '📷 Image' : '');
         const options: import('../services/chat').SendMessageOptions = {};
         if (taggedUser) {
           options.taggedUserId = taggedUser.id;
@@ -199,44 +201,79 @@ export default function ChatDetailScreen() {
           options.replyToSenderName = replyToMessage.senderName;
           options.replyToMessagePreview = (replyToMessage.message || '').slice(0, 80) + ((replyToMessage.message || '').length > 80 ? '…' : '');
         }
-        await sendMessageToStore(chatId, content, selectedImage ? 'image' : 'text', Object.keys(options).length > 0 ? options : undefined);
+        let content: string;
+        let type: 'text' | 'image' | 'file' = 'text';
+        if (selectedImage) {
+          const { url } = await uploadChatAttachment(selectedImage, { type: 'image' });
+          content = url;
+          type = 'image';
+        } else if (selectedFile) {
+          const { url } = await uploadChatAttachment(selectedFile.uri, {
+            type: 'file',
+            fileName: selectedFile.name,
+          });
+          content = formatFileContent(selectedFile.name, url);
+          type = 'file';
+        } else {
+          content = inputText.trim();
+        }
+        await sendMessageToStore(chatId, content, type, Object.keys(options).length > 0 ? options : undefined);
         setInputText('');
         setSelectedImage(null);
+        setSelectedFile(null);
         setTaggedUser(null);
         setReplyToMessage(null);
         setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
       } catch (e) {
         console.warn('Send failed', e);
+        const message = e instanceof Error ? e.message : 'Could not send. Try again.';
+        if (message.includes('Bucket not found') || message.includes('bucket')) {
+          Alert.alert(
+            'Storage not set up',
+            'Create a storage bucket named "chat-attachments" in your Supabase project (Dashboard → Storage → New bucket), then try again.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert('Send failed', message);
+        }
       }
       return;
     }
 
     setInputText('');
     setSelectedImage(null);
+    setSelectedFile(null);
     setTaggedUser(null);
     setReplyToMessage(null);
   };
 
-  const showImageSourceOptions = () => {
+  /** Camera icon: show Camera vs Choose from Library */
+  const showPhotoOptions = () => {
     Alert.alert(
-      'Add Image',
-      'Choose how to add an image',
+      'Photo',
+      undefined,
       [
-        {
-          text: 'Take Photo',
-          onPress: handleTakePhoto,
-        },
-        {
-          text: 'Choose from Library',
-          onPress: handlePickFromLibrary,
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Camera', onPress: handleTakePhoto },
+        { text: 'Choose from Library', onPress: handlePickFromLibrary },
+        { text: 'Cancel', style: 'cancel' as const },
       ],
       { cancelable: true }
     );
+  };
+
+  const handlePickFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      setSelectedFile({ uri: asset.uri, name: asset.name ?? 'file' });
+    } catch (error) {
+      console.error('Error picking file:', error);
+      Alert.alert('Error', 'Failed to pick file. Please try again.');
+    }
   };
 
   const handleTakePhoto = async () => {
@@ -248,9 +285,8 @@ export default function ChatDetailScreen() {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
+        mediaTypes: ['images'],
+        allowsEditing: false,
         quality: 0.8,
       });
 
@@ -272,9 +308,8 @@ export default function ChatDetailScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
+        mediaTypes: ['images'],
+        allowsEditing: false,
         quality: 0.8,
       });
 
@@ -287,50 +322,38 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const recordingRef = useRef<Audio.Recording | null>(null);
-
   const handleVoiceRecord = async () => {
     if (!chat) return;
 
-    if (isRecording) {
+    if (recorderState.isRecording) {
       // Stop recording and send
       try {
-        if (recordingRef.current) {
-          const uri = recordingRef.current.getURI();
-          const status = await recordingRef.current.stopAndUnloadAsync();
-          const durationSec = status && 'durationMillis' in status && status.durationMillis != null
-            ? Math.round(status.durationMillis / 1000)
-            : 0;
-          recordingRef.current = null;
-          setIsRecording(false);
-          setRecordingSeconds(0);
+        const durationSec = Math.round(recorderState.durationMillis / 1000) || 0;
+        await audioRecorder.stop();
+        const uri = audioRecorder.uri;
 
-          if (uri && durationSec > 0 && isSupabaseChat) {
-            const newMessage: ChatMessage = {
-              id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              chatId: chatId,
-              senderId: uid,
-              senderName: 'You',
-              message: '🎤 Voice message',
-              timestamp: new Date().toISOString(),
-              type: 'voice',
-              voiceUri: uri,
-              voiceDuration: durationSec,
-              taggedUserId: taggedUser?.id,
-              taggedUserName: taggedUser?.name,
-            };
-            appendMessage(chatId, newMessage);
-            setTaggedUser(null);
-            scrollToBottom();
-          } else {
-            Alert.alert('Recording too short', 'Please record for at least 1 second.');
-          }
+        if (uri && durationSec > 0 && isSupabaseChat) {
+          const newMessage: ChatMessage = {
+            id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            chatId: chatId,
+            senderId: uid,
+            senderName: 'You',
+            message: '🎤 Voice message',
+            timestamp: new Date().toISOString(),
+            type: 'voice',
+            voiceUri: uri,
+            voiceDuration: durationSec,
+            taggedUserId: taggedUser?.id,
+            taggedUserName: taggedUser?.name,
+          };
+          appendMessage(chatId, newMessage);
+          setTaggedUser(null);
+          scrollToBottom();
+        } else {
+          Alert.alert('Recording too short', 'Please record for at least 1 second.');
         }
       } catch (error) {
         console.error('Error stopping recording:', error);
-        setIsRecording(false);
-        setRecordingSeconds(0);
-        recordingRef.current = null;
         Alert.alert('Error', 'Failed to save voice message. Please try again.');
       }
       return;
@@ -338,25 +361,19 @@ export default function ChatDetailScreen() {
 
     // Start recording
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
+      const { granted } = await requestRecordingPermissionsAsync();
+      if (!granted) {
         Alert.alert('Permission needed', 'Please grant microphone permissions to record voice messages.');
         return;
       }
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      recordingRef.current = recording;
-      setIsRecording(true);
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
     } catch (error) {
       console.error('Error starting recording:', error);
       Alert.alert('Error', 'Failed to start recording. Please try again.');
@@ -393,9 +410,8 @@ export default function ChatDetailScreen() {
     setTaggedUser(null);
   };
 
-  const removeImage = () => {
-    setSelectedImage(null);
-  };
+  const removeImage = () => setSelectedImage(null);
+  const removeFile = () => setSelectedFile(null);
 
   const shouldShowDateSeparator = (currentMessage: ChatMessage, prevMessage: ChatMessage | null): boolean => {
     if (!prevMessage) return true;
@@ -548,7 +564,7 @@ export default function ChatDetailScreen() {
           style={[styles.messagesContainer, { marginTop: 0 }]}
           contentContainerStyle={[
             styles.messagesContent,
-            { paddingVertical: 16 * responsiveScale, paddingBottom: 12 * responsiveScale },
+            { paddingTop: 0, paddingBottom: 12 * responsiveScale },
           ]}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => {
@@ -619,15 +635,6 @@ export default function ChatDetailScreen() {
             </View>
           )}
 
-          {selectedImage && (
-            <View style={styles.imagePreviewContainer}>
-              <Image source={{ uri: selectedImage }} style={styles.imagePreview} resizeMode="cover" />
-              <TouchableOpacity style={styles.removeImageButton} onPress={removeImage}>
-                <Text style={styles.removeImageText}>×</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           {replyToMessage && (
             <View style={styles.replyPreviewBar}>
               <View style={styles.replyPreviewContent}>
@@ -647,37 +654,61 @@ export default function ChatDetailScreen() {
               </TouchableOpacity>
             )}
 
-            {isRecording ? (
-              <Text style={styles.recordingTime} numberOfLines={1}>
-                {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}
-              </Text>
-            ) : null}
+            <View style={styles.inputWithAttachments}>
+              {!isRecording && (selectedImage || selectedFile) && (
+                <View style={styles.attachmentPreviewRow}>
+                  {selectedImage && (
+                    <View style={styles.imagePreviewContainer}>
+                      <Image source={{ uri: selectedImage }} style={styles.imagePreview} resizeMode="cover" />
+                      <TouchableOpacity style={styles.removeImageButton} onPress={removeImage}>
+                        <Text style={styles.removeImageText}>×</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {selectedFile && (
+                    <View style={styles.filePreviewContainer}>
+                      <Ionicons name="attach-outline" size={18} color={colors.text.secondary} />
+                      <Text style={styles.filePreviewName} numberOfLines={1}>{selectedFile.name}</Text>
+                      <TouchableOpacity style={styles.removeImageButton} onPress={removeFile}>
+                        <Text style={styles.removeImageText}>×</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {isRecording ? (
+                <Text style={styles.recordingTime} numberOfLines={1}>
+                  {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}
+                </Text>
+              ) : null}
+
+              {!isRecording && (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Message"
+                  placeholderTextColor={colors.text.tertiary}
+                  value={inputText}
+                  onChangeText={handleInputChange}
+                  onFocus={handleInputFocus}
+                  multiline
+                  maxLength={500}
+                  returnKeyType="default"
+                  blurOnSubmit={false}
+                  textAlignVertical={Platform.OS === 'android' ? 'center' : 'top'}
+                  underlineColorAndroid="transparent"
+                />
+              )}
+            </View>
 
             {!isRecording && (
-              <TextInput
-                style={styles.input}
-                placeholder="Message"
-                placeholderTextColor={colors.text.tertiary}
-                value={inputText}
-                onChangeText={handleInputChange}
-                onFocus={handleInputFocus}
-                multiline
-                maxLength={500}
-                returnKeyType="default"
-                blurOnSubmit={false}
-                textAlignVertical={Platform.OS === 'android' ? 'center' : 'top'}
-                underlineColorAndroid="transparent"
-              />
-            )}
-
-            {!isRecording && (
-              <TouchableOpacity style={styles.iconButton} onPress={showImageSourceOptions} activeOpacity={0.7}>
+              <TouchableOpacity style={styles.iconButton} onPress={handlePickFile} activeOpacity={0.7}>
                 <Ionicons name="attach-outline" size={24} color={colors.text.secondary} />
               </TouchableOpacity>
             )}
 
             {!isRecording && (
-              <TouchableOpacity style={styles.iconButton} onPress={handleTakePhoto} activeOpacity={0.7}>
+              <TouchableOpacity style={styles.iconButton} onPress={showPhotoOptions} activeOpacity={0.7}>
                 <Ionicons name="camera-outline" size={24} color={colors.text.secondary} />
               </TouchableOpacity>
             )}
@@ -685,13 +716,13 @@ export default function ChatDetailScreen() {
             <TouchableOpacity
               style={[
                 styles.sendOrMicButton,
-                (inputText.trim() || selectedImage) && styles.sendButtonActive,
+                (inputText.trim() || selectedImage || selectedFile) && styles.sendButtonActive,
                 isRecording && styles.sendButtonRecording,
               ]}
-              onPress={isRecording ? handleVoiceRecord : (inputText.trim() || selectedImage) ? handleSend : handleVoiceRecord}
+              onPress={isRecording ? handleVoiceRecord : (inputText.trim() || selectedImage || selectedFile) ? handleSend : handleVoiceRecord}
               activeOpacity={0.7}
             >
-              {(inputText.trim() || selectedImage) && !isRecording ? (
+              {(inputText.trim() || selectedImage || selectedFile) && !isRecording ? (
                 <Ionicons name="arrow-up" size={22} color={colors.text.white} />
               ) : (
                 <Ionicons name="mic-outline" size={22} color={isRecording ? colors.text.white : colors.text.secondary} />
@@ -818,7 +849,13 @@ const styles = StyleSheet.create({
   },
   inputRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
+  },
+  inputWithAttachments: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
   iconButton: {
     width: 40 * scaleX,
@@ -867,7 +904,8 @@ const styles = StyleSheet.create({
   dateSeparator: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 16 * scaleX,
+    marginTop: 0,
+    marginBottom: 16 * scaleX,
     paddingHorizontal: 16 * scaleX,
   },
   dateSeparatorLine: {
@@ -882,24 +920,29 @@ const styles = StyleSheet.create({
     marginHorizontal: 12 * scaleX,
     fontWeight: '400' as any,
   },
+  attachmentPreviewRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    paddingBottom: 6 * scaleX,
+    gap: 6 * scaleX,
+  },
   imagePreviewContainer: {
     position: 'relative',
-    marginBottom: 8 * scaleX,
-    marginHorizontal: 16 * scaleX,
     alignSelf: 'flex-start',
   },
   imagePreview: {
-    width: 120 * scaleX,
-    height: 120 * scaleX,
+    width: 44 * scaleX,
+    height: 44 * scaleX,
     borderRadius: 8 * scaleX,
   },
   removeImageButton: {
     position: 'absolute',
-    top: -8 * scaleX,
-    right: -8 * scaleX,
-    width: 24 * scaleX,
-    height: 24 * scaleX,
-    borderRadius: 12 * scaleX,
+    top: -6 * scaleX,
+    right: -6 * scaleX,
+    width: 20 * scaleX,
+    height: 20 * scaleX,
+    borderRadius: 10 * scaleX,
     backgroundColor: colors.status.dirty,
     justifyContent: 'center',
     alignItems: 'center',
@@ -908,6 +951,24 @@ const styles = StyleSheet.create({
     color: colors.text.white,
     fontSize: 16 * scaleX,
     fontWeight: 'bold' as any,
+  },
+  filePreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6 * scaleX,
+    paddingHorizontal: 10 * scaleX,
+    backgroundColor: colors.background.tertiary,
+    borderRadius: 10 * scaleX,
+    alignSelf: 'flex-start',
+    maxWidth: 140 * scaleX,
+    position: 'relative',
+  },
+  filePreviewName: {
+    fontSize: 12 * scaleX,
+    fontFamily: 'Helvetica',
+    color: colors.text.primary,
+    marginLeft: 6 * scaleX,
+    flex: 1,
   },
   taggedUserContainer: {
     flexDirection: 'row',
