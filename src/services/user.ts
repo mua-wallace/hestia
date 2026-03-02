@@ -120,6 +120,8 @@ export interface GetUsersParams {
   page?: number;
   limit?: number;
   search?: string;
+  /** Filter users by department (UUID from departments.id). */
+  departmentId?: string;
 }
 
 export interface GetUsersResponse {
@@ -149,6 +151,10 @@ export async function getUsers(params?: GetUsersParams): Promise<GetUsersRespons
     query = query.ilike('full_name', `%${params.search.trim()}%`);
   }
 
+  if (params?.departmentId) {
+    query = query.eq('department_id', params.departmentId);
+  }
+
   const { data, error, count } = await query;
   if (error) throw error;
 
@@ -161,6 +167,31 @@ export async function getUsers(params?: GetUsersParams): Promise<GetUsersRespons
     limit,
     totalPages: Math.ceil(total / limit) || 1,
   };
+}
+
+/**
+ * Get department UUID by name (for filtering users by department).
+ */
+export async function getDepartmentIdByName(departmentName: string): Promise<string | null> {
+  if (!isSupabaseConfigured || !departmentName?.trim()) return null;
+  const { data, error } = await supabase
+    .from('departments')
+    .select('id')
+    .eq('name', departmentName.trim())
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return (data as { id: string }).id;
+}
+
+/**
+ * List users in a given department (by department name).
+ * Used when tagging staff on a ticket for that department.
+ */
+export async function getUsersByDepartment(departmentName: string, params?: Omit<GetUsersParams, 'departmentId'>): Promise<GetUsersResponse> {
+  const departmentId = await getDepartmentIdByName(departmentName);
+  if (!departmentId) return { data: [], total: 0, page: 1, limit: params?.limit ?? 20, totalPages: 0 };
+  return getUsers({ ...params, departmentId });
 }
 
 /**

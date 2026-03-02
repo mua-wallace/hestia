@@ -143,6 +143,17 @@ export const DEPARTMENT_GRID = {
   },
 } as const;
 
+/** Map frontend department slug to DB department name (for API and staff filtering). */
+export const DEPARTMENT_SLUG_TO_DB_NAME: Record<string, string> = {
+  engineering: 'Engineering',
+  hskPortier: 'HSK Portier',
+  inRoomDining: 'In Room Dining',
+  laundry: 'Laundry',
+  concierge: 'Concierge',
+  reception: 'Reception',
+  it: 'IT',
+};
+
 // AI Button Styles
 export const CREATE_TICKET_AI_BUTTON = {
   container: {

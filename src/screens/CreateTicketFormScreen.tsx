@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,10 @@ import { useToast } from '../contexts/ToastContext';
 import { useMessageModal } from '../contexts/MessageModalContext';
 import { typography } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
+import { getUsersByDepartment } from '../services/user';
+import type { User } from '../types';
+import { DEPARTMENT_SLUG_TO_DB_NAME } from '../constants/createTicketStyles';
+import TicketStaffSelectorModal from '../components/tickets/TicketStaffSelectorModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -81,9 +85,30 @@ export default function CreateTicketFormScreen() {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority | null>(null);
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
+  const [departmentStaff, setDepartmentStaff] = useState<User[]>([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [showStaffModal, setShowStaffModal] = useState(false);
   const [pictures, setPictures] = useState<string[]>([]);
   const [showTicketTagDropdown, setShowTicketTagDropdown] = useState(false);
   const [selectedTicketTag, setSelectedTicketTag] = useState<string>('');
+
+  const departmentDbName = DEPARTMENT_SLUG_TO_DB_NAME[departmentId] ?? departmentId;
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingStaff(true);
+    getUsersByDepartment(departmentDbName, { limit: 50 })
+      .then((res) => {
+        if (!cancelled) setDepartmentStaff(res.data);
+      })
+      .catch(() => {
+        if (!cancelled) setDepartmentStaff([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingStaff(false);
+      });
+    return () => { cancelled = true; };
+  }, [departmentDbName]);
 
   // Ticket Tag options - can be customized based on requirements
   const ticketTagOptions = [
@@ -106,9 +131,22 @@ export default function CreateTicketFormScreen() {
   };
 
   const handleAssignPress = () => {
-    // TODO: Open assign to modal/selector
-    console.log('Assign to pressed');
+    setShowStaffModal(true);
   };
+
+  const handleStaffSelect = (staffId: string, _staffName: string) => {
+    setAssignedTo((prev) =>
+      prev.includes(staffId) ? prev : [...prev, staffId]
+    );
+  };
+
+  const handleRemoveTaggedStaff = (staffId: string) => {
+    setAssignedTo((prev) => prev.filter((id) => id !== staffId));
+  };
+
+  const taggedStaffForDisplay = assignedTo
+    .map((id) => departmentStaff.find((u) => u.id === id))
+    .filter(Boolean) as User[];
 
   const handleAddPicture = async () => {
     try {
@@ -519,6 +557,22 @@ export default function CreateTicketFormScreen() {
         >
           Tag people to the ticket
         </Text>
+        {taggedStaffForDisplay.length > 0 && (
+          <View style={[styles.taggedStaffWrap, { top: (assignHintTop + 28) * scaleX }]}>
+            {taggedStaffForDisplay.map((u) => (
+              <View key={u.id} style={styles.taggedChip}>
+                <Text style={styles.taggedChipName} numberOfLines={1}>{u.name}</Text>
+                <TouchableOpacity
+                  hitSlop={8}
+                  onPress={() => handleRemoveTaggedStaff(u.id)}
+                  style={styles.taggedChipRemove}
+                >
+                  <Text style={styles.taggedChipRemoveText}>×</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Priority Section - Dynamically positioned after Assign to */}
         <Text
@@ -598,6 +652,16 @@ export default function CreateTicketFormScreen() {
           <Text style={styles.submitButtonText}>Submit Ticket</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <TicketStaffSelectorModal
+        visible={showStaffModal}
+        onClose={() => setShowStaffModal(false)}
+        onSelect={handleStaffSelect}
+        staff={departmentStaff}
+        selectedStaffIds={assignedTo}
+        departmentName={departmentDbName}
+        loading={loadingStaff}
+      />
     </View>
   );
 }
@@ -1003,6 +1067,39 @@ const styles = StyleSheet.create({
     lineHeight: 17 * scaleX, // Match text height from Figma
     includeFontPadding: false,
     textAlignVertical: 'center',
+  },
+  taggedStaffWrap: {
+    position: 'absolute',
+    left: 26 * scaleX,
+    right: 26 * scaleX,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8 * scaleX,
+  },
+  taggedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e4eefe',
+    paddingVertical: 6 * scaleX,
+    paddingLeft: 10 * scaleX,
+    paddingRight: 4 * scaleX,
+    borderRadius: 16 * scaleX,
+    maxWidth: '100%',
+  },
+  taggedChipName: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: '#333',
+    maxWidth: 140 * scaleX,
+  },
+  taggedChipRemove: {
+    marginLeft: 4 * scaleX,
+    padding: 4 * scaleX,
+  },
+  taggedChipRemoveText: {
+    fontSize: 18 * scaleX,
+    color: '#607aa1',
+    fontWeight: '600',
   },
   // Priority Section - From Figma: label at x=26, y=1077, fontSize=17, fontWeight=700; options at y=1118, x=55, 167, 285, fontSize=15, fontWeight=300
   priorityLabel: {

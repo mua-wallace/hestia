@@ -789,6 +789,7 @@ export type Database = {
           assigned_to_id: string | null
           created_at: string | null
           created_by_id: string
+          department_id: string | null
           description: string | null
           id: string
           priority: string | null
@@ -804,6 +805,7 @@ export type Database = {
           assigned_to_id?: string | null
           created_at?: string | null
           created_by_id: string
+          department_id?: string | null
           description?: string | null
           id?: string
           priority?: string | null
@@ -819,6 +821,7 @@ export type Database = {
           assigned_to_id?: string | null
           created_at?: string | null
           created_by_id?: string
+          department_id?: string | null
           description?: string | null
           id?: string
           priority?: string | null
