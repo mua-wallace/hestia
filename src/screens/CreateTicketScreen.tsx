@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,12 +16,15 @@ import {
   CREATE_TICKET_HEADER,
   CREATE_TICKET_CONTENT,
   DEPARTMENT_GRID,
+  DEPARTMENT_GRID_LAYOUT,
+  DEPARTMENT_NAME_TO_ICON,
   CREATE_TICKET_AI_BUTTON,
   CREATE_TICKET_DIVIDER,
   CREATE_TICKET_COLORS,
   CREATE_TICKET_TYPOGRAPHY,
   scaleX,
 } from '../constants/createTicketStyles';
+import { getDepartments } from '../services/departments';
 import type { RootStackParamList } from '../navigation/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -30,81 +34,79 @@ type CreateTicketScreenNavigationProp = NativeStackNavigationProp<
   'CreateTicket'
 >;
 
-type DepartmentId =
-  | 'engineering'
-  | 'hskPortier'
-  | 'inRoomDining'
-  | 'laundry'
-  | 'concierge'
-  | 'reception'
-  | 'it';
-
-interface Department {
-  id: DepartmentId;
+/** Display item for one department from Supabase with grid position and icon. */
+interface DepartmentDisplayItem {
+  id: string;
   name: string;
   icon: any;
+  noTint: boolean;
+  left: number;
+  top: number;
+  labelLeft: number;
+  labelTop: number;
 }
-
-// Department icons - all downloaded from Figma and saved locally
-const DEPARTMENTS: Department[] = [
-  {
-    id: 'engineering',
-    name: 'Engineering',
-    icon: require('../../assets/icons/engineering.png'),
-  },
-  {
-    id: 'hskPortier',
-    name: 'HSK Portier',
-    icon: require('../../assets/icons/hsk-portier.png'),
-  },
-  {
-    id: 'inRoomDining',
-    name: 'In Room Dining',
-    icon: require('../../assets/icons/in-room-dining.png'),
-  },
-  {
-    id: 'laundry',
-    name: 'Laundry',
-    icon: require('../../assets/icons/laundry-icon.png'),
-  },
-  {
-    id: 'concierge',
-    name: 'Concierge',
-    icon: require('../../assets/icons/concierge.png'),
-  },
-  {
-    id: 'reception',
-    name: 'Reception',
-    icon: require('../../assets/icons/reception.png'),
-  },
-  {
-    id: 'it',
-    name: 'IT',
-    icon: require('../../assets/icons/it.png'),
-  },
-];
 
 export default function CreateTicketScreen() {
   const navigation = useNavigation<CreateTicketScreenNavigationProp>();
-  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentId | null>(null);
+  const [departments, setDepartments] = useState<DepartmentDisplayItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getDepartments().then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) {
+        setLoadError(error.message);
+        setDepartments([]);
+        setLoading(false);
+        return;
+      }
+      const layout = DEPARTMENT_GRID_LAYOUT;
+      const items: DepartmentDisplayItem[] = (data ?? []).map((dept, index) => {
+        const col = index % 3;
+        const row = Math.floor(index / 3);
+        const left = layout.colLeft[col];
+        const top = layout.rowTopStart + row * layout.rowGap;
+        const labelTop = top + layout.labelOffset;
+        const labelWidth = Math.min(layout.maxLabelWidth, dept.name.length * 8);
+        const labelLeft = left + layout.iconSize / 2 - labelWidth / 2;
+        const iconInfo = DEPARTMENT_NAME_TO_ICON[dept.name] ?? {
+          icon: require('../../assets/icons/reception.png'),
+          noTint: false,
+        };
+        return {
+          id: dept.id,
+          name: dept.name,
+          icon: iconInfo.icon,
+          noTint: !!iconInfo.noTint,
+          left,
+          top,
+          labelLeft,
+          labelTop,
+        };
+      });
+      setDepartments(items);
+      setLoadError(null);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleBackPress = () => {
     navigation.goBack();
   };
 
-  const handleDepartmentPress = (departmentId: DepartmentId) => {
-    setSelectedDepartment(departmentId);
-    // Navigate to ticket creation form
-    navigation.navigate('CreateTicketForm', { departmentId });
+  const handleDepartmentPress = (department: DepartmentDisplayItem) => {
+    navigation.navigate('CreateTicketForm', {
+      departmentId: department.id,
+      departmentName: department.name,
+    });
   };
 
   const handleAICreatePress = () => {
     // TODO: Implement AI ticket creation
     console.log('AI Create Ticket pressed');
-  };
-
-  const getDepartmentStyle = (deptId: DepartmentId) => {
-    return DEPARTMENT_GRID.departments[deptId];
   };
 
   return (
@@ -148,56 +150,56 @@ export default function CreateTicketScreen() {
           {CREATE_TICKET_CONTENT.selectDepartmentLabel.text}
         </Text>
 
-        {/* Department Grid */}
-        {DEPARTMENTS.map((department) => {
-          const deptStyle = getDepartmentStyle(department.id);
-          const isSelected = selectedDepartment === department.id;
-
-          return (
+        {/* Department Grid - from Supabase */}
+        {loading ? (
+          <View style={styles.departmentLoading}>
+            <ActivityIndicator size="small" color={CREATE_TICKET_COLORS.textSecondary} />
+            <Text style={styles.departmentLoadingText}>Loading departments…</Text>
+          </View>
+        ) : loadError ? (
+          <View style={styles.departmentLoading}>
+            <Text style={styles.departmentErrorText}>{loadError}</Text>
+          </View>
+        ) : (
+          departments.map((department) => (
             <View key={department.id} style={styles.departmentContainer}>
-              {/* Department Icon */}
               <TouchableOpacity
                 style={[
                   styles.departmentIcon,
                   {
-                    left: deptStyle.left * scaleX,
-                    top: deptStyle.top * scaleX,
+                    left: department.left * scaleX,
+                    top: department.top * scaleX,
                     backgroundColor: CREATE_TICKET_COLORS.departmentIconBg,
                   },
                 ]}
-                onPress={() => handleDepartmentPress(department.id)}
+                onPress={() => handleDepartmentPress(department)}
                 activeOpacity={0.7}
               >
                 <Image
                   source={department.icon}
                   style={[
                     styles.departmentIconImage,
-                    // Apply tintColor for icons that need it, but some icons are already colored
-                    // Remove tintColor for icons that are not visible with it
-                    (department.id === 'hskPortier' || department.id === 'inRoomDining')
-                      ? {} // No tintColor - icons are already colored
-                      : { tintColor: '#F92424' }, // Red color from Figma design
+                    department.noTint ? {} : { tintColor: '#F92424' },
                   ]}
                   resizeMode="contain"
                 />
               </TouchableOpacity>
-
-              {/* Department Label */}
               <Text
                 style={[
                   styles.departmentLabel,
                   {
-                    left: deptStyle.labelLeft * scaleX,
-                    top: deptStyle.labelTop * scaleX,
-                    width: deptStyle.labelWidth * scaleX,
+                    left: department.labelLeft * scaleX,
+                    top: department.labelTop * scaleX,
+                    width: DEPARTMENT_GRID_LAYOUT.maxLabelWidth * scaleX,
                   },
                 ]}
+                numberOfLines={2}
               >
-                {deptStyle.labelText}
+                {department.name}
               </Text>
             </View>
-          );
-        })}
+          ))
+        )}
 
         {/* Divider */}
         <View
@@ -337,6 +339,23 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.secondary, // Inter
     fontWeight: '300', // Inter Light
     color: CREATE_TICKET_TYPOGRAPHY.selectDepartmentLabel.color,
+  },
+  departmentLoading: {
+    position: 'absolute',
+    left: DEPARTMENT_GRID.container.left * scaleX,
+    top: DEPARTMENT_GRID.container.top * scaleX,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24 * scaleX,
+  },
+  departmentLoadingText: {
+    marginTop: 8 * scaleX,
+    fontSize: 14 * scaleX,
+    color: CREATE_TICKET_COLORS.textSecondary,
+  },
+  departmentErrorText: {
+    fontSize: 14 * scaleX,
+    color: '#c00',
   },
   departmentContainer: {
     position: 'absolute',

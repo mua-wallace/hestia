@@ -19,7 +19,7 @@ export type RootStackParamList = {
   CreateChatGroup: undefined;
   TicketDetail: { ticketId: string };
   CreateTicket: undefined;
-  CreateTicketForm: { departmentId: string };
+  CreateTicketForm: { departmentId: string; departmentName?: string };
 };
 
 /** Tab/screen to return to when back is pressed */

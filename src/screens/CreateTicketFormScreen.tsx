@@ -19,7 +19,7 @@ import { typography } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
 import { getUsersByDepartment } from '../services/user';
 import type { User } from '../types';
-import { DEPARTMENT_SLUG_TO_DB_NAME } from '../constants/createTicketStyles';
+import { DEPARTMENT_SLUG_TO_DB_NAME, DEPARTMENT_NAME_TO_ICON } from '../constants/createTicketStyles';
 import TicketStaffSelectorModal from '../components/tickets/TicketStaffSelectorModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -76,7 +76,10 @@ type Priority = 'urgent' | 'medium' | 'notUrgent';
 export default function CreateTicketFormScreen() {
   const navigation = useNavigation<CreateTicketFormScreenNavigationProp>();
   const route = useRoute<CreateTicketFormScreenRouteProp>();
-  const departmentId = route.params?.departmentId || 'engineering';
+  const paramDepartmentId = route.params?.departmentId ?? 'engineering';
+  const paramDepartmentName = route.params?.departmentName;
+  const isFromSupabase = !!paramDepartmentName;
+  const departmentId = paramDepartmentId;
   const toast = useToast();
   const messageModal = useMessageModal();
 
@@ -92,7 +95,9 @@ export default function CreateTicketFormScreen() {
   const [showTicketTagDropdown, setShowTicketTagDropdown] = useState(false);
   const [selectedTicketTag, setSelectedTicketTag] = useState<string>('');
 
-  const departmentDbName = DEPARTMENT_SLUG_TO_DB_NAME[departmentId] ?? departmentId;
+  const departmentDbName = isFromSupabase
+    ? paramDepartmentName!
+    : (DEPARTMENT_SLUG_TO_DB_NAME[paramDepartmentId] ?? paramDepartmentId);
 
   useEffect(() => {
     let cancelled = false;
@@ -227,8 +232,13 @@ export default function CreateTicketFormScreen() {
     });
   };
 
-  const selectedDepartmentName = DEPARTMENT_NAMES[departmentId as DepartmentId];
-  const selectedDepartmentIcon = DEPARTMENT_ICONS[departmentId as DepartmentId];
+  const selectedDepartmentName = isFromSupabase
+    ? paramDepartmentName!
+    : (DEPARTMENT_NAMES[departmentId as DepartmentId] ?? departmentId);
+  const selectedDepartmentIcon = isFromSupabase
+    ? (DEPARTMENT_NAME_TO_ICON[paramDepartmentName!]?.icon ?? require('../../assets/icons/reception.png'))
+    : DEPARTMENT_ICONS[departmentId as DepartmentId];
+  const noTintForDepartment = isFromSupabase && !!DEPARTMENT_NAME_TO_ICON[paramDepartmentName!]?.noTint;
 
   // Calculate the bottom position of description field dynamically
   const getDescriptionBottom = () => {
@@ -304,8 +314,7 @@ export default function CreateTicketFormScreen() {
             source={selectedDepartmentIcon}
             style={[
               styles.selectedIcon,
-              // Some icons don't need tint (like hskPortier, inRoomDining) - they're already colored
-              (departmentId === 'hskPortier' || departmentId === 'inRoomDining')
+              (noTintForDepartment || departmentId === 'hskPortier' || departmentId === 'inRoomDining')
                 ? { tintColor: undefined }
                 : { tintColor: '#F92424' },
             ]}
