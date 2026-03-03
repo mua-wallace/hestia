@@ -68,6 +68,64 @@ const DEFAULT_STAFF: StaffInfo = {
   statusColor: '#1e1e1e',
 };
 
+/** Shift row from Supabase */
+type ShiftRow = { id: string; name: string; start_time: string; end_time: string };
+/** Room assignment row with user info */
+type RoomAssignmentRow = {
+  room_id: string;
+  user_id: string;
+  shift_id: string;
+  work_status: string | null;
+  users: { full_name: string; avatar_url: string | null } | null;
+};
+
+/**
+ * Fetch shift id by name (e.g. 'AM', 'PM'). Returns first matching shift or null.
+ */
+async function getShiftIdByName(shiftName: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('shifts')
+    .select('id')
+    .ilike('name', shiftName)
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  return (data as { id: string }).id;
+}
+
+/**
+ * Fetch room assignments for a shift and map room_id -> StaffInfo.
+ * Returns a Map; rooms not in the map have no assignment (null).
+ */
+async function fetchRoomAssignmentsForShift(shift: 'AM' | 'PM'): Promise<Map<string, StaffInfo>> {
+  const map = new Map<string, StaffInfo>();
+  const shiftId = await getShiftIdByName(shift);
+  if (!shiftId) return map;
+
+  const { data, error } = await supabase
+    .from('room_assignments')
+    .select('room_id, user_id, work_status, users(full_name, avatar_url)')
+    .eq('shift_id', shiftId);
+
+  if (error) return map;
+
+  const rows = (data ?? []) as RoomAssignmentRow[];
+  for (const row of rows) {
+    const name = row.users?.full_name ?? 'Staff';
+    const initials = name.split(/\s+/).map((s) => s[0]).join('').slice(0, 2).toUpperCase() || '?';
+    const statusText = row.work_status === 'in_progress' ? 'In Progress' : row.work_status === 'completed' ? 'Finished' : 'Not Started';
+    const statusColor = row.work_status === 'completed' ? '#41d541' : row.work_status === 'in_progress' ? '#F0BE1B' : '#1e1e1e';
+    map.set(row.room_id, {
+      name,
+      initials,
+      avatar: row.users?.avatar_url ?? undefined,
+      statusText,
+      statusColor,
+    });
+  }
+  return map;
+}
+
 function safeStatus<T extends string>(value: string | null | undefined, allowed: readonly T[]): T {
   if (value && allowed.includes(value as T)) return value as T;
   return allowed[0] as T;
@@ -99,7 +157,7 @@ function mapToGuestInfo(
 function mapRoomToCard(
   room: RoomRow,
   reservations: Array<{ res: ReservationRow; guest: GuestRow | null }>,
-  attendant: StaffInfo,
+  attendant: StaffInfo | null,
   notesAgg: RoomNotesAggregate | null
 ): RoomCardData {
   const firstRes = reservations[0]?.res;
@@ -201,6 +259,7 @@ export async function fetchAllRooms(shift: 'AM' | 'PM'): Promise<AllRoomsScreenD
   const roomIds = rooms.map((r) => r.id);
 
   const notesByRoom = await fetchRoomNotesAggregate(roomIds);
+  const assignmentByRoom = await fetchRoomAssignmentsForShift(shift);
 
   const { data: resData, error: resError } = await supabase
     .from('reservations')
@@ -244,7 +303,8 @@ export async function fetchAllRooms(shift: 'AM' | 'PM'): Promise<AllRoomsScreenD
   const cards: RoomCardData[] = rooms.map((room) => {
     const resList = resByRoom.get(room.id) ?? [];
     const notesAgg = notesByRoom.get(room.id) ?? null;
-    return mapRoomToCard(room, resList, DEFAULT_STAFF, notesAgg);
+    const attendant = assignmentByRoom.get(room.id) ?? null;
+    return mapRoomToCard(room, resList, attendant, notesAgg);
   });
 
   return {
@@ -367,4 +427,63 @@ export async function updateRoom(roomId: string, updates: RoomStateUpdate): Prom
   if (Object.keys(payload).length === 0) return;
   const { error } = await supabase.from('rooms').update(payload).eq('id', roomId);
   if (error) throw error;
+}
+
+/**
+ * Assign a room to a staff member for the given shift.
+ * Uses room_assignments table: upserts by (room_id, shift_id) so one assignee per room per shift.
+ * Returns the created/updated assignment's user info for optimistic UI, or null if invalid IDs.
+ */
+export async function assignRoomToStaff(
+  roomId: string,
+  userId: string,
+  shift: 'AM' | 'PM'
+): Promise<StaffInfo | null> {
+  if (!isValidUUID(roomId) || !isValidUUID(userId)) return null;
+
+  const shiftId = await getShiftIdByName(shift);
+  if (!shiftId) return null;
+
+  // Fetch user for optimistic response
+  const { data: userData } = await supabase
+    .from('users')
+    .select('full_name, avatar_url')
+    .eq('id', userId)
+    .single();
+
+  const name = (userData as { full_name: string; avatar_url: string | null } | null)?.full_name ?? 'Staff';
+  const avatarUrl = (userData as { full_name: string; avatar_url: string | null } | null)?.avatar_url ?? null;
+  const initials = name.split(/\s+/).map((s) => s[0]).join('').slice(0, 2).toUpperCase() || '?';
+
+  // Upsert: update existing assignment for this room+shift or insert new
+  const { data: existing } = await supabase
+    .from('room_assignments')
+    .select('id')
+    .eq('room_id', roomId)
+    .eq('shift_id', shiftId)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase
+      .from('room_assignments')
+      .update({ user_id: userId })
+      .eq('room_id', roomId)
+      .eq('shift_id', shiftId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.from('room_assignments').insert({
+      room_id: roomId,
+      shift_id: shiftId,
+      user_id: userId,
+    });
+    if (error) throw error;
+  }
+
+  return {
+    name,
+    initials,
+    avatar: avatarUrl ?? undefined,
+    statusText: 'Not Started',
+    statusColor: '#1e1e1e',
+  };
 }

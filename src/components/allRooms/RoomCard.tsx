@@ -39,13 +39,14 @@ interface RoomCardProps {
   room: RoomCardData;
   onPress: () => void;
   onStatusPress: () => void;
-  onLayout?: (event: any) => void; // Optional layout handler for position tracking
-  statusButtonRef?: (ref: any) => void; // Ref callback for status button
+  onAssignStaffPress?: (room: RoomCardData) => void;
+  onLayout?: (event: any) => void;
+  statusButtonRef?: (ref: any) => void;
   selectedShift?: ShiftType;
 }
 
 const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardProps>(
-  ({ room, onPress, onStatusPress, onLayout, statusButtonRef, selectedShift }, ref) => {
+  ({ room, onPress, onStatusPress, onAssignStaffPress, onLayout, statusButtonRef, selectedShift }, ref) => {
   // Card type detection
   const isArrivalDeparture = room.frontOfficeStatus === 'Arrival/Departure';
   const isDeparture = room.frontOfficeStatus === 'Departure';
@@ -275,12 +276,13 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         !room.isPriority && styles.dividerVerticalStandard
       ]} />
 
-      {/* Staff Section */}
+      {/* Staff Section - or "Assign Staff" when no one assigned */}
       <StaffSection
         staff={room.roomAttendantAssigned}
         isPriority={room.isPriority}
         frontOfficeStatus={room.frontOfficeStatus}
-        selectedShift="AM"
+        selectedShift={selectedShift ?? 'AM'}
+        onAssignPress={room.roomAttendantAssigned == null ? () => onAssignStaffPress?.(room) : undefined}
       />
 
       {/* Status Button */}

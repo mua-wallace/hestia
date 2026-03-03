@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import { dashboardService, type RoomStateUpdate } from '../services/dashboard';
-import type { AllRoomsScreenData, RoomCardData } from '../types/allRooms.types';
+import type { AllRoomsScreenData, RoomCardData, StaffInfo } from '../types/allRooms.types';
 import type { ShiftType } from '../types/home.types';
 import { getShiftFromTime } from '../utils/shiftUtils';
 
@@ -13,10 +13,11 @@ interface RoomsState {
   loading: boolean;
   refreshing: boolean;
   error: Error | null;
-  /** Set while updateRoom is in progress – use for activity indicator */
   updatingRoomId: string | null;
   fetchRooms: (shift?: ShiftType) => Promise<void>;
   updateRoom: (roomId: string, updates: RoomStateUpdate) => Promise<void>;
+  /** Set assigned staff for a room (optimistic update after assign from modal). */
+  setRoomAttendant: (roomId: string, staff: StaffInfo | null) => void;
   setData: (data: AllRoomsScreenData | null) => void;
   setSelectedShift: (shift: ShiftType) => void;
 }
@@ -32,6 +33,19 @@ export const useRoomsStore = create<RoomsState>((set, get) => ({
   setSelectedShift: (shift) => {
     const { data } = get();
     if (data) set({ data: { ...data, selectedShift: shift } });
+  },
+  setRoomAttendant: (roomId, staff: StaffInfo | null) => {
+    const { data } = get();
+    if (!data) return;
+    const update = (room: RoomCardData): RoomCardData =>
+      room.id === roomId ? { ...room, roomAttendantAssigned: staff } : room;
+    set({
+      data: {
+        ...data,
+        rooms: data.rooms.map(update),
+        roomsPM: data.roomsPM?.map(update) ?? data.roomsPM,
+      },
+    });
   },
 
   fetchRooms: async (shift?: ShiftType) => {

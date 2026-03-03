@@ -1,23 +1,55 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, typography } from '../../theme';
 import { StaffInfo } from '../../types/allRooms.types';
 import type { ShiftType } from '../../types/home.types';
 import { scaleX, STAFF_SECTION } from '../../constants/allRoomsStyles';
 
 interface StaffSectionProps {
-  staff: StaffInfo; // Room attendant assigned - passed as 'staff' for component reuse
+  staff: StaffInfo | null; // When null, show "Assign Staff" button
   isPriority?: boolean;
-  frontOfficeStatus?: string; // To determine if it's Departure card
+  frontOfficeStatus?: string;
   selectedShift?: ShiftType;
+  onAssignPress?: () => void; // When staff is null and user taps Assign Staff
 }
 
-export default function StaffSection({ staff, isPriority = false, frontOfficeStatus = '', selectedShift }: StaffSectionProps) {
+export default function StaffSection({ staff, isPriority = false, frontOfficeStatus = '', selectedShift, onAssignPress }: StaffSectionProps) {
+  const isDeparture = frontOfficeStatus === 'Departure';
+
+  // No staff assigned: show "Assign Staff" button
   if (!staff) {
-    return null;
+    return (
+      <View style={styles.container}>
+        <TouchableOpacity
+          style={[
+            styles.assignButton,
+            {
+              left: (STAFF_SECTION.nameStandard?.left ?? STAFF_SECTION.name.left) * scaleX,
+              top: (STAFF_SECTION.nameStandard?.top ?? STAFF_SECTION.name.top) * scaleX,
+            },
+          ]}
+          onPress={onAssignPress}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.assignButtonText}>Assign Staff</Text>
+        </TouchableOpacity>
+        <View style={[
+          styles.forwardArrowContainer,
+          {
+            left: (STAFF_SECTION.forwardArrowStandard?.left ?? STAFF_SECTION.forwardArrow.left) * scaleX,
+            top: STAFF_SECTION.forwardArrow.top * scaleX,
+          },
+        ]}>
+          <Image
+            source={require('../../../assets/icons/forward-arrow-icon.png')}
+            style={[styles.forwardArrowIcon, selectedShift === 'PM' && styles.forwardArrowIconPM]}
+            resizeMode="contain"
+          />
+        </View>
+      </View>
+    );
   }
 
-  const isDeparture = frontOfficeStatus === 'Departure';
   const hasPromiseTime = !!staff.promiseTime;
 
   // Departure cards have different positioning due to promiseTime
@@ -199,6 +231,24 @@ const styles = StyleSheet.create({
   },
   forwardArrowIconPM: {
     tintColor: '#ffffff',
+  },
+  assignButton: {
+    position: 'absolute',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#e4eefe',
+    borderWidth: 1,
+    borderColor: '#5a759d',
+    minWidth: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  assignButtonText: {
+    fontSize: 13 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.bold as any,
+    color: '#5a759d',
   },
 });
 

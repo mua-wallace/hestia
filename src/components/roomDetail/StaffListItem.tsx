@@ -9,6 +9,7 @@ interface StaffListItemProps {
     id: string;
     name: string;
     department?: string;
+    role?: string;
     avatar?: any;
     initials?: string;
     workload?: number;
@@ -55,10 +56,12 @@ export default function StaffListItem({
         )}
       </View>
 
-      {/* Name and Department */}
+      {/* Name and Role */}
       <View style={styles.infoContainer}>
         <Text style={styles.name}>{staff.name}</Text>
-        <Text style={styles.department}>{staff.department ?? ''}</Text>
+        <Text style={styles.department}>
+          {staff.role ?? ''}
+        </Text>
       </View>
 
       {/* Workload Progress Bar - Always show for all staff */}
@@ -120,13 +123,13 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: '#1e1e1e',
-    marginBottom: 5 * scaleX,
+    marginBottom: 2 * scaleX,
   },
   department: {
-    fontSize: REASSIGN_MODAL.staffList.department.fontSize * scaleX,
+    fontSize: (REASSIGN_MODAL.staffList.department.fontSize - 1) * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.light as any,
-    color: '#000000',
+    color: '#555555',
   },
   progressContainer: {
     alignItems: 'flex-end',

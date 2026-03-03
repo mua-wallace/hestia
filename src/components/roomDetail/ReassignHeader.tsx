@@ -5,7 +5,7 @@ import { REASSIGN_MODAL, scaleX } from '../../constants/reassignModalStyles';
 
 interface ReassignHeaderProps {
   onBackPress: () => void;
-  onAutoAssignPress: () => void;
+  onAutoAssignPress?: () => void;
   onSearchPress?: () => void;
 }
 
@@ -25,21 +25,23 @@ export default function ReassignHeader({
         <View style={styles.backArrowContainer}>
           <Image
             source={require('../../../assets/icons/back-arrow.png')}
-            style={styles.backArrow}
+            style={[styles.backArrow, { tintColor: REASSIGN_MODAL.header.backButton.color }]}
             resizeMode="contain"
           />
         </View>
         <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
 
-      {/* Auto Assign Button */}
-      <TouchableOpacity
-        style={styles.autoAssignButton}
-        onPress={onAutoAssignPress}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.autoAssignText}>Auto Assign</Text>
-      </TouchableOpacity>
+      {/* Auto Assign Button - only when provided */}
+      {onAutoAssignPress != null && (
+        <TouchableOpacity
+          style={styles.autoAssignButton}
+          onPress={onAutoAssignPress}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.autoAssignText}>Auto Assign</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Search Icon */}
       {onSearchPress && (
@@ -78,7 +80,6 @@ const styles = StyleSheet.create({
     height: 28 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
-    transform: [{ rotate: '270deg' }],
   },
   backArrow: {
     width: 14 * scaleX,

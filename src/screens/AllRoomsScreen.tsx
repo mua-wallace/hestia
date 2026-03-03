@@ -8,6 +8,7 @@ import { ShiftType } from '../types/home.types';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
 import { type RoomStateUpdate } from '../services/dashboard';
 import { useRoomsStore } from '../store/useRoomsStore';
+import { dashboardService } from '../services/dashboard';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import { mockHomeData } from '../data/mockHomeData';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
@@ -23,6 +24,7 @@ import { BlurView } from 'expo-blur';
 import { FilterState, FilterCounts } from '../types/filter.types';
 import type { CategoryName } from '../types/home.types';
 import AllRoomsFilterModal from '../components/allRooms/AllRoomsFilterModal';
+import ReassignModal from '../components/roomDetail/ReassignModal';
 import { CARD_DIMENSIONS, CARD_COLORS } from '../constants/allRoomsStyles';
 import { getShiftFromTime } from '../utils/shiftUtils';
 import { getStayoverWithLinen } from '../utils/stayoverLinen';
@@ -63,7 +65,7 @@ export default function AllRoomsScreen() {
   const route = useRoute();
   const routeShift = (route.params as any)?.selectedShift as ShiftType | undefined;
   const initialShift = routeShift || getShiftFromTime();
-  const { data: allRoomsData, loading, refreshing, fetchRooms, updateRoom, setSelectedShift } = useRoomsStore();
+  const { data: allRoomsData, loading, refreshing, fetchRooms, updateRoom, setSelectedShift, setRoomAttendant } = useRoomsStore();
 
   React.useEffect(() => {
     fetchRooms(initialShift);
@@ -79,6 +81,8 @@ export default function AllRoomsScreen() {
   const [buttonPositionForInspection, setButtonPositionForInspection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedRoomForStatusChange, setSelectedRoomForStatusChange] = useState<RoomCardData | null>(null);
+  const [roomToAssign, setRoomToAssign] = useState<RoomCardData | null>(null);
+  const [showAssignStaffModal, setShowAssignStaffModal] = useState(false);
   const [selectedCardTop, setSelectedCardTop] = useState<number>(0);
   const [selectedCardHeight, setSelectedCardHeight] = useState<number>(0);
   const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -171,6 +175,24 @@ export default function AllRoomsScreen() {
 
   const handleFilterPress = () => {
     setShowFilterModal(true);
+  };
+
+  const handleAssignStaffPress = (room: RoomCardData) => {
+    setRoomToAssign(room);
+    setShowAssignStaffModal(true);
+  };
+
+  const handleAssignStaffSelect = async (staffId: string) => {
+    if (!roomToAssign) return;
+    const shift = displayData.selectedShift ?? 'AM';
+    try {
+      const staffInfo = await dashboardService.assignRoomToStaff(roomToAssign.id, staffId, shift);
+      if (staffInfo) setRoomAttendant(roomToAssign.id, staffInfo);
+    } catch (e) {
+      console.warn('Assign room failed', e);
+    }
+    setShowAssignStaffModal(false);
+    setRoomToAssign(null);
   };
 
   // Calculate filter counts from current shift's room list (AM: rooms, PM: roomsPM)
@@ -742,6 +764,7 @@ export default function AllRoomsScreen() {
                 room={room}
                 onPress={() => handleRoomPress(room)}
                 onStatusPress={() => handleStatusPress(room)}
+                onAssignStaffPress={handleAssignStaffPress}
                 statusButtonRef={(ref) => {
                   if (ref) {
                     statusButtonRefs.current[room.id] = ref;
@@ -851,7 +874,20 @@ export default function AllRoomsScreen() {
         showTriangle={true}
       />
 
-      {/* Filter Modal - Use AllRoomsFilterModal for both AM and PM shifts */}
+      {/* Assign Staff Modal - staff list when room has no assignee */}
+      <ReassignModal
+        visible={showAssignStaffModal}
+        onClose={() => {
+          setShowAssignStaffModal(false);
+          setRoomToAssign(null);
+        }}
+        onStaffSelect={handleAssignStaffSelect}
+        onAutoAssign={() => {}}
+        roomNumber={roomToAssign?.roomNumber}
+        showAutoAssign={false}
+      />
+
+      {/* Filter Modal */}
       <AllRoomsFilterModal
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}

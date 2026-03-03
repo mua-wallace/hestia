@@ -9,7 +9,8 @@ export interface StaffMember {
   avatar?: any; // Image source
   initials?: string; // Single letter for avatar
   avatarColor?: string; // Background color for initial circle
-  department?: string; // e.g. HSK, F&B
+  department?: string; // Department display name (e.g. HSK, F&B)
+  role?: string; // Role display name (e.g. Attendant, Supervisor)
   workload?: number;
   maxWorkload?: number;
   onShift?: boolean;

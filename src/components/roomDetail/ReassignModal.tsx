@@ -6,6 +6,7 @@ import ReassignHeader from './ReassignHeader';
 import ReassignTabs from './ReassignTabs';
 import StaffListContainer from './StaffListContainer';
 import { mockStaffData } from '../../data/mockStaffData';
+import { fetchStaffFromSupabase } from '../../services/staff';
 
 interface ReassignModalProps {
   visible: boolean;
@@ -14,6 +15,8 @@ interface ReassignModalProps {
   onAutoAssign: () => void;
   currentAssignedStaffId?: string;
   roomNumber?: string;
+  /** When false, hides the Auto Assign button (e.g. for "Assign Staff" flow). Default true. */
+  showAutoAssign?: boolean;
 }
 
 export default function ReassignModal({
@@ -23,12 +26,32 @@ export default function ReassignModal({
   onAutoAssign,
   currentAssignedStaffId,
   roomNumber,
+  showAutoAssign = true,
 }: ReassignModalProps) {
   const [activeTab, setActiveTab] = useState<ReassignTab>('OnShift');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(
     currentAssignedStaffId || null
   );
+  const [staff, setStaff] = useState<StaffMember[]>(mockStaffData);
+
+  // Load staff list from Supabase when modal is visible; fall back to mock data if empty/error.
+  React.useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    (async () => {
+      const supabaseStaff = await fetchStaffFromSupabase();
+      if (cancelled) return;
+      if (supabaseStaff.length > 0) {
+        setStaff(supabaseStaff);
+      } else {
+        setStaff(mockStaffData);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
 
   const handleStaffSelect = (staffId: string) => {
     setSelectedStaffId(staffId);
@@ -50,7 +73,7 @@ export default function ReassignModal({
   };
 
   const getFilteredStaff = (): StaffMember[] => {
-    let filtered = mockStaffData;
+    let filtered = staff;
     
     // Filter by tab
     switch (activeTab) {
@@ -99,7 +122,7 @@ export default function ReassignModal({
         {/* Header */}
         <ReassignHeader
           onBackPress={onClose}
-          onAutoAssignPress={handleAutoAssign}
+          onAutoAssignPress={showAutoAssign ? handleAutoAssign : undefined}
         />
 
         {/* Tabs */}
@@ -114,7 +137,7 @@ export default function ReassignModal({
 
         {/* Staff List */}
         <StaffListContainer
-          staff={mockStaffData}
+          staff={staff}
           activeTab={activeTab}
           searchQuery={searchQuery}
           selectedStaffId={selectedStaffId || undefined}

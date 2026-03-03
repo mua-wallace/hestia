@@ -82,7 +82,8 @@ export interface RoomCardData {
   reservationStatus?: ReservationStatus; // Due in / Due out, Occupied, Checked out / Due in, Checked in, Checked out, Due out, Vacant, Out Of Order, Due Out / Out Of Order, Checked out / Out Of Order
   promisedTime?: PromisedTime; // 12:00, 13:00, or null
   guests: GuestInfo[]; // Array to support Arrival/Departure rooms with 2 guests
-  roomAttendantAssigned: StaffInfo;
+  /** When null, room card shows "Assign Staff" button; when set, shows staff info. */
+  roomAttendantAssigned: StaffInfo | null;
   isPriority: boolean; // Must be true or false; red border for priority rooms when true
   flagged: boolean; // Must be true or false; when true, room contributes to "Flagged" category on Home
   notes?: NotesInfo;
