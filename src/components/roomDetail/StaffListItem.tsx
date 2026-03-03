@@ -27,7 +27,14 @@ export default function StaffListItem({
 }: StaffListItemProps) {
   // Get first letter for initial if no avatar
   const initial = staff.initials || (staff.name ? staff.name.charAt(0).toUpperCase() : '?');
-  
+  // Remote URLs need { uri }; local require() is a number. Empty string = no image.
+  const avatarSource =
+    typeof staff.avatar === 'string'
+      ? staff.avatar.trim()
+        ? { uri: staff.avatar.trim() }
+        : null
+      : staff.avatar || null;
+
   // Generate color for initial circle based on name
   const getInitialColor = (name: string): string => {
     const colors = ['#ff4dd8', '#5a759d', '#607aa1', '#f0be1b'];
@@ -43,9 +50,9 @@ export default function StaffListItem({
     >
       {/* Profile Picture or Initial */}
       <View style={styles.avatarContainer}>
-        {staff.avatar ? (
+        {avatarSource ? (
           <Image
-            source={staff.avatar}
+            source={avatarSource}
             style={styles.avatar}
             resizeMode="cover"
           />

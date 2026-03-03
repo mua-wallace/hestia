@@ -80,7 +80,7 @@ type RoomAssignmentRow = {
 };
 
 /**
- * Fetch shift id by name (e.g. 'AM', 'PM'). Returns first matching shift or null.
+ * Fetch shift id by name (e.g. 'AM', 'PM'). Returns first matching shift, or first shift in table as fallback, or null.
  */
 async function getShiftIdByName(shiftName: string): Promise<string | null> {
   const { data, error } = await supabase
@@ -89,8 +89,10 @@ async function getShiftIdByName(shiftName: string): Promise<string | null> {
     .ilike('name', shiftName)
     .limit(1)
     .maybeSingle();
-  if (error || !data) return null;
-  return (data as { id: string }).id;
+  if (!error && data) return (data as { id: string }).id;
+  // Fallback: use first available shift so assignment can still be saved
+  const { data: first } = await supabase.from('shifts').select('id').limit(1).maybeSingle();
+  return first ? (first as { id: string }).id : null;
 }
 
 /**
@@ -432,7 +434,8 @@ export async function updateRoom(roomId: string, updates: RoomStateUpdate): Prom
 /**
  * Assign a room to a staff member for the given shift.
  * Uses room_assignments table: upserts by (room_id, shift_id) so one assignee per room per shift.
- * Returns the created/updated assignment's user info for optimistic UI, or null if invalid IDs.
+ * Always returns StaffInfo for the user when both IDs are valid UUIDs (so the room card can update);
+ * persists to DB only when shift_id exists.
  */
 export async function assignRoomToStaff(
   roomId: string,
@@ -441,10 +444,7 @@ export async function assignRoomToStaff(
 ): Promise<StaffInfo | null> {
   if (!isValidUUID(roomId) || !isValidUUID(userId)) return null;
 
-  const shiftId = await getShiftIdByName(shift);
-  if (!shiftId) return null;
-
-  // Fetch user for optimistic response
+  // Fetch user first so we can always return StaffInfo for the UI
   const { data: userData } = await supabase
     .from('users')
     .select('full_name, avatar_url')
@@ -454,36 +454,59 @@ export async function assignRoomToStaff(
   const name = (userData as { full_name: string; avatar_url: string | null } | null)?.full_name ?? 'Staff';
   const avatarUrl = (userData as { full_name: string; avatar_url: string | null } | null)?.avatar_url ?? null;
   const initials = name.split(/\s+/).map((s) => s[0]).join('').slice(0, 2).toUpperCase() || '?';
-
-  // Upsert: update existing assignment for this room+shift or insert new
-  const { data: existing } = await supabase
-    .from('room_assignments')
-    .select('id')
-    .eq('room_id', roomId)
-    .eq('shift_id', shiftId)
-    .maybeSingle();
-
-  if (existing) {
-    const { error } = await supabase
-      .from('room_assignments')
-      .update({ user_id: userId })
-      .eq('room_id', roomId)
-      .eq('shift_id', shiftId);
-    if (error) throw error;
-  } else {
-    const { error } = await supabase.from('room_assignments').insert({
-      room_id: roomId,
-      shift_id: shiftId,
-      user_id: userId,
-    });
-    if (error) throw error;
-  }
-
-  return {
+  const staffInfo: StaffInfo = {
     name,
     initials,
     avatar: avatarUrl ?? undefined,
     statusText: 'Not Started',
     statusColor: '#1e1e1e',
   };
+
+  const shiftId = await getShiftIdByName(shift);
+  if (!shiftId) {
+    // No shift in DB – still return StaffInfo so the room card updates
+    console.warn('[assignRoomToStaff] No shift found for', shift, '– assignment not persisted. Add shifts (e.g. AM, PM) in Supabase.');
+    return staffInfo;
+  }
+
+  const { error } = await supabase
+    .from('room_assignments')
+    .upsert(
+      { room_id: roomId, shift_id: shiftId, user_id: userId },
+      { onConflict: 'room_id,shift_id' }
+    );
+
+  if (error) {
+    const isNoConflictConstraint =
+      error.code === '42P10' || (error.message != null && /unique|on conflict/i.test(error.message));
+    if (isNoConflictConstraint) {
+      // Fallback when unique constraint doesn't exist yet (run migration 20250628000000_room_assignments_upsert_and_anon.sql)
+      const { data: existing } = await supabase
+        .from('room_assignments')
+        .select('id')
+        .eq('room_id', roomId)
+        .eq('shift_id', shiftId)
+        .maybeSingle();
+      if (existing) {
+        const updateResult = await supabase
+          .from('room_assignments')
+          .update({ user_id: userId })
+          .eq('room_id', roomId)
+          .eq('shift_id', shiftId);
+        if (updateResult.error) throw updateResult.error;
+      } else {
+        const insertResult = await supabase.from('room_assignments').insert({
+          room_id: roomId,
+          shift_id: shiftId,
+          user_id: userId,
+        });
+        if (insertResult.error) throw insertResult.error;
+      }
+    } else {
+      console.error('[assignRoomToStaff] Supabase error:', error.message, error.code);
+      throw error;
+    }
+  }
+
+  return staffInfo;
 }

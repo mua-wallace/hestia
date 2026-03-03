@@ -11,9 +11,11 @@ interface StaffSectionProps {
   frontOfficeStatus?: string;
   selectedShift?: ShiftType;
   onAssignPress?: () => void; // When staff is null and user taps Assign Staff
+  /** When staff is assigned, tap on forward arrow opens staff list to change assignee */
+  onStaffSectionPress?: () => void;
 }
 
-export default function StaffSection({ staff, isPriority = false, frontOfficeStatus = '', selectedShift, onAssignPress }: StaffSectionProps) {
+export default function StaffSection({ staff, isPriority = false, frontOfficeStatus = '', selectedShift, onAssignPress, onStaffSectionPress }: StaffSectionProps) {
   const isDeparture = frontOfficeStatus === 'Departure';
 
   // No staff assigned: show "Assign Staff" button
@@ -90,11 +92,15 @@ export default function StaffSection({ staff, isPriority = false, frontOfficeSta
       </View>
 
       {/* Staff Name */}
-      <Text style={[
-        styles.staffName, 
-        { left: nameLeft * scaleX, top: nameTop * scaleX },
-        selectedShift === 'PM' && styles.staffNamePM
-      ]}>
+      <Text
+        style={[
+          styles.staffName,
+          { left: nameLeft * scaleX, top: nameTop * scaleX },
+          selectedShift === 'PM' && styles.staffNamePM
+        ]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
         {staff.name}
       </Text>
 
@@ -126,25 +132,50 @@ export default function StaffSection({ staff, isPriority = false, frontOfficeSta
         </Text>
       )}
 
-      {/* Forward Arrow Icon */}
-      <View style={[
-        styles.forwardArrowContainer,
-        {
-          left: isPriority 
-            ? STAFF_SECTION.forwardArrow.left * scaleX 
-            : (STAFF_SECTION.forwardArrowStandard?.left ?? STAFF_SECTION.forwardArrow.left) * scaleX,
-          top: STAFF_SECTION.forwardArrow.top * scaleX,
-        }
-      ]}>
-        <Image
-          source={require('../../../assets/icons/forward-arrow-icon.png')}
+      {/* Forward Arrow Icon – tappable to open staff list when assigned */}
+      {onStaffSectionPress ? (
+        <TouchableOpacity
           style={[
-            styles.forwardArrowIcon,
-            selectedShift === 'PM' && styles.forwardArrowIconPM
+            styles.forwardArrowContainer,
+            {
+              left: isPriority
+                ? STAFF_SECTION.forwardArrow.left * scaleX
+                : (STAFF_SECTION.forwardArrowStandard?.left ?? STAFF_SECTION.forwardArrow.left) * scaleX,
+              top: STAFF_SECTION.forwardArrow.top * scaleX,
+            },
           ]}
-          resizeMode="contain"
-        />
-      </View>
+          onPress={onStaffSectionPress}
+          activeOpacity={0.7}
+        >
+          <Image
+            source={require('../../../assets/icons/forward-arrow-icon.png')}
+            style={[
+              styles.forwardArrowIcon,
+              selectedShift === 'PM' && styles.forwardArrowIconPM
+            ]}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      ) : (
+        <View style={[
+          styles.forwardArrowContainer,
+          {
+            left: isPriority
+              ? STAFF_SECTION.forwardArrow.left * scaleX
+              : (STAFF_SECTION.forwardArrowStandard?.left ?? STAFF_SECTION.forwardArrow.left) * scaleX,
+            top: STAFF_SECTION.forwardArrow.top * scaleX,
+          }
+        ]}>
+          <Image
+            source={require('../../../assets/icons/forward-arrow-icon.png')}
+            style={[
+              styles.forwardArrowIcon,
+              selectedShift === 'PM' && styles.forwardArrowIconPM
+            ]}
+            resizeMode="contain"
+          />
+        </View>
+      )}
     </View>
   );
 }

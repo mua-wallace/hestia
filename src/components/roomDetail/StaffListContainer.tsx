@@ -33,14 +33,15 @@ export default function StaffListContainer({
     }
   };
 
-  // Filter by search query
+  // Filter by search query (name, department, role)
   const filterBySearch = (staffList: StaffMember[], query: string): StaffMember[] => {
     if (!query.trim()) return staffList;
     const lowerQuery = query.toLowerCase();
     return staffList.filter(
       (s) =>
         s.name.toLowerCase().includes(lowerQuery) ||
-        (s.department ?? '').toLowerCase().includes(lowerQuery)
+        (s.department ?? '').toLowerCase().includes(lowerQuery) ||
+        (s.role ?? '').toLowerCase().includes(lowerQuery)
     );
   };
 

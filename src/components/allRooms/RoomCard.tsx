@@ -283,6 +283,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         frontOfficeStatus={room.frontOfficeStatus}
         selectedShift={selectedShift ?? 'AM'}
         onAssignPress={room.roomAttendantAssigned == null ? () => onAssignStaffPress?.(room) : undefined}
+        onStaffSectionPress={room.roomAttendantAssigned != null ? () => onAssignStaffPress?.(room) : undefined}
       />
 
       {/* Status Button */}

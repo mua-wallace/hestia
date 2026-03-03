@@ -10,11 +10,12 @@ import type { HomeScreenData } from '../types/home.types';
 import type { AllRoomsScreenData } from '../types/allRooms.types';
 import type { TicketsScreenData } from '../types/tickets.types';
 import type { ChatItemData } from '../components/chat/ChatItem';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { fetchAllRooms, updateRoom, assignRoomToStaff as roomsAssignRoomToStaff, type RoomStateUpdate } from './rooms';
 import type { StaffInfo } from '../types/allRooms.types';
 import { mockStaffData } from '../data/mockStaffData';
 import { getShiftFromTime } from '../utils/shiftUtils';
+import { getToast } from '../utils/toast';
 
 export type { RoomStateUpdate } from './rooms';
 
@@ -43,10 +44,11 @@ const dashboard = {
 
   /**
    * Assign a room to a staff member for the current shift.
-   * When Supabase is configured and userId is a valid UUID, persists to room_assignments and returns StaffInfo.
-   * When using mock staff (non-UUID ids), returns StaffInfo from mock data for local-only update.
+   * When both roomId and userId are UUIDs and Supabase is configured, persists to room_assignments.
+   * Always returns StaffInfo when we have a valid user selection so the room card can update (from API or by fetching user).
    */
   async assignRoomToStaff(roomId: string, userId: string, shift: 'AM' | 'PM'): Promise<StaffInfo | null> {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const staffMember = mockStaffData.find((s) => s.id === userId);
     const mockStaffInfo: StaffInfo | null = staffMember
       ? {
@@ -58,15 +60,41 @@ const dashboard = {
         }
       : null;
 
-    if (isSupabaseConfigured && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+    // Build StaffInfo from Supabase user when staff was selected from Supabase list (UUID)
+    const buildStaffInfoFromSupabase = async (): Promise<StaffInfo | null> => {
+      if (!isSupabaseConfigured || !uuidRegex.test(userId)) return null;
+      const { data } = await supabase.from('users').select('full_name, avatar_url').eq('id', userId).single();
+      const row = data as { full_name: string; avatar_url: string | null } | null;
+      if (!row) return null;
+      const name = row.full_name ?? 'Staff';
+      const initials = name.split(/\s+/).map((s) => s[0]).join('').slice(0, 2).toUpperCase() || '?';
+      return {
+        name,
+        initials,
+        avatar: row.avatar_url ?? undefined,
+        statusText: 'Not Started',
+        statusColor: '#1e1e1e',
+      };
+    };
+
+    if (isSupabaseConfigured && uuidRegex.test(roomId) && uuidRegex.test(userId)) {
       try {
         const info = await roomsAssignRoomToStaff(roomId, userId, shift);
-        return info ?? mockStaffInfo;
+        return info ?? (await buildStaffInfoFromSupabase()) ?? mockStaffInfo;
       } catch (e) {
-        console.warn('Assign room failed, using local update:', e);
-        return mockStaffInfo;
+        const message = e instanceof Error ? e.message : 'Assignment could not be saved';
+        console.warn('Assign room failed:', message, e);
+        getToast()?.show(message, { type: 'error', duration: 4000 });
+        return (await buildStaffInfoFromSupabase()) ?? mockStaffInfo;
       }
     }
+
+    // Room from mock data but staff from Supabase – still update card with selected user
+    if (isSupabaseConfigured && uuidRegex.test(userId)) {
+      const fromSupabase = await buildStaffInfoFromSupabase();
+      if (fromSupabase) return fromSupabase;
+    }
+
     return mockStaffInfo;
   },
 
