@@ -78,7 +78,11 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
   const isVacant = room.guests?.[0]?.isVacant === true;
   const isVacantTurndown = isTurndown && isVacant;
   const hasNotes = !!room.notes;
-  const hasNotesOrPriority = hasNotes || !!room.isPriority;
+  // Only show notes/rush container when there is at least one note, or rushed, or priority (per Figma)
+  const showNotesSection =
+    !!room.isPriority ||
+    (!!room.notes && (room.notes.count > 0 || !!room.notes.hasRushed));
+  const hasNotesOrPriority = showNotesSection;
 
   // Check if any guest names wrap (longer than 23 characters)
   const MAX_NAME_LENGTH = 23;
@@ -99,17 +103,20 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         : wrappedGuestCount * WRAP_SPACING * scaleX) // For single guest cards, add for each wrapped name
     : 0;
 
-  // Calculate card height based on type - matching Figma; notes/priority always get withNotes height so section fits
+  // Card height differs by type (different content = different size):
+  // - Arrival/Departure: 2 guest infos → tallest (292px base)
+  // - Departure (single): 1 guest → 177px base
+  // - Arrival, Stayover, Turndown (single): 1 guest → 185px base, or 244px when notes/rush section shown
   const getCardHeight = (): number => {
     let baseHeight: number;
     if (isArrivalDeparture) {
-      baseHeight = CARD_DIMENSIONS.heights.arrivalDeparture * scaleX; // 292px
+      baseHeight = CARD_DIMENSIONS.heights.arrivalDeparture * scaleX; // 2 guests
     } else if (hasNotesOrPriority) {
-      baseHeight = CARD_DIMENSIONS.heights.withNotes * scaleX; // 222px – same for all cards with notes or priority
+      baseHeight = CARD_DIMENSIONS.heights.withNotes * scaleX; // 1 guest + notes/rush section
     } else if (isDeparture) {
-      baseHeight = CARD_DIMENSIONS.heights.standard * scaleX; // 177px
+      baseHeight = CARD_DIMENSIONS.heights.standard * scaleX; // 1 guest, departure
     } else {
-      baseHeight = CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 185px
+      baseHeight = CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 1 guest, arrival/stayover/turndown
     }
     return baseHeight + wrappedNameExtraHeight;
   };
@@ -122,16 +129,12 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
   });
 
   // Determine guest container background style
-  // Note: Arrival, Stayover, and Turndown all use the same positioning (height: 100, top: 74)
-  // Departure uses different positioning (height: 101, top: 70)
+  // Arrival, Stayover, Turndown, and Departure all use the same positioning (height: 100, top: 74)
   const getGuestContainerBgStyle = () => {
     if (isArrivalDeparture || hasNotesOrPriority) {
       return null; // No background when notes section is shown (notes or priority)
     }
-    if (isDeparture) {
-      return styles.guestContainerBgDeparture;
-    }
-    // Arrival, Stayover, Turndown all use the same positioning from constants
+    // Single-guest cards (Arrival, Stayover, Turndown, Departure) use same guest area position
     return styles.guestContainerBgArrival;
   };
 
@@ -322,10 +325,10 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         />
       )}
 
-      {/* Notes Section - shown for cards with notes OR priority rooms */}
-      {hasNotesOrPriority && (
-        <NotesSection 
-          notes={room.notes || { count: 0, hasRushed: false }} 
+      {/* Notes/Rush container - only when there is a note, rush, or priority (Figma: clear padding from card and guest info) */}
+      {showNotesSection && (
+        <NotesSection
+          notes={room.notes || { count: 0, hasRushed: false }}
           isArrivalDeparture={isArrivalDeparture}
           isPriority={room.isPriority}
         />

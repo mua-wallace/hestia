@@ -124,11 +124,9 @@ export default function GuestInfoDisplay({
       ? (isSecondGuest ? GUEST_INFO.nameSecond.top : GUEST_INFO.name.top)
       : isPriority
         ? (isSecondGuest ? GUEST_INFO.nameSecond.top : GUEST_INFO.name.top)
-        : hasNotes || isTurndown || isStayover || isNoTask
+          : hasNotes || isTurndown || isStayover || isNoTask
           ? GUEST_INFO.nameWithNotes.top
-          : isArrival
-            ? GUEST_INFO.nameStandardArrival.top
-            : GUEST_INFO.nameStandard.top;
+          : GUEST_INFO.nameStandardArrival.top; // Arrival, Departure, Stayover, Turndown: same position
 
   // Determine date range top position - use override if provided, otherwise calculate
   // For Arrival/Departure cards (with or without isPriority), use first/second guest positions
@@ -138,11 +136,9 @@ export default function GuestInfoDisplay({
       ? (isSecondGuest ? GUEST_INFO.dateRangeSecond.top : GUEST_INFO.dateRange.top)
       : isPriority
         ? (isSecondGuest ? GUEST_INFO.dateRangeSecond.top : GUEST_INFO.dateRange.top)
-        : hasNotes || isTurndown || isStayover || isNoTask
+          : hasNotes || isTurndown || isStayover || isNoTask
           ? GUEST_INFO.dateRangeWithNotes.top
-          : isArrival
-            ? GUEST_INFO.dateRangeStandardArrival.top
-            : GUEST_INFO.dateRangeStandard.top;
+          : GUEST_INFO.dateRangeStandardArrival.top; // Arrival, Departure, Stayover, Turndown: same position
 
   // Max name length: "Eric Coleman & Glenn" = 23 characters
   // If name exceeds this length, truncate at 23 chars and wrap remainder to next line
@@ -210,11 +206,9 @@ export default function GuestInfoDisplay({
           }
         : isPriority
           ? (isSecondGuest ? GUEST_INFO.guestCount.positions.prioritySecond : GUEST_INFO.guestCount.positions.priorityFirst)
-          : hasNotes || isTurndown || isStayover
+            : hasNotes || isTurndown || isStayover
             ? GUEST_INFO.guestCount.positions.withNotes
-            : isArrival || isStayover || isTurndown
-              ? GUEST_INFO.guestCount.positions.standardArrival // Use constants directly - already positioned correctly at top 109px
-              : GUEST_INFO.guestCount.positions.standardDeparture;
+            : GUEST_INFO.guestCount.positions.standardArrival; // Arrival, Departure, Stayover, Turndown: same position
 
   // Priority badge positioning - use override if provided
   // Note: For Arrival/Departure cards, badge is now inline with name using flexbox, so absolute positioning is not used
@@ -244,13 +238,8 @@ export default function GuestInfoDisplay({
     guestIconPos = isSecondGuest
       ? GUEST_INFO.iconArrivalDeparture.positions.secondGuest
       : GUEST_INFO.iconArrivalDeparture.positions.firstGuest;
-  } else if (isDeparture && !isPriority && !hasNotes) {
-    guestIconPos = {
-      left: GUEST_INFO.iconStandardDeparture.left,
-      top: GUEST_INFO.iconStandardDeparture.top,
-    };
-  } else if (isArrival && !hasNotes) {
-    // For Arrival cards (priority or standard), use standard Arrival icon positioning
+  } else if ((isArrival || isDeparture || isStayover || isTurndown) && !hasNotes) {
+    // Arrival, Departure, Stayover, Turndown: same icon position (align with stayover, turndown, etc.)
     guestIconPos = {
       left: GUEST_INFO.iconStandardArrival.left,
       top: GUEST_INFO.iconStandardArrival.top,

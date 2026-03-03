@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import {
   View,
   Image,
@@ -6,7 +6,6 @@ import {
   Modal,
   TouchableOpacity,
   StatusBar,
-  Animated,
   Dimensions,
   Platform,
 } from 'react-native';
@@ -47,47 +46,6 @@ export default function GuestProfileImageModal({
   guest,
   anchorLayout,
 }: GuestProfileImageModalProps) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.9)).current;
-
-  useEffect(() => {
-    if (visible) {
-      opacity.setValue(0);
-      scale.setValue(0.9);
-      Animated.parallel([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scale, {
-          toValue: 1,
-          useNativeDriver: true,
-          tension: 80,
-          friction: 12,
-        }),
-      ]).start();
-    } else {
-      opacity.setValue(0);
-      scale.setValue(0.9);
-    }
-  }, [visible, opacity, scale]);
-
-  const closeModal = () => {
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scale, {
-        toValue: 0.95,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start(() => onClose());
-  };
-
   if (!guest?.imageUrl) return null;
 
   // Position to the right of guest image when anchorLayout is provided
@@ -113,17 +71,17 @@ export default function GuestProfileImageModal({
     <Modal
       visible={visible}
       transparent
-      animationType="none"
-      onRequestClose={closeModal}
+      animationType="fade"
+      onRequestClose={onClose}
     >
       <StatusBar hidden={visible} />
       <View style={styles.overlay}>
         <TouchableOpacity
           style={styles.touchableOverlay}
           activeOpacity={1}
-          onPress={closeModal}
+          onPress={onClose}
         >
-          <Animated.View
+          <View
             style={[
               styles.imageWrap,
               {
@@ -133,8 +91,6 @@ export default function GuestProfileImageModal({
                 width: IMAGE_SIZE,
                 height: IMAGE_SIZE,
                 borderRadius: IMAGE_RADIUS,
-                opacity,
-                transform: [{ scale }],
               },
             ]}
             pointerEvents="box-none"
@@ -152,7 +108,7 @@ export default function GuestProfileImageModal({
                 {...(Platform.OS === 'android' && { resizeMethod: 'resize' as const })}
               />
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         </TouchableOpacity>
       </View>
     </Modal>

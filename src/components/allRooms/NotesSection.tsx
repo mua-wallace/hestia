@@ -11,6 +11,10 @@ interface NotesSectionProps {
 }
 
 export default function NotesSection({ notes, isArrivalDeparture = false, isPriority = false }: NotesSectionProps) {
+  // Only show container when there is something to show (note, rush, or priority) - per Figma
+  const hasContent = isPriority || notes.count > 0 || !!notes.hasRushed;
+  if (!hasContent) return null;
+
   const position = isArrivalDeparture 
     ? NOTES_SECTION.positions.arrivalDeparture 
     : NOTES_SECTION.positions.withNotes;
@@ -108,7 +112,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: NOTES_SECTION.background,
     borderRadius: NOTES_SECTION.borderRadius * scaleX,
-    paddingVertical: NOTES_SECTION.paddingVertical * scaleX,
+    paddingTop: (NOTES_SECTION.paddingTop ?? NOTES_SECTION.paddingVertical) * scaleX,
+    paddingBottom: NOTES_SECTION.paddingVertical * scaleX,
     paddingHorizontal: NOTES_SECTION.paddingHorizontal * scaleX,
     height: NOTES_SECTION.height * scaleX,
     width: NOTES_SECTION.width * scaleX,

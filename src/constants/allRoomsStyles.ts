@@ -9,14 +9,14 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 export const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
-// Card Dimensions
+// Card Dimensions - different card types have different content so heights differ
 export const CARD_DIMENSIONS = {
   width: 426,
   heights: {
-    standard: 177,        // Single guest, no notes
-    withGuestInfo: 185,   // Standard with guest info
-    withNotes: 222,       // With notes section
-    arrivalDeparture: 292, // Arrival/Departure with 2 guests
+    standard: 177,        // Departure: 1 guest only
+    withGuestInfo: 185,   // Arrival / Stayover / Turndown: 1 guest
+    withNotes: 244,       // Any type with notes/rush section: 1 guest + notes container
+    arrivalDeparture: 292, // Arrival/Departure: 2 guest infos
   },
   marginHorizontal: 7,
   marginBottom: 16,
@@ -361,13 +361,14 @@ export const STATUS_BUTTON = {
 
 // Notes Section Styles - Exact values from Figma
 export const NOTES_SECTION = {
-  width: 416, // Increased from 414 to be more full width (card is 426px, so 5px margin on each side)
+  width: 414, // Figma node 1061:1243; card 426 so 6px padding from card left/right
   height: 54,
   borderRadius: 10,
   background: '#ffffff', // Arrival/Departure cards
   backgroundWithNotes: 'rgba(223, 230, 240, 0.4)', // Cards with notes (Room 203)
-  paddingHorizontal: 12,
-  paddingVertical: 8,
+  paddingHorizontal: 16, // Clear internal padding from container edges
+  paddingVertical: 10,
+  paddingTop: 14, // Small padding top inside container so icons don't sit flush with top edge
   // Room 201 (Arrival/Departure): From Figma metadata
   // Container should span full width within card (card is 426px, container is 416px with 5px margin on each side)
   // Card height is 292px, container height is 54px
@@ -375,9 +376,10 @@ export const NOTES_SECTION = {
   // Elements: rushed icon x=19 y=245, notes icon x=45.03 y=245, badge x=75 y=247, text x=112 y=252 (all relative to card)
   // For top: icons at y=245, so container top should be ~238 (245-7=238 where 7 accounts for visual alignment)
   // But we need padding from bottom: card height 292 - container height 54 - bottom padding 5 = 233px top
+  // Figma: container centered in card (426−414)/2 = 6px from left; top from Figma frame (e.g. 897−758 = 139 for Room 203)
   positions: {
-    arrivalDeparture: { left: 5, top: 233 }, // Container at x=5 (5px margin from card left), top=233 gives 5px padding from bottom (292-54-233=5)
-    withNotes: { left: 5, top: 161 }, // Room 203: card height 222, container 54, so 222-54-7=161 (7px padding from bottom)
+    arrivalDeparture: { left: 6, top: 233 }, // 6px from card left; 5px from card bottom (292−54−233=5)
+    withNotes: { left: 6, top: 182 }, // 6px from card left; 8px gap below guest info (174+8); 244−182−54 = 8px from bottom
   },
   icon: {
     width: 31.974,
