@@ -91,19 +91,12 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
     return baseHeight + wrappedNameExtraHeight;
   };
 
-  // Determine card background and border - always use AM styling (PM keeps screen bg only)
-  const getCardStyles = () => {
-    const isInProgress = room.houseKeepingStatus === 'InProgress';
-    return {
-      backgroundColor: isInProgress 
-        ? CARD_COLORS.priorityBackground 
-        : CARD_COLORS.background,
-      borderColor: isInProgress 
-        ? CARD_COLORS.priorityBorder 
-        : CARD_COLORS.border,
-      borderWidth: 1,
-    };
-  };
+  // Card background and border: do not change for priority; priority only adds/removes rush icon
+  const getCardStyles = () => ({
+    backgroundColor: CARD_COLORS.background,
+    borderColor: CARD_COLORS.border,
+    borderWidth: 1,
+  });
 
   // Determine guest container background style
   // Note: Arrival, Stayover, and Turndown all use the same positioning (height: 100, top: 74)

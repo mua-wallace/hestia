@@ -317,16 +317,26 @@ export default function RoomDetailScreen() {
       }
     };
 
-    const newStatus = mapStatusOptionToRoomStatus(statusOption);
-    setCurrentStatus(newStatus);
-
-    // Priority toggles: if already priority, clicking Priority resets to normal
+    // Priority only toggles rush icon on room card; do not change room detail background or status icon
     if (statusOption === 'Priority') {
       const newIsPriority = !localRoom.isPriority;
       setLocalRoom((prev) => ({ ...prev, isPriority: newIsPriority }));
       setSelectedStatusText(undefined);
       setPausedAt(undefined);
-    } else if (statusOption === 'Pause') {
+      const priorityPayload = newIsPriority ? 'high' : 'normal';
+      updateRoom(room.id, {
+        ...(localRoom.houseKeepingStatus && { house_keeping_status: localRoom.houseKeepingStatus }),
+        priority: priorityPayload,
+      }).catch((e) => console.warn('Failed to update room status in Supabase', e));
+      setShowStatusModal(false);
+      setStatusButtonPosition(null);
+      return;
+    }
+
+    const newStatus = mapStatusOptionToRoomStatus(statusOption);
+    setCurrentStatus(newStatus);
+
+    if (statusOption === 'Pause') {
       const now = new Date();
       const hours = now.getHours().toString().padStart(2, '0');
       const minutes = now.getMinutes().toString().padStart(2, '0');
@@ -337,10 +347,8 @@ export default function RoomDetailScreen() {
       setPausedAt(undefined);
     }
 
-    const priorityPayload = statusOption === 'Priority' ? (!localRoom.isPriority ? 'high' : 'normal') : undefined;
     updateRoom(room.id, {
       house_keeping_status: newStatus,
-      ...(priorityPayload !== undefined && { priority: priorityPayload }),
     }).catch((e) => console.warn('Failed to update room status in Supabase', e));
 
     setShowStatusModal(false);
