@@ -1,10 +1,11 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { typography } from '../../theme';
 import { GUEST_INFO, CARD_DIMENSIONS, GUEST_CONTAINER_BG } from '../../constants/allRoomsStyles';
 import { normalizedScaleX } from '../../utils/responsive';
 import { formatGuestCount, formatDatesOfStay } from '../../utils/formatting';
 import type { GuestInfo } from '../../types/allRooms.types';
+import type { GuestImageAnchorLayout } from './GuestProfileImageModal';
 
 interface GuestInfoDisplayProps {
   guest: GuestInfo;
@@ -37,6 +38,8 @@ interface GuestInfoDisplayProps {
   absolutePositioning?: boolean;
   absoluteTop?: number; // Absolute top position from parent
   hideNameRow?: boolean; // Hide the name row (used when parent renders it)
+  /** When provided and guest has imageUrl, tapping the guest image calls this with guest and anchor layout for positioning */
+  onGuestImagePress?: (guest: GuestInfo, anchorLayout?: GuestImageAnchorLayout) => void;
 }
 
 /**
@@ -72,7 +75,10 @@ export default function GuestInfoDisplay({
   absolutePositioning = false,
   absoluteTop,
   hideNameRow = false,
+  onGuestImagePress,
 }: GuestInfoDisplayProps) {
+  const guestImageWrapRef = useRef<View>(null);
+
   // Determine card type characteristics
   const isArrival = category === 'Arrival';
   const isDeparture = category === 'Departure';
@@ -437,18 +443,46 @@ export default function GuestInfoDisplay({
           ]}
         >
           <View style={[styles.guestImageContainer, { marginRight: guestImageGap }]}>
-            <Image
-              source={{ uri: guest.imageUrl! }}
-              style={[
-                styles.guestImage,
-                {
-                  width: guestImageWidth,
-                  height: guestImageHeight,
-                  borderRadius: guestImageRadius,
-                },
-              ]}
-              resizeMode="cover"
-            />
+            {onGuestImagePress ? (
+              <View ref={guestImageWrapRef} collapsable={false}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    guestImageWrapRef.current?.measureInWindow(
+                      (x, y, width, height) => {
+                        onGuestImagePress(guest, { x, y, width, height });
+                      }
+                    );
+                  }}
+                >
+                  <Image
+                    source={{ uri: guest.imageUrl! }}
+                    style={[
+                      styles.guestImage,
+                      {
+                        width: guestImageWidth,
+                        height: guestImageHeight,
+                        borderRadius: guestImageRadius,
+                      },
+                    ]}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Image
+                source={{ uri: guest.imageUrl! }}
+                style={[
+                  styles.guestImage,
+                  {
+                    width: guestImageWidth,
+                    height: guestImageHeight,
+                    borderRadius: guestImageRadius,
+                  },
+                ]}
+                resizeMode="cover"
+              />
+            )}
             {/* Category Badge at bottom right */}
             {((isArrival || isDeparture || isStayover || isTurndown) || (isArrivalDeparture || category === 'ArrivalDeparture')) && (
               <View

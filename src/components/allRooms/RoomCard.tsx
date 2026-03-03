@@ -1,8 +1,9 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
 import { scaleX } from '../../constants/allRoomsStyles';
-import type { RoomCardData } from '../../types/allRooms.types';
+import type { RoomCardData, GuestInfo } from '../../types/allRooms.types';
+import type { GuestImageAnchorLayout } from '../shared/GuestProfileImageModal';
 import { FRONT_OFFICE_STATUS_ICONS, STATUS_CONFIGS } from '../../types/allRooms.types';
 import { getStayoverDisplayLabel, showStayoverWithLinenBadge } from '../../utils/stayoverLinen';
 import type { ShiftType } from '../../types/home.types';
@@ -17,6 +18,7 @@ import {
   STATUS_BUTTON,
 } from '../../constants/allRoomsStyles';
 import GuestInfoSection from './GuestInfoSection';
+import GuestProfileImageModal from '../shared/GuestProfileImageModal';
 import StaffSection from './StaffSection';
 import StatusButton from './StatusButton';
 import NotesSection from './NotesSection';
@@ -47,6 +49,26 @@ interface RoomCardProps {
 
 const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardProps>(
   ({ room, onPress, onStatusPress, onAssignStaffPress, onLayout, statusButtonRef, selectedShift }, ref) => {
+  // Guest profile image modal - opens to the right of guest image
+  const [guestProfileModalGuest, setGuestProfileModalGuest] = useState<GuestInfo | null>(null);
+  const [guestProfileAnchorLayout, setGuestProfileAnchorLayout] = useState<GuestImageAnchorLayout | null>(null);
+  const guestImagePressRef = useRef(false);
+
+  const handleCardPress = () => {
+    if (guestImagePressRef.current) {
+      guestImagePressRef.current = false;
+      return;
+    }
+    onPress();
+  };
+
+  const handleGuestImagePress = (guest: GuestInfo, anchorLayout?: GuestImageAnchorLayout) => {
+    if (!guest.imageUrl) return;
+    guestImagePressRef.current = true;
+    setGuestProfileModalGuest(guest);
+    setGuestProfileAnchorLayout(anchorLayout ?? null);
+  };
+
   // Card type detection
   const isArrivalDeparture = room.frontOfficeStatus === 'Arrival/Departure';
   const isDeparture = room.frontOfficeStatus === 'Departure';
@@ -126,7 +148,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           ...cardStyles,
         },
       ]}
-      onPress={onPress}
+      onPress={handleCardPress}
       onLayout={onLayout}
       activeOpacity={0.6} // Slightly lower opacity for smoother press feedback
     >
@@ -265,6 +287,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
               frontOfficeStatus={room.frontOfficeStatus}
               isArrivalDeparture={isArrivalDeparture}
               selectedShift="AM"
+              onGuestImagePress={handleGuestImagePress}
             />
           );
         })
@@ -307,6 +330,14 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           isPriority={room.isPriority}
         />
       )}
+
+      {/* Guest profile image modal - opens to the right of guest image, 296×296, 5px radius */}
+      <GuestProfileImageModal
+        visible={!!guestProfileModalGuest}
+        onClose={() => { setGuestProfileModalGuest(null); setGuestProfileAnchorLayout(null); }}
+        guest={guestProfileModalGuest?.imageUrl ? { imageUrl: guestProfileModalGuest.imageUrl, name: guestProfileModalGuest.name } : null}
+        anchorLayout={guestProfileAnchorLayout}
+      />
     </TouchableOpacity>
   );
 });

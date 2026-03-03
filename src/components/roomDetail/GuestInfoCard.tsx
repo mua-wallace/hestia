@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, Modal, TouchableOpacity, Dimensions, StatusBar } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { GUEST_INFO as ROOM_DETAIL_GUEST_INFO, CONTENT_AREA, ROOM_DETAIL_HEADER, DETAIL_TABS } from '../../constants/roomDetailStyles';
+import React, { useState, useRef } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { GUEST_INFO as ROOM_DETAIL_GUEST_INFO } from '../../constants/roomDetailStyles';
 import { GUEST_INFO } from '../../constants/allRoomsStyles';
 import { normalizedScaleX } from '../../utils/responsive';
 import { formatGuestCount, formatDatesOfStay } from '../../utils/formatting';
 import GuestInfoDisplay from '../shared/GuestInfoDisplay';
+import GuestProfileImageModal, { type GuestImageAnchorLayout } from '../shared/GuestProfileImageModal';
 import type { GuestInfo } from '../../types/allRooms.types';
 
 interface GuestInfoCardProps {
@@ -33,9 +33,18 @@ export default function GuestInfoCard({
   specialInstructionsTextTop,
   roomCategory,
 }: GuestInfoCardProps) {
-  // State for image modal
+  // State for image modal - opens to the right of guest image
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
-  
+  const [imageModalAnchorLayout, setImageModalAnchorLayout] = useState<GuestImageAnchorLayout | null>(null);
+  const guestImageWrapRef = useRef<View>(null);
+
+  const openGuestImageModal = () => {
+    guestImageWrapRef.current?.measureInWindow((x, y, width, height) => {
+      setImageModalAnchorLayout({ x, y, width, height });
+      setIsImageModalVisible(true);
+    });
+  };
+
   // Calculate relative position from content area start
   const containerTop = absoluteTop - contentAreaTop;
 
@@ -143,6 +152,8 @@ export default function GuestInfoCard({
       {iconLeftRelative !== undefined && (
         hasGuestImage ? (
           <View
+            ref={guestImageWrapRef}
+            collapsable={false}
             style={{
               position: 'absolute',
               left: iconLeftRelative * normalizedScaleX,
@@ -153,7 +164,7 @@ export default function GuestInfoCard({
           >
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => setIsImageModalVisible(true)}
+              onPress={openGuestImageModal}
             >
               <Image
                 source={{ uri: guest.imageUrl }}
@@ -346,37 +357,13 @@ export default function GuestInfoCard({
         </>
       )}
 
-      {/* Image Modal - Enlarged Guest Image with Blur Background */}
-      <Modal
+      {/* Guest profile image modal - opens to the right of guest image, 296×296, 5px radius */}
+      <GuestProfileImageModal
         visible={isImageModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setIsImageModalVisible(false)}
-      >
-        <StatusBar hidden={isImageModalVisible} />
-        {/* BlurView starts below header and tabs - header remains unblurred */}
-        <BlurView intensity={20} style={styles.modalBlurOverlay} tint="light">
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setIsImageModalVisible(false)}
-          >
-            <View style={styles.modalContent} pointerEvents="box-none">
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={() => {}}
-                style={styles.enlargedImageContainer}
-              >
-                <Image
-                  source={{ uri: guest.imageUrl }}
-                  style={styles.enlargedImage}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </BlurView>
-      </Modal>
+        onClose={() => { setIsImageModalVisible(false); setImageModalAnchorLayout(null); }}
+        guest={guest.imageUrl ? { imageUrl: guest.imageUrl, name: guest.name } : null}
+        anchorLayout={imageModalAnchorLayout}
+      />
     </View>
   );
 }
@@ -526,50 +513,6 @@ const styles = StyleSheet.create({
     color: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.text.color,
     lineHeight: 18 * normalizedScaleX,
     zIndex: 2, // Above divider
-  },
-  modalBlurOverlay: {
-    position: 'absolute',
-    top: (DETAIL_TABS.container.top + DETAIL_TABS.container.height) * normalizedScaleX, // Start below header and tabs (281px)
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalOverlay: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  modalContent: {
-    width: Dimensions.get('window').width * 0.85,
-    aspectRatio: 1, // Square image as per Figma
-    justifyContent: 'center',
-    alignItems: 'center',
-    maxWidth: 350,
-    maxHeight: 350,
-  },
-  enlargedImageContainer: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 10, // Slightly rounded corners as per Figma
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  enlargedImage: {
-    width: '100%',
-    height: '100%',
   },
 });
 
