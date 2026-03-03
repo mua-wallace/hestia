@@ -331,7 +331,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         onStaffSectionPress={room.roomAttendantAssigned != null ? () => onAssignStaffPress?.(room) : undefined}
       />
 
-      {/* Status Button - vertically and horizontally centered in right column */}
+      {/* Status Button - horizontally centered; vertically centered only on single-guest no-notes to avoid overlapping guest info */}
       {!isVacantTurndown && (
         <StatusButton 
           ref={statusButtonRef}
@@ -342,6 +342,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           hasNotes={hasNotes}
           frontOfficeStatus={room.frontOfficeStatus}
           cardHeight={cardHeight}
+          centerVertically={isSingleGuestWithBg}
         />
       )}
 

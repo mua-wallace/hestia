@@ -300,10 +300,8 @@ export default function GuestInfoDisplay({
     : {};
 
   // Calculate guest count positions for Arrival, Stayover, Turndown (separate row below date)
-  // Show below only if time exists and is not N/A, AND guestcount exists
-  // For Arrival/Departure cards, guest count is shown inline with date (not below)
-  // For Room Detail screen, guest count is shown inline (not below)
-  const hasTime = guest.timeLabel && guest.time && guest.timeLabel !== 'N/A';
+  // Show time (ETA/EDT) only when label and value exist and are not N/A
+  const hasTime = guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && guest.time !== 'N/A';
   const hasGuestCount = guest.guestCount && guest.guestCount.adults !== undefined;
   const hasDatesOfStay = guest.datesOfStay && guest.datesOfStay.from && guest.datesOfStay.to;
   
@@ -953,7 +951,7 @@ export default function GuestInfoDisplay({
 
       {/* Line 2 Rendering */}
       {/* Arrival/Departure: Line 2 = EDT/ETA (only for All Rooms screen) */}
-      {(isArrivalDeparture || category === 'ArrivalDeparture') && guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && !(timeLeft !== undefined && timeTop !== undefined) ? (
+      {(isArrivalDeparture || category === 'ArrivalDeparture') && hasTime && !(timeLeft !== undefined && timeTop !== undefined) ? (
         // Arrival/Departure: Line 2 = EDT/ETA
         <Text style={[
           styles.time,

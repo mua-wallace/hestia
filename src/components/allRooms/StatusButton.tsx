@@ -10,8 +10,10 @@ interface StatusButtonProps {
   isArrivalDeparture?: boolean;
   hasNotes?: boolean;
   frontOfficeStatus?: string; // To identify Arrival vs Departure vs Stayover etc.
-  /** Card height in px. When set, button is vertically and horizontally centered in the right column. */
+  /** Card height in px. Used with centerVertically to center button; otherwise legacy top is used to avoid overlapping guest info. */
   cardHeight?: number;
+  /** When true, button is vertically centered in the card. Only safe for single-guest cards without notes. */
+  centerVertically?: boolean;
 }
 
 const StatusButton = forwardRef<any, StatusButtonProps>(({ 
@@ -22,6 +24,7 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
   hasNotes = false,
   frontOfficeStatus = '',
   cardHeight,
+  centerVertically = false,
 }, ref) => {
   // Safety check: ensure status is valid and config exists
   if (!status || !STATUS_CONFIGS[status]) {
@@ -38,10 +41,18 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
   const rightColumnWidth = cardWidthScaled - rightColumnLeft;
   const buttonLeft = rightColumnLeft + (rightColumnWidth - buttonWidth) / 2;
   
-  // Center vertically in the card when cardHeight is provided
-  const buttonTop = cardHeight != null && cardHeight > 0
+  // Legacy top positions avoid overlapping guest info on Arrival/Departure, with-notes, and departure cards
+  const legacyTop = isArrivalDeparture
+    ? STATUS_BUTTON.positions.arrivalDeparture.top
+    : hasNotes
+      ? STATUS_BUTTON.positions.arrivalWithNotes.top
+      : frontOfficeStatus === 'Departure'
+        ? STATUS_BUTTON.positions.departure.top
+        : STATUS_BUTTON.positions.standard.top;
+  // Only center vertically when safe (single-guest, no notes); otherwise use legacy top
+  const top = centerVertically && cardHeight != null && cardHeight > 0
     ? (cardHeight - buttonHeight) / 2
-    : null;
+    : legacyTop * scaleX;
 
   // Safety check: ensure config exists before rendering
   if (!config) {
@@ -52,14 +63,6 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
   if (!config.icon) {
     return null;
   }
-
-  // When cardHeight is set, use centered position; otherwise fall back to legacy top (for callers that don't pass cardHeight)
-  const legacyTop = isArrivalDeparture
-    ? STATUS_BUTTON.positions.arrivalDeparture.top
-    : hasNotes
-      ? STATUS_BUTTON.positions.arrivalWithNotes.top
-      : STATUS_BUTTON.positions.standard.top;
-  const top = buttonTop ?? legacyTop * scaleX;
 
   return (
     <TouchableOpacity

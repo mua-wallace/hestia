@@ -315,8 +315,8 @@ export default function GuestInfoCard({
             </>
           )}
           
-          {/* Time (ETA/EDT) - inline if available and not N/A */}
-          {guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && (
+          {/* Time (ETA/EDT) - only when value is present and not N/A */}
+          {guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && guest.time !== 'N/A' && (
             <Text style={styles.timeInline}>
               {`${guest.timeLabel}: ${guest.time}`}
             </Text>
