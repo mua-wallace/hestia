@@ -377,6 +377,11 @@ export const NOTES_SECTION = {
   // For top: icons at y=245, so container top should be ~238 (245-7=238 where 7 accounts for visual alignment)
   // But we need padding from bottom: card height 292 - container height 54 - bottom padding 5 = 233px top
   // Figma: container centered in card (426−414)/2 = 6px from left; top from Figma frame (e.g. 897−758 = 139 for Room 203)
+  /** Bottom margin from card bottom (px). When cardHeight is passed, notes container is positioned so it stays this far from bottom. */
+  bottomMarginFromCard: {
+    arrivalDeparture: 5,  // 292−54−233=5
+    withNotes: 8,         // 244−182−54=8
+  },
   positions: {
     arrivalDeparture: { left: 6, top: 233 }, // 6px from card left; 5px from card bottom (292−54−233=5)
     withNotes: { left: 6, top: 182 }, // 6px from card left; 8px gap below guest info (174+8); 244−182−54 = 8px from bottom

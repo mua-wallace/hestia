@@ -1,7 +1,7 @@
 import React, { forwardRef } from 'react';
 import { TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { RoomStatus, STATUS_CONFIGS } from '../../types/allRooms.types';
-import { scaleX, STATUS_BUTTON } from '../../constants/allRoomsStyles';
+import { scaleX, STATUS_BUTTON, CARD_DIMENSIONS, STAFF_SECTION } from '../../constants/allRoomsStyles';
 
 interface StatusButtonProps {
   status: RoomStatus;
@@ -10,6 +10,8 @@ interface StatusButtonProps {
   isArrivalDeparture?: boolean;
   hasNotes?: boolean;
   frontOfficeStatus?: string; // To identify Arrival vs Departure vs Stayover etc.
+  /** Card height in px. When set, button is vertically and horizontally centered in the right column. */
+  cardHeight?: number;
 }
 
 const StatusButton = forwardRef<any, StatusButtonProps>(({ 
@@ -19,6 +21,7 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
   isArrivalDeparture = false,
   hasNotes = false,
   frontOfficeStatus = '',
+  cardHeight,
 }, ref) => {
   // Safety check: ensure status is valid and config exists
   if (!status || !STATUS_CONFIGS[status]) {
@@ -26,36 +29,19 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
   }
   
   const config = STATUS_CONFIGS[status];
+  const buttonWidth = STATUS_BUTTON.width * scaleX;
+  const buttonHeight = STATUS_BUTTON.height * scaleX;
   
-  // Determine button position based on card type
-  // Status button should be right-aligned with consistent right margin
-  const CARD_WIDTH = 426;
-  const RIGHT_MARGIN = 15; // Consistent margin from right edge
-  let buttonRight: number;
-  let buttonTop: number;
+  // Center horizontally in the right column (from divider to card right edge)
+  const rightColumnLeft = STAFF_SECTION.dividerStandard.left * scaleX;
+  const cardWidthScaled = CARD_DIMENSIONS.width * scaleX;
+  const rightColumnWidth = cardWidthScaled - rightColumnLeft;
+  const buttonLeft = rightColumnLeft + (rightColumnWidth - buttonWidth) / 2;
   
-  const isArrival = frontOfficeStatus === 'Arrival';
-  const isDeparture = frontOfficeStatus === 'Departure';
-  
-  if (isArrivalDeparture) {
-    buttonRight = RIGHT_MARGIN;
-    buttonTop = STATUS_BUTTON.positions.arrivalDeparture.top;
-  } else if (hasNotes) {
-    buttonRight = RIGHT_MARGIN;
-    buttonTop = STATUS_BUTTON.positions.arrivalWithNotes.top;
-  } else if (isDeparture || status === 'Dirty') {
-    buttonRight = RIGHT_MARGIN;
-    buttonTop = STATUS_BUTTON.positions.departure.top;
-  } else if (isArrival) {
-    // For Arrival cards, vertically center status button with guest image
-    // Guest image: top: 87px, height: 65px, so center is at 87 + 32.5 = 119.5px
-    // Status button height: 70px, so to center it with image: top = 119.5 - 35 = 84.5px ≈ 85px
-    buttonRight = RIGHT_MARGIN;
-    buttonTop = 85; // Vertically centered with guest image (image center at 119.5px, button center at 119.5px)
-  } else {
-    buttonRight = RIGHT_MARGIN;
-    buttonTop = STATUS_BUTTON.positions.standard.top;
-  }
+  // Center vertically in the card when cardHeight is provided
+  const buttonTop = cardHeight != null && cardHeight > 0
+    ? (cardHeight - buttonHeight) / 2
+    : null;
 
   // Safety check: ensure config exists before rendering
   if (!config) {
@@ -67,18 +53,26 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
     return null;
   }
 
+  // When cardHeight is set, use centered position; otherwise fall back to legacy top (for callers that don't pass cardHeight)
+  const legacyTop = isArrivalDeparture
+    ? STATUS_BUTTON.positions.arrivalDeparture.top
+    : hasNotes
+      ? STATUS_BUTTON.positions.arrivalWithNotes.top
+      : STATUS_BUTTON.positions.standard.top;
+  const top = buttonTop ?? legacyTop * scaleX;
+
   return (
     <TouchableOpacity
       ref={ref}
       style={[
         styles.containerIconOnly,
         {
-          width: STATUS_BUTTON.width * scaleX,
-          height: STATUS_BUTTON.height * scaleX,
+          width: buttonWidth,
+          height: buttonHeight,
           borderRadius: STATUS_BUTTON.borderRadius * scaleX,
           backgroundColor: config.color,
-          right: buttonRight * scaleX,
-          top: buttonTop * scaleX,
+          left: buttonLeft,
+          top,
         },
       ]}
       onPress={onPress}

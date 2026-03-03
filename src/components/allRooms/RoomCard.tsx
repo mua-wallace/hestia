@@ -128,14 +128,32 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
     borderWidth: 1,
   });
 
+  // Guest block height and vertical centering for single-guest cards (so wrapped names stay aligned and content is centered)
+  const GUEST_BLOCK_BASE_TOP = GUEST_CONTAINER_BG.positions.arrival.top * scaleX;
+  const GUEST_BLOCK_BASE_HEIGHT = GUEST_CONTAINER_BG.positions.arrival.height * scaleX;
+  const cardHeight = getCardHeight();
+  const isSingleGuestWithBg = !isArrivalDeparture && !hasNotesOrPriority && !isVacantTurndown;
+  const guestBlockHeight = isSingleGuestWithBg
+    ? GUEST_BLOCK_BASE_HEIGHT + wrappedNameExtraHeight
+    : GUEST_BLOCK_BASE_HEIGHT;
+  const guestBlockCenteredTop = isSingleGuestWithBg
+    ? (cardHeight - guestBlockHeight) / 2
+    : GUEST_BLOCK_BASE_TOP;
+  // Offset to apply to guest content so it moves with the centered container (in px)
+  const contentVerticalOffsetPx = isSingleGuestWithBg
+    ? guestBlockCenteredTop - GUEST_BLOCK_BASE_TOP
+    : 0;
+
   // Determine guest container background style
-  // Arrival, Stayover, Turndown, and Departure all use the same positioning (height: 100, top: 74)
   const getGuestContainerBgStyle = () => {
     if (isArrivalDeparture || hasNotesOrPriority) {
       return null; // No background when notes section is shown (notes or priority)
     }
-    // Single-guest cards (Arrival, Stayover, Turndown, Departure) use same guest area position
-    return styles.guestContainerBgArrival;
+    // Single-guest cards: use centered, expandable block (height includes wrap space). Others use fixed position.
+    if (isSingleGuestWithBg) {
+      return [styles.guestContainerBg, { top: guestBlockCenteredTop, height: guestBlockHeight }];
+    }
+    return [styles.guestContainerBg, styles.guestContainerBgArrival];
   };
 
   const cardStyles = getCardStyles();
@@ -222,9 +240,9 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         </View>
       </View>
 
-      {/* Guest Container Background - for standard cards without notes */}
+      {/* Guest Container Background - for standard cards without notes; centered when single-guest (incl. wrapped names) */}
       {guestContainerBgStyle && (
-        <View style={[styles.guestContainerBg, guestContainerBgStyle]} />
+        <View style={guestContainerBgStyle} />
       )}
 
       {/* Horizontal divider between guests for Arrival/Departure cards - render FIRST so it's below guest names */}
@@ -291,6 +309,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
               isArrivalDeparture={isArrivalDeparture}
               selectedShift="AM"
               onGuestImagePress={handleGuestImagePress}
+              contentVerticalOffsetPx={isFirstGuest && isSingleGuestWithBg ? contentVerticalOffsetPx : undefined}
             />
           );
         })
@@ -312,7 +331,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         onStaffSectionPress={room.roomAttendantAssigned != null ? () => onAssignStaffPress?.(room) : undefined}
       />
 
-      {/* Status Button */}
+      {/* Status Button - vertically and horizontally centered in right column */}
       {!isVacantTurndown && (
         <StatusButton 
           ref={statusButtonRef}
@@ -322,6 +341,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           isArrivalDeparture={isArrivalDeparture}
           hasNotes={hasNotes}
           frontOfficeStatus={room.frontOfficeStatus}
+          cardHeight={cardHeight}
         />
       )}
 
@@ -331,6 +351,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           notes={room.notes || { count: 0, hasRushed: false }}
           isArrivalDeparture={isArrivalDeparture}
           isPriority={room.isPriority}
+          cardHeight={cardHeight}
         />
       )}
 

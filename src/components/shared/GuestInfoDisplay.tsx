@@ -40,6 +40,8 @@ interface GuestInfoDisplayProps {
   hideNameRow?: boolean; // Hide the name row (used when parent renders it)
   /** When provided and guest has imageUrl, tapping the guest image calls this with guest and anchor layout for positioning */
   onGuestImagePress?: (guest: GuestInfo, anchorLayout?: GuestImageAnchorLayout) => void;
+  /** Vertical offset in px to center guest block (e.g. when name wraps on All Rooms single-guest cards) */
+  contentVerticalOffsetPx?: number;
 }
 
 /**
@@ -76,8 +78,12 @@ export default function GuestInfoDisplay({
   absoluteTop,
   hideNameRow = false,
   onGuestImagePress,
+  contentVerticalOffsetPx,
 }: GuestInfoDisplayProps) {
   const guestImageWrapRef = useRef<View>(null);
+  const contentOffsetStyle = contentVerticalOffsetPx != null && contentVerticalOffsetPx !== 0
+    ? { marginTop: contentVerticalOffsetPx }
+    : undefined;
 
   // Determine card type characteristics
   const isArrival = category === 'Arrival';
@@ -371,6 +377,7 @@ export default function GuestInfoDisplay({
             left: calculatedContainerLeft * normalizedScaleX,
             width: containerWidth,
           },
+          contentOffsetStyle,
           containerStyle,
         ]}
       >
@@ -416,8 +423,9 @@ export default function GuestInfoDisplay({
         { 
           left: effectiveContainerLeft * normalizedScaleX,
           width: containerWidth,
-        }, 
-        containerStyle
+        },
+        contentOffsetStyle,
+        containerStyle,
       ]}
     >
       {hasGuestImage && !hideNameRow ? (

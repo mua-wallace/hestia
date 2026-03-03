@@ -16,6 +16,8 @@ interface GuestInfoSectionProps {
   selectedShift?: ShiftType;
   /** When provided, tapping the guest image opens the profile modal with layout for positioning */
   onGuestImagePress?: (guest: GuestInfo, anchorLayout?: GuestImageAnchorLayout) => void;
+  /** Vertical offset in px to center guest block when name wraps (All Rooms single-guest cards) */
+  contentVerticalOffsetPx?: number;
 }
 
 export default function GuestInfoSection({ 
@@ -29,6 +31,7 @@ export default function GuestInfoSection({
   isArrivalDeparture = false,
   selectedShift,
   onGuestImagePress,
+  contentVerticalOffsetPx,
 }: GuestInfoSectionProps) {
   // Use the reusable GuestInfoDisplay component
   return (
@@ -43,6 +46,7 @@ export default function GuestInfoSection({
       isArrivalDeparture={isArrivalDeparture}
       themeVariant={selectedShift === 'PM' ? 'pm' : 'am'}
       onGuestImagePress={onGuestImagePress}
+      contentVerticalOffsetPx={contentVerticalOffsetPx}
     />
   );
 }

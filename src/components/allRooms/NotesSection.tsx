@@ -8,9 +8,11 @@ interface NotesSectionProps {
   notes: NotesInfo;
   isArrivalDeparture?: boolean;
   isPriority?: boolean; // When true, show priority icon with badge next to notes
+  /** Card height in px. When set, notes container is positioned from card bottom so margin from bottom stays constant when name wraps. */
+  cardHeight?: number;
 }
 
-export default function NotesSection({ notes, isArrivalDeparture = false, isPriority = false }: NotesSectionProps) {
+export default function NotesSection({ notes, isArrivalDeparture = false, isPriority = false, cardHeight }: NotesSectionProps) {
   // Only show container when there is something to show (note, rush, or priority) - per Figma
   const hasContent = isPriority || notes.count > 0 || !!notes.hasRushed;
   if (!hasContent) return null;
@@ -18,6 +20,17 @@ export default function NotesSection({ notes, isArrivalDeparture = false, isPrio
   const position = isArrivalDeparture 
     ? NOTES_SECTION.positions.arrivalDeparture 
     : NOTES_SECTION.positions.withNotes;
+  
+  // When cardHeight is provided, pin notes container to card bottom so margin from bottom stays constant when name wraps
+  const bottomMargin = isArrivalDeparture 
+    ? NOTES_SECTION.bottomMarginFromCard.arrivalDeparture 
+    : NOTES_SECTION.bottomMarginFromCard.withNotes;
+  const notesHeightScaled = NOTES_SECTION.height * scaleX;
+  const bottomMarginScaled = bottomMargin * scaleX;
+  const topFromBottom = cardHeight != null && cardHeight > 0
+    ? cardHeight - notesHeightScaled - bottomMarginScaled
+    : position.top * scaleX;
+
   const iconPos = isArrivalDeparture 
     ? NOTES_SECTION.icon.positions.arrivalDeparture 
     : NOTES_SECTION.icon.positions.withNotes;
@@ -49,7 +62,7 @@ export default function NotesSection({ notes, isArrivalDeparture = false, isPrio
       styles.container, 
       { 
         left: position.left * scaleX, 
-        top: position.top * scaleX,
+        top: topFromBottom,
         backgroundColor: containerBackground,
       }
     ]}>
