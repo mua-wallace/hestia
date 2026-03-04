@@ -167,7 +167,7 @@ export const GUEST_INFO = {
     top: 87 + CONTENT_OFFSET_TOP, // Room 204 (Arrival)
   },
   nameWithNotes: {
-    top: 80 + CONTENT_OFFSET_TOP, // Room 203
+    top: 86 + CONTENT_OFFSET_TOP, // Room 203
   },
   // Date range styles and positions
   dateRange: {
@@ -187,7 +187,7 @@ export const GUEST_INFO = {
     top: 109 + CONTENT_OFFSET_TOP, // Room 204 (Arrival)
   },
   dateRangeWithNotes: {
-    top: 102 + CONTENT_OFFSET_TOP, // Room 203
+    top: 108 + CONTENT_OFFSET_TOP, // Room 203
   },
   // Time (ETA/EDT) positions - Exact from Figma
   time: {
@@ -200,7 +200,7 @@ export const GUEST_INFO = {
       prioritySecond: { left: 73, top: 204 + CONTENT_OFFSET_TOP },
       standardDeparture: { left: 154, top: 115 + CONTENT_OFFSET_TOP },
       standardArrival: { left: 154, top: 110 + CONTENT_OFFSET_TOP },
-      withNotes: { left: 151, top: 103 + CONTENT_OFFSET_TOP },
+      withNotes: { left: 151, top: 109 + CONTENT_OFFSET_TOP },
     },
   },
   // Guest count positions - Exact from Figma
@@ -218,7 +218,7 @@ export const GUEST_INFO = {
       prioritySecond: { iconLeft: 151, textLeft: 170, iconTop: 184 + CONTENT_OFFSET_TOP, textTop: 184 + CONTENT_OFFSET_TOP },
       standardDeparture: { iconLeft: 151, textLeft: 177, iconTop: 116 + CONTENT_OFFSET_TOP, textTop: 116 + CONTENT_OFFSET_TOP },
       standardArrival: { iconLeft: 73, textLeft: 92, iconTop: 109 + CONTENT_OFFSET_TOP, textTop: 109 + CONTENT_OFFSET_TOP },
-      withNotes: { iconLeft: 70, textLeft: 89, iconTop: 125 + CONTENT_OFFSET_TOP, textTop: 124 + CONTENT_OFFSET_TOP },
+      withNotes: { iconLeft: 70, textLeft: 89, iconTop: 131 + CONTENT_OFFSET_TOP, textTop: 130 + CONTENT_OFFSET_TOP },
     },
   },
   priorityBadge: {
@@ -348,7 +348,7 @@ export const STATUS_BUTTON = {
   positions: {
     arrivalDeparture: { left: 255, top: 114 + CONTENT_OFFSET_TOP }, // Room 201
     departure: { left: 262, top: 81 + CONTENT_OFFSET_TOP }, // Room 202
-    arrivalWithNotes: { left: 256, top: 74 + CONTENT_OFFSET_TOP }, // Room 203
+    arrivalWithNotes: { left: 256, top: 80 + CONTENT_OFFSET_TOP }, // Room 203
     standard: { left: 270, top: 87 + CONTENT_OFFSET_TOP }, // Room 204/205
   },
   flagged: {

@@ -129,7 +129,8 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
     borderWidth: 1,
   });
 
-  // Guest block height and vertical centering for single-guest cards (so wrapped names stay aligned and content is centered)
+  // Guest block height and vertical positioning for single-guest cards
+  // For cards without notes/priority, keep the guest block closer to the card bottom so layout feels grounded
   const GUEST_BLOCK_BASE_TOP = GUEST_CONTAINER_BG.positions.arrival.top * scaleX;
   const GUEST_BLOCK_BASE_HEIGHT = GUEST_CONTAINER_BG.positions.arrival.height * scaleX;
   const cardHeight = getCardHeight();
@@ -137,22 +138,27 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
   const guestBlockHeight = isSingleGuestWithBg
     ? GUEST_BLOCK_BASE_HEIGHT + wrappedNameExtraHeight
     : GUEST_BLOCK_BASE_HEIGHT;
-  const guestBlockCenteredTop = isSingleGuestWithBg
-    ? (cardHeight - guestBlockHeight) / 2
+  const SINGLE_GUEST_BOTTOM_MARGIN = 16 * scaleX; // Space from bottom of card for single-guest block
+  const guestBlockTop = isSingleGuestWithBg
+    ? Math.max(GUEST_BLOCK_BASE_TOP, cardHeight - guestBlockHeight - SINGLE_GUEST_BOTTOM_MARGIN)
     : GUEST_BLOCK_BASE_TOP;
-  // Offset to apply to guest content so it moves with the centered container (in px)
+  // Offset to apply to guest content so it moves with the guest container (in px)
   const contentVerticalOffsetPx = isSingleGuestWithBg
-    ? guestBlockCenteredTop - GUEST_BLOCK_BASE_TOP
+    ? guestBlockTop - GUEST_BLOCK_BASE_TOP
     : 0;
+  // Vertical center for status button within the single-guest block (so it aligns with GuestInfoDisplay)
+  const singleGuestStatusTopPx = isSingleGuestWithBg
+    ? guestBlockTop + (guestBlockHeight - STATUS_BUTTON.height * scaleX) / 2
+    : undefined;
 
   // Determine guest container background style
   const getGuestContainerBgStyle = () => {
     if (isArrivalDeparture || hasNotesOrPriority) {
       return null; // No background when notes section is shown (notes or priority)
     }
-    // Single-guest cards: use centered, expandable block (height includes wrap space). Others use fixed position.
+    // Single-guest cards: use bottom-anchored, expandable block (height includes wrap space). Others use fixed position.
     if (isSingleGuestWithBg) {
-      return [styles.guestContainerBg, { top: guestBlockCenteredTop, height: guestBlockHeight }];
+      return [styles.guestContainerBg, { top: guestBlockTop, height: guestBlockHeight }];
     }
     return [styles.guestContainerBg, styles.guestContainerBgArrival];
   };
@@ -343,7 +349,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           hasNotes={hasNotes}
           frontOfficeStatus={room.frontOfficeStatus}
           cardHeight={cardHeight}
-          centerVertically={isSingleGuestWithBg}
+          buttonTopOverridePx={singleGuestStatusTopPx}
         />
       )}
 

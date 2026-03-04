@@ -35,19 +35,6 @@ export default function StaffSection({ staff, isPriority = false, frontOfficeSta
         >
           <Text style={styles.assignButtonText}>Assign Staff</Text>
         </TouchableOpacity>
-        <View style={[
-          styles.forwardArrowContainer,
-          {
-            left: (STAFF_SECTION.forwardArrowStandard?.left ?? STAFF_SECTION.forwardArrow.left) * scaleX,
-            top: STAFF_SECTION.forwardArrow.top * scaleX,
-          },
-        ]}>
-          <Image
-            source={require('../../../assets/icons/forward-arrow-icon.png')}
-            style={[styles.forwardArrowIcon, selectedShift === 'PM' && styles.forwardArrowIconPM]}
-            resizeMode="contain"
-          />
-        </View>
       </View>
     );
   }

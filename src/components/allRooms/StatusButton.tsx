@@ -10,10 +10,13 @@ interface StatusButtonProps {
   isArrivalDeparture?: boolean;
   hasNotes?: boolean;
   frontOfficeStatus?: string; // To identify Arrival vs Departure vs Stayover etc.
-  /** Card height in px. Used with centerVertically to center button; otherwise legacy top is used to avoid overlapping guest info. */
+  /** Card height in px (used for some legacy layouts and safety checks). */
   cardHeight?: number;
-  /** When true, button is vertically centered in the card. Only safe for single-guest cards without notes. */
-  centerVertically?: boolean;
+  /**
+   * Optional explicit top (in px) for the button.
+   * When provided, this is used directly so the button can align with the guest info block.
+   */
+  buttonTopOverridePx?: number;
 }
 
 const StatusButton = forwardRef<any, StatusButtonProps>(({ 
@@ -24,7 +27,7 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
   hasNotes = false,
   frontOfficeStatus = '',
   cardHeight,
-  centerVertically = false,
+  buttonTopOverridePx,
 }, ref) => {
   // Safety check: ensure status is valid and config exists
   if (!status || !STATUS_CONFIGS[status]) {
@@ -49,9 +52,9 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
       : frontOfficeStatus === 'Departure'
         ? STATUS_BUTTON.positions.departure.top
         : STATUS_BUTTON.positions.standard.top;
-  // Only center vertically when safe (single-guest, no notes); otherwise use legacy top
-  const top = centerVertically && cardHeight != null && cardHeight > 0
-    ? (cardHeight - buttonHeight) / 2
+  // Use explicit override when provided so we can align with guest block; otherwise use legacy top
+  const top = buttonTopOverridePx != null
+    ? buttonTopOverridePx
     : legacyTop * scaleX;
 
   // Safety check: ensure config exists before rendering
