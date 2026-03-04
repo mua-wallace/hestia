@@ -41,6 +41,7 @@ export default function DetailTabNavigation({
             style={[styles.tab, { left: left * scaleX }]}
             onPress={() => onTabPress(tab)}
             activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 14, right: 14 }}
           >
             <Text
               style={[

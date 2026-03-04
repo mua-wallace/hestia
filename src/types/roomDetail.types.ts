@@ -70,8 +70,9 @@ export interface HistoryGroup {
 }
 
 /**
- * Props interface for reusable RoomDetailScreen component
- * All content is passed as props for maximum reusability
+ * Props for the reusable RoomDetailContent component.
+ * Any screen or host that shows room details should pass these props (e.g. RoomDetailScreen).
+ * Layout is defined in RoomDetailContent; this interface is the data contract.
  */
 export interface RoomDetailScreenProps {
   // Room identification

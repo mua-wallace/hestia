@@ -47,6 +47,7 @@ export default function StaffListItem({
       style={[styles.container, isSelected && styles.containerSelected]}
       onPress={onPress}
       activeOpacity={0.7}
+      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
     >
       {/* Profile Picture or Initial */}
       <View style={styles.avatarContainer}>

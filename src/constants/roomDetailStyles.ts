@@ -1,6 +1,7 @@
 /**
  * Room Detail Screen Styles - Exact values from Figma
- * Based on design: https://www.figma.com/design/q59hfVJCVzzUixq1HFRGEh/HESTIA-APP-AND-DASHBOARD?node-id=1-1506
+ * Layout reference: Room Detail - Overview (node 1772-104)
+ * https://www.figma.com/design/q59hfVJCVzzUixq1HFRGEh/HESTIA-APP-AND-DASHBOARD?node-id=1772-104
  */
 
 import { Dimensions } from 'react-native';
@@ -282,6 +283,75 @@ export const GUEST_INFO = {
       fontSize: 14,
       fontWeight: 'regular' as const,
       color: '#000000',
+    },
+  },
+  // Stayover/Turndown (Figma 1772-406): Guest Info at 310, guest block 360, special 441/466, divider 536
+  stayover: {
+    icon: {
+      left: 29,
+      top: 339,
+      width: 28.371,
+      height: 29.919,
+    },
+    name: {
+      left: 122,
+      top: 360,
+      fontSize: 14,
+      fontWeight: 'bold' as const,
+      color: '#000000',
+    },
+    numberBadge: {
+      left: 232,
+      top: 361,
+      fontSize: 12,
+      fontWeight: 'light' as const,
+      color: '#334866',
+    },
+    categoryBadge: {
+      left: 122,
+      top: 341,
+      fontSize: 13,
+      fontWeight: 'bold' as const,
+      color: '#3BC1F6',
+    },
+    dates: {
+      left: 122,
+      top: 388,
+      fontSize: 14,
+      fontWeight: 'light' as const,
+      color: '#000000',
+    },
+    occupancy: {
+      iconLeft: 207,
+      textLeft: 226,
+      top: 389,
+      fontSize: 14,
+      fontWeight: 'light' as const,
+      color: '#000000',
+    },
+    eta: {
+      left: 258,
+      top: 388,
+      fontSize: 14,
+      fontWeight: 'regular' as const,
+      color: '#000000',
+    },
+    specialInstructions: {
+      title: {
+        left: 24,
+        top: 441,
+        fontSize: 13,
+        fontWeight: 'bold' as const,
+        color: '#000000',
+      },
+      text: {
+        left: 24,
+        top: 466,
+        fontSize: 13,
+        fontWeight: 'light' as const,
+        color: '#000000',
+        width: 392,
+      },
     },
   },
 } as const;

@@ -3,6 +3,11 @@
 ## Overview
 Successfully implemented a fully reusable room detail screen that supports all room types: Arrival, Departure, Arrival/Departure, Stayover, and Turndown. The implementation is configuration-driven, type-safe, and maintains pixel-perfect layouts for each room type based on Figma designs.
 
+### Reusability and Figma layout
+- **Single layout component**: `RoomDetailContent` is the reusable UI. It accepts `RoomDetailScreenProps` and does not fetch data; any host (e.g. `RoomDetailScreen`) fetches and passes these props.
+- **Figma reference**: Layout and spacing follow **Room Detail - Overview** (Figma node **1772-104**). Style constants live in `src/constants/roomDetailStyles.ts` with this node referenced in the file header.
+- **Section order (Overview tab)**: Guest Info → Special Instructions (in guest card) → Assigned to + Task card → Lost & Found → Notes.
+
 ## Implementation Completed
 
 ### 1. Type Definitions ✅

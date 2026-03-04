@@ -59,10 +59,9 @@ export default function GuestInfoCard({
   // Since containerTop = absoluteTop - contentAreaTop:
   // relative = absolutePosition - (contentAreaTop + absoluteTop - contentAreaTop) = absolutePosition - absoluteTop
   
-  // Select config based on roomCategory if provided, otherwise use isArrival
-  // For Stayover/Turndown, use Arrival config since they have ETA and similar layout
-  // For Departure, use Departure config
-  const configKey = roomCategory === 'Departure' ? 'departure' : 'arrival';
+  // Select config based on roomCategory (Figma: arrival 1772-104, departure 1772-255, stayover 1772-406)
+  type GuestBlockKey = 'arrival' | 'departure' | 'stayover';
+  const configKey: GuestBlockKey = roomCategory === 'Departure' ? 'departure' : roomCategory === 'Stayover' || roomCategory === 'Turndown' ? 'stayover' : 'arrival';
   const config = ROOM_DETAIL_GUEST_INFO[configKey];
   
   // Convert room detail absolute positions to relative positions within container
@@ -89,12 +88,13 @@ export default function GuestInfoCard({
   const timeTopRelative = dateRowOffset;
   const countTopRelative = dateRowOffset;
   
-  // Calculate Special Instructions spacing from date row to match Figma
-  // From Figma: dates top = 377px, Special Instructions title top = 417px
-  // Gap = 417 - 377 = 40px
-  // Date row height (lineHeight) = ~17px, so spacing after date row = 40 - 17 = 23px
+  // Calculate Special Instructions spacing from date row, per Figma config:
+  // gap = (specialInstructionsTitleTop - datesTop) - dateRowHeight
   const dateRowHeight = GUEST_INFO.dateRange.lineHeight || 17; // Use dateRange lineHeight
-  const specialInstructionsGap = 23; // Spacing between date row bottom and Special Instructions title (matches Figma)
+  const specialInstructionsGap =
+    'specialInstructions' in config && config.specialInstructions
+      ? (config.specialInstructions.title.top - config.dates.top) - dateRowHeight
+      : 23; // Fallback gap when config doesn't define special instructions
   const specialInstructionsTitleTopRelative = dateTopRelative + dateRowHeight + specialInstructionsGap;
   // Calculate text position only if specialInstructions config exists
   const specialInstructionsTextGap = 8; // Gap between title and text (from Figma: 442 - 417 - titleHeight ≈ 8px)
@@ -163,8 +163,9 @@ export default function GuestInfoCard({
             }}
           >
             <TouchableOpacity
-              activeOpacity={0.8}
+              activeOpacity={0.7}
               onPress={openGuestImageModal}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Image
                 source={{ uri: guest.imageUrl }}

@@ -11,10 +11,11 @@ import NotesSection from '../components/roomDetail/NotesSection';
 import LostAndFoundSection from '../components/roomDetail/LostAndFoundSection';
 import AssignedToSection from '../components/roomDetail/AssignedToSection';
 import TaskSection from '../components/roomDetail/TaskSection';
-import ChecklistSection from '../components/roomDetail/ChecklistSection';
+import CleanChecklistSection from '../components/roomDetail/CleanChecklistSection';
 import RoomTicketsSection from '../components/roomDetail/RoomTicketsSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
+import CleanChecklistModal from '../components/allRooms/CleanChecklistModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
 import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
 import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal';
@@ -47,6 +48,7 @@ export default function ArrivalDepartureDetailScreen() {
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showInspectedModal, setShowInspectedModal] = useState(false);
+  const [showCleanChecklistModal, setShowCleanChecklistModal] = useState(false);
   const [buttonPositionForInspection, setButtonPositionForInspection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
   const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
@@ -506,19 +508,12 @@ export default function ArrivalDepartureDetailScreen() {
       {/* Content Area - Starts at 285px */}
       {/* Checklist and Tickets Tabs have their own ScrollView, so render separately */}
       {activeTab === 'Checklist' ? (
-        <ChecklistSection
+        <CleanChecklistSection
           roomNumber={room.roomNumber}
           roomCode={`${room.roomCategory} - ${room.credit}`}
-          roomStatus={currentStatus}
-          onSubmit={(data) => {
-            // TODO: Handle checklist submission
-            console.log('Checklist submitted:', data);
-            // Optionally show success message or navigate back
-          }}
-          onCancel={() => {
-            // TODO: Handle cancel - could navigate back or reset
-            console.log('Checklist cancelled');
-          }}
+          onComplete={() => console.log('Clean checklist completed')}
+          onAddPhoto={() => console.log('Add photo')}
+          onAddNotes={() => console.log('Add notes')}
         />
       ) : activeTab === 'Tickets' ? (
         <RoomTicketsSection
@@ -646,6 +641,7 @@ export default function ArrivalDepartureDetailScreen() {
           setButtonPositionForInspection(statusButtonPosition);
           setShowInspectedModal(true);
         }}
+        onCleanedSelect={() => setShowCleanChecklistModal(true)}
         currentStatus={currentStatus}
         room={localRoom}
         buttonPosition={statusButtonPosition}
@@ -669,7 +665,18 @@ export default function ArrivalDepartureDetailScreen() {
         }}
         buttonPosition={buttonPositionForInspection}
         headerHeight={232}
-        showTriangle={!!buttonPositionForInspection}
+        showTriangle={false}
+      />
+
+      <CleanChecklistModal
+        visible={showCleanChecklistModal}
+        onClose={() => setShowCleanChecklistModal(false)}
+        onComplete={() => {
+          handleStatusSelect('Cleaned');
+          setShowCleanChecklistModal(false);
+        }}
+        headerHeight={232}
+        showTriangle={false}
       />
 
       <ReturnLaterModal

@@ -257,7 +257,6 @@ export default function StaffDepartmentStaffPanel({
           {loading ? (
             <View style={styles.loadingWrap}>
               <ActivityIndicator size="small" color={STAFF_DEPARTMENT_PANEL.header.closeIconColor} />
-              <Text style={styles.loadingText}>Loading staff…</Text>
             </View>
           ) : (
             <ScrollView

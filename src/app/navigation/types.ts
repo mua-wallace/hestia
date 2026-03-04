@@ -12,7 +12,7 @@ export type RootStackParamList = {
   UserProfile: { user: import('../../types/home.types').UserProfile };
   AllRooms: { showBackButton?: boolean };
   RoomDetails: { roomId: string };
-  RoomDetail: { room: any; roomType: RoomType };
+  RoomDetail: { room?: any; roomType?: RoomType; roomId?: string };
   ArrivalDepartureDetail: { room: any };
   ChatDetail: { chatId: string; chat?: import('../../components/chat/ChatItem').ChatItemData };
   NewChat: undefined;

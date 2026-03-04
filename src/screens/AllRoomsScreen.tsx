@@ -334,8 +334,8 @@ export default function AllRoomsScreen() {
 
     const roomType = mapCategoryToRoomType(room.frontOfficeStatus);
     
-    // Navigate to the new reusable RoomDetail screen
-    navigation.navigate('RoomDetail', { room, roomType } as any);
+    // Navigate to Room Detail; pass roomId so screen can fetch full details via getRoomDetailsById
+    navigation.navigate('RoomDetail', { room, roomType, roomId: room.id } as any);
   };
 
   const handleStatusPress = (room: RoomCardData) => {

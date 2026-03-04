@@ -154,7 +154,6 @@ export default function CreateTicketScreen() {
         {loading ? (
           <View style={styles.departmentLoading}>
             <ActivityIndicator size="small" color={CREATE_TICKET_COLORS.textSecondary} />
-            <Text style={styles.departmentLoadingText}>Loading departments…</Text>
           </View>
         ) : loadError ? (
           <View style={styles.departmentLoading}>

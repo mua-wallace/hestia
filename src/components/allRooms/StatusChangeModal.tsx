@@ -42,6 +42,8 @@ interface StatusChangeModalProps {
   onStatusSelect: (status: StatusChangeOption) => void;
   /** When provided and user selects Inspected, this is called instead of onStatusSelect. Use to show Inspection Checklist slide. */
   onInspectedSelect?: () => void;
+  /** When provided and user selects Cleaned, this is called instead of onStatusSelect. Use to show Clean Checklist modal. */
+  onCleanedSelect?: () => void;
   currentStatus: RoomStatus;
   room?: RoomCardData; // Room data
   buttonPosition?: { x: number; y: number; width: number; height: number } | null; // Status button position on screen
@@ -56,6 +58,7 @@ export default function StatusChangeModal({
   onClose,
   onStatusSelect,
   onInspectedSelect,
+  onCleanedSelect,
   currentStatus,
   room,
   buttonPosition,
@@ -97,6 +100,18 @@ export default function StatusChangeModal({
         Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start(() => {
         onInspectedSelect();
+        onClose();
+      });
+      return;
+    }
+
+    // Cleaned requires Clean Checklist modal - delegate to onCleanedSelect if provided
+    if (option === 'Cleaned' && onCleanedSelect) {
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start(() => {
+        onCleanedSelect();
         onClose();
       });
       return;

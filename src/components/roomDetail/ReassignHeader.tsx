@@ -21,6 +21,7 @@ export default function ReassignHeader({
         style={styles.backButton}
         onPress={onBackPress}
         activeOpacity={0.7}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       >
         <View style={styles.backArrowContainer}>
           <Image
@@ -38,6 +39,7 @@ export default function ReassignHeader({
           style={styles.autoAssignButton}
           onPress={onAutoAssignPress}
           activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Text style={styles.autoAssignText}>Auto Assign</Text>
         </TouchableOpacity>
@@ -49,6 +51,7 @@ export default function ReassignHeader({
           style={styles.searchButton}
           onPress={onSearchPress}
           activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Image
             source={require('../../../assets/icons/search-icon.png')}

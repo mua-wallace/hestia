@@ -39,7 +39,7 @@ export const ROOM_TYPE_CONFIGS: Record<RoomType, RoomTypeConfig> = {
   },
   Stayover: {
     type: 'Stayover',
-    guestInfoStartTop: 318,
+    guestInfoStartTop: 310, // Figma 1772-406: Guest Info title at 310px
     hasSpecialInstructions: true,
     numberOfGuests: 1,
     cardHeight: 183,
@@ -47,7 +47,7 @@ export const ROOM_TYPE_CONFIGS: Record<RoomType, RoomTypeConfig> = {
   },
   Turndown: {
     type: 'Turndown',
-    guestInfoStartTop: 318,
+    guestInfoStartTop: 310, // Figma 1772-601: same as Stayover
     hasSpecialInstructions: true,
     numberOfGuests: 1,
     cardHeight: 183,

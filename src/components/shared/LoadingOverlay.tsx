@@ -1,23 +1,21 @@
 /**
- * Full-screen or inline loading overlay with ActivityIndicator
+ * Full-screen or inline loading overlay with ActivityIndicator only (no loading text when spinner is active).
  */
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { colors, typography } from '../../theme';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { colors } from '../../theme';
 
 interface LoadingOverlayProps {
   /** If true, overlay covers the whole screen (absolute). Otherwise inline. */
   fullScreen?: boolean;
+  /** Optional message; when provided it is not shown while spinner is active (spinner-only for cleaner UX). */
   message?: string;
 }
 
-export function LoadingOverlay({ fullScreen = false, message }: LoadingOverlayProps) {
+export function LoadingOverlay({ fullScreen = false }: LoadingOverlayProps) {
   return (
     <View style={[styles.container, fullScreen && styles.fullScreen]}>
       <ActivityIndicator size="large" color={colors.primary.main} />
-      {message != null && message !== '' ? (
-        <Text style={styles.message}>{typeof message === 'string' ? message : String(message)}</Text>
-      ) : null}
     </View>
   );
 }
@@ -36,10 +34,5 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: colors.background.overlay ?? 'rgba(255,255,255,0.85)',
     zIndex: 1000,
-  },
-  message: {
-    marginTop: 12,
-    fontSize: 12,
-    color: colors.text.secondary,
   },
 });

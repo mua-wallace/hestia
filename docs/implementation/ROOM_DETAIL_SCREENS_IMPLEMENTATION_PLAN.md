@@ -1,9 +1,16 @@
 # Room Detail Screens - Implementation Plan
 
 ## Overview
-This document outlines the implementation plan for five room detail screen variants based on the Figma design (node-id: 1-1506). All screens share the same foundational structure with variations in guest information display and optional sections.
+This document outlines the implementation plan for five room detail screen variants based on the Figma designs. All screens share the same foundational structure with variations in guest information display and optional sections, but their vertical layout (Guest Info, Special Instructions, dividers, Assigned to card, Lost & Found, Notes) must match the exact Figma coordinates per node.
 
-**Figma Design:** https://www.figma.com/design/q59hfVJCVzzUixq1HFRGEh/HESTIA-APP-AND-DASHBOARD?node-id=1-1506&m=dev
+**Figma Designs:**
+- **Arrival (single guest)**: Room Detail – Arrival `node-id=1772-104`
+- **Departure (single guest)**: Room Detail – Departure `node-id=1772-255`
+- **Stayover (single guest)**: Room Detail – Stayover `node-id=1772-406`
+- **Turndown (single guest)**: Room Detail – Turndown `node-id=1772-601`
+- **Arrival/Departure (dual guest)**: Room Detail – Arrival/Departure `node-id=1-1506`
+
+Base design file: `https://www.figma.com/design/q59hfVJCVzzUixq1HFRGEh/HESTIA-APP-AND-DASHBOARD`
 
 ## Screen Variants
 
@@ -106,14 +113,14 @@ Starts at y=285px, scrollable
   - Name with number badge (e.g., "11")
   - Green "Arrival" pill badge
   - Dates, occupancy, ETA
-  - **Special Instructions** section (only for arrival)
+  - **Special Instructions** section (only for arrival) at **417px** title / **442px** text
 - **Departure Guest:**
   - Icon: Red arrow pointing right
   - Name with number badge (e.g., "22")
   - Red "Departure" pill badge
   - Dates, occupancy, EDT
-- **Divider** between guests (top: 510px)
-- **Second divider** after departure guest (top: 625px)
+- **Divider** between guests (top: **510px**)
+- **Second divider** after departure guest (top: **625px**)
 
 ### Arrival Detail Screen
 **Unique Features:**
@@ -123,8 +130,8 @@ Starts at y=285px, scrollable
   - Name with number badge
   - Green "Arrival" pill badge
   - Dates, occupancy, ETA
-  - **Special Instructions** section
-- **Divider** after guest info (top: 510px)
+  - **Special Instructions** section at **417px** title / **442px** text
+- **Divider** after guest + special instructions (top: **510px**)
 
 ### Departure Detail Screen
 **Unique Features:**
@@ -135,7 +142,7 @@ Starts at y=285px, scrollable
   - Red "Departure" pill badge
   - Dates, occupancy, EDT
   - **No Special Instructions** (departure guests don't have special instructions)
-- **Divider** after guest info (top: 510px)
+- **Divider** after guest info (top: **436px**)
 
 ### Stayover Detail Screen
 **Unique Features:**
@@ -145,8 +152,8 @@ Starts at y=285px, scrollable
   - Name with number badge (if priority)
   - Stayover category badge (if applicable)
   - Dates, occupancy
-  - **May have Special Instructions** (optional)
-- **Divider** after guest info (top: 510px)
+  - **Special Instructions** block (if present) at **441px** title / **466px** text
+- **Divider** after guest + special instructions (top: **536px**)
 
 ### Turndown Detail Screen
 **Unique Features:**
@@ -156,8 +163,8 @@ Starts at y=285px, scrollable
   - Name with number badge (if priority)
   - Turndown category badge (if applicable)
   - Dates, occupancy
-  - **May have Special Instructions** (optional)
-- **Divider** after guest info (top: 510px)
+  - **Special Instructions** block (if present) at **441px** title / **466px** text
+- **Divider** after guest + special instructions (top: **536px**)
 
 ## Component Structure
 

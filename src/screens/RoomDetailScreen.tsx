@@ -11,6 +11,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ROOM_DETAIL_HEADER, scaleX } from '../constants/roomDetailStyles';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
+import CleanChecklistModal from '../components/allRooms/CleanChecklistModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
 import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
 import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal';
@@ -33,30 +34,148 @@ import { getMockHistoryEvents } from '../data/mockHistoryData';
 import { generateHistoryReport } from '../utils/generateHistoryReport';
 import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
 import { getDefaultTaskText } from '../utils/defaultTasks';
-import { getRoomNotes, addRoomNote } from '../services/rooms';
+import { getRoomNotes, addRoomNote, getRoomDetailsById, fullRoomDetailsToRoomCardData, type FullRoomDetails } from '../services/rooms';
 
 type RoomDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   'RoomDetail'
 >;
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function mapFrontOfficeToRoomType(frontOffice: string | null | undefined, reservationCount: number): RoomType {
+  if (reservationCount >= 2) return 'ArrivalDeparture';
+  switch (frontOffice) {
+    case 'Arrival': return 'Arrival';
+    case 'Departure': return 'Departure';
+    case 'Stayover': return 'Stayover';
+    case 'Turndown': return 'Turndown';
+    case 'No Task': return 'Stayover';
+    default: return 'Stayover';
+  }
+}
+
 export default function RoomDetailScreen() {
   const navigation = useNavigation<RoomDetailScreenNavigationProp>();
   const route = useRoute();
-  const room = (route.params as any)?.room as RoomCardData;
-  const roomType = (route.params as any)?.roomType as RoomType || 'ArrivalDeparture'; // Default to ArrivalDeparture
+  const params = route.params as { room?: RoomCardData; roomType?: RoomType; roomId?: string } | undefined;
+  const initialRoom = params?.room;
+  const initialRoomType = params?.roomType ?? 'ArrivalDeparture';
+  const roomId = params?.roomId;
 
-  const { updateRoom, updatingRoomId } = useRoomsStore();
+  const { updateRoom, updatingRoomId, data: roomsData } = useRoomsStore();
+  const shift = roomsData?.selectedShift ?? 'AM';
 
-  if (!room) {
+  const [loadingDetails, setLoadingDetails] = useState(!!(roomId && UUID_REGEX.test(roomId)));
+  const [fetchedRoom, setFetchedRoom] = useState<RoomCardData | null>(null);
+  const [fetchedRoomType, setFetchedRoomType] = useState<RoomType | null>(null);
+  const [fetchedNotes, setFetchedNotes] = useState<Note[] | null>(null);
+  const [fetchedAssignedStaff, setFetchedAssignedStaff] = useState<{
+    id: string;
+    name: string;
+    avatar?: any;
+    initials?: string;
+    avatarColor?: string;
+    department?: string;
+  } | null>(null);
+  const [fetchedLostAndFound, setFetchedLostAndFound] = useState<LostAndFoundItem[] | null>(null);
+
+  useEffect(() => {
+    if (!roomId || !UUID_REGEX.test(roomId)) {
+      setLoadingDetails(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingDetails(true);
+    getRoomDetailsById(roomId)
+      .then((full: FullRoomDetails | null) => {
+        if (cancelled || !full) {
+          setLoadingDetails(false);
+          return;
+        }
+        const roomCard = fullRoomDetailsToRoomCardData(full, shift as 'AM' | 'PM');
+        setFetchedRoom(roomCard);
+        const firstRes = full.reservations[0];
+        const rawFrontOffice = firstRes?.front_office_status ?? 'Stayover';
+        setFetchedRoomType(
+          mapFrontOfficeToRoomType(rawFrontOffice, full.reservations.length)
+        );
+        setFetchedNotes(
+          full.notes.map((n) => ({
+            id: n.id,
+            text: n.text,
+            staff: { name: n.staff.name, avatar: n.staff.avatar_url ?? undefined },
+            createdAt: n.created_at,
+          }))
+        );
+        const assignment = full.assignedStaff[0];
+        if (assignment) {
+          setFetchedAssignedStaff({
+            id: assignment.user_id,
+            name: assignment.staff.full_name,
+            avatar: assignment.staff.avatar_url ?? undefined,
+            initials: assignment.staff.full_name.split(/\s+/).map((s) => s[0]).join('').slice(0, 2).toUpperCase() || '?',
+            department: assignment.staff.department_name,
+          });
+        } else {
+          setFetchedAssignedStaff(undefined);
+        }
+        setFetchedLostAndFound(
+          full.lostAndFoundItems.map((item) => ({
+            id: item.id,
+            itemName: item.item_name,
+            itemId: item.id,
+            location: item.description ?? 'Room',
+            storedLocation: item.storage_location ?? '',
+            registeredBy: { name: 'Staff', timestamp: item.found_at },
+            status: (item.status as 'stored' | 'shipped' | 'returned' | 'discarded') ?? 'stored',
+            createdAt: item.found_at,
+          }))
+        );
+        setLoadingDetails(false);
+      })
+      .catch(() => setLoadingDetails(false));
+    return () => { cancelled = true; };
+  }, [roomId, shift]);
+
+  const placeholderRoom: RoomCardData | null =
+    roomId && loadingDetails && !initialRoom
+      ? {
+          id: roomId,
+          roomNumber: '—',
+          roomCategory: '',
+          credit: 0,
+          frontOfficeStatus: 'Stayover',
+          houseKeepingStatus: 'InProgress',
+          reservationStatus: 'Occupied',
+          guests: [],
+          roomAttendantAssigned: null,
+          isPriority: false,
+          flagged: false,
+          specialInstructions: null,
+          roomNotes: null,
+          noteMadeBy: null,
+          notes: undefined,
+          withLinen: false,
+          promisedTime: null,
+        }
+      : null;
+
+  const room = fetchedRoom ?? initialRoom ?? placeholderRoom;
+  const roomType = fetchedRoomType ?? initialRoomType;
+
+  if (!room && !loadingDetails) {
     console.warn('RoomDetailScreen: No room data provided');
     return null;
   }
 
+  const roomGuests = room.guests || [];
+  const effectiveRoomType: RoomType = roomGuests.length >= 2 ? 'ArrivalDeparture' : roomType;
   const isUpdating = updatingRoomId === room.id;
-  const config = React.useMemo(() => getRoomTypeConfig(roomType), [roomType]);
+  const config = React.useMemo(() => getRoomTypeConfig(effectiveRoomType), [effectiveRoomType]);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showInspectedModal, setShowInspectedModal] = useState(false);
+  const [showCleanChecklistModal, setShowCleanChecklistModal] = useState(false);
   const [buttonPositionForInspection, setButtonPositionForInspection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
   const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
@@ -99,12 +218,23 @@ export default function RoomDetailScreen() {
     return [];
   });
 
-  // Load notes from room_notes when room is from Supabase (valid UUID)
+  // Sync fetched full-details into state when load by roomId completes
   useEffect(() => {
+    if (fetchedNotes !== null) setNotes(fetchedNotes);
+    if (fetchedAssignedStaff !== null) setAssignedStaff(fetchedAssignedStaff);
+    if (fetchedRoom) {
+      setLocalRoom(fetchedRoom);
+      setCurrentStatus(fetchedRoom.houseKeepingStatus);
+    }
+  }, [fetchedNotes, fetchedAssignedStaff, fetchedRoom]);
+
+  // Load notes from room_notes when room is from Supabase and we did not load via getRoomDetailsById
+  useEffect(() => {
+    if (fetchedNotes !== null) return;
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!room?.id || !uuidRegex.test(room.id)) return;
     getRoomNotes(room.id).then((loaded) => setNotes(loaded)).catch(() => {});
-  }, [room?.id]);
+  }, [room?.id, fetchedNotes]);
   
   const [assignedStaff, setAssignedStaff] = useState<{
     id: string;
@@ -154,7 +284,7 @@ export default function RoomDetailScreen() {
       return tasks[0].text;
     }
     // Return default task based on room type
-    return getDefaultTaskText(roomType);
+    return getDefaultTaskText(effectiveRoomType);
   };
 
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -507,59 +637,52 @@ export default function RoomDetailScreen() {
   }
 
   // Transform room data to props format for reusable component
-  // Determine guests based on room type
-  const roomGuests = room.guests || [];
-  
   // Build guests array with type information
   const guestsWithTypes: Array<{ guest: import('../types/allRooms.types').GuestInfo; type: 'Arrival' | 'Departure' | 'Stayover' | 'Turndown' }> = [];
   
-  if (roomType === 'ArrivalDeparture') {
-    // For Arrival/Departure: first guest is Arrival, second is Departure
-    // Try to find guests by timeLabel first, fallback to array position if timeLabel is missing or "N/A"
-    let arrivalGuest = roomGuests.find((g) => g.timeLabel === 'ETA');
-    let departureGuest = roomGuests.find((g) => g.timeLabel === 'EDT');
-    
-    // Fallback: if no ETA found, use first guest as Arrival (if it's not already EDT)
-    if (!arrivalGuest && roomGuests.length >= 1 && roomGuests[0].timeLabel !== 'EDT') {
-      arrivalGuest = roomGuests[0];
+  if (effectiveRoomType === 'ArrivalDeparture') {
+    // For Arrival/Departure: show both guests whenever we have at least two entries.
+    // Prefer ETA/EDT when present, but always fall back to array order so nothing disappears.
+    const etaGuest = roomGuests.find((g) => g.timeLabel === 'ETA');
+    const edtGuest = roomGuests.find((g) => g.timeLabel === 'EDT');
+
+    let arrivalGuest = etaGuest ?? roomGuests[0];
+    let departureGuest = edtGuest ?? (roomGuests.length > 1 ? roomGuests[1] : roomGuests[0]);
+
+    // If both resolved to the same object but we have more than one guest, pick a different one for departure
+    if (arrivalGuest === departureGuest && roomGuests.length > 1) {
+      const alt = roomGuests.find((g) => g !== arrivalGuest);
+      if (alt) {
+        // Prefer keeping EDT as departure when possible
+        departureGuest = edtGuest && edtGuest !== arrivalGuest ? edtGuest : alt;
+      }
     }
-    
-    // Fallback: if no EDT found, use second guest as Departure (if it exists and is not already ETA)
-    if (!departureGuest && roomGuests.length >= 2 && roomGuests[1].timeLabel !== 'ETA') {
-      departureGuest = roomGuests[1];
-    }
-    
-    // Ensure we don't add the same guest twice
-    if (arrivalGuest && arrivalGuest !== departureGuest) {
+
+    if (arrivalGuest) {
       guestsWithTypes.push({ guest: arrivalGuest, type: 'Arrival' });
     }
     if (departureGuest && departureGuest !== arrivalGuest) {
       guestsWithTypes.push({ guest: departureGuest, type: 'Departure' });
     }
-    
-    // Edge case: if we only found one guest, make sure we add it
-    if (guestsWithTypes.length === 0 && roomGuests.length > 0) {
-      guestsWithTypes.push({ guest: roomGuests[0], type: 'Arrival' });
-    }
-  } else if (roomType === 'Arrival') {
+  } else if (effectiveRoomType === 'Arrival') {
     // For Arrival: single arrival guest
     const arrivalGuest = roomGuests.find((g) => g.timeLabel === 'ETA') || roomGuests[0];
     if (arrivalGuest) {
       guestsWithTypes.push({ guest: arrivalGuest, type: 'Arrival' });
     }
-  } else if (roomType === 'Departure') {
+  } else if (effectiveRoomType === 'Departure') {
     // For Departure: single departure guest
     const departureGuest = roomGuests.find((g) => g.timeLabel === 'EDT') || roomGuests[0];
     if (departureGuest) {
       guestsWithTypes.push({ guest: departureGuest, type: 'Departure' });
     }
-  } else if (roomType === 'Stayover') {
+  } else if (effectiveRoomType === 'Stayover') {
     // For Stayover: single stayover guest
     const stayoverGuest = roomGuests[0];
     if (stayoverGuest) {
       guestsWithTypes.push({ guest: stayoverGuest, type: 'Stayover' });
     }
-  } else if (roomType === 'Turndown') {
+  } else if (effectiveRoomType === 'Turndown') {
     // For Turndown: single turndown guest
     const turndownGuest = roomGuests[0];
     if (turndownGuest) {
@@ -570,23 +693,36 @@ export default function RoomDetailScreen() {
   // Get task description from tasks
   const taskDescription = getTaskDescription();
 
-  // Get lost & found items based on config
-  const lostAndFoundItems = config.lostAndFoundType === 'withItems' ? [
-    {
-      id: 'lf1',
-      itemName: 'Wrist Watch',
-      itemId: 'FH31390',
-      location: 'Guest bathroom while cleaning',
-      storedLocation: 'HSK Office',
-      registeredBy: {
-        name: 'Stella Kitou',
-        avatar: require('../../assets/icons/profile-avatar.png'),
-        timestamp: '15:00, 11 November 2025',
-      },
-      status: 'stored' as const,
-      createdAt: new Date().toISOString(),
-    },
-  ] : undefined;
+  // Lost & found: use fetched items when loaded by roomId, else mock when config says withItems
+  const lostAndFoundItems =
+    fetchedLostAndFound !== null
+      ? fetchedLostAndFound
+      : config.lostAndFoundType === 'withItems'
+        ? [
+            {
+              id: 'lf1',
+              itemName: 'Wrist Watch',
+              itemId: 'FH31390',
+              location: 'Guest bathroom while cleaning',
+              storedLocation: 'HSK Office',
+              registeredBy: {
+                name: 'Stella Kitou',
+                avatar: require('../../assets/icons/profile-avatar.png'),
+                timestamp: '15:00, 11 November 2025',
+              },
+              status: 'stored' as const,
+              createdAt: new Date().toISOString(),
+            },
+          ]
+        : undefined;
+
+  if (loadingDetails && !initialRoom) {
+    return (
+      <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary }]}>
+        <ActivityIndicator size="large" color={colors.primary.main} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -595,6 +731,7 @@ export default function RoomDetailScreen() {
           <ActivityIndicator size="large" color={colors.primary.main} />
         </View>
       )}
+      {/* Layout lives in RoomDetailContent (Figma 1772-104); this screen only fetches and passes props. */}
       <RoomDetailContent
         roomNumber={room.roomNumber}
         roomCode={`${room.roomCategory} - ${room.credit}`}
@@ -602,7 +739,7 @@ export default function RoomDetailScreen() {
         isPriority={localRoom.isPriority === true}
         flagged={localRoom.flagged}
         frontOfficeStatus={room.frontOfficeStatus === 'Refresh' ? undefined : room.frontOfficeStatus}
-        roomType={roomType}
+        roomType={effectiveRoomType}
         guests={guestsWithTypes}
         specialInstructions={room.specialInstructions ?? undefined}
         assignedTo={assignedStaff}
@@ -646,6 +783,7 @@ export default function RoomDetailScreen() {
           setButtonPositionForInspection(statusButtonPosition);
           setShowInspectedModal(true);
         }}
+        onCleanedSelect={() => setShowCleanChecklistModal(true)}
         currentStatus={currentStatus}
         room={localRoom}
         buttonPosition={statusButtonPosition}
@@ -669,7 +807,18 @@ export default function RoomDetailScreen() {
         }}
         buttonPosition={buttonPositionForInspection}
         headerHeight={232}
-        showTriangle={!!buttonPositionForInspection}
+        showTriangle={false}
+      />
+
+      <CleanChecklistModal
+        visible={showCleanChecklistModal}
+        onClose={() => setShowCleanChecklistModal(false)}
+        onComplete={() => {
+          handleStatusSelect('Cleaned');
+          setShowCleanChecklistModal(false);
+        }}
+        headerHeight={232}
+        showTriangle={false}
       />
 
       <ReturnLaterModal

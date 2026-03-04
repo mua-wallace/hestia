@@ -1,7 +1,13 @@
 /**
  * Reusable Room Detail Content Component
- * Accepts props for all content sections
- * Handles: Arrival/Departure, Arrival, Departure, Stayover, Turndown
+ *
+ * This is the single source for room detail layout. Any host (e.g. RoomDetailScreen)
+ * should fetch data and pass RoomDetailScreenProps; this component does not fetch.
+ * Layout and spacing follow Figma: Room Detail - Overview (node 1772-104).
+ *
+ * Sections (Overview tab): Guest Info → Special Instructions (in guest card) →
+ * Assigned to + Task card → Lost & Found → Notes.
+ * Handles: Arrival/Departure, Arrival, Departure, Stayover, Turndown.
  */
 
 import React, { useState, useRef, useMemo } from 'react';
@@ -16,7 +22,7 @@ import GuestInfoCard from './GuestInfoCard';
 import NotesSection from './NotesSection';
 import LostAndFoundSection from './LostAndFoundSection';
 import AssignedToSection from './AssignedToSection';
-import ChecklistSection from './ChecklistSection';
+import CleanChecklistSection from './CleanChecklistSection';
 import RoomTicketsSection from './RoomTicketsSection';
 import HistorySection from './HistorySection';
 import type { RoomDetailScreenProps, DetailTab, HistoryEvent } from '../../types/roomDetail.types';
@@ -60,7 +66,10 @@ export default function RoomDetailContent({
   const hasSpecialInstructionsData = !!specialInstructions;
   // Get first guest name to check if it wraps (for Arrival/Departure rooms)
   const firstGuestName = guests.find(g => g.type === 'Arrival')?.guest?.name || guests[0]?.guest?.name;
-  const positions = useMemo(() => calculatePositions(config, hasSpecialInstructionsData, firstGuestName), [config, hasSpecialInstructionsData, firstGuestName]);
+  const positions = useMemo(
+    () => calculatePositions(config, hasSpecialInstructionsData, firstGuestName, specialInstructions ?? undefined),
+    [config, hasSpecialInstructionsData, firstGuestName, specialInstructions]
+  );
 
   const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
   const statusButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
@@ -158,7 +167,7 @@ export default function RoomDetailContent({
   const dynamicStyles = {
     guestInfoSection: {
       paddingTop: (positions.guestInfoTitle - CONTENT_AREA.top) * scaleX,
-      minHeight: (positions.divider2 - positions.guestInfoTitle) * scaleX,
+      minHeight: (positions.divider2 - positions.guestInfoTitle + 2) * scaleX, // +2 so divider line is never clipped
     },
     guestInfoTitle: {
       top: (positions.guestInfoTitle - CONTENT_AREA.top) * scaleX,
@@ -217,16 +226,12 @@ export default function RoomDetailContent({
 
       {/* Content Area */}
       {activeTab === 'Checklist' ? (
-        <ChecklistSection
+        <CleanChecklistSection
           roomNumber={roomNumber}
           roomCode={roomCode}
-          roomStatus={currentStatus}
-          onSubmit={(data) => {
-            console.log('Checklist submitted:', data);
-          }}
-          onCancel={() => {
-            console.log('Checklist cancelled');
-          }}
+          onComplete={() => console.log('Clean checklist completed')}
+          onAddPhoto={() => console.log('Add photo')}
+          onAddNotes={() => console.log('Add notes')}
         />
       ) : activeTab === 'Tickets' ? (
         <RoomTicketsSection

@@ -133,6 +133,22 @@ function safeStatus<T extends string>(value: string | null | undefined, allowed:
   return allowed[0] as T;
 }
 
+/** Canonical house_keeping_status values for display (RoomStatus). */
+const HOUSE_KEEPING_CANONICAL: Record<string, import('../types/allRooms.types').RoomStatus> = {
+  dirty: 'Dirty',
+  inprogress: 'InProgress',
+  'in progress': 'InProgress',
+  in_progress: 'InProgress',
+  cleaned: 'Cleaned',
+  inspected: 'Inspected',
+};
+
+/** Normalize DB house_keeping_status so room detail and cards display correctly (case-insensitive, snake_case). */
+function normalizeHouseKeepingStatus(value: string | null | undefined): import('../types/allRooms.types').RoomStatus {
+  const key = (value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  return (key && HOUSE_KEEPING_CANONICAL[key]) ?? 'Dirty';
+}
+
 const FRONT_OFFICE_CANONICAL: Record<string, FrontOfficeStatus> = {
   'arrival/departure': 'Arrival/Departure',
   'arrival': 'Arrival',
@@ -214,7 +230,7 @@ function mapRoomToCard(
     credit: room.credit ?? 0,
     frontOfficeStatus,
     withLinen: room.linen_status === 'with_linen',
-    houseKeepingStatus: safeStatus(room.house_keeping_status, ['Dirty', 'InProgress', 'Cleaned', 'Inspected']) as RoomStatus,
+    houseKeepingStatus: normalizeHouseKeepingStatus(room.house_keeping_status),
     reservationStatus: reservationStatus as ReservationStatus,
     promisedTime: (promisedTime === '12:00' || promisedTime === '13:00' ? promisedTime : null) as PromisedTime,
     guests: guestsForCard,
@@ -704,7 +720,7 @@ export function fullRoomDetailsToRoomCardData(
     credit: room.credit ?? 0,
     frontOfficeStatus,
     withLinen: room.linen_status === 'with_linen',
-    houseKeepingStatus: safeStatus(room.house_keeping_status, ['Dirty', 'InProgress', 'Cleaned', 'Inspected']) as RoomStatus,
+    houseKeepingStatus: normalizeHouseKeepingStatus(room.house_keeping_status),
     reservationStatus: reservationStatus as ReservationStatus,
     promisedTime: (promisedTime === '12:00' || promisedTime === '13:00' ? promisedTime : null) as PromisedTime,
     guests: guestsForCard,
@@ -915,4 +931,24 @@ export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetai
 
   console.log('[getFullRoomDetails] Room details:', JSON.stringify(result, null, 2));
   return result;
+}
+
+/**
+ * Convenience helper: get full room details for a single room by id.
+ * This includes:
+ * - core room fields (number, category, credit, linen/priority/flagged, housekeeping status, special instructions)
+ * - all reservations + guests for that room
+ * - all notes for that room (with staff names/avatars)
+ * - all assigned staff for that room
+ * - all lost & found items for that room
+ * - all tickets for that room
+ */
+export async function getRoomDetailsById(roomId: string): Promise<FullRoomDetails | null> {
+  if (!roomId) return null;
+
+  const list = await getFullRoomDetails(roomId);
+  if (!list.length) {
+    return null;
+  }
+  return list[0];
 }

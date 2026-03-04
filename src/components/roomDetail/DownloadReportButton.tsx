@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { typography } from '../../theme';
 import { scaleX, HISTORY_SECTION } from '../../constants/roomDetailStyles';
 
@@ -15,13 +15,20 @@ export default function DownloadReportButton({ onPress, isLoading = false }: Dow
       onPress={onPress}
       activeOpacity={0.7}
       disabled={isLoading}
+      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
     >
-      <Image
-        source={require('../../../assets/icons/download-report.png')}
-        style={styles.icon}
-        resizeMode="contain"
-      />
-      <Text style={styles.text}>{isLoading ? 'Generating...' : 'Download Report'}</Text>
+      {isLoading ? (
+        <ActivityIndicator size="small" color={HISTORY_SECTION.downloadButtonText.color} />
+      ) : (
+        <>
+          <Image
+            source={require('../../../assets/icons/download-report.png')}
+            style={styles.icon}
+            resizeMode="contain"
+          />
+          <Text style={styles.text}>Download Report</Text>
+        </>
+      )}
     </TouchableOpacity>
   );
 }

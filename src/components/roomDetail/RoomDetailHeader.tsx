@@ -42,7 +42,7 @@ export default function RoomDetailHeader({
   frontOfficeLabel,
   showWithLinenBadge = false,
 }: RoomDetailHeaderProps) {
-  const statusConfig = STATUS_CONFIGS[status];
+  const statusConfig = STATUS_CONFIGS[status] ?? STATUS_CONFIGS.Dirty;
   const isReturnLater = customStatusText === 'Return Later';
   const isPromiseTime = customStatusText === 'Promise Time' || customStatusText === 'Promised Time';
   const isRefuseService = customStatusText === 'Refuse Service' && refuseServiceReason != null;
@@ -250,7 +250,8 @@ export default function RoomDetailHeader({
         ref={statusButtonRef}
         style={styles.statusIndicator}
         onPress={onStatusPress}
-        activeOpacity={0.8}
+        activeOpacity={0.7}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       >
         <>
             <Image

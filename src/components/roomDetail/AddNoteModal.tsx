@@ -65,6 +65,7 @@ export default function AddNoteModal({
                 style={styles.backButton}
                 onPress={handleClose}
                 activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
                 <Text style={styles.backButtonText}>Cancel</Text>
               </TouchableOpacity>
@@ -74,6 +75,7 @@ export default function AddNoteModal({
                 onPress={handleSave}
                 activeOpacity={0.7}
                 disabled={!noteText.trim()}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Text style={[styles.saveButtonText, !noteText.trim() && styles.saveButtonTextDisabled]}>
                   Save

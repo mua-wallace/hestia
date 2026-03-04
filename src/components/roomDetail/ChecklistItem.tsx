@@ -73,6 +73,7 @@ export default function ChecklistItem({
           onPress={handleDecrease}
           disabled={item.quantity === 0}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Text style={[styles.quantityButtonText, styles.quantityButtonTextMinus, item.quantity === 0 && styles.quantityButtonTextDisabled]}>
             −
@@ -100,6 +101,7 @@ export default function ChecklistItem({
           onPress={handleIncrease}
           disabled={item.initialStock !== undefined && item.quantity >= item.initialStock}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Text
             style={[
