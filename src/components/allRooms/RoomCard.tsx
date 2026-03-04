@@ -16,6 +16,7 @@ import {
   STAFF_SECTION,
   DIVIDERS,
   STATUS_BUTTON,
+  CONTENT_OFFSET_TOP,
 } from '../../constants/allRoomsStyles';
 import GuestInfoSection from './GuestInfoSection';
 import GuestProfileImageModal from '../shared/GuestProfileImageModal';
@@ -550,11 +551,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 75 * scaleX, // Room 201: divider between two guests at top-[75px]
+    top: (75 + CONTENT_OFFSET_TOP) * scaleX, // Between two guests; moved down with content offset
     height: DIVIDERS.horizontal.height,
     backgroundColor: DIVIDERS.horizontal.color,
-    zIndex: 1, // Lowest z-index - below all guest info elements
-    elevation: 1, // Android elevation - lowest
+    zIndex: 1,
+    elevation: 1,
   },
   vacantRowContainer: {
     position: 'absolute',

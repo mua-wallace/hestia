@@ -3,7 +3,7 @@
  * Root component wired from project root App.tsx
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -14,8 +14,13 @@ import { ToastProvider } from '../contexts/ToastContext';
 import { MessageModalProvider } from '../contexts/MessageModalContext';
 import { AIChatOverlayProvider } from '../contexts/AIChatOverlayContext';
 import AppNavigator from './navigation/AppNavigator';
+import { getFullRoomDetails } from '../services/rooms';
 
 export default function App() {
+  useEffect(() => {
+    getFullRoomDetails().catch((err) => console.warn('[getFullRoomDetails]', err));
+  }, []);
+
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>

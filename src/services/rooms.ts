@@ -133,6 +133,23 @@ function safeStatus<T extends string>(value: string | null | undefined, allowed:
   return allowed[0] as T;
 }
 
+const FRONT_OFFICE_CANONICAL: Record<string, FrontOfficeStatus> = {
+  'arrival/departure': 'Arrival/Departure',
+  'arrival': 'Arrival',
+  'departure': 'Departure',
+  'stayover': 'Stayover',
+  'turndown': 'Turndown',
+  'no task': 'No Task',
+  'refresh': 'Refresh',
+};
+
+/** Normalize DB front_office_status (trim, case-insensitive) so cards get correct layout. */
+function normalizeFrontOfficeStatus(value: string | null | undefined): FrontOfficeStatus {
+  const key = (value ?? '').trim().toLowerCase();
+  if (key && FRONT_OFFICE_CANONICAL[key]) return FRONT_OFFICE_CANONICAL[key];
+  return 'Stayover';
+}
+
 function mapToGuestInfo(
   res: ReservationRow,
   guest: GuestRow | null,
@@ -144,6 +161,7 @@ function mapToGuestInfo(
   const to = res.departure_date ?? '';
   const time = res.eta ?? 'N/A';
   const timeLabel = res.eta ? 'ETA' : (res.departure_date ? 'EDT' : 'N/A');
+  const isVacant = (res.reservation_status ?? '').toLowerCase() === 'vacant';
   return {
     name,
     datesOfStay: { from, to },
@@ -153,6 +171,7 @@ function mapToGuestInfo(
     vipCode: guest?.vip_code != null ? parseInt(String(guest.vip_code), 10) : undefined,
     arrivalDate: res.arrival_date,
     imageUrl: guest?.image_url ?? undefined,
+    isVacant: isVacant || undefined,
   };
 }
 
@@ -163,7 +182,7 @@ function mapRoomToCard(
   notesAgg: RoomNotesAggregate | null
 ): RoomCardData {
   const firstRes = reservations[0]?.res;
-  const frontOffice = firstRes?.front_office_status ?? 'Stayover';
+  const rawFrontOffice = firstRes?.front_office_status ?? 'Stayover';
   const reservationStatus = firstRes?.reservation_status ?? 'Occupied';
   const promisedTime = firstRes?.promised_time ?? null;
 
@@ -180,20 +199,25 @@ function mapRoomToCard(
     });
   }
 
+  // Normalize so DB values (e.g. "No task", "Stayover") get correct card layout
+  let frontOfficeStatus = normalizeFrontOfficeStatus(rawFrontOffice);
+  if (reservations.length >= 2) {
+    frontOfficeStatus = 'Arrival/Departure';
+  }
+  const guestsForCard = frontOfficeStatus === 'Arrival/Departure' ? guests : guests.slice(0, 1);
+
   const noteCount = notesAgg?.count ?? 0;
   return {
     id: room.id,
-    roomNumber: room.room_number,
+    roomNumber: String(room.room_number ?? ''),
     roomCategory: room.category ?? '',
     credit: room.credit ?? 0,
-    frontOfficeStatus: safeStatus(frontOffice, [
-      'Arrival/Departure', 'Arrival', 'Departure', 'Stayover', 'Turndown', 'No Task', 'Refresh',
-    ] as const) as FrontOfficeStatus,
+    frontOfficeStatus,
     withLinen: room.linen_status === 'with_linen',
     houseKeepingStatus: safeStatus(room.house_keeping_status, ['Dirty', 'InProgress', 'Cleaned', 'Inspected']) as RoomStatus,
     reservationStatus: reservationStatus as ReservationStatus,
     promisedTime: (promisedTime === '12:00' || promisedTime === '13:00' ? promisedTime : null) as PromisedTime,
-    guests,
+    guests: guestsForCard,
     roomAttendantAssigned: attendant,
     isPriority: room.priority === 'high',
     flagged: room.flagged ?? false,
@@ -509,4 +533,386 @@ export async function assignRoomToStaff(
   }
 
   return staffInfo;
+}
+
+// ---------------------------------------------------------------------------
+// Full room details endpoint (guest info, reservations, notes, assigned staff, etc.)
+// ---------------------------------------------------------------------------
+
+export interface ReservationDetail {
+  id: string;
+  room_id: string;
+  arrival_date: string;
+  departure_date: string;
+  eta: string | null;
+  adults: number | null;
+  kids: number | null;
+  reservation_status: string | null;
+  front_office_status: string | null;
+  promised_time: string | null;
+  guests: Array<{
+    id: string;
+    full_name: string;
+    vip_code: string | null;
+    image_url: string | null;
+  }>;
+}
+
+export interface RoomNoteDetail {
+  id: string;
+  text: string;
+  created_at: string;
+  staff: { name: string; avatar_url: string | null };
+}
+
+export interface AssignedStaffDetail {
+  user_id: string;
+  shift_name: string;
+  work_status: string | null;
+  staff: {
+    full_name: string;
+    avatar_url: string | null;
+    department_name?: string;
+  };
+}
+
+export interface LostAndFoundItemDetail {
+  id: string;
+  item_name: string;
+  description: string | null;
+  status: string | null;
+  found_at: string;
+  storage_location: string | null;
+}
+
+export interface TicketDetail {
+  id: string;
+  title: string;
+  description: string | null;
+  type: string | null;
+  priority: string | null;
+  status: string;
+}
+
+export interface FullRoomDetails {
+  room: {
+    id: string;
+    room_number: string;
+    category: string | null;
+    credit: number | null;
+    linen_status: string | null;
+    priority: string | null;
+    flagged: boolean | null;
+    special_instructions: string | null;
+    house_keeping_status: string | null;
+  };
+  reservations: ReservationDetail[];
+  notes: RoomNoteDetail[];
+  assignedStaff: AssignedStaffDetail[];
+  lostAndFoundItems: LostAndFoundItemDetail[];
+  tickets: TicketDetail[];
+}
+
+/** Map one reservation + guest from full details to GuestInfo (for room cards). */
+function mapReservationDetailToGuestInfo(
+  res: ReservationDetail,
+  guest: { id: string; full_name: string; vip_code: string | null; image_url: string | null } | null
+): GuestInfo {
+  const name = guest?.full_name ?? 'Guest';
+  const from = res.arrival_date ?? '';
+  const to = res.departure_date ?? '';
+  const time = res.eta ?? 'N/A';
+  const timeLabel = res.eta ? 'ETA' : (res.departure_date ? 'EDT' : 'N/A');
+  const isVacant = (res.reservation_status ?? '').toLowerCase() === 'vacant';
+  return {
+    name,
+    datesOfStay: { from, to },
+    time: time === 'N/A' || !time ? 'N/A' : time,
+    timeLabel: timeLabel as 'ETA' | 'EDT' | 'N/A',
+    guestCount: { adults: res.adults ?? 0, kids: res.kids ?? 0 },
+    vipCode: guest?.vip_code != null ? parseInt(String(guest.vip_code), 10) : undefined,
+    arrivalDate: res.arrival_date,
+    imageUrl: guest?.image_url ?? undefined,
+    isVacant: isVacant || undefined,
+  };
+}
+
+/**
+ * Convert full room details to RoomCardData for list/cards. Uses first reservation for
+ * front_office_status; builds guests from all reservations; picks assigned staff for the given shift.
+ */
+export function fullRoomDetailsToRoomCardData(
+  full: FullRoomDetails,
+  shift: 'AM' | 'PM'
+): RoomCardData {
+  const room = full.room;
+  const firstRes = full.reservations[0];
+  const rawFrontOffice = firstRes?.front_office_status ?? 'Stayover';
+  const reservationStatus = firstRes?.reservation_status ?? 'Occupied';
+  const promisedTime = firstRes?.promised_time ?? null;
+
+  const guests: GuestInfo[] = [];
+  for (const res of full.reservations) {
+    if (res.guests.length) {
+      for (const g of res.guests) {
+        guests.push(mapReservationDetailToGuestInfo(res, g));
+      }
+    } else {
+      guests.push(mapReservationDetailToGuestInfo(res, null));
+    }
+  }
+  if (guests.length === 0) {
+    guests.push({
+      name: 'Guest',
+      datesOfStay: { from: '', to: '' },
+      time: 'N/A',
+      timeLabel: 'N/A',
+      guestCount: { adults: 0, kids: 0 },
+    });
+  }
+
+  // Normalize status so DB values (e.g. "No task", "Stayover") match card layout; use Arrival/Departure when 2+ reservations so height/layout are correct
+  let frontOfficeStatus = normalizeFrontOfficeStatus(rawFrontOffice);
+  if (full.reservations.length >= 2) {
+    frontOfficeStatus = 'Arrival/Departure';
+  }
+  // For single-guest card types, only pass first guest so layout/height match (card expects one guest section)
+  const guestsForCard =
+    frontOfficeStatus === 'Arrival/Departure' ? guests : guests.slice(0, 1);
+
+  const assignment = full.assignedStaff.find((a) => a.shift_name === shift);
+  const attendant: StaffInfo | null = assignment
+    ? {
+        name: assignment.staff.full_name,
+        initials: assignment.staff.full_name.split(/\s+/).map((s) => s[0]).join('').slice(0, 2).toUpperCase() || '?',
+        avatar: assignment.staff.avatar_url ?? undefined,
+        statusText: assignment.work_status === 'in_progress' ? 'In Progress' : assignment.work_status === 'completed' ? 'Finished' : 'Not Started',
+        statusColor: assignment.work_status === 'completed' ? '#41d541' : assignment.work_status === 'in_progress' ? '#F0BE1B' : '#1e1e1e',
+      }
+    : null;
+
+  const noteCount = full.notes.length;
+  const lastNote = full.notes[0];
+  const notesAgg: RoomNotesAggregate | null = noteCount
+    ? { count: noteCount, lastNoteBy: lastNote ? { name: lastNote.staff.name, avatar: lastNote.staff.avatar_url ?? undefined } : null }
+    : null;
+
+  return {
+    id: room.id,
+    roomNumber: room.room_number,
+    roomCategory: room.category ?? '',
+    credit: room.credit ?? 0,
+    frontOfficeStatus,
+    withLinen: room.linen_status === 'with_linen',
+    houseKeepingStatus: safeStatus(room.house_keeping_status, ['Dirty', 'InProgress', 'Cleaned', 'Inspected']) as RoomStatus,
+    reservationStatus: reservationStatus as ReservationStatus,
+    promisedTime: (promisedTime === '12:00' || promisedTime === '13:00' ? promisedTime : null) as PromisedTime,
+    guests: guestsForCard,
+    roomAttendantAssigned: attendant,
+    isPriority: room.priority === 'high',
+    flagged: room.flagged ?? false,
+    specialInstructions: room.special_instructions ?? null,
+    roomNotes: noteCount > 0 ? undefined : null,
+    noteMadeBy: notesAgg?.lastNoteBy ? ({ name: notesAgg.lastNoteBy.name, avatar: notesAgg.lastNoteBy.avatar } as NoteMadeBy) : null,
+    notes: noteCount > 0 ? { count: noteCount, hasRushed: false } : undefined,
+  };
+}
+
+/**
+ * Fetch all rooms for the All Rooms screen using full room details (one source of truth).
+ * Returns data in RoomCardData form so RoomCard can render by front_office_status.
+ */
+export async function fetchAllRoomsFromFullDetails(shift: 'AM' | 'PM'): Promise<AllRoomsScreenData> {
+  const fullList = await getFullRoomDetails();
+  const rooms = fullList.map((full) => fullRoomDetailsToRoomCardData(full, shift));
+  return {
+    selectedShift: shift,
+    rooms,
+    roomsPM: rooms,
+  };
+}
+
+/**
+ * Fetch full details for one room or all rooms: guest info, reservations, room notes,
+ * assigned staff, lost & found, tickets. Logs the result to the console and returns it.
+ * @param roomId - Optional. If provided, returns details for that room only; otherwise all rooms.
+ */
+export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetails[]> {
+  const roomsQuery = supabase
+    .from('rooms')
+    .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status')
+    .order('room_number', { ascending: true });
+  const { data: roomsData, error: roomsError } = roomId
+    ? await roomsQuery.eq('id', roomId)
+    : await roomsQuery;
+  if (roomsError) throw roomsError;
+  const rooms = (roomsData ?? []) as RoomRow[];
+  if (rooms.length === 0) {
+    console.log('[getFullRoomDetails] No rooms found.');
+    return [];
+  }
+
+  const roomIds = rooms.map((r) => r.id);
+
+  const [reservationsRes, notesRes, assignmentsRes, lfRes, ticketsRes] = await Promise.all([
+    supabase
+      .from('reservations')
+      .select('id, room_id, arrival_date, departure_date, eta, adults, kids, reservation_status, front_office_status, promised_time')
+      .in('room_id', roomIds)
+      .order('arrival_date', { ascending: false }),
+    supabase
+      .from('room_notes')
+      .select('id, room_id, text, created_at, users(full_name, avatar_url)')
+      .in('room_id', roomIds)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('room_assignments')
+      .select('room_id, user_id, work_status, users(full_name, avatar_url), shifts(name)')
+      .in('room_id', roomIds),
+    supabase
+      .from('lost_and_found_items')
+      .select('id, room_id, item_name, description, status, found_at, storage_location')
+      .in('room_id', roomIds)
+      .order('found_at', { ascending: false }),
+    supabase
+      .from('tickets')
+      .select('id, room_id, title, description, type, priority, status')
+      .in('room_id', roomIds),
+  ]);
+
+  const reservations = (reservationsRes.data ?? []) as (ReservationRow & { promised_time?: string | null })[];
+  const resIds = reservations.map((r) => r.id);
+
+  let reservationGuests: ReservationGuestRow[] = [];
+  if (resIds.length > 0) {
+    const { data: rgData, error: rgError } = await supabase
+      .from('reservation_guests')
+      .select('reservation_id, guest_id, guests(id, full_name, vip_code, image_url)')
+      .in('reservation_id', resIds);
+    if (!rgError) reservationGuests = (rgData ?? []) as ReservationGuestRow[];
+  }
+
+  const resWithGuestsByRoom = new Map<string, ReservationDetail[]>();
+  for (const rid of roomIds) {
+    const roomReservations = reservations.filter((r) => r.room_id === rid);
+    const list: ReservationDetail[] = roomReservations.map((res) => {
+      const guests = reservationGuests
+        .filter((rg) => rg.reservation_id === res.id && rg.guests)
+        .map((rg) => rg.guests as GuestRow)
+        .filter(Boolean);
+      return {
+        id: res.id,
+        room_id: res.room_id,
+        arrival_date: res.arrival_date,
+        departure_date: res.departure_date,
+        eta: res.eta ?? null,
+        adults: res.adults ?? null,
+        kids: res.kids ?? null,
+        reservation_status: res.reservation_status ?? null,
+        front_office_status: res.front_office_status ?? null,
+        promised_time: res.promised_time ?? null,
+        guests: guests.map((g) => ({
+          id: g.id,
+          full_name: g.full_name,
+          vip_code: g.vip_code ?? null,
+          image_url: g.image_url ?? null,
+        })),
+      };
+    });
+    resWithGuestsByRoom.set(rid, list);
+  }
+
+  type NoteRow = { id: string; room_id: string; text: string; created_at: string; users: { full_name: string | null; avatar_url: string | null } | null };
+  const notesRows = (notesRes.data ?? []) as NoteRow[];
+  const notesByRoom = new Map<string, RoomNoteDetail[]>();
+  for (const rid of roomIds) {
+    const roomNotes = notesRows
+      .filter((n) => n.room_id === rid)
+      .map((n) => ({
+        id: n.id,
+        text: n.text,
+        created_at: n.created_at,
+        staff: { name: n.users?.full_name ?? 'Staff', avatar_url: n.users?.avatar_url ?? null },
+      }));
+    notesByRoom.set(rid, roomNotes);
+  }
+
+  type AssignmentRow = {
+    room_id: string;
+    user_id: string;
+    work_status: string | null;
+    users: { full_name: string; avatar_url: string | null } | null;
+    shifts: { name: string } | null;
+  };
+  const assignmentRows = (assignmentsRes.data ?? []) as AssignmentRow[];
+  const assignmentsByRoom = new Map<string, AssignedStaffDetail[]>();
+  for (const rid of roomIds) {
+    const roomAssignments = assignmentRows
+      .filter((a) => a.room_id === rid)
+      .map((a) => ({
+        user_id: a.user_id,
+        shift_name: a.shifts?.name ?? 'Unknown',
+        work_status: a.work_status,
+        staff: {
+          full_name: a.users?.full_name ?? 'Staff',
+          avatar_url: a.users?.avatar_url ?? null,
+          department_name: undefined,
+        },
+      }));
+    assignmentsByRoom.set(rid, roomAssignments);
+  }
+
+  const lfRows = (lfRes.data ?? []) as { id: string; room_id: string; item_name: string; description: string | null; status: string | null; found_at: string; storage_location: string | null }[];
+  const lfByRoom = new Map<string, LostAndFoundItemDetail[]>();
+  for (const rid of roomIds) {
+    const items = lfRows
+      .filter((i) => i.room_id === rid)
+      .map((i) => ({
+        id: i.id,
+        item_name: i.item_name,
+        description: i.description,
+        status: i.status,
+        found_at: i.found_at,
+        storage_location: i.storage_location,
+      }));
+    lfByRoom.set(rid, items);
+  }
+
+  const ticketRows = (ticketsRes.data ?? []) as { id: string; room_id: string; title: string; description: string | null; type: string | null; priority: string | null; status: string }[];
+  const ticketsByRoom = new Map<string, TicketDetail[]>();
+  for (const rid of roomIds) {
+    const roomTickets = ticketRows
+      .filter((t) => t.room_id === rid)
+      .map((t) => ({
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        type: t.type,
+        priority: t.priority,
+        status: t.status,
+      }));
+    ticketsByRoom.set(rid, roomTickets);
+  }
+
+  const result: FullRoomDetails[] = rooms.map((room) => ({
+    room: {
+      id: room.id,
+      room_number: room.room_number,
+      category: room.category,
+      credit: room.credit,
+      linen_status: room.linen_status,
+      priority: room.priority,
+      flagged: room.flagged,
+      special_instructions: room.special_instructions,
+      house_keeping_status: room.house_keeping_status,
+    },
+    reservations: resWithGuestsByRoom.get(room.id) ?? [],
+    notes: notesByRoom.get(room.id) ?? [],
+    assignedStaff: assignmentsByRoom.get(room.id) ?? [],
+    lostAndFoundItems: lfByRoom.get(room.id) ?? [],
+    tickets: ticketsByRoom.get(room.id) ?? [],
+  }));
+
+  console.log('[getFullRoomDetails] Room details:', JSON.stringify(result, null, 2));
+  return result;
 }
