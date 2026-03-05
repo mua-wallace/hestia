@@ -33,7 +33,7 @@
         "resizeMode": "contain",
         "backgroundColor": "#e4eefe"
       },
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "favicon": "./assets/app/favicon.png"

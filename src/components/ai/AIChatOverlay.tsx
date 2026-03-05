@@ -3,7 +3,7 @@
  * Full width, zero margin; border-radius 12px top; border 1.5px solid #FF46A3; background #FFF.
  */
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -56,8 +57,23 @@ export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) 
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<AIChatMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const toast = useToast();
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(audioRecorder);
@@ -151,16 +167,20 @@ export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) 
   const tabBarHeight = 152 * scaleX;
   const bottomOffset = tabBarHeight;
 
+  const overlayBottom = Platform.OS === 'android' ? bottomOffset + keyboardHeight : bottomOffset;
+
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent={Platform.OS === 'android'}
     >
       <KeyboardAvoidingView
         style={styles.backdrop}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+        keyboardVerticalOffset={Platform.OS === 'android' ? 0 : 0}
       >
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
@@ -174,7 +194,7 @@ export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) 
               width: SCREEN_WIDTH,
               height: OVERLAY_HEIGHT,
               left: 0,
-              bottom: bottomOffset,
+              bottom: overlayBottom,
             },
           ]}
         >
