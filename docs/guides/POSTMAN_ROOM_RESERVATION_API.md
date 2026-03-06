@@ -4,6 +4,22 @@ Use these Supabase REST API calls to create a reservation that links a **guest**
 
 ---
 
+## Important: use the service_role key in Postman
+
+Tables `rooms`, `guests`, `reservations`, and `reservation_guests` have **Row Level Security (RLS)** and allow only **authenticated** users (logged-in with a JWT). The **anon** key is not authenticated, so you get:
+
+- **GET** → `[]` (empty)
+- **POST/PATCH/DELETE** → `42501` — *"new row violates row-level security policy"*
+
+**Fix:** Use the **service_role** key (not the anon/publishable key) for every request in this guide.
+
+- **apikey:** your `SUPABASE_SERVICE_ROLE_KEY` (from `.env` or Supabase Dashboard → Settings → API)
+- **Authorization:** `Bearer <same service_role key>`
+
+The service_role key bypasses RLS so Postman can read and write for testing. Do not expose it in the frontend or commit it to git.
+
+---
+
 ## Base URL and headers
 
 - **Base URL:** `https://<your-project-ref>.supabase.co/rest/v1`
@@ -16,6 +32,63 @@ Use these Supabase REST API calls to create a reservation that links a **guest**
 | `Authorization`| `Bearer <same key>`      |
 | `Content-Type` | `application/json`       |
 | `Prefer`       | `return=representation`  *(optional; returns created row in response)* |
+
+---
+
+## Get all rooms
+
+- **Method:** `GET`
+- **URL:** `{{baseUrl}}/rooms`
+
+Optional query params (Supabase/PostgREST):
+
+| Param   | Example              | Description                    |
+|---------|----------------------|--------------------------------|
+| `order` | `room_number.asc`    | Sort by room number ascending  |
+| `select`| `id,room_number,category,house_keeping_status,flagged` | Return only these columns |
+| `house_keeping_status` | `eq.Cleaned` | Filter by status (Dirty, InProgress, Cleaned, Inspected) |
+
+**Examples**
+
+- All rooms:  
+  `GET {{baseUrl}}/rooms`
+- Sorted by room number:  
+  `GET {{baseUrl}}/rooms?order=room_number.asc`
+- Only cleaned rooms:  
+  `GET {{baseUrl}}/rooms?house_keeping_status=eq.Cleaned`
+- Specific columns:  
+  `GET {{baseUrl}}/rooms?select=id,room_number,category,house_keeping_status,flagged,special_instructions`
+
+**Response (example)**
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "room_number": "101",
+    "category": "standard",
+    "credit": 0,
+    "house_keeping_status": "Dirty",
+    "flagged": false,
+    "special_instructions": null,
+    "notes": null,
+    "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-01-01T00:00:00Z"
+  },
+  { "id": "...", "room_number": "102", ... }
+]
+```
+
+**If you get `[]` (empty array)**
+
+1. **RLS (Row Level Security)** – The `rooms` table only allows **authenticated** users. The **anon** key does not count as authenticated, so Supabase returns no rows.
+   - **Fix:** Use the **service_role** key in Postman (in `apikey` and `Authorization: Bearer <service_role_key>`). It bypasses RLS so you can read/write for testing.
+2. **Table is empty** – There may be no rows yet.
+   - **Fix:** Seed data. In Supabase Dashboard → SQL Editor, run your seed script (e.g. `supabase/seed_rooms_guests_reservations.sql` or `supabase/SEED_DATA.sql`), or insert a room manually:
+   ```sql
+   INSERT INTO rooms (room_number, category, house_keeping_status)
+   VALUES ('101', 'standard', 'Dirty'), ('102', 'standard', 'Cleaned');
+   ```
 
 ---
 
@@ -54,6 +127,8 @@ Copy `id` → use as **`room_id`** in Step 3.
 
 ## Step 2: Create a guest (or use an existing one)
 
+If you get **42501** or "row-level security policy", use the **service_role** key (see top of this doc).
+
 **Option A – Create a new guest**
 
 - **Method:** `POST`
@@ -78,6 +153,22 @@ Copy `id` → use as **`room_id`** in Step 3.
 | `primary_email`| string | No       |                    |
 | `dob`          | string | No       | ISO date (YYYY-MM-DD) |
 | `image_url`    | string | No       |                    |
+
+**Sample object (all fields):**
+
+```json
+{
+  "full_name": "Jane Doe",
+  "vip_code": "12345",
+  "address": "123 Main St, City",
+  "company": "Acme Inc",
+  "primary_email": "jane.doe@example.com",
+  "dob": "1990-05-15",
+  "image_url": "https://example.com/photo.jpg"
+}
+```
+
+**Minimal (required only):** `{ "full_name": "Jane Doe" }`
 
 **Response (with `Prefer: return=representation`):** the created row including `id`. Copy **`id`** → use as **`guest_id`** in Step 4.
 
