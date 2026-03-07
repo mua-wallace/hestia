@@ -14,7 +14,7 @@ Tables `rooms`, `guests`, `reservations`, and `reservation_guests` have **Row Le
 **Fix:** Use the **service_role** key (not the anon/publishable key) for every request in this guide.
 
 - **apikey:** your `SUPABASE_SERVICE_ROLE_KEY` (from `.env` or Supabase Dashboard → Settings → API)
-- **Authorization:** `Bearer <same service_role key>`
+- **Authorization:** `Bearer <same key>`
 
 The service_role key bypasses RLS so Postman can read and write for testing. Do not expose it in the frontend or commit it to git.
 
@@ -52,6 +52,8 @@ Optional query params (Supabase/PostgREST):
 
 - All rooms:  
   `GET {{baseUrl}}/rooms`
+- Rooms with no reservations (see [Get rooms with no reservations](#get-rooms-with-no-reservations) below):  
+  `POST {{baseUrl}}/rpc/get_rooms_without_reservations`
 - Sorted by room number:  
   `GET {{baseUrl}}/rooms?order=room_number.asc`
 - Only cleaned rooms:  
@@ -78,6 +80,105 @@ Optional query params (Supabase/PostgREST):
   { "id": "...", "room_number": "102", ... }
 ]
 ```
+
+---
+
+## Get all rooms with reservations and guests
+
+Single request that returns every room with its reservations and each reservation’s guests (nested).
+
+- **Method:** `GET`
+- **URL (explicit columns – use this to avoid PGRST204):**  
+  `{{baseUrl}}/rooms?select=*,reservations(id,room_id,arrival_date,departure_date,eta,adults,kids,reservation_status,front_office_status,promised_time,reservation_guests(guest_id,guests(id,full_name,vip_code,image_url)))`
+
+  *`adults` and `kids` are on **reservations**, not on **guests**. If you get `PGRST204` ("Could not find the 'adults' column of 'guests'"), you were selecting `adults` from the wrong table; use the URL above.*
+
+Optional: sort rooms by number and order reservations by arrival:
+
+`{{baseUrl}}/rooms?select=*,reservations(id,room_id,arrival_date,departure_date,eta,adults,kids,reservation_status,front_office_status,promised_time,reservation_guests(guest_id,guests(id,full_name,vip_code,image_url)))&order=room_number.asc&reservations.order=arrival_date.desc`
+
+**Response shape (example)**
+
+```json
+[
+  {
+    "id": "room-uuid",
+    "room_number": "101",
+    "category": "standard",
+    "house_keeping_status": "Dirty",
+    "flagged": false,
+    "reservations": [
+      {
+        "id": "res-uuid",
+        "room_id": "room-uuid",
+        "arrival_date": "2026-03-01",
+        "departure_date": "2026-03-05",
+        "eta": "14:00:00",
+        "adults": 2,
+        "kids": 0,
+        "reservation_status": "confirmed",
+        "front_office_status": "Arrival",
+        "promised_time": "12:00:00",
+        "reservation_guests": [
+          {
+            "guest_id": "guest-uuid",
+            "guests": {
+              "id": "guest-uuid",
+              "full_name": "Jane Doe",
+              "vip_code": "12345",
+              "image_url": null
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
+```
+
+Rooms with no reservations have `"reservations": []`. Use the **service_role** key (see top of doc) if you get `[]` or an RLS error.
+
+---
+
+---
+
+## Get rooms with no reservations
+
+Returns only rooms that have **no** linked reservations (available to assign).
+
+**Option A – RPC (one call, requires migration)**
+
+1. Run the migration once (Supabase Dashboard → SQL Editor, or `supabase db push`):
+   - File: `supabase/migrations/20250629000000_rooms_without_reservations_rpc.sql`
+2. Then in Postman:
+   - **Method:** `POST`
+   - **URL:** `{{baseUrl}}/rpc/get_rooms_without_reservations`
+   - **Body:** `{}` (empty JSON object)
+
+**Option B – No migration (two requests)**
+
+1. `GET {{baseUrl}}/rooms?select=id,room_number` → list of all rooms.
+2. `GET {{baseUrl}}/reservations?select=room_id` → list of `room_id` that have reservations.
+3. In your app or a script: keep only rooms whose `id` is not in the reservation `room_id` list.
+
+**Response (Option A, same shape as rooms):**
+
+```json
+[
+  {
+    "id": "uuid",
+    "room_number": "102",
+    "category": "standard",
+    "house_keeping_status": "Cleaned",
+    "flagged": false,
+    ...
+  }
+]
+```
+
+Use the **service_role** key. If the RPC returns 404, run the migration first.
+
+---
 
 **If you get `[]` (empty array)**
 
