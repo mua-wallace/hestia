@@ -1,8 +1,3 @@
-/**
- * AI Chat overlay – voice note, transcription, and AI response.
- * Full width, zero margin; border-radius 12px top; border 1.5px solid #FF46A3; background #FFF.
- */
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
@@ -12,7 +7,6 @@ import {
   StyleSheet,
   Modal,
   Dimensions,
-  KeyboardAvoidingView,
   Platform,
   Image,
   ScrollView,
@@ -62,7 +56,6 @@ export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) 
   const toast = useToast();
 
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
     const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
       setKeyboardHeight(e.endCoordinates.height);
     });
@@ -163,11 +156,18 @@ export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) 
     toast,
   ]);
 
-  // Zero margin from tab bar: overlay sits flush with tab bar top
+  // Fixed overlay height.
+  const overlayHeight = OVERLAY_HEIGHT;
+
+  // When keyboard is closed, sit just above the tab bar. When open, move up slightly more than
+  // the keyboard height so there's clear space and the input is never under the keyboard.
   const tabBarHeight = 152 * scaleX;
   const bottomOffset = tabBarHeight;
-
-  const overlayBottom = Platform.OS === 'android' ? bottomOffset + keyboardHeight : bottomOffset;
+  const isKeyboardOpen = keyboardHeight > 0;
+  const extraGapAboveKeyboard = 52 * scaleX; // push sheet clearly above keyboard
+  const overlayBottom = isKeyboardOpen
+    ? keyboardHeight + extraGapAboveKeyboard
+    : bottomOffset;
 
   return (
     <Modal
@@ -177,11 +177,7 @@ export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) 
       onRequestClose={onClose}
       statusBarTranslucent={Platform.OS === 'android'}
     >
-      <KeyboardAvoidingView
-        style={styles.backdrop}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
-        keyboardVerticalOffset={Platform.OS === 'android' ? 0 : 0}
-      >
+      <View style={styles.backdrop}>
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -192,7 +188,7 @@ export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) 
             styles.overlay,
             {
               width: SCREEN_WIDTH,
-              height: OVERLAY_HEIGHT,
+              height: overlayHeight,
               left: 0,
               bottom: overlayBottom,
             },
@@ -222,20 +218,37 @@ export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) 
               {messages.map((msg, i) => (
                 <View
                   key={i}
-                  style={[styles.messageBubble, msg.role === 'user' ? styles.messageUser : styles.messageAssistant]}
+                  style={[
+                    styles.messageRow,
+                    msg.role === 'user' ? styles.messageRowUser : styles.messageRowAssistant,
+                  ]}
                 >
-                  <Text
-                    style={[styles.messageText, msg.role === 'assistant' && styles.messageTextAssistant]}
-                    numberOfLines={10}
+                  <View
+                    style={[
+                      styles.messageBubble,
+                      msg.role === 'user' ? styles.messageUser : styles.messageAssistant,
+                    ]}
                   >
-                    {msg.content}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.messageText,
+                        msg.role === 'assistant' && styles.messageTextAssistant,
+                        msg.role === 'user' && styles.messageTextUser,
+                      ]}
+                    >
+                      {msg.content}
+                    </Text>
+                  </View>
                 </View>
               ))}
               {isProcessing && (
-                <View style={[styles.messageBubble, styles.messageAssistant]}>
-                  <ActivityIndicator size="small" color={colors.primary.main} />
-                  <Text style={[styles.messageText, styles.processingText]}>Transcribing and responding…</Text>
+                <View style={[styles.messageRow, styles.messageRowAssistant]}>
+                  <View style={[styles.messageBubble, styles.messageAssistant]}>
+                    <ActivityIndicator size="small" color={colors.primary.main} />
+                    <Text style={[styles.messageText, styles.processingText]}>
+                      Transcribing and responding…
+                    </Text>
+                  </View>
                 </View>
               )}
             </ScrollView>
@@ -282,7 +295,7 @@ export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) 
             </View>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -302,6 +315,9 @@ const styles = StyleSheet.create({
     borderColor: '#FF46A3',
     justifyContent: 'space-between',
   },
+  overlayKeyboardWrap: {
+    flex: 1,
+  },
   overlayContent: {
     flex: 1,
     paddingHorizontal: 16 * scaleX,
@@ -311,26 +327,34 @@ const styles = StyleSheet.create({
   },
   messagesScroll: {
     flex: 1,
-    maxHeight: 120 * scaleX,
-    marginVertical: 8 * scaleX,
+    maxHeight: 160 * scaleX,
+    marginVertical: 10 * scaleX,
   },
   messagesContent: {
-    paddingVertical: 4,
-    gap: 8 * scaleX,
+    paddingVertical: 8 * scaleX,
+    gap: 10 * scaleX,
+  },
+  messageRow: {
+    width: '100%',
+    paddingHorizontal: 4 * scaleX,
+  },
+  messageRowUser: {
+    alignItems: 'flex-end',
+  },
+  messageRowAssistant: {
+    alignItems: 'flex-start',
   },
   messageBubble: {
     paddingHorizontal: 12 * scaleX,
-    paddingVertical: 8 * scaleX,
-    borderRadius: 12,
-    maxWidth: '90%',
+    paddingVertical: 10 * scaleX,
+    borderRadius: 16,
+    maxWidth: '88%',
   },
   messageUser: {
-    alignSelf: 'flex-end',
-    backgroundColor: colors.background.tertiary ?? '#f1f6fc',
+    backgroundColor: '#FFFFFF', // Light user bubble
   },
   messageAssistant: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary.main,
+    backgroundColor: '#F7F7F8', // ChatGPT-style assistant gray
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8 * scaleX,
@@ -341,11 +365,14 @@ const styles = StyleSheet.create({
     fontSize: 13 * scaleX,
     color: colors.text.primary,
   },
+  messageTextUser: {
+    color: '#111827',
+  },
   messageTextAssistant: {
-    color: colors.text.white,
+    color: '#111827',
   },
   processingText: {
-    color: colors.text.white,
+    color: '#111827',
   },
   header: {
     flexDirection: 'row',
