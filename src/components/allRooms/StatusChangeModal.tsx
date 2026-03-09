@@ -317,16 +317,38 @@ export default function StatusChangeModal({
               {STATUS_OPTIONS.filter((option) => {
                 if (!STATUS_OPTION_IDS.includes(option.id)) return true;
                 return option.id !== currentStatus;
-              }).map((option) => (
-                <StatusOptionItem
-                  key={option.id}
-                  icon={option.icon}
-                  label={option.label}
-                  onPress={() => handleStatusSelect(option.id)}
-                  tintColor={option.id === 'InProgress' ? '#FFFFFF' : undefined}
-                  backgroundColor={getOptionBackgroundColor(option.id)}
-                />
-              ))}
+              }).map((option) => {
+                const isInProgress = option.id === 'InProgress';
+                const isCleaned = option.id === 'Cleaned';
+                const isInspected = option.id === 'Inspected';
+                const isPause = option.id === 'Pause';
+                const isReturnLater = option.id === 'ReturnLater';
+                const isRefuseService = option.id === 'RefuseService';
+                const isPromisedTime = option.id === 'PromisedTime';
+                const isPriority = option.id === 'Priority';
+                const iconOnly =
+                  isCleaned ||
+                  isInspected ||
+                  isPause ||
+                  isReturnLater ||
+                  isRefuseService ||
+                  isPromisedTime ||
+                  isPriority;
+
+                return (
+                  <StatusOptionItem
+                    key={option.id}
+                    icon={option.icon}
+                    label={option.label}
+                    onPress={() => handleStatusSelect(option.id)}
+                    tintColor={isInProgress ? '#FFFFFF' : undefined}
+                    // For iconOnly statuses: no circular background – show icon only
+                    backgroundColor={iconOnly ? undefined : getOptionBackgroundColor(option.id)}
+                    // Upscale iconOnly statuses so they visually match In Progress size
+                    iconScale={iconOnly ? 2 : 1}
+                  />
+                );
+              })}
             </View>
 
             <View style={styles.divider} />

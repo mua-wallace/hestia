@@ -22,7 +22,14 @@ const ICON_SIZE = 50 * scaleX;
 /** Icon drawn smaller so it fits with padding inside the circle (same as Dirty, Cleaned) */
 const ICON_FIT_SIZE = ICON_SIZE * 0.5;
 
-export default function StatusOptionItem({ icon, label, onPress, tintColor, backgroundColor }: StatusOptionItemProps) {
+export default function StatusOptionItem({
+  icon,
+  label,
+  onPress,
+  tintColor,
+  backgroundColor,
+  iconScale = 1,
+}: StatusOptionItemProps) {
   return (
     <TouchableOpacity
       style={styles.container}
@@ -40,7 +47,13 @@ export default function StatusOptionItem({ icon, label, onPress, tintColor, back
       >
         <Image
           source={icon}
-          style={styles.icon}
+          style={[
+            styles.icon,
+            iconScale !== 1 && {
+              width: ICON_FIT_SIZE * iconScale,
+              height: ICON_FIT_SIZE * iconScale,
+            },
+          ]}
           resizeMode="contain"
           {...(tintColor != null && { tintColor })}
         />
