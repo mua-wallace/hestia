@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import TabBarItem from './TabBarItem';
@@ -75,6 +76,8 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatB
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         style={styles.scrollView}
+        keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
       >
         {allTabs.map((tab) => (
           <View key={tab.id} style={styles.tabItemContainer}>
