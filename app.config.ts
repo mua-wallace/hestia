@@ -6,8 +6,8 @@ const PROJECT_SLUG = "hestia";
 const OWNER = "wallice-dev";
 
 const APP_NAME = "Hestia";
-const BUNDLE_IDENTIFIER = "Hesia App - com.hestiahotels.app";
-const PACKAGE_NAME = "Hesia App - com.hestiahotels.app";
+const BUNDLE_IDENTIFIER = "com.hestiahotels.app";
+const PACKAGE_NAME = "com.hestiahotels.app";
 const ICON = "./assets/app/icon.png";
 const ADAPTIVE_ICON = "./assets/app/adaptive-icon.png";
 const SCHEME = "hestia";

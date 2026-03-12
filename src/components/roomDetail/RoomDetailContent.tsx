@@ -22,7 +22,7 @@ import GuestInfoCard from './GuestInfoCard';
 import NotesSection from './NotesSection';
 import LostAndFoundSection from './LostAndFoundSection';
 import AssignedToSection from './AssignedToSection';
-import CleanChecklistSection from './CleanChecklistSection';
+import ChecklistSection from './ChecklistSection';
 import RoomTicketsSection from './RoomTicketsSection';
 import HistorySection from './HistorySection';
 import type { RoomDetailScreenProps, DetailTab, HistoryEvent } from '../../types/roomDetail.types';
@@ -226,12 +226,13 @@ export default function RoomDetailContent({
 
       {/* Content Area */}
       {activeTab === 'Checklist' ? (
-        <CleanChecklistSection
+        <ChecklistSection
           roomNumber={roomNumber}
           roomCode={roomCode}
-          onComplete={() => console.log('Clean checklist completed')}
-          onAddPhoto={() => console.log('Add photo')}
-          onAddNotes={() => console.log('Add notes')}
+          roomStatus={currentStatus}
+          onSubmit={(data) => {
+            console.log('Room checklist submitted:', data);
+          }}
         />
       ) : activeTab === 'Tickets' ? (
         <RoomTicketsSection
