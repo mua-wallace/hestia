@@ -1098,7 +1098,8 @@ export const ITEM_REGISTERED_SUCCESS = {
       trackingNumberValue: {
         top: 558,
         left: 144,
-        fontSize: 37,
+        // Slightly larger than original for better readability
+        fontSize: 42,
         fontWeight: 'light' as const,
         color: '#000000',
       },

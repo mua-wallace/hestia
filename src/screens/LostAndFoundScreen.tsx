@@ -266,13 +266,23 @@ export default function LostAndFoundScreen() {
             trackingNumberFromDb = inserted.tracking_number;
           }
           await loadItems();
-          // Ensure the newly created item shows an image on the Created tab
-          if (inserted?.id && firstImageUri) {
-            const finalImageUri = inserted.image_url ?? imageUrl ?? firstImageUri;
+          // Ensure the newly created item shows image and (for rooms) guest name on the Created tab
+          if (inserted?.id) {
+            const finalImageUri =
+              inserted.image_url ?? imageUrl ?? (firstImageUri || undefined);
+            const guestNameForCard =
+              selectedLocation === 'room' && (selectedRoom as any)?.guestName
+                ? `Mr ${(selectedRoom as any).guestName}`
+                : undefined;
+
             setItems((prev) =>
               prev.map((item) =>
                 item.id === inserted.id
-                  ? { ...item, image: { uri: finalImageUri } }
+                  ? {
+                      ...item,
+                      image: finalImageUri ? { uri: finalImageUri } : item.image,
+                      guestName: guestNameForCard ?? item.guestName,
+                    }
                   : item
               )
             );
