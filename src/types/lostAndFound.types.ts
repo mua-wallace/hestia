@@ -16,7 +16,7 @@ export interface LostAndFoundItem {
     avatar?: any; // Image source
     timestamp: string; // e.g., "15:00, 11 November 2025"
   };
-  image?: any; // Image source
+  image?: { uri: string } | any; // Remote image source (Supabase URL) or local
   status: LostAndFoundStatus;
   createdAt: string; // ISO date string for filtering
   storedAt?: string; // ISO date string

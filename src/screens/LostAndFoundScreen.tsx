@@ -9,8 +9,6 @@ import LostAndFoundTabs from '../components/lostAndFound/LostAndFoundTabs';
 import LostAndFoundItemCard from '../components/lostAndFound/LostAndFoundItemCard';
 import RegisterLostAndFoundModal from '../components/lostAndFound/RegisterLostAndFoundModal';
 import ItemRegisteredSuccessModal from '../components/lostAndFound/ItemRegisteredSuccessModal';
-import { mockHomeData } from '../data/mockHomeData';
-import { mockLostAndFoundData } from '../data/mockLostAndFoundData';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
 import { LostAndFoundTab, LostAndFoundItem } from '../types/lostAndFound.types';
@@ -22,6 +20,7 @@ import {
 } from '../constants/lostAndFoundStyles';
 import type { ReturnToTab } from '../navigation/types';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 type MainTabsParamList = {
   Home: undefined;
@@ -42,7 +41,7 @@ export default function LostAndFoundScreen() {
   const params = route.params as { openRegisterModal?: boolean } | undefined;
   const [activeTab, setActiveTab] = useState('LostAndFound');
   const [selectedTab, setSelectedTab] = useState<LostAndFoundTab>('created');
-  const [items] = useState<LostAndFoundItem[]>(mockLostAndFoundData);
+  const [items, setItems] = useState<LostAndFoundItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -51,6 +50,50 @@ export default function LostAndFoundScreen() {
     itemImage?: string;
     itemData: any;
   } | null>(null);
+
+  // Load items from Supabase lost_and_found_items table
+  const loadItems = React.useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      setItems([]);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('lost_and_found_items')
+        .select('id, item_name, description, status, storage_location, room_id, found_location, tracking_number, image_url')
+        .order('found_at', { ascending: false });
+      if (error || !data) {
+        console.warn('[LostAndFoundScreen] Failed to load items', error);
+        setItems([]);
+        return;
+      }
+      const mapped: LostAndFoundItem[] = (data as any[]).map((row) => ({
+        id: row.id,
+        itemName: row.item_name,
+        // Use tracking_number (e.g. FH31390); fall back to id if missing
+        itemId: row.tracking_number ?? row.id,
+        location: row.found_location ?? 'Room',
+        storedLocation: row.storage_location ?? '',
+        registeredBy: {
+          name: 'Staff',
+          avatar: undefined,
+          timestamp: '',
+        },
+        // Use Supabase image_url (first uploaded image) if present
+        image: row.image_url ? { uri: row.image_url } : undefined,
+        status: (row.status as LostAndFoundItem['status']) ?? 'stored',
+        createdAt: '',
+      }));
+      setItems(mapped);
+    } catch (e) {
+      console.warn('[LostAndFoundScreen] Unexpected error loading items', e);
+      setItems([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
 
   // Open register modal if param is set
   useEffect(() => {
@@ -68,7 +111,9 @@ export default function LostAndFoundScreen() {
       if (routeName === 'Home' || routeName === 'Rooms' || routeName === 'Chat' || routeName === 'Tickets') {
         setActiveTab(routeName);
       }
-    }, [route.name])
+      // Reload Lost & Found items when screen gains focus
+      loadItems();
+    }, [route.name, loadItems])
   );
 
   // Calculate total unread chat messages for badge
@@ -119,12 +164,132 @@ export default function LostAndFoundScreen() {
     setShowRegisterModal(false);
   };
 
-  const handleRegisterNext = (data: {
-    trackingNumber: string;
+  const handleRegisterNext = async (data: {
+    trackingNumber?: string;
     itemImage?: string;
     itemData: any;
   }) => {
-    setSuccessData(data);
+    let trackingNumberFromDb: string = data.trackingNumber ?? '';
+    const firstImageUri: string | undefined = data.itemImage;
+
+    try {
+      if (isSupabaseConfigured) {
+        const itemData = data.itemData ?? {};
+        const notes: string = itemData.notes ?? '';
+        const status: string = itemData.status ?? 'stored';
+        const storedLocation: string | null = itemData.storedLocation ?? null;
+        const selectedLocation: 'room' | 'publicArea' = itemData.selectedLocation ?? 'room';
+        const selectedRoom = itemData.selectedRoom as { number?: string } | undefined;
+        const selectedDate: Date = itemData.selectedDate ?? new Date();
+        const selectedHour: number = itemData.selectedHour ?? selectedDate.getHours();
+        const selectedMinute: number = itemData.selectedMinute ?? selectedDate.getMinutes();
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData?.session?.user?.id ?? null;
+
+        // Build found_at timestamp
+        const foundAt = new Date(
+          selectedDate.getFullYear(),
+          selectedDate.getMonth(),
+          selectedDate.getDate(),
+          selectedHour,
+          selectedMinute,
+          0,
+          0
+        ).toISOString();
+
+        const foundLocation =
+          selectedLocation === 'room' && selectedRoom?.number
+            ? `Room ${selectedRoom.number}`
+            : 'Public Area';
+
+        // Derive a simple item_name from notes (fallback to generic)
+        const itemName =
+          (notes || '')
+            .split(/[.!]/)[0]
+            .trim()
+            .split(' ')
+            .slice(0, 4)
+            .join(' ') || 'Lost item';
+
+        // Upload first image to Supabase storage (lost-and-found bucket), if present.
+        // Fallback: if upload/storage fails, still use the local URI so the card shows an image.
+        let imageUrl: string | null = null;
+        if (firstImageUri) {
+          try {
+            const response = await fetch(firstImageUri);
+            const blob = await response.blob();
+            const extMatch = firstImageUri.split('.').pop();
+            const fileExt = (extMatch || 'jpg').split('?')[0];
+            const fileName = `items/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('lost-and-found')
+              .upload(fileName, blob, {
+                contentType: blob.type || 'image/jpeg',
+                upsert: false,
+              });
+
+            if (!uploadError && uploadData?.path) {
+              const { data: publicUrlData } = supabase.storage
+                .from('lost-and-found')
+                .getPublicUrl(uploadData.path);
+              imageUrl = publicUrlData.publicUrl ?? null;
+            } else if (uploadError) {
+              console.warn('[LostAndFoundScreen] Failed to upload lost-and-found image', uploadError);
+              // Fallback to local URI so UI still shows the image on the card
+              imageUrl = firstImageUri;
+            }
+          } catch (uploadException) {
+            console.warn('[LostAndFoundScreen] Unexpected error uploading image', uploadException);
+            // Fallback to local URI so UI still shows the image on the card
+            imageUrl = firstImageUri;
+          }
+        }
+
+        if (userId) {
+          const { data: inserted, error } = await supabase
+            .from('lost_and_found_items')
+            .insert({
+              item_name: itemName,
+              description: notes.trim() || null,
+              status,
+              storage_location: storedLocation,
+              found_at: foundAt,
+              found_by_id: userId,
+              found_location: foundLocation,
+              image_url: imageUrl,
+            })
+            .select('id, tracking_number, image_url')
+            .single();
+          if (!error && inserted?.tracking_number) {
+            trackingNumberFromDb = inserted.tracking_number;
+          }
+          await loadItems();
+          // Ensure the newly created item shows an image on the Created tab
+          if (inserted?.id && firstImageUri) {
+            const finalImageUri = inserted.image_url ?? imageUrl ?? firstImageUri;
+            setItems((prev) =>
+              prev.map((item) =>
+                item.id === inserted.id
+                  ? { ...item, image: { uri: finalImageUri } }
+                  : item
+              )
+            );
+          }
+        } else {
+          console.warn('[LostAndFoundScreen] No authenticated user – lost & found item not persisted.');
+        }
+      }
+    } catch (e) {
+      console.warn('[LostAndFoundScreen] Failed to persist lost & found item', e);
+    }
+
+    setSuccessData({
+      trackingNumber: trackingNumberFromDb,
+      itemImage: data.itemImage,
+      itemData: data.itemData,
+    });
     setShowRegisterModal(false);
     setShowSuccessModal(true);
   };
@@ -150,10 +315,8 @@ export default function LostAndFoundScreen() {
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  }, []);
+    loadItems().finally(() => setRefreshing(false));
+  }, [loadItems]);
 
   // Filter items based on selected tab
   const filteredItems = items.filter((item) => {

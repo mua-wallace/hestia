@@ -5,7 +5,6 @@
 
 import { mockHomeData } from '../data/mockHomeData';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
-import { mockTicketsData } from '../data/mockTicketsData';
 import type { HomeScreenData } from '../types/home.types';
 import type { AllRoomsScreenData } from '../types/allRooms.types';
 import type { TicketsScreenData } from '../types/tickets.types';
@@ -16,6 +15,7 @@ import type { StaffInfo } from '../types/allRooms.types';
 import { mockStaffData } from '../data/mockStaffData';
 import { getShiftFromTime } from '../utils/shiftUtils';
 import { getToast } from '../utils/toast';
+import { getTicketsData as fetchTicketsData } from './tickets';
 
 export type { RoomStateUpdate } from './rooms';
 
@@ -103,7 +103,7 @@ const dashboard = {
   },
 
   async getTicketsData(): Promise<TicketsScreenData> {
-    return Promise.resolve(mockTicketsData);
+    return fetchTicketsData();
   },
 };
 

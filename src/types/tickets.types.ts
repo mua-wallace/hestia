@@ -14,6 +14,16 @@ export interface TicketData {
     name: string;
     avatar?: any;
   };
+  /**
+   * Supabase user id of the assignee (tickets.assigned_to_id).
+   * Used to power the "My Tickets" tab.
+   */
+  assignedToId?: string | null;
+  /**
+   * Supabase user id of the creator (tickets.created_by_id).
+   * Currently not used for filtering but kept for future extensions.
+   */
+  createdById?: string;
   status: TicketStatus;
   locationIcon?: any; // Map pin icon
 }

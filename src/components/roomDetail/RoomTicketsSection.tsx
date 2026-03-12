@@ -15,8 +15,6 @@ import { useToast } from '../../contexts/ToastContext';
 import { useMessageModal } from '../../contexts/MessageModalContext';
 import { typography } from '../../theme';
 import { CONTENT_AREA, scaleX } from '../../constants/roomDetailStyles';
-import TicketCard from '../tickets/TicketCard';
-import { TicketData } from '../../types/tickets.types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -213,21 +211,6 @@ export default function RoomTicketsSection({
   const selectedDepartmentName = DEPARTMENT_NAMES[selectedDepartment];
   const selectedDepartmentIcon = DEPARTMENT_ICONS[selectedDepartment];
 
-  // Mock current ticket for the room - in real app, this would come from props or API
-  const currentTicket: TicketData = {
-    id: 'current-ticket-1',
-    title: 'TV not working',
-    description: 'Guess could not connect the TV with chrome cast, kindly assist',
-    roomNumber: roomNumber,
-    dueTime: '10 mins',
-    createdBy: {
-      name: 'Stella Kitou',
-      avatar: require('../../../assets/icons/profile-avatar.png'),
-    },
-    status: 'unsolved',
-    locationIcon: require('../../../assets/icons/location.png'),
-  };
-
   return (
     <View style={styles.container}>
       <ScrollView
@@ -239,20 +222,10 @@ export default function RoomTicketsSection({
       >
         {/* Current Ticket Section */}
         <Text style={[styles.sectionTitle, styles.firstSectionTitle]}>Current Ticket</Text>
-        <View style={styles.currentTicketContainer}>
-          <View style={styles.ticketCardWrapper}>
-            <TicketCard
-              ticket={currentTicket}
-              onPress={() => {
-                // TODO: Navigate to ticket detail
-                console.log('Current ticket pressed');
-              }}
-              onStatusPress={() => {
-                // TODO: Handle status change
-                console.log('Current ticket status pressed');
-              }}
-            />
-          </View>
+        <View style={styles.noTicketContainer}>
+          <Text style={styles.noTicketText}>
+            There is no active ticket for this room yet.
+          </Text>
         </View>
 
         {/* Divider */}

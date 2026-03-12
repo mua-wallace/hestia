@@ -9,6 +9,7 @@ import {
   ScrollView,
   Dimensions,
   Platform,
+  Modal,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -21,6 +22,8 @@ import { getUsersByDepartment } from '../services/user';
 import type { User } from '../types';
 import { DEPARTMENT_SLUG_TO_DB_NAME, DEPARTMENT_NAME_TO_ICON } from '../constants/createTicketStyles';
 import TicketStaffSelectorModal from '../components/tickets/TicketStaffSelectorModal';
+import { createTicket } from '../services/tickets';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -94,6 +97,11 @@ export default function CreateTicketFormScreen() {
   const [pictures, setPictures] = useState<string[]>([]);
   const [showTicketTagDropdown, setShowTicketTagDropdown] = useState(false);
   const [selectedTicketTag, setSelectedTicketTag] = useState<string>('');
+  const [rooms, setRooms] = useState<Array<{ id: string; room_number: string }>>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [locationSearch, setLocationSearch] = useState('');
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
 
   const departmentDbName = isFromSupabase
     ? paramDepartmentName!
@@ -114,6 +122,27 @@ export default function CreateTicketFormScreen() {
       });
     return () => { cancelled = true; };
   }, [departmentDbName]);
+
+  // Load rooms for Location dropdown (from Supabase rooms table)
+  useEffect(() => {
+    let cancelled = false;
+    if (!isSupabaseConfigured) return;
+    setLoadingRooms(true);
+    supabase
+      .from('rooms')
+      .select('id, room_number')
+      .order('room_number', { ascending: true })
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        setRooms(data as Array<{ id: string; room_number: string }>);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingRooms(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Ticket Tag options - can be customized based on requirements
   const ticketTagOptions = [
@@ -220,16 +249,33 @@ export default function CreateTicketFormScreen() {
     setPictures(newPictures);
   };
 
-  const handleSubmit = () => {
-    // TODO: Submit ticket
-    console.log('Submit ticket', {
-      departmentId,
-      issue,
-      location,
-      description,
-      priority,
-      assignedTo,
-    });
+  const handleSubmit = async () => {
+    const title = issue.trim() || selectedTicketTag.trim();
+    if (!title) {
+      toast.show('Please add a ticket tag or title.', { type: 'error', title: 'Missing title' });
+      return;
+    }
+
+    try {
+      await createTicket({
+        title,
+        description: description?.trim() || null,
+        roomId: selectedRoomId ?? null,
+        priority: priority ?? null,
+        // For now we only care about "My Tickets" when the ticket is explicitly assigned
+        assignedToId: assignedTo.length === 1 ? assignedTo[0] : null,
+      });
+
+      toast.show('Ticket created successfully.', { type: 'success', title: 'Ticket created' });
+      // After successful creation, send user to Tickets screen with the "All" tab selected
+      (navigation as any).navigate('Main', {
+        screen: 'Tickets',
+        params: { initialTab: 'all' },
+      });
+    } catch (error) {
+      console.warn('[CreateTicketFormScreen] Failed to create ticket', error);
+      toast.show('Failed to create ticket. Please try again.', { type: 'error', title: 'Error' });
+    }
   };
 
   const selectedDepartmentName = isFromSupabase
@@ -416,15 +462,25 @@ export default function CreateTicketFormScreen() {
 
         {/* Location Field */}
         <Text style={styles.locationLabel}>Location</Text>
-        <View style={styles.locationInputContainer}>
-          <TextInput
-            style={styles.locationInput}
-            placeholder="Where is it located? (e.g., Room 201)"
-            placeholderTextColor="#5a759d"
-            value={location}
-            onChangeText={setLocation}
-          />
-        </View>
+        <TouchableOpacity
+          style={styles.locationInputContainer}
+          onPress={() => {
+            if (rooms.length > 0) {
+              setLocationModalVisible(true);
+            }
+          }}
+          activeOpacity={rooms.length > 0 ? 0.7 : 1}
+        >
+          <Text
+            style={[
+              styles.locationInput,
+              !location && { color: '#5a759d' },
+            ]}
+            numberOfLines={1}
+          >
+            {location || 'Select room (e.g., Room 201)'}
+          </Text>
+        </TouchableOpacity>
 
         {/* Pictures Section */}
         <Text style={styles.picturesLabel}>Pictures</Text>
@@ -671,6 +727,71 @@ export default function CreateTicketFormScreen() {
         departmentName={departmentDbName}
         loading={loadingStaff}
       />
+
+      {/* Location – Room selector modal */}
+      <Modal
+        visible={locationModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLocationModalVisible(false)}
+      >
+        <View style={styles.locationModalBackdrop}>
+          <View style={styles.locationModalCard}>
+            <Text style={styles.locationModalTitle}>Select Room</Text>
+            <View style={styles.locationSearchContainer}>
+              <TextInput
+                style={styles.locationSearchInput}
+                placeholder="Search room number..."
+                placeholderTextColor="#9ca3af"
+                value={locationSearch}
+                onChangeText={setLocationSearch}
+              />
+            </View>
+            <ScrollView
+              style={styles.locationList}
+              keyboardShouldPersistTaps="handled"
+            >
+              {rooms
+                .filter((r) =>
+                  r.room_number
+                    .toLowerCase()
+                    .includes(locationSearch.trim().toLowerCase()),
+                )
+                .map((room) => (
+                  <TouchableOpacity
+                    key={room.id}
+                    style={[
+                      styles.locationListItem,
+                      selectedRoomId === room.id && styles.locationListItemSelected,
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setSelectedRoomId(room.id);
+                      setLocation(`Room ${room.room_number}`);
+                      setLocationModalVisible(false);
+                    }}
+                  >
+                    <Text style={styles.locationListItemText}>
+                      Room {room.room_number}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              {rooms.length === 0 && !loadingRooms && (
+                <Text style={styles.locationEmptyText}>
+                  No rooms available.
+                </Text>
+              )}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.locationModalCloseButton}
+              onPress={() => setLocationModalVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.locationModalCloseText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -913,10 +1034,77 @@ const styles = StyleSheet.create({
     fontSize: 16 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '400' as any,
-    color: '#5a759d',
+    color: '#000000',
     textAlign: 'left',
     includeFontPadding: false,
     textAlignVertical: 'center',
+  },
+  locationModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  locationModalCard: {
+    width: SCREEN_WIDTH - 40 * scaleX,
+    maxHeight: 480 * scaleX,
+    backgroundColor: '#ffffff',
+    borderRadius: 12 * scaleX,
+    padding: 16 * scaleX,
+  },
+  locationModalTitle: {
+    fontSize: 18 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700' as any,
+    color: '#111827',
+    marginBottom: 12 * scaleX,
+  },
+  locationSearchContainer: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8 * scaleX,
+    paddingHorizontal: 12 * scaleX,
+    paddingVertical: 8 * scaleX,
+    marginBottom: 12 * scaleX,
+  },
+  locationSearchInput: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: '#111827',
+  },
+  locationList: {
+    maxHeight: 320 * scaleX,
+    marginBottom: 12 * scaleX,
+  },
+  locationListItem: {
+    paddingVertical: 10 * scaleX,
+    paddingHorizontal: 8 * scaleX,
+    borderRadius: 6 * scaleX,
+  },
+  locationListItemSelected: {
+    backgroundColor: '#e5f0ff',
+  },
+  locationListItemText: {
+    fontSize: 15 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: '#111827',
+  },
+  locationEmptyText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: '#6b7280',
+    textAlign: 'center',
+    paddingVertical: 16 * scaleX,
+  },
+  locationModalCloseButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: 6 * scaleX,
+    paddingHorizontal: 12 * scaleX,
+  },
+  locationModalCloseText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: '#4b5563',
   },
   // Description Field - Adjusted to account for reduced header spacing
   // When no pictures, position closer to pictures section (480 + 156 + 20 = 656)

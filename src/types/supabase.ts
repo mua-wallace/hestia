@@ -263,6 +263,7 @@ export type Database = {
           found_location: string | null
           id: string
           item_name: string
+          image_url: string | null
           notes: string | null
           reservation_id: string | null
           return_info: string | null
@@ -270,6 +271,7 @@ export type Database = {
           status: string | null
           storage_location: string | null
           ticket_id: string | null
+          tracking_number: string | null
           updated_at: string | null
         }
         Insert: {
@@ -280,6 +282,7 @@ export type Database = {
           found_location?: string | null
           id?: string
           item_name: string
+          image_url?: string | null
           notes?: string | null
           reservation_id?: string | null
           return_info?: string | null
@@ -287,6 +290,7 @@ export type Database = {
           status?: string | null
           storage_location?: string | null
           ticket_id?: string | null
+          tracking_number?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -297,6 +301,7 @@ export type Database = {
           found_location?: string | null
           id?: string
           item_name?: string
+          image_url?: string | null
           notes?: string | null
           reservation_id?: string | null
           return_info?: string | null
@@ -304,6 +309,7 @@ export type Database = {
           status?: string | null
           storage_location?: string | null
           ticket_id?: string | null
+          tracking_number?: string | null
           updated_at?: string | null
         }
         Relationships: [

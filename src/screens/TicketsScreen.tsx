@@ -1,20 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/types';
-import { BlurView } from 'expo-blur';
+import type { RootStackParamList, MainTabsParamList as MainTabsParamListFromApp } from '../navigation/types';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import TicketsHeader from '../components/tickets/TicketsHeader';
 import TicketsTabs from '../components/tickets/TicketsTabs';
 import TicketCard from '../components/tickets/TicketCard';
-import { mockHomeData } from '../data/mockHomeData';
-import { mockTicketsData } from '../data/mockTicketsData';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
-import { TicketTab, TicketData } from '../types/tickets.types';
+import { TicketTab, TicketData, TicketsScreenData } from '../types/tickets.types';
 import {
   TICKETS_HEADER,
   TICKETS_TABS,
@@ -23,15 +20,11 @@ import {
   TICKET_DIVIDER,
   scaleX,
 } from '../constants/ticketsStyles';
+import { dashboardService } from '../services/dashboard';
+import { useAuth } from '../contexts/AuthContext';
 
-type MainTabsParamList = {
-  Home: undefined;
-  Rooms: undefined;
-  Chat: undefined;
-  Tickets: undefined;
-  LostAndFound: undefined;
-  Staff: undefined;
-  Settings: undefined;
+type MainTabsParamList = MainTabsParamListFromApp & {
+  Tickets: { initialTab?: TicketTab } | undefined;
 };
 
 type TicketsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, 'Tickets'>;
@@ -42,10 +35,33 @@ export default function TicketsScreen() {
   const stackNavigation = useNavigation<StackNavigationProp>();
   const route = useRoute();
   const { open: openAIChatOverlay } = useAIChatOverlay();
+  const { session } = useAuth();
   const [activeTab, setActiveTab] = useState('Tickets');
   const [selectedTab, setSelectedTab] = useState<TicketTab>('myTickets');
-  const [tickets] = useState<TicketData[]>(mockTicketsData.tickets);
+  const [ticketsData, setTicketsData] = useState<TicketsScreenData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const loadTickets = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await dashboardService.getTicketsData();
+      setTicketsData(data);
+      if (data.selectedTab) {
+        setSelectedTab(data.selectedTab);
+      }
+    } catch (e) {
+      console.warn('[TicketsScreen] Failed to load tickets', e);
+      setTicketsData({ selectedTab: 'myTickets', tickets: [] });
+      setSelectedTab('myTickets');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTickets();
+  }, [loadTickets]);
 
   // Sync activeTab with current route
   useFocusEffect(
@@ -54,7 +70,17 @@ export default function TicketsScreen() {
       if (routeName === 'Home' || routeName === 'Rooms' || routeName === 'Chat' || routeName === 'Tickets') {
         setActiveTab(routeName);
       }
-    }, [route.name])
+
+      // When navigated with an explicit initialTab (e.g. after creating a ticket),
+      // prefer that over the stored selection.
+      const params = (route as any).params as { initialTab?: TicketTab } | undefined;
+      if (params?.initialTab) {
+        setSelectedTab(params.initialTab);
+      }
+
+      // Refresh tickets whenever Tickets screen gains focus
+      loadTickets();
+    }, [route, loadTickets])
   );
 
   // Calculate total unread chat messages for badge
@@ -114,16 +140,17 @@ export default function TicketsScreen() {
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    loadTickets().finally(() => setRefreshing(false));
   }, []);
+
+  const tickets: TicketData[] = ticketsData?.tickets ?? [];
+  const currentUserId = session?.user?.id;
 
   // Filter tickets based on selected tab
   const filteredTickets = tickets.filter((ticket) => {
     if (selectedTab === 'myTickets') {
-      // TODO: Filter by current user's tickets
-      return true;
+      if (!currentUserId) return false;
+      return ticket.assignedToId === currentUserId;
     } else if (selectedTab === 'open') {
       return ticket.status === 'unsolved';
     } else if (selectedTab === 'closed') {
@@ -134,7 +161,7 @@ export default function TicketsScreen() {
 
   return (
     <View style={styles.container}>
-      {refreshing && <LoadingOverlay fullScreen message="Refreshing…" />}
+      {(loading || refreshing) && <LoadingOverlay fullScreen message={loading ? 'Loading tickets…' : 'Refreshing…'} />}
       <View style={styles.scrollContainer}>
         <ScrollView
           style={styles.scrollView}

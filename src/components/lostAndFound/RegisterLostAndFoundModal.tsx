@@ -15,6 +15,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useMessageModal } from '../../contexts/MessageModalContext';
 import { typography } from '../../theme';
 import { REGISTER_FORM, scaleX, LOST_AND_FOUND_COLORS } from '../../constants/lostAndFoundStyles';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import DatePickerModal from './DatePickerModal';
 import TimePickerModal from './TimePickerModal';
 import StaffSelectorModal from './StaffSelectorModal';
@@ -25,7 +26,7 @@ interface RegisterLostAndFoundModalProps {
   visible: boolean;
   onClose: () => void;
   onNext?: (data: {
-    trackingNumber: string;
+    trackingNumber?: string;
     itemImage?: string;
     itemData: {
       notes: string;
@@ -78,8 +79,8 @@ export default function RegisterLostAndFoundModal({
   const [showRoomDropdown, setShowRoomDropdown] = useState(false);
   const [notes, setNotes] = useState('');
   
-  // Mock room data with guest names
-  const mockRooms = [
+  // Room data with optional guest names (fallback to mock data when Supabase is not configured)
+  const fallbackRooms = [
     { number: '201', guestName: 'Mohamed B', badgeCount: 11 },
     { number: '202', guestName: 'Sarah Johnson', badgeCount: 3 },
     { number: '203', guestName: 'Ahmed Al-Mansouri', badgeCount: 7 },
@@ -90,12 +91,11 @@ export default function RegisterLostAndFoundModal({
     { number: '303', guestName: 'Fatima Ali', badgeCount: 6 },
   ];
 
-  // Select a random default room
-  const getRandomRoom = () => {
-    return mockRooms[Math.floor(Math.random() * mockRooms.length)];
-  };
+  const [rooms, setRooms] = useState(fallbackRooms);
+  const [roomSearch, setRoomSearch] = useState('');
 
-  const [selectedRoom, setSelectedRoom] = useState(() => getRandomRoom());
+  const getInitialRoom = () => rooms[0] ?? { number: '—', guestName: '', badgeCount: 0 };
+  const [selectedRoom, setSelectedRoom] = useState(getInitialRoom);
   
   // Step 2 state
   const [showFoundedByModal, setShowFoundedByModal] = useState(false);
@@ -123,8 +123,34 @@ export default function RegisterLostAndFoundModal({
       setSendEmailToGuest(true); // Reset email checkbox
       setPictures([]); // Reset pictures
       setShowPictureError(false); // Reset error state
+      setRoomSearch('');
     }
   }, [visible]);
+
+  // Load rooms from Supabase for Location dropdown when configured
+  useEffect(() => {
+    let cancelled = false;
+    if (!isSupabaseConfigured) return;
+    supabase
+      .from('rooms')
+      .select('room_number')
+      .order('room_number', { ascending: true })
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        const mapped = (data as { room_number: string }[]).map((r) => ({
+          number: r.room_number,
+          guestName: '',
+          badgeCount: 0,
+        }));
+        if (mapped.length) {
+          setRooms(mapped);
+          setSelectedRoom(mapped[0]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Handle adding pictures
   const handleAddPicture = async () => {
@@ -310,13 +336,6 @@ export default function RegisterLostAndFoundModal({
     setSelectedMinute(minute);
   };
 
-  // Generate tracking number
-  const generateTrackingNumber = (): string => {
-    const prefix = 'FH';
-    const randomNumber = Math.floor(10000 + Math.random() * 90000); // 5-digit number
-    return `${prefix}${randomNumber}`;
-  };
-
   const handleNext = () => {
     if (currentStep === 1) {
       // Validation is handled by disabled state - button won't be clickable if invalid
@@ -324,11 +343,9 @@ export default function RegisterLostAndFoundModal({
     } else if (currentStep === 2) {
       setCurrentStep(3);
     } else if (currentStep === 3) {
-      // Generate tracking number and submit
-      const trackingNumber = generateTrackingNumber();
+      // Submit; tracking number is assigned by DB (trigger)
       if (onNext) {
         onNext({
-          trackingNumber,
           itemImage: pictures.length > 0 ? pictures[0] : undefined,
           itemData: {
             notes,
@@ -579,35 +596,55 @@ export default function RegisterLostAndFoundModal({
                       activeOpacity={1}
                       onPress={() => setShowRoomDropdown(false)}
                     />
-                    <ScrollView
-                      style={styles.roomDropdown}
-                      nestedScrollEnabled={true}
-                      showsVerticalScrollIndicator={false}
-                    >
-                      {mockRooms.map((room) => (
-                        <TouchableOpacity
-                          key={room.number}
-                          style={[
-                            styles.roomDropdownItem,
-                            selectedRoom.number === room.number && styles.roomDropdownItemSelected,
-                          ]}
-                          onPress={() => {
-                            setSelectedRoom(room);
-                            setShowRoomDropdown(false);
-                          }}
-                          activeOpacity={0.7}
-                        >
-                          <View style={styles.roomDropdownItemContent}>
-                            <Text style={styles.roomDropdownRoomText}>Room {room.number}</Text>
-                            <View style={styles.roomDropdownDivider} />
-                            <Text style={styles.roomDropdownGuestText}>{room.guestName}</Text>
-                          </View>
-                          {selectedRoom.number === room.number && (
-                            <Text style={styles.roomDropdownCheckmark}>✓</Text>
-                          )}
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
+                    <View style={styles.roomDropdown}>
+                      <View style={styles.roomSearchContainer}>
+                        <TextInput
+                          style={styles.roomSearchInput}
+                          placeholder="Search room number..."
+                          placeholderTextColor="#9ca3af"
+                          value={roomSearch}
+                          onChangeText={setRoomSearch}
+                        />
+                      </View>
+                      <ScrollView
+                        nestedScrollEnabled={true}
+                        showsVerticalScrollIndicator={false}
+                      >
+                        {rooms
+                          .filter((room) =>
+                            room.number
+                              .toLowerCase()
+                              .includes(roomSearch.trim().toLowerCase()),
+                          )
+                          .map((room) => (
+                            <TouchableOpacity
+                              key={room.number}
+                              style={[
+                                styles.roomDropdownItem,
+                                selectedRoom.number === room.number && styles.roomDropdownItemSelected,
+                              ]}
+                              onPress={() => {
+                                setSelectedRoom(room);
+                                setShowRoomDropdown(false);
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <View style={styles.roomDropdownItemContent}>
+                                <Text style={styles.roomDropdownRoomText}>Room {room.number}</Text>
+                                {room.guestName ? (
+                                  <>
+                                    <View style={styles.roomDropdownDivider} />
+                                    <Text style={styles.roomDropdownGuestText}>{room.guestName}</Text>
+                                  </>
+                                ) : null}
+                              </View>
+                              {selectedRoom.number === room.number && (
+                                <Text style={styles.roomDropdownCheckmark}>✓</Text>
+                              )}
+                            </TouchableOpacity>
+                          ))}
+                      </ScrollView>
+                    </View>
                   </>
                 )}
               </View>
@@ -1482,13 +1519,24 @@ const styles = StyleSheet.create({
     borderRadius: 8 * scaleX,
     borderWidth: 1,
     borderColor: '#afa9ad',
-    maxHeight: 200 * scaleX,
+    maxHeight: 260 * scaleX,
     zIndex: 101,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
+  },
+  roomSearchContainer: {
+    paddingHorizontal: 12 * scaleX,
+    paddingVertical: 8 * scaleX,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  roomSearchInput: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: '#111827',
   },
   roomDropdownItem: {
     flexDirection: 'row',
