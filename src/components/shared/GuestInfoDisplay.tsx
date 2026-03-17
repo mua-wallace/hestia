@@ -600,23 +600,32 @@ export default function GuestInfoDisplay({
               </>
             ) : (isArrivalDeparture || category === 'ArrivalDeparture') ? (
               <>
-                {/* First line: datesOfStay + guest count */}
+                {/* First line: datesOfStay (+ guest count only if hasTime) */}
                 <View style={[styles.detailsRowWithCount, styles.detailsRowFlex, { marginTop: infoGap }]}>
                   {hasDatesOfStay && (
                     <Text style={[styles.dateRange, isPMTheme && styles.dateRangePM]}>{formatDatesOfStay(guest.datesOfStay)}</Text>
                   )}
-                  {countPos && hasGuestCount && (
+                  {/* Show guest count inline only if there's time (ETA/EDT) */}
+                  {hasTime && countPos && hasGuestCount && (
                     <>
                       <Image source={require('../../../assets/icons/people-icon.png')} style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM]} resizeMode="contain" />
                       <Text style={styles.countTextInline}>{formatGuestCount(guest.guestCount)}</Text>
                     </>
                   )}
                 </View>
-                {/* Second line: ETA/EDT (if splitting to new line) */}
-                {shouldSplitTimeToNewLine && (
+                {/* Second line: ETA/EDT or guest count (if no time) */}
+                {hasTime ? (
                   <Text style={[styles.time, styles.timeFlex, isPMTheme && styles.timePM, { marginTop: infoGap }]}>
                     {`${guest.timeLabel}: ${guest.time}`}
                   </Text>
+                ) : (
+                  /* If no time, show guest count on second line */
+                  countPos && hasGuestCount && (
+                    <View style={[styles.detailsRowWithCount, styles.detailsRowFlex, { marginTop: infoGap }]}>
+                      <Image source={require('../../../assets/icons/people-icon.png')} style={[styles.countIconInline, isPMTheme && styles.countIconInlinePM]} resizeMode="contain" />
+                      <Text style={styles.countTextInline}>{formatGuestCount(guest.guestCount)}</Text>
+                    </View>
+                  )
                 )}
               </>
             ) : (
@@ -1106,6 +1115,8 @@ const styles = StyleSheet.create({
     minWidth: 0, // Allow flex to work properly
     overflow: 'visible', // Ensure text is not clipped
     paddingRight: 8 * normalizedScaleX, // Padding from container edge
+    paddingBottom: 0, // Remove bottom padding
+    marginBottom: 0, // Remove bottom margin
   },
   guestNameSingleRow: {
     flexDirection: 'row', // Horizontal layout for name and badge when name is short
@@ -1133,6 +1144,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent', // Ensure no background covers text
     includeFontPadding: false, // Remove extra padding that clips text
     textAlignVertical: 'top', // Align to top so bottom part is visible
+    paddingBottom: 0, // Remove bottom padding
+    marginBottom: 0, // Remove bottom margin
   },
   guestNamePM: {
     color: '#ffffff',

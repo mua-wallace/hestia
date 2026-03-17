@@ -126,7 +126,7 @@ export const GUEST_INFO = {
   },
   infoColumn: {
     marginTop: 0,
-    gapBetweenNameAndDate: 4,
+    gapBetweenNameAndDate: 2,
     gapBetweenDateAndTime: 4,
   },
   iconArrivalDeparture: {
@@ -384,7 +384,7 @@ export const NOTES_SECTION = {
     withNotes: 8,         // 244−182−54=8
   },
   positions: {
-    arrivalDeparture: { left: 6, top: 233 + CONTENT_OFFSET_TOP }, // 6px from card left; 5px from card bottom
+    arrivalDeparture: { left: 6, top: 240 + CONTENT_OFFSET_TOP }, // 6px from card left; increased top to avoid overlap with second guest time
     withNotes: { left: 6, top: 182 + CONTENT_OFFSET_TOP }, // 6px from card left; 8px gap below guest info
   },
   icon: {
