@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { RoomStatus, STATUS_CONFIGS } from '../../types/allRooms.types';
 import { scaleX, STATUS_BUTTON, CARD_DIMENSIONS, STAFF_SECTION } from '../../constants/allRoomsStyles';
 
@@ -17,6 +17,7 @@ interface StatusButtonProps {
    * When provided, this is used directly so the button can align with the guest info block.
    */
   buttonTopOverridePx?: number;
+  isLoading?: boolean;
 }
 
 const StatusButton = forwardRef<any, StatusButtonProps>(({ 
@@ -28,6 +29,7 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
   frontOfficeStatus = '',
   cardHeight,
   buttonTopOverridePx,
+  isLoading = false,
 }, ref) => {
   // Safety check: ensure status is valid and config exists
   if (!status || !STATUS_CONFIGS[status]) {
@@ -83,12 +85,17 @@ const StatusButton = forwardRef<any, StatusButtonProps>(({
       ]}
       onPress={onPress}
       activeOpacity={0.8}
+      disabled={isLoading}
     >
-      <Image
-        source={config.icon}
-        style={styles.iconLarge}
-        resizeMode="contain"
-      />
+      {isLoading ? (
+        <ActivityIndicator size="small" color="#FFF" />
+      ) : (
+        <Image
+          source={config.icon}
+          style={styles.iconLarge}
+          resizeMode="contain"
+        />
+      )}
     </TouchableOpacity>
   );
 });

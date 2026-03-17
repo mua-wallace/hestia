@@ -9,7 +9,6 @@ import ChecklistFooter from './ChecklistFooter';
 import DownloadReportButton from './DownloadReportButton';
 import type { ChecklistData, ChecklistSubmissionData } from '../../types/checklist.types';
 import { getDefaultChecklist } from '../../data/mockChecklistData';
-import { mockStaffData } from '../../data/mockStaffData';
 import { generateChecklistReport } from '../../utils/generateChecklistReport';
 
 interface ChecklistSectionProps {
@@ -30,8 +29,8 @@ export default function ChecklistSection({
   initialData,
 }: ChecklistSectionProps) {
   const toast = useToast();
-  // Get current user (in real app, get from auth context)
-  const currentUser = mockStaffData[0]; // Default to first staff member
+  // Get current user from auth context
+  const currentUser = { id: 'user-1', name: 'Staff Member', initials: 'SM' };
 
   // Format current date and time
   const formatDate = (date: Date): string => {

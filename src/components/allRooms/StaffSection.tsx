@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { colors, typography } from '../../theme';
 import { StaffInfo } from '../../types/allRooms.types';
 import type { ShiftType } from '../../types/home.types';
@@ -13,9 +13,10 @@ interface StaffSectionProps {
   onAssignPress?: () => void; // When staff is null and user taps Assign Staff
   /** When staff is assigned, tap on forward arrow opens staff list to change assignee */
   onStaffSectionPress?: () => void;
+  isLoading?: boolean;
 }
 
-export default function StaffSection({ staff, isPriority = false, frontOfficeStatus = '', selectedShift, onAssignPress, onStaffSectionPress }: StaffSectionProps) {
+export default function StaffSection({ staff, isPriority = false, frontOfficeStatus = '', selectedShift, onAssignPress, onStaffSectionPress, isLoading = false }: StaffSectionProps) {
   const isDeparture = frontOfficeStatus === 'Departure';
 
   // No staff assigned: show "Assign Staff" button
@@ -32,8 +33,13 @@ export default function StaffSection({ staff, isPriority = false, frontOfficeSta
           ]}
           onPress={onAssignPress}
           activeOpacity={0.7}
+          disabled={isLoading}
         >
-          <Text style={styles.assignButtonText}>Assign Staff</Text>
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#5a759d" />
+          ) : (
+            <Text style={styles.assignButtonText}>Assign Staff</Text>
+          )}
         </TouchableOpacity>
       </View>
     );

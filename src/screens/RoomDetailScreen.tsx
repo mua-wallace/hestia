@@ -26,7 +26,6 @@ import { STATUS_OPTIONS } from '../types/allRooms.types';
 import type { Note, Task, RoomType, HistoryEvent, HistoryGroup } from '../types/roomDetail.types';
 import type { LostAndFoundItem } from '../types/lostAndFound.types';
 import type { RootStackParamList } from '../navigation/types';
-import { mockStaffData } from '../data/mockStaffData';
 import { useRoomsStore } from '../store/useRoomsStore';
 import { authService } from '../services/auth';
 import { colors } from '../theme';
@@ -251,10 +250,7 @@ export default function RoomDetailScreen() {
           avatar: room.roomAttendantAssigned.avatar || require('../../assets/icons/profile-avatar.png'),
           initials: room.roomAttendantAssigned.initials,
           avatarColor: room.roomAttendantAssigned.avatarColor,
-          department: (() => {
-            const staffMember = mockStaffData.find(s => s.name === room.roomAttendantAssigned?.name);
-            return staffMember?.department;
-          })(),
+          department: undefined,
         }
       : undefined
   );
@@ -608,12 +604,12 @@ export default function RoomDetailScreen() {
 
   const handleStaffSelect = (staffId: string) => {
     console.log('Staff selected:', staffId);
-    const selectedStaff = mockStaffData.find((s) => s.id === staffId);
-    if (selectedStaff) {
+    // Staff data should come from Supabase, not mock data
+    if (staffId) {
       setAssignedStaff({
-        id: selectedStaff.id,
-        name: selectedStaff.name,
-        avatar: selectedStaff.avatar,
+        id: staffId,
+        name: 'Staff Member',
+        avatar: require('../../assets/icons/profile-avatar.png'),
         initials: selectedStaff.initials,
         department: selectedStaff.department,
         avatarColor: selectedStaff.avatarColor || (() => {

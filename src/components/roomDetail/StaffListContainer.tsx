@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { REASSIGN_MODAL, scaleX } from '../../constants/reassignModalStyles';
 import { StaffMember, ReassignTab } from '../../types/staff.types';
 import StaffListItem from './StaffListItem';
+import { colors } from '../../theme';
 
 interface StaffListContainerProps {
   staff: StaffMember[];
@@ -10,6 +11,7 @@ interface StaffListContainerProps {
   searchQuery?: string;
   selectedStaffId?: string;
   onStaffSelect: (staffId: string) => void;
+  isLoading?: boolean;
 }
 
 export default function StaffListContainer({
@@ -18,6 +20,7 @@ export default function StaffListContainer({
   searchQuery = '',
   selectedStaffId,
   onStaffSelect,
+  isLoading = false,
 }: StaffListContainerProps) {
   // Filter staff based on active tab
   const filterStaffByTab = (staffList: StaffMember[], tab: ReassignTab): StaffMember[] => {
@@ -54,6 +57,14 @@ export default function StaffListContainer({
   // Sort by workload (lowest first) for better assignment suggestions
   const sortedStaff = [...filteredStaff].sort((a, b) => (a.workload ?? 0) - (b.workload ?? 0));
 
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={colors.primary.main} />
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       style={styles.container}
@@ -76,6 +87,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   contentContainer: {
     paddingBottom: 100 * scaleX,

@@ -5,7 +5,6 @@ import { ReassignTab, StaffMember } from '../../types/staff.types';
 import ReassignHeader from './ReassignHeader';
 import ReassignTabs from './ReassignTabs';
 import StaffListContainer from './StaffListContainer';
-import { mockStaffData } from '../../data/mockStaffData';
 import { fetchStaffFromSupabase } from '../../services/staff';
 import { typography } from '../../theme';
 
@@ -34,8 +33,9 @@ export default function ReassignModal({
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(
     currentAssignedStaffId || null
   );
-  const [staff, setStaff] = useState<StaffMember[]>(mockStaffData);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [showSearch, setShowSearch] = useState(false);
+  const [loadingStaff, setLoadingStaff] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
 
   const focusSearch = () => {
@@ -52,14 +52,14 @@ export default function ReassignModal({
   React.useEffect(() => {
     if (!visible) return;
     let cancelled = false;
+    setLoadingStaff(true);
     (async () => {
       const supabaseStaff = await fetchStaffFromSupabase();
       if (cancelled) return;
       if (supabaseStaff.length > 0) {
         setStaff(supabaseStaff);
-      } else {
-        setStaff(mockStaffData);
       }
+      setLoadingStaff(false);
     })();
     return () => {
       cancelled = true;
@@ -170,6 +170,7 @@ export default function ReassignModal({
           searchQuery={searchQuery}
           selectedStaffId={selectedStaffId || undefined}
           onStaffSelect={handleStaffSelect}
+          isLoading={loadingStaff}
         />
       </View>
     </Modal>

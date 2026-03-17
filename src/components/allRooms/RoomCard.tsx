@@ -46,10 +46,12 @@ interface RoomCardProps {
   onLayout?: (event: any) => void;
   statusButtonRef?: (ref: any) => void;
   selectedShift?: ShiftType;
+  isChangingStatus?: boolean;
+  isAssigningStaff?: boolean;
 }
 
 const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardProps>(
-  ({ room, onPress, onStatusPress, onAssignStaffPress, onLayout, statusButtonRef, selectedShift }, ref) => {
+  ({ room, onPress, onStatusPress, onAssignStaffPress, onLayout, statusButtonRef, selectedShift, isChangingStatus, isAssigningStaff }, ref) => {
   // Guest profile image modal - opens to the right of guest image
   const [guestProfileModalGuest, setGuestProfileModalGuest] = useState<GuestInfo | null>(null);
   const [guestProfileAnchorLayout, setGuestProfileAnchorLayout] = useState<GuestImageAnchorLayout | null>(null);
@@ -346,13 +348,14 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         selectedShift={selectedShift ?? 'AM'}
         onAssignPress={room.roomAttendantAssigned == null ? () => onAssignStaffPress?.(room) : undefined}
         onStaffSectionPress={room.roomAttendantAssigned != null ? () => onAssignStaffPress?.(room) : undefined}
+        isLoading={isAssigningStaff}
       />
 
       {/* Status Button - horizontally centered; vertically centered only on single-guest no-notes to avoid overlapping guest info */}
       {!isVacantTurndown && (
-        <StatusButton 
+        <StatusButton
           ref={statusButtonRef}
-          status={room.houseKeepingStatus} 
+          status={room.houseKeepingStatus}
           onPress={handleStatusPress}
           isPriority={room.isPriority}
           isArrivalDeparture={isArrivalDeparture}
@@ -360,6 +363,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           frontOfficeStatus={room.frontOfficeStatus}
           cardHeight={cardHeight}
           buttonTopOverridePx={singleGuestStatusTopPx}
+          isLoading={isChangingStatus}
         />
       )}
 

@@ -352,18 +352,25 @@ export default function GuestInfoDisplay({
           : ((GUEST_INFO.guestCount.positions.standardArrival.textLeft) - calculatedContainerLeft) * normalizedScaleX)
     : 0;
 
-  // Calculate container width: card width minus container left position, minus space for status button
-  // Reserve space for status button (starts around 255px, so max width should be ~240px from left edge)
-  // Add padding (16px) to ensure name doesn't touch status button
-  const STATUS_BUTTON_RESERVED_SPACE = 16; // Padding between name and status button
-  const maxWidthBeforeButton = (isArrivalDeparture || category === 'ArrivalDeparture')
-    ? STATUS_BUTTON.positions.arrivalDeparture.left - STATUS_BUTTON_RESERVED_SPACE
-    : STATUS_BUTTON.positions.standard.left - STATUS_BUTTON_RESERVED_SPACE;
+  // Calculate container width using relative approach
+  // Reserve space for status button: use percentage-based calculation
+  // Status button takes ~31% of card width (134/426), reserve ~4% padding
+  // Guest name area should be ~52% of card width (from left edge to before status button)
+  const STATUS_BUTTON_WIDTH_PERCENT = 0.31; // 31% for status button
+  const PADDING_PERCENT = 0.04; // 4% padding between name and button
+  const GUEST_AREA_MAX_PERCENT = 0.52; // 52% max width for guest info area
+  
+  const cardWidthScaled = CARD_DIMENSIONS.width * normalizedScaleX;
+  const containerLeftScaled = calculatedContainerLeft * normalizedScaleX;
+  
+  // Calculate max width: either full available space or limited by status button position
+  const maxWidthBeforeButton = cardWidthScaled * GUEST_AREA_MAX_PERCENT;
+  
   const containerWidth = hasGuestImage 
     ? effectiveContainerWidth 
     : Math.min(
-        (CARD_DIMENSIONS.width - calculatedContainerLeft) * normalizedScaleX,
-        (maxWidthBeforeButton - calculatedContainerLeft) * normalizedScaleX
+        cardWidthScaled - containerLeftScaled,
+        maxWidthBeforeButton - containerLeftScaled
       );
 
   if (isVacantGuest) {

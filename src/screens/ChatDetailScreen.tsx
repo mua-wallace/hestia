@@ -28,7 +28,6 @@ import {
 } from 'expo-audio';
 import { RootStackParamList } from '../navigation/types';
 import { ChatMessage } from '../types';
-import { mockStaffData } from '../data/mockStaffData';
 import MessageBubble from '../components/chat/MessageBubble';
 import ChatHeader from '../components/chat/ChatHeader';
 import { colors } from '../theme';
@@ -168,11 +167,10 @@ export default function ChatDetailScreen() {
     if (names.length === 3) return `${names[0]}, ${names[1]} and ${names[2]}`;
     return `${names[0]}, ${names[1]} and ${names.length - 2} others`;
   };
-  /** Participants for tag modal: real group members when group (excluding self), else mock for DM */
+  /** Participants for tag modal: real group members when group (excluding self), else empty for DM */
   const getParticipantsForTag = () => {
     if (isGroup) return otherParticipants.map((p) => ({ id: p.user_id, name: p.full_name || 'Unknown' }));
-    const otherPerson = mockStaffData.find((s) => s.id !== uid) || mockStaffData[0];
-    return [{ id: otherPerson.id, name: otherPerson.name }];
+    return [];
   };
 
   const scrollToBottom = () => {

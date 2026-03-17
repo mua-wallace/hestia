@@ -87,6 +87,8 @@ export default function AllRoomsScreen() {
   const [selectedCardHeight, setSelectedCardHeight] = useState<number>(0);
   const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [originalScrollY, setOriginalScrollY] = useState<number>(0); // Store original scroll position before modal opens
+  const [changingStatusRoomId, setChangingStatusRoomId] = useState<string | null>(null); // Track which room is updating status
+  const [assigningStaffRoomId, setAssigningStaffRoomId] = useState<string | null>(null); // Track which room is assigning staff
   const currentScrollYRef = useRef<number>(0); // Track current scroll position
   const cardRefs = useRef<{ [key: string]: any }>({});
   const statusButtonRefs = useRef<{ [key: string]: any }>({});
@@ -185,12 +187,20 @@ export default function AllRoomsScreen() {
   const handleAssignStaffSelect = async (staffId: string) => {
     if (!roomToAssign) return;
     const shift = displayData.selectedShift ?? 'AM';
+    
+    // Show loading indicator
+    setAssigningStaffRoomId(roomToAssign.id);
+    
     try {
       const staffInfo = await dashboardService.assignRoomToStaff(roomToAssign.id, staffId, shift);
       if (staffInfo) setRoomAttendant(roomToAssign.id, staffInfo);
     } catch (e) {
       console.warn('Assign room failed', e);
+    } finally {
+      // Hide loading indicator
+      setAssigningStaffRoomId(null);
     }
+    
     setShowAssignStaffModal(false);
     setRoomToAssign(null);
   };
@@ -490,7 +500,7 @@ export default function AllRoomsScreen() {
     }
   };
 
-  const handleStatusSelect = (statusOption: StatusChangeOption, roomOverride?: RoomCardData | null) => {
+  const handleStatusSelect = async (statusOption: StatusChangeOption, roomOverride?: RoomCardData | null) => {
     const roomToUpdate = roomOverride ?? selectedRoomForStatusChange;
     if (!roomToUpdate) return;
 
@@ -508,9 +518,18 @@ export default function AllRoomsScreen() {
     if (priorityPayload !== undefined) {
       supabaseUpdates.priority = priorityPayload;
     }
-    updateRoom(roomToUpdate.id, supabaseUpdates).catch((e) =>
-      console.warn('Failed to update room status in Supabase', e)
-    );
+
+    // Show loading indicator
+    setChangingStatusRoomId(roomToUpdate.id);
+
+    try {
+      await updateRoom(roomToUpdate.id, supabaseUpdates);
+    } catch (e) {
+      console.warn('Failed to update room status in Supabase', e);
+    } finally {
+      // Hide loading indicator
+      setChangingStatusRoomId(null);
+    }
 
     // Reset state
     setShowStatusModal(false);
@@ -771,6 +790,8 @@ export default function AllRoomsScreen() {
                   }
                 }}
                 selectedShift={displayData.selectedShift}
+                isChangingStatus={changingStatusRoomId === room.id}
+                isAssigningStaff={assigningStaffRoomId === room.id}
               />
             ))
           )}
