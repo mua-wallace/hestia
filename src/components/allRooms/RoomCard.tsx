@@ -54,13 +54,23 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
   const [guestProfileModalGuest, setGuestProfileModalGuest] = useState<GuestInfo | null>(null);
   const [guestProfileAnchorLayout, setGuestProfileAnchorLayout] = useState<GuestImageAnchorLayout | null>(null);
   const guestImagePressRef = useRef(false);
+  const statusButtonPressRef = useRef(false);
 
   const handleCardPress = () => {
     if (guestImagePressRef.current) {
       guestImagePressRef.current = false;
       return;
     }
+    if (statusButtonPressRef.current) {
+      statusButtonPressRef.current = false;
+      return;
+    }
     onPress();
+  };
+
+  const handleStatusPress = () => {
+    statusButtonPressRef.current = true;
+    onStatusPress();
   };
 
   const handleGuestImagePress = (guest: GuestInfo, anchorLayout?: GuestImageAnchorLayout) => {
@@ -85,8 +95,8 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
     (!!room.notes && (room.notes.count > 0 || !!room.notes.hasRushed));
   const hasNotesOrPriority = showNotesSection;
 
-  // Check if any guest names wrap (longer than 23 characters)
-  const MAX_NAME_LENGTH = 23;
+  // Check if any guest names wrap (longer than 18 characters - "Daniel Thompson &")
+  const MAX_NAME_LENGTH = 18;
   const wrappedGuestCount = room.guests?.filter(guest => guest.name.length > MAX_NAME_LENGTH).length ?? 0;
   
   // Calculate additional height needed when names wrap
@@ -286,7 +296,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           </View>
           {STATUS_CONFIGS[room.houseKeepingStatus]?.icon && (
             <TouchableOpacity
-              onPress={onStatusPress}
+              onPress={handleStatusPress}
               activeOpacity={0.8}
               style={styles.vacantStatusButton}
             >
@@ -343,7 +353,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         <StatusButton 
           ref={statusButtonRef}
           status={room.houseKeepingStatus} 
-          onPress={onStatusPress}
+          onPress={handleStatusPress}
           isPriority={room.isPriority}
           isArrivalDeparture={isArrivalDeparture}
           hasNotes={hasNotes}

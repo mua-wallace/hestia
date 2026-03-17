@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { typography } from '../../theme';
-import { GUEST_INFO, CARD_DIMENSIONS, GUEST_CONTAINER_BG } from '../../constants/allRoomsStyles';
+import { GUEST_INFO, CARD_DIMENSIONS, GUEST_CONTAINER_BG, STATUS_BUTTON } from '../../constants/allRoomsStyles';
 import { normalizedScaleX } from '../../utils/responsive';
 import { formatGuestCount, formatDatesOfStay } from '../../utils/formatting';
 import type { GuestInfo } from '../../types/allRooms.types';
@@ -146,9 +146,9 @@ export default function GuestInfoDisplay({
           ? GUEST_INFO.dateRangeWithNotes.top
           : GUEST_INFO.dateRangeStandardArrival.top; // Arrival, Departure, Stayover, Turndown: same position
 
-  // Max name length: "Eric Coleman & Glenn" = 23 characters
-  // If name exceeds this length, truncate at 23 chars and wrap remainder to next line
-  const MAX_NAME_LENGTH = 23;
+  // Max name length: "Daniel Thompson &" = 18 characters
+  // If name exceeds this length, truncate at 18 chars and wrap remainder to next line
+  const MAX_NAME_LENGTH = 18;
   const shouldWrapName = guest.name.length > MAX_NAME_LENGTH;
   
   // Adjust date top position when name wraps - add extra space for wrapped line
@@ -320,7 +320,7 @@ export default function GuestInfoDisplay({
   // This ensures guest count is positioned correctly below the date, even when name wraps
   // For Arrival/Stayover/Turndown: position below date range with proper spacing
   // When date and time are on same row, use the taller lineHeight (time: 18px vs date: 17px)
-  // Spacing: max lineHeight (18px) + gap (4px) = 22px total spacing from date top
+  // Spacing: max lineHeight (18px) + gap (2px) = 20px total spacing from date top (reduced from 4px)
   const dateTimeRowHeight = (isArrival || isStayover || isTurndown) && guest.timeLabel && guest.time && guest.timeLabel !== 'N/A'
     ? Math.max(GUEST_INFO.dateRange.lineHeight, GUEST_INFO.time.lineHeight) // Use taller lineHeight when time is present
     : GUEST_INFO.dateRange.lineHeight; // Just date lineHeight when no time
@@ -329,7 +329,7 @@ export default function GuestInfoDisplay({
         ? countTop * normalizedScaleX // Use custom position if provided (Room Detail screen)
         : hasNotes
           ? ((GUEST_INFO.guestCount.positions.withNotes.iconTop ?? 0)) * normalizedScaleX
-          : (adjustedDateTop + dateTimeRowHeight + 4) * normalizedScaleX) // Use adjustedDateTop + dateTimeRowHeight + 4px gap for proper spacing below date/time row
+          : (adjustedDateTop + dateTimeRowHeight + 2) * normalizedScaleX) // Use adjustedDateTop + dateTimeRowHeight + 2px gap (reduced from 4px)
     : 0;
 
   // Guest count top is already adjusted (uses adjustedDateTop), so no additional adjustment needed
@@ -352,8 +352,19 @@ export default function GuestInfoDisplay({
           : ((GUEST_INFO.guestCount.positions.standardArrival.textLeft) - calculatedContainerLeft) * normalizedScaleX)
     : 0;
 
-  // Calculate container width: card width minus container left position to ensure content is visible
-  const containerWidth = hasGuestImage ? effectiveContainerWidth : (CARD_DIMENSIONS.width - calculatedContainerLeft) * normalizedScaleX;
+  // Calculate container width: card width minus container left position, minus space for status button
+  // Reserve space for status button (starts around 255px, so max width should be ~240px from left edge)
+  // Add padding (16px) to ensure name doesn't touch status button
+  const STATUS_BUTTON_RESERVED_SPACE = 16; // Padding between name and status button
+  const maxWidthBeforeButton = (isArrivalDeparture || category === 'ArrivalDeparture')
+    ? STATUS_BUTTON.positions.arrivalDeparture.left - STATUS_BUTTON_RESERVED_SPACE
+    : STATUS_BUTTON.positions.standard.left - STATUS_BUTTON_RESERVED_SPACE;
+  const containerWidth = hasGuestImage 
+    ? effectiveContainerWidth 
+    : Math.min(
+        (CARD_DIMENSIONS.width - calculatedContainerLeft) * normalizedScaleX,
+        (maxWidthBeforeButton - calculatedContainerLeft) * normalizedScaleX
+      );
 
   if (isVacantGuest) {
     // For vacant turndown rooms, position at guest container top

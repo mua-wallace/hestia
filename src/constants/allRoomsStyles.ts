@@ -184,7 +184,7 @@ export const GUEST_INFO = {
     top: 114 + CONTENT_OFFSET_TOP, // Room 202 (Departure)
   },
   dateRangeStandardArrival: {
-    top: 109 + CONTENT_OFFSET_TOP, // Room 204 (Arrival)
+    top: 105 + CONTENT_OFFSET_TOP, // Room 204 (Arrival) - reduced from 109 to 105 for much tighter spacing
   },
   dateRangeWithNotes: {
     top: 108 + CONTENT_OFFSET_TOP, // Room 203
@@ -199,7 +199,7 @@ export const GUEST_INFO = {
       priorityFirst: { left: 75, top: 130 + CONTENT_OFFSET_TOP },
       prioritySecond: { left: 73, top: 204 + CONTENT_OFFSET_TOP },
       standardDeparture: { left: 154, top: 115 + CONTENT_OFFSET_TOP },
-      standardArrival: { left: 154, top: 110 + CONTENT_OFFSET_TOP },
+      standardArrival: { left: 154, top: 105 + CONTENT_OFFSET_TOP }, // Aligned with date (was 110, now 105)
       withNotes: { left: 151, top: 109 + CONTENT_OFFSET_TOP },
     },
   },
@@ -217,7 +217,7 @@ export const GUEST_INFO = {
       priorityFirst: { iconLeft: 151, textLeft: 170, iconTop: 109 + CONTENT_OFFSET_TOP, textTop: 109 + CONTENT_OFFSET_TOP },
       prioritySecond: { iconLeft: 151, textLeft: 170, iconTop: 184 + CONTENT_OFFSET_TOP, textTop: 184 + CONTENT_OFFSET_TOP },
       standardDeparture: { iconLeft: 151, textLeft: 177, iconTop: 116 + CONTENT_OFFSET_TOP, textTop: 116 + CONTENT_OFFSET_TOP },
-      standardArrival: { iconLeft: 73, textLeft: 92, iconTop: 109 + CONTENT_OFFSET_TOP, textTop: 109 + CONTENT_OFFSET_TOP },
+      standardArrival: { iconLeft: 73, textLeft: 92, iconTop: 105 + CONTENT_OFFSET_TOP, textTop: 105 + CONTENT_OFFSET_TOP }, // Aligned with date (was 109, now 105)
       withNotes: { iconLeft: 70, textLeft: 89, iconTop: 131 + CONTENT_OFFSET_TOP, textTop: 130 + CONTENT_OFFSET_TOP },
     },
   },
