@@ -19,7 +19,6 @@ import {
   DEPARTMENT_GRID_LAYOUT,
   DEPARTMENT_NAME_TO_ICON,
   CREATE_TICKET_AI_BUTTON,
-  CREATE_TICKET_DIVIDER,
   CREATE_TICKET_COLORS,
   CREATE_TICKET_TYPOGRAPHY,
   scaleX,
@@ -200,18 +199,6 @@ export default function CreateTicketScreen() {
           ))
         )}
 
-        {/* Divider */}
-        <View
-          style={[
-            styles.divider,
-            {
-              left: (SCREEN_WIDTH / 2) + (CREATE_TICKET_DIVIDER.leftOffset * scaleX),
-              top: CREATE_TICKET_DIVIDER.top * scaleX,
-              width: CREATE_TICKET_DIVIDER.width * scaleX,
-            },
-          ]}
-        />
-
         {/* AI Create Ticket Button Section */}
         <View style={styles.aiButtonSection}>
           {/* Button Container */}
@@ -381,12 +368,6 @@ const styles = StyleSheet.create({
     fontWeight: '300', // Inter Light
     color: CREATE_TICKET_TYPOGRAPHY.departmentLabel.color,
     textAlign: 'left',
-  },
-  divider: {
-    position: 'absolute',
-    height: CREATE_TICKET_DIVIDER.height,
-    backgroundColor: CREATE_TICKET_DIVIDER.color,
-    transform: [{ translateX: -CREATE_TICKET_DIVIDER.width * scaleX / 2 }],
   },
   aiButtonSection: {
     position: 'relative',
