@@ -200,61 +200,40 @@ export default function CreateTicketScreen() {
         )}
 
         {/* AI Create Ticket Button Section */}
-        <View style={styles.aiButtonSection}>
+        <View style={[styles.aiButtonSection, { marginTop: CREATE_TICKET_AI_BUTTON.container.top * scaleX }]}>
           {/* Button Container */}
-          <TouchableOpacity
-            style={[
-              styles.aiButtonContainer,
-              {
-                left: (SCREEN_WIDTH / 2),
-                top: CREATE_TICKET_AI_BUTTON.container.top * scaleX,
-              },
-            ]}
-            onPress={handleAICreatePress}
-            activeOpacity={0.7}
-          >
-            {/* Button */}
-            <View style={styles.aiButton}>
-              {/* Button Text */}
-              <Text style={styles.aiButtonText}>
-                {CREATE_TICKET_AI_BUTTON.text.text}
-              </Text>
-
-              {/* AI Badge */}
-              <View style={styles.aiBadge}>
-                {/* Note: For true gradient text, would need react-native-svg or mask approach */}
-                {/* Using gradient start color as fallback for now */}
-                <Text style={styles.aiBadgeText}>
-                  {CREATE_TICKET_AI_BUTTON.aiText.text}
+          <View style={styles.aiButtonWrapper}>
+            <TouchableOpacity
+              style={styles.aiButtonContainer}
+              onPress={handleAICreatePress}
+              activeOpacity={0.7}
+            >
+              {/* Button */}
+              <View style={styles.aiButton}>
+                {/* Button Text */}
+                <Text style={styles.aiButtonText}>
+                  {CREATE_TICKET_AI_BUTTON.text.text}
                 </Text>
+
+                {/* AI Badge */}
+                <View style={styles.aiBadge}>
+                  {/* Note: For true gradient text, would need react-native-svg or mask approach */}
+                  {/* Using gradient start color as fallback for now */}
+                  <Text style={styles.aiBadgeText}>
+                    {CREATE_TICKET_AI_BUTTON.aiText.text}
+                  </Text>
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
 
           {/* Beta Label */}
-          <Text
-            style={[
-              styles.betaLabel,
-              {
-                left: (SCREEN_WIDTH / 2) + (CREATE_TICKET_AI_BUTTON.betaLabel.leftOffset * scaleX),
-                top: CREATE_TICKET_AI_BUTTON.betaLabel.top * scaleX,
-              },
-            ]}
-          >
+          <Text style={styles.betaLabel}>
             {CREATE_TICKET_AI_BUTTON.betaLabel.text}
           </Text>
 
           {/* Description */}
-          <Text
-            style={[
-              styles.description,
-              {
-                left: CREATE_TICKET_AI_BUTTON.description.left * scaleX,
-                top: CREATE_TICKET_AI_BUTTON.description.top * scaleX,
-                width: CREATE_TICKET_AI_BUTTON.description.width * scaleX,
-              },
-            ]}
-          >
+          <Text style={styles.description}>
             {CREATE_TICKET_AI_BUTTON.description.text}
           </Text>
         </View>
@@ -370,18 +349,21 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   aiButtonSection: {
-    position: 'relative',
+    width: '100%',
+    alignItems: 'center',
+    paddingHorizontal: 24 * scaleX,
+  },
+  aiButtonWrapper: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 8 * scaleX,
   },
   aiButtonContainer: {
-    position: 'absolute',
-    width: CREATE_TICKET_AI_BUTTON.container.width * scaleX,
-    height: CREATE_TICKET_AI_BUTTON.container.height * scaleX,
-    transform: [{ translateX: -(CREATE_TICKET_AI_BUTTON.container.width * scaleX / 2) }],
+    width: CREATE_TICKET_AI_BUTTON.button.width * scaleX,
+    height: CREATE_TICKET_AI_BUTTON.button.height * scaleX,
+    position: 'relative',
   },
   aiButton: {
-    position: 'absolute',
-    left: CREATE_TICKET_AI_BUTTON.button.left,
-    top: CREATE_TICKET_AI_BUTTON.button.top,
     width: CREATE_TICKET_AI_BUTTON.button.width * scaleX,
     height: CREATE_TICKET_AI_BUTTON.button.height * scaleX,
     borderRadius: CREATE_TICKET_AI_BUTTON.button.borderRadius * scaleX,
@@ -390,6 +372,7 @@ const styles = StyleSheet.create({
     backgroundColor: CREATE_TICKET_AI_BUTTON.button.backgroundColor,
     justifyContent: 'center',
     alignItems: 'flex-start',
+    position: 'relative',
   },
   aiButtonText: {
     position: 'absolute',
@@ -422,27 +405,25 @@ const styles = StyleSheet.create({
     width: CREATE_TICKET_AI_BUTTON.aiText.width * scaleX,
   },
   betaLabel: {
-    position: 'absolute',
     fontSize: CREATE_TICKET_TYPOGRAPHY.betaLabel.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary, // Helvetica
     fontWeight: '700', // Helvetica Bold
     color: CREATE_TICKET_TYPOGRAPHY.betaLabel.color,
-    width: CREATE_TICKET_AI_BUTTON.betaLabel.width * scaleX,
     textAlign: 'center',
-    // Center the label: left is already set to SCREEN_WIDTH/2 + leftOffset, so we need to adjust by half the width
-    transform: [{ translateX: -(CREATE_TICKET_AI_BUTTON.betaLabel.width * scaleX / 2) }],
+    marginTop: 8 * scaleX,
+    marginBottom: 16 * scaleX,
   },
   description: {
-    position: 'absolute',
     fontSize: CREATE_TICKET_TYPOGRAPHY.description.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary, // Helvetica Light
     fontWeight: '300', // Helvetica Light (not Inter Light)
     color: CREATE_TICKET_TYPOGRAPHY.description.color,
-    textAlign: CREATE_TICKET_AI_BUTTON.description.textAlign as any,
+    textAlign: 'center',
     lineHeight: CREATE_TICKET_TYPOGRAPHY.description.lineHeight === 'normal'
       ? undefined
       : (CREATE_TICKET_TYPOGRAPHY.description.fontSize * 1.2) * scaleX,
-    transform: [{ translateX: -CREATE_TICKET_AI_BUTTON.description.width * scaleX / 2 }],
+    paddingHorizontal: 16 * scaleX,
+    maxWidth: CREATE_TICKET_AI_BUTTON.description.width * scaleX,
   },
 });
 

@@ -286,6 +286,28 @@ export default function CreateTicketFormScreen() {
     : DEPARTMENT_ICONS[departmentId as DepartmentId];
   const noTintForDepartment = isFromSupabase && !!DEPARTMENT_NAME_TO_ICON[paramDepartmentName!]?.noTint;
 
+  // Map Supabase department name to local department ID for filtering
+  const getLocalDepartmentId = (name: string): DepartmentId | null => {
+    const mapping: Record<string, DepartmentId> = {
+      'Engineering': 'engineering',
+      'HSK Portier': 'hskPortier',
+      'In Room Dining': 'inRoomDining',
+      'Laundry': 'laundry',
+      'Concierge': 'concierge',
+      'Reception': 'reception',
+      'IT': 'it',
+      'Front Office': 'reception',
+      'Food and Beverage': 'inRoomDining',
+      'Executive Administration': 'reception',
+    };
+    return mapping[name] || null;
+  };
+  
+  // Get the actual department ID to filter out from other icons
+  const selectedDepartmentIdForFiltering = isFromSupabase
+    ? (getLocalDepartmentId(paramDepartmentName!) || departmentId)
+    : departmentId;
+
   // Calculate the bottom position of description field dynamically
   const getDescriptionBottom = () => {
     let descriptionTop: number;
@@ -370,7 +392,7 @@ export default function CreateTicketFormScreen() {
 
         {/* Other Department Icons (Inactive) */}
         <View style={styles.otherIconsContainer}>
-          {ALL_DEPARTMENTS.filter(id => id !== departmentId).slice(0, 4).map((id, index) => {
+          {ALL_DEPARTMENTS.filter(id => id !== selectedDepartmentIdForFiltering).slice(0, 4).map((id, index) => {
             // Calculate left position: selected icon at 50px, width 55.482px, gap, then other icons
             const leftPosition = 50 + 55.482 + 25 + (index * 80); // 25px gap after selected icon
             return (
