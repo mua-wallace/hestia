@@ -97,8 +97,7 @@ export default function CreateTicketScreen() {
   };
 
   const handleDepartmentPress = (department: DepartmentDisplayItem) => {
-    navigation.navigate('CreateTicketForm', {
-      departmentId: department.id,
+    navigation.navigate('SelectTicketLocation', {
       departmentName: department.name,
     });
   };

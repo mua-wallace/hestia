@@ -57,10 +57,18 @@ function mapFrontOfficeToRoomType(frontOffice: string | null | undefined, reserv
 export default function RoomDetailScreen() {
   const navigation = useNavigation<RoomDetailScreenNavigationProp>();
   const route = useRoute();
-  const params = route.params as { room?: RoomCardData; roomType?: RoomType; roomId?: string } | undefined;
+  const params = route.params as { 
+    room?: RoomCardData; 
+    roomType?: RoomType; 
+    roomId?: string;
+    initialTab?: 'Overview' | 'Tickets' | 'Checklist' | 'History';
+    departmentName?: string;
+  } | undefined;
   const initialRoom = params?.room;
   const initialRoomType = params?.roomType ?? 'ArrivalDeparture';
   const roomId = params?.roomId;
+  const initialTab = params?.initialTab;
+  const departmentName = params?.departmentName;
 
   const { updateRoom, updatingRoomId, data: roomsData } = useRoomsStore();
   const shift = roomsData?.selectedShift ?? 'AM';
@@ -729,6 +737,7 @@ export default function RoomDetailScreen() {
       )}
       {/* Layout lives in RoomDetailContent (Figma 1772-104); this screen only fetches and passes props. */}
       <RoomDetailContent
+        roomId={room.id}
         roomNumber={room.roomNumber}
         roomCode={`${room.roomCategory} - ${room.credit}`}
         status={currentStatus}
@@ -753,6 +762,8 @@ export default function RoomDetailScreen() {
         onSaveTask={handleSaveTask}
         onAddLostAndFoundItem={handleAddPhotos}
         onDownloadHistoryReport={handleDownloadReport}
+        initialTab={initialTab}
+        departmentName={departmentName}
         customStatusText={
           showReturnLaterModal
             ? 'Return Later'

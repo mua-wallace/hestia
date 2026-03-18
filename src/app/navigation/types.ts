@@ -12,14 +12,32 @@ export type RootStackParamList = {
   UserProfile: { user: import('../../types/home.types').UserProfile };
   AllRooms: { showBackButton?: boolean };
   RoomDetails: { roomId: string };
-  RoomDetail: { room?: any; roomType?: RoomType; roomId?: string };
-  ArrivalDepartureDetail: { room: any };
+  RoomDetail: { 
+    room?: any; 
+    roomType?: RoomType; 
+    roomId?: string;
+    initialTab?: 'Overview' | 'Tickets' | 'Checklist' | 'History';
+    departmentName?: string;
+  };
+  ArrivalDepartureDetail: { 
+    room: any; 
+    initialTab?: 'Overview' | 'Tickets' | 'Checklist' | 'History';
+    departmentName?: string;
+  };
   ChatDetail: { chatId: string; chat?: import('../../components/chat/ChatItem').ChatItemData };
   NewChat: undefined;
   CreateChatGroup: undefined;
   TicketDetail: { ticketId: string };
   CreateTicket: undefined;
-  CreateTicketForm: { departmentId: string; departmentName?: string };
+  SelectTicketLocation: { departmentName: string };
+  CreateTicketForm: { 
+    departmentId?: string; 
+    departmentName?: string; 
+    roomId?: string; 
+    roomNumber?: string;
+    isPublicArea?: boolean;
+    publicAreaName?: string;
+  };
 };
 
 /** Tab/screen to return to when back is pressed */

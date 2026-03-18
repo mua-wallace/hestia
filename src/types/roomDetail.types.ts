@@ -76,6 +76,7 @@ export interface HistoryGroup {
  */
 export interface RoomDetailScreenProps {
   // Room identification
+  roomId?: string;
   roomNumber: string;
   roomCode: string; // e.g., "ST2K - 1.4"
   
@@ -144,4 +145,10 @@ export interface RoomDetailScreenProps {
   
   // Optional: Show stayover with linen badge
   showWithLinenBadge?: boolean;
+  
+  // Optional: Initial tab to display
+  initialTab?: DetailTab;
+  
+  // Optional: Department name for ticket creation
+  departmentName?: string;
 }

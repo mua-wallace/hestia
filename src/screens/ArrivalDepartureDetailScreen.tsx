@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 import { scaleX, ROOM_DETAIL_HEADER, DETAIL_TABS, CONTENT_AREA, GUEST_INFO, NOTES_SECTION, LOST_AND_FOUND, ASSIGNED_TO, ASSIGNED_TASK_CARD } from '../constants/roomDetailStyles';
 import RoomDetailHeader from '../components/roomDetail/RoomDetailHeader';
 import DetailTabNavigation from '../components/roomDetail/DetailTabNavigation';
@@ -12,7 +12,6 @@ import LostAndFoundSection from '../components/roomDetail/LostAndFoundSection';
 import AssignedToSection from '../components/roomDetail/AssignedToSection';
 import TaskSection from '../components/roomDetail/TaskSection';
 import CleanChecklistSection from '../components/roomDetail/CleanChecklistSection';
-import RoomTicketsSection from '../components/roomDetail/RoomTicketsSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
 import CleanChecklistModal from '../components/allRooms/CleanChecklistModal';
@@ -41,10 +40,12 @@ export default function ArrivalDepartureDetailScreen() {
   const navigation = useNavigation<ArrivalDepartureDetailScreenNavigationProp>();
   const route = useRoute();
   const room = (route.params as any)?.room as RoomCardData;
+  const initialTab = (route.params as any)?.initialTab as DetailTab | undefined;
+  const departmentName = (route.params as any)?.departmentName as string | undefined;
   const { updateRoom, updatingRoomId } = useRoomsStore();
   const isUpdating = room && updatingRoomId === room.id;
 
-  const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
+  const [activeTab, setActiveTab] = useState<DetailTab>(initialTab || 'Overview');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showInspectedModal, setShowInspectedModal] = useState(false);
   const [showCleanChecklistModal, setShowCleanChecklistModal] = useState(false);
@@ -501,7 +502,7 @@ export default function ArrivalDepartureDetailScreen() {
       />
 
       {/* Content Area - Starts at 285px */}
-      {/* Checklist and Tickets Tabs have their own ScrollView, so render separately */}
+      {/* Checklist Tab has its own ScrollView, so render separately */}
       {activeTab === 'Checklist' ? (
         <CleanChecklistSection
           roomNumber={room.roomNumber}
@@ -511,14 +512,24 @@ export default function ArrivalDepartureDetailScreen() {
           onAddNotes={() => console.log('Add notes')}
         />
       ) : activeTab === 'Tickets' ? (
-        <RoomTicketsSection
-          roomNumber={room.roomNumber}
-          onSubmit={(ticketData) => {
-            // TODO: Handle ticket submission
-            console.log('Ticket submitted:', ticketData);
-            // Optionally show success message or navigate back
-          }}
-        />
+        <View style={styles.ticketsTabContainer}>
+          <TouchableOpacity
+            style={styles.createTicketButton}
+            onPress={() => {
+              navigation.navigate('CreateTicketForm', {
+                roomId: room.id,
+                roomNumber: room.roomNumber,
+                departmentName: departmentName,
+              });
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.createTicketButtonText}>+ Create Ticket</Text>
+          </TouchableOpacity>
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+            <Text style={styles.noTicketsText}>No tickets yet. Create one to get started.</Text>
+          </ScrollView>
+        </View>
       ) : (
         <ScrollView
           style={styles.scrollView}
@@ -861,5 +872,31 @@ const styles = StyleSheet.create({
     height: ASSIGNED_TASK_CARD.divider.height, // 1px
     backgroundColor: ASSIGNED_TASK_CARD.divider.backgroundColor,
     zIndex: 2, // Above both Assigned to (zIndex: 1) and Task sections (zIndex: 0)
+  },
+  ticketsTabContainer: {
+    flex: 1,
+    backgroundColor: colors.background.primary,
+  },
+  createTicketButton: {
+    backgroundColor: '#5a759d',
+    marginHorizontal: 24 * scaleX,
+    marginTop: 20 * scaleX,
+    marginBottom: 16 * scaleX,
+    paddingVertical: 14 * scaleX,
+    borderRadius: 10 * scaleX,
+    alignItems: 'center',
+  },
+  createTicketButtonText: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  noTicketsText: {
+    fontSize: 15 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 40 * scaleX,
   },
 });

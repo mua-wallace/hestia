@@ -29,6 +29,7 @@ import type { RoomDetailScreenProps, DetailTab, HistoryEvent } from '../../types
 import type { RoomStatus } from '../../types/allRooms.types';
 
 export default function RoomDetailContent({
+  roomId,
   roomNumber,
   roomCode,
   status,
@@ -59,6 +60,8 @@ export default function RoomDetailContent({
   promiseTimeAtTimestamp,
   refuseServiceReason,
   showWithLinenBadge = false,
+  initialTab,
+  departmentName,
 }: RoomDetailScreenProps) {
   // Get room type configuration and calculate positions
   const config = useMemo(() => getRoomTypeConfig(roomType), [roomType]);
@@ -71,7 +74,7 @@ export default function RoomDetailContent({
     [config, hasSpecialInstructionsData, firstGuestName, specialInstructions]
   );
 
-  const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
+  const [activeTab, setActiveTab] = useState<DetailTab>(initialTab || 'Overview');
   const statusButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   
   // Track current status - sync with parent when status changes (e.g. from StatusChangeModal)
@@ -236,7 +239,9 @@ export default function RoomDetailContent({
         />
       ) : activeTab === 'Tickets' ? (
         <RoomTicketsSection
+          roomId={roomId}
           roomNumber={roomNumber}
+          departmentName={departmentName}
           onSubmit={(ticketData) => {
             console.log('Ticket submitted:', ticketData);
           }}

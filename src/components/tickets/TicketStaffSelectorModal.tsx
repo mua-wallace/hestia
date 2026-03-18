@@ -16,7 +16,7 @@ import type { User } from '../../types';
 interface TicketStaffSelectorModalProps {
   visible: boolean;
   onClose: () => void;
-  onSelect: (staffId: string, staffName: string) => void;
+  onSelect: (staffIds: string[]) => void;
   staff: User[];
   /** Already tagged staff IDs (show checkmark in list). */
   selectedStaffIds?: string[];
@@ -38,15 +38,34 @@ export default function TicketStaffSelectorModal({
   loading = false,
 }: TicketStaffSelectorModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [localSelectedIds, setLocalSelectedIds] = useState<string[]>(selectedStaffIds);
 
-  const filteredStaff = searchQuery.trim()
-    ? staff.filter((u) =>
-        u.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
-      )
-    : staff;
+  React.useEffect(() => {
+    if (visible) {
+      setLocalSelectedIds(selectedStaffIds);
+    }
+  }, [visible, selectedStaffIds]);
 
-  const handleSelect = (user: User) => {
-    onSelect(user.id, user.name);
+  const filteredStaff = React.useMemo(() => {
+    if (!staff || !Array.isArray(staff)) return [];
+    if (!searchQuery.trim()) return staff;
+    return staff.filter((u) =>
+      u.name?.toLowerCase().includes(searchQuery.trim().toLowerCase())
+    );
+  }, [staff, searchQuery]);
+
+  const handleToggleStaff = (userId: string) => {
+    setLocalSelectedIds((prev) => {
+      if (prev.includes(userId)) {
+        return prev.filter((id) => id !== userId);
+      } else {
+        return [...prev, userId];
+      }
+    });
+  };
+
+  const handleDone = () => {
+    onSelect(localSelectedIds);
     onClose();
   };
 
@@ -89,31 +108,36 @@ export default function TicketStaffSelectorModal({
                 {staff.length === 0 ? `No staff in ${departmentName}.` : 'No matching staff.'}
               </Text>
             ) : (
-              <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
-                {filteredStaff.map((user) => {
-                  const isSelected = selectedStaffIds.includes(user.id);
-                  return (
-                    <TouchableOpacity
-                      key={user.id}
-                      style={[styles.row, isSelected && styles.rowSelected]}
-                      onPress={() => handleSelect(user)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.avatarWrap}>
-                        {user.avatar ? (
-                          <Image source={{ uri: user.avatar }} style={styles.avatar} />
-                        ) : (
-                          <View style={styles.initialsCircle}>
-                            <Text style={styles.initials}>{getInitial(user.name)}</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.name} numberOfLines={1}>{user.name}</Text>
-                      {isSelected && <Text style={styles.check}>✓</Text>}
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
+              <>
+                <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+                  {filteredStaff.map((user) => {
+                    const isSelected = localSelectedIds.includes(user.id);
+                    return (
+                      <TouchableOpacity
+                        key={user.id}
+                        style={[styles.row, isSelected && styles.rowSelected]}
+                        onPress={() => handleToggleStaff(user.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.avatarWrap}>
+                          {user.avatar ? (
+                            <Image source={{ uri: user.avatar }} style={styles.avatar} />
+                          ) : (
+                            <View style={styles.initialsCircle}>
+                              <Text style={styles.initials}>{getInitial(user.name)}</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={styles.name} numberOfLines={1}>{user.name}</Text>
+                        {isSelected && <Text style={styles.check}>✓</Text>}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+                <TouchableOpacity style={styles.doneButton} onPress={handleDone} activeOpacity={0.8}>
+                  <Text style={styles.doneButtonText}>Done</Text>
+                </TouchableOpacity>
+              </>
             )}
           </TouchableOpacity>
         </View>
@@ -238,5 +262,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#607aa1',
     fontWeight: 'bold',
+  },
+  doneButton: {
+    backgroundColor: '#607aa1',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  doneButtonText: {
+    fontSize: 16,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

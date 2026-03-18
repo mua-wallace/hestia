@@ -9,6 +9,7 @@ import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import TicketsHeader from '../components/tickets/TicketsHeader';
 import TicketsTabs from '../components/tickets/TicketsTabs';
 import TicketCard from '../components/tickets/TicketCard';
+import EmptyTicketsState from '../components/tickets/EmptyTicketsState';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
 import { TicketTab, TicketData, TicketsScreenData } from '../types/tickets.types';
@@ -172,20 +173,24 @@ export default function TicketsScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {/* Ticket Cards */}
-          {filteredTickets.map((ticket, index) => (
-            <React.Fragment key={ticket.id}>
-              <TicketCard
-                ticket={ticket}
-                onPress={() => handleTicketPress(ticket)}
-                onStatusPress={() => handleStatusPress(ticket)}
-              />
-              {/* Divider */}
-              {index < filteredTickets.length - 1 && (
-                <View style={styles.divider} />
-              )}
-            </React.Fragment>
-          ))}
+          {/* Ticket Cards or Empty State */}
+          {filteredTickets.length === 0 ? (
+            <EmptyTicketsState selectedTab={selectedTab} />
+          ) : (
+            filteredTickets.map((ticket, index) => (
+              <React.Fragment key={ticket.id}>
+                <TicketCard
+                  ticket={ticket}
+                  onPress={() => handleTicketPress(ticket)}
+                  onStatusPress={() => handleStatusPress(ticket)}
+                />
+                {/* Divider */}
+                {index < filteredTickets.length - 1 && (
+                  <View style={styles.divider} />
+                )}
+              </React.Fragment>
+            ))
+          )}
         </ScrollView>
 
         {/* Blur Overlay for content only */}
