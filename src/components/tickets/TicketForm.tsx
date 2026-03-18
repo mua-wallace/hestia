@@ -80,25 +80,27 @@ function GradientText({
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
     >
       {width > 0 ? (
-        <Svg width={width} height={fontSize * 1.15}>
-          <Defs>
-            <SvgLinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-              <Stop offset="0" stopColor={gradientColors[0]} />
-              <Stop offset="1" stopColor={gradientColors[1]} />
-            </SvgLinearGradient>
-          </Defs>
-          <SvgText
-            x={width / 2}
-            y={fontSize}
-            textAnchor="middle"
-            fontSize={fontSize}
-            fontFamily={fontFamily}
-            fontWeight={fontWeight}
-            fill={`url(#${gradId})`}
-          >
-            {text}
-          </SvgText>
-        </Svg>
+        <>
+          <Svg width={width} height={fontSize * 1.5}>
+            <Defs>
+              <SvgLinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor={gradientColors[0]} />
+                <Stop offset="1" stopColor={gradientColors[1]} />
+              </SvgLinearGradient>
+            </Defs>
+            <SvgText
+              x={width / 2}
+              y={fontSize * 1.2}
+              textAnchor="middle"
+              fontSize={fontSize}
+              fontFamily={fontFamily}
+              fontWeight={fontWeight}
+              fill={`url(#${gradId})`}
+            >
+              {text}
+            </SvgText>
+          </Svg>
+        </>
       ) : (
         <Text style={textStyle}>{text}</Text>
       )}
@@ -547,6 +549,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24 * scaleX,
     paddingTop: 24 * scaleX,
     paddingBottom: 100 * scaleX,
+    width: '100%',
   },
   heading: {
     fontSize: 20 * scaleX,
@@ -606,6 +609,7 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24 * scaleX,
+    width: '100%',
   },
   sectionTitle: {
     fontSize: 20 * scaleX,
@@ -633,6 +637,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16 * scaleX,
     paddingVertical: 12 * scaleX,
     backgroundColor: '#ffffff',
+    width: '100%',
   },
   textInput: {
     flex: 1,
@@ -778,6 +783,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16 * scaleX,
     paddingVertical: 12 * scaleX,
     backgroundColor: '#ffffff',
+    width: '100%',
   },
   priorityContent: {
     flexDirection: 'row',
@@ -820,6 +826,7 @@ const styles = StyleSheet.create({
     borderColor: '#e3e3e3',
     borderRadius: 12 * scaleX,
     borderStyle: 'dashed',
+    width: '100%',
   },
   addPhotoIcon: {
     width: 48 * scaleX,
@@ -924,6 +931,7 @@ const styles = StyleSheet.create({
     borderColor: '#e3e3e3',
     borderRadius: 8 * scaleX,
     backgroundColor: '#ffffff',
+    width: '100%',
   },
   descriptionInput: {
     fontSize: 14 * scaleX,
@@ -940,6 +948,8 @@ const styles = StyleSheet.create({
     borderRadius: 8 * scaleX,
     alignItems: 'center',
     marginTop: 16 * scaleX,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   submitButtonDisabled: {
     opacity: 0.6,
