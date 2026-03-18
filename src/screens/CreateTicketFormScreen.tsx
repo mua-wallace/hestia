@@ -569,8 +569,7 @@ const styles = StyleSheet.create({
   backArrow: {
     width: 28 * scaleX,
     height: 28 * scaleX,
-    tintColor: '#ffffff',
-    transform: [{ rotate: '270deg' }],
+    tintColor: '#607AA1',
   },
   headerContent: {
     alignItems: 'center',

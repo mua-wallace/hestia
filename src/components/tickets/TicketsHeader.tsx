@@ -34,6 +34,7 @@ export default function TicketsHeader({
             source={require('../../../assets/icons/back-arrow.png')}
             style={styles.backArrow}
             resizeMode="contain"
+            tintColor="#607AA1"
           />
         </TouchableOpacity>
 
@@ -92,7 +93,6 @@ const styles = StyleSheet.create({
   backArrow: {
     width: TICKETS_HEADER.backButton.width * scaleX,
     height: TICKETS_HEADER.backButton.height * scaleX,
-    transform: [{ rotate: '270deg' }],
   },
   title: {
     fontSize: TICKETS_TYPOGRAPHY.headerTitle.fontSize * scaleX,
