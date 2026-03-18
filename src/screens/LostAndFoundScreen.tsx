@@ -180,6 +180,7 @@ export default function LostAndFoundScreen() {
         const storedLocation: string | null = itemData.storedLocation ?? null;
         const selectedLocation: 'room' | 'publicArea' = itemData.selectedLocation ?? 'room';
         const selectedRoom = itemData.selectedRoom as { number?: string } | undefined;
+        const selectedPublicArea = itemData.selectedPublicArea as string | null | undefined;
         const selectedDate: Date = itemData.selectedDate ?? new Date();
         const selectedHour: number = itemData.selectedHour ?? selectedDate.getHours();
         const selectedMinute: number = itemData.selectedMinute ?? selectedDate.getMinutes();
@@ -201,7 +202,9 @@ export default function LostAndFoundScreen() {
         const foundLocation =
           selectedLocation === 'room' && selectedRoom?.number
             ? `Room ${selectedRoom.number}`
-            : 'Public Area';
+            : selectedPublicArea
+              ? selectedPublicArea
+              : 'Public Area';
 
         // Derive a simple item_name from notes (fallback to generic)
         const itemName =

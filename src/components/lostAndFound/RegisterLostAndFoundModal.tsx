@@ -9,6 +9,8 @@ import {
   TextInput,
   StyleSheet,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useToast } from '../../contexts/ToastContext';
@@ -32,6 +34,7 @@ interface RegisterLostAndFoundModalProps {
       notes: string;
       selectedLocation: 'room' | 'publicArea';
       selectedRoom?: any;
+      selectedPublicArea?: string | null;
       foundedBy: string;
       registeredBy: string;
       status: StatusOption;
@@ -79,23 +82,41 @@ export default function RegisterLostAndFoundModal({
   const [showRoomDropdown, setShowRoomDropdown] = useState(false);
   const [notes, setNotes] = useState('');
   
-  // Room data with optional guest names (fallback to mock data when Supabase is not configured)
-  const fallbackRooms = [
-    { number: '201', guestName: 'Mohamed B', badgeCount: 11 },
-    { number: '202', guestName: 'Sarah Johnson', badgeCount: 3 },
-    { number: '203', guestName: 'Ahmed Al-Mansouri', badgeCount: 7 },
-    { number: '204', guestName: 'Emma Williams', badgeCount: 2 },
-    { number: '205', guestName: 'John Smith', badgeCount: 5 },
-    { number: '301', guestName: 'Maria Garcia', badgeCount: 9 },
-    { number: '302', guestName: 'David Chen', badgeCount: 4 },
-    { number: '303', guestName: 'Fatima Ali', badgeCount: 6 },
+  interface RoomSelection {
+    id?: string;
+    number: string;
+    guestName: string; // Used by Lost & Found cards
+    badgeCount: number; // Backward-compat (used by older UI)
+    // Create-ticket-like guest info (optional)
+    guest_count?: number;
+    vip_code?: string | null;
+    image_url?: string | null;
+    check_in?: string | null;
+    check_out?: string | null;
+  }
+
+  // Fallback to mock data when Supabase is not configured.
+  // Note: keep `number` + `guestName` because the parent Lost&Found screen reads those.
+  const fallbackRooms: RoomSelection[] = [
+    { number: '201', guestName: 'Mohamed B', badgeCount: 11, guest_count: 11, vip_code: '11' },
+    { number: '202', guestName: 'Sarah Johnson', badgeCount: 3, guest_count: 3, vip_code: '3' },
+    { number: '203', guestName: 'Ahmed Al-Mansouri', badgeCount: 7, guest_count: 7, vip_code: '7' },
+    { number: '204', guestName: 'Emma Williams', badgeCount: 2, guest_count: 2, vip_code: '2' },
+    { number: '205', guestName: 'John Smith', badgeCount: 5, guest_count: 5, vip_code: '5' },
+    { number: '301', guestName: 'Maria Garcia', badgeCount: 9, guest_count: 9, vip_code: '9' },
+    { number: '302', guestName: 'David Chen', badgeCount: 4, guest_count: 4, vip_code: '4' },
+    { number: '303', guestName: 'Fatima Ali', badgeCount: 6, guest_count: 6, vip_code: '6' },
   ];
 
-  const [rooms, setRooms] = useState(fallbackRooms);
+  const [rooms, setRooms] = useState<RoomSelection[]>(fallbackRooms);
   const [roomSearch, setRoomSearch] = useState('');
+  const [selectedPublicArea, setSelectedPublicArea] = useState<string | null>(null);
 
-  const getInitialRoom = () => rooms[0] ?? { number: '—', guestName: '', badgeCount: 0 };
-  const [selectedRoom, setSelectedRoom] = useState(getInitialRoom);
+  const PUBLIC_AREAS = ['Brasserie', 'Gym', 'Toilet', 'Reception', 'Elevator'];
+
+  const getInitialRoom = (): RoomSelection =>
+    rooms[0] ?? { number: '—', guestName: '', badgeCount: 0, guest_count: 0, vip_code: null, image_url: null };
+  const [selectedRoom, setSelectedRoom] = useState<RoomSelection | null>(getInitialRoom());
   
   // Step 2 state
   const [showFoundedByModal, setShowFoundedByModal] = useState(false);
@@ -124,6 +145,8 @@ export default function RegisterLostAndFoundModal({
       setPictures([]); // Reset pictures
       setShowPictureError(false); // Reset error state
       setRoomSearch('');
+      setShowRoomDropdown(false);
+      setSelectedPublicArea(null);
     }
   }, [visible]);
 
@@ -133,15 +156,41 @@ export default function RegisterLostAndFoundModal({
     if (!isSupabaseConfigured) return;
     supabase
       .from('rooms')
-      .select('room_number')
+      .select(`
+        id,
+        room_number,
+        reservations (
+          guests (
+            full_name,
+            vip_code,
+            image_url
+          ),
+          arrival_date,
+          departure_date,
+          adults,
+          kids
+        )
+      `)
       .order('room_number', { ascending: true })
       .then(({ data, error }) => {
         if (cancelled || error || !data) return;
-        const mapped = (data as { room_number: string }[]).map((r) => ({
-          number: r.room_number,
-          guestName: '',
-          badgeCount: 0,
-        }));
+        const mapped: RoomSelection[] = (data as any[]).map((room) => {
+          const reservation = room.reservations?.[0];
+          const guest = reservation?.guests?.[0];
+          const guestCount = (reservation?.adults || 0) + (reservation?.kids || 0);
+
+          return {
+            id: room.id,
+            number: room.room_number,
+            guestName: guest?.full_name ?? '',
+            badgeCount: guestCount,
+            guest_count: guestCount,
+            vip_code: guest?.vip_code ?? null,
+            image_url: guest?.image_url ?? null,
+            check_in: reservation?.arrival_date ?? null,
+            check_out: reservation?.departure_date ?? null,
+          };
+        });
         if (mapped.length) {
           setRooms(mapped);
           setSelectedRoom(mapped[0]);
@@ -322,6 +371,14 @@ export default function RegisterLostAndFoundModal({
     return `${day} ${month} ${year}`;
   };
 
+  // Format ISO date strings as "07/10"
+  const formatDateStr = (dateStr?: string | null): string => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return '';
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+  };
+
   // Format time as "15:00"
   const formatTime = (hour: number, minute: number): string => {
     return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
@@ -351,6 +408,7 @@ export default function RegisterLostAndFoundModal({
             notes,
             selectedLocation,
             selectedRoom: selectedLocation === 'room' ? selectedRoom : undefined,
+            selectedPublicArea: selectedLocation === 'publicArea' ? selectedPublicArea : undefined,
             foundedBy,
             registeredBy,
             status,
@@ -457,24 +515,30 @@ export default function RegisterLostAndFoundModal({
           <Text style={styles.headerTitle}>Lost & Found</Text>
         </View>
 
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          {/* Title */}
-          <Text style={styles.title}>Register</Text>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Title */}
+            <Text style={styles.title}>Register</Text>
 
           {/* Step Indicator */}
           <Text style={styles.stepIndicator}>Step {currentStep}</Text>
 
           {/* Progress Bar */}
-          <View style={styles.progressBarContainer}>
+            <View style={styles.progressBarContainer}>
             <View style={[styles.progressBar, currentStep >= 1 ? styles.progressBarActive : styles.progressBarInactive]} />
             <View style={[styles.progressBar, currentStep >= 2 ? styles.progressBarActive : styles.progressBarInactive]} />
             <View style={[styles.progressBar, currentStep >= 3 ? styles.progressBarActive : styles.progressBarInactive]} />
-          </View>
+            </View>
 
           {/* Step 1 Content */}
           {currentStep === 1 && (
@@ -566,87 +630,192 @@ export default function RegisterLostAndFoundModal({
             <>
               <Text style={styles.sectionLabelLight}>Room Number</Text>
               <View style={styles.roomSelectorWrapper}>
-                <TouchableOpacity
-                  style={styles.roomSelector}
-                  activeOpacity={0.7}
-                  onPress={() => setShowRoomDropdown(!showRoomDropdown)}
-                >
-                  <View style={styles.roomSelectorContent}>
-                    <Text style={styles.roomText}>Room {selectedRoom.number}</Text>
-                    <View style={styles.roomDivider} />
-                    <View style={styles.guestNameContainer}>
-                      <Text style={styles.guestText}>{selectedRoom.guestName}</Text>
-                      <Image
-                        source={require('../../../assets/icons/spinner.png')}
-                        style={styles.spinnerIcon}
-                        resizeMode="contain"
-                      />
-                    </View>
-                  </View>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{selectedRoom.badgeCount}</Text>
-                  </View>
-                </TouchableOpacity>
-
-                {/* Room Dropdown */}
-                {showRoomDropdown && (
+                {!selectedRoom ? (
                   <>
                     <TouchableOpacity
-                      style={styles.dropdownBackdrop}
-                      activeOpacity={1}
-                      onPress={() => setShowRoomDropdown(false)}
-                    />
-                    <View style={styles.roomDropdown}>
-                      <View style={styles.roomSearchContainer}>
+                      style={styles.searchInputContainer}
+                      onPress={() => setShowRoomDropdown((v) => !v)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.searchInputText, !roomSearch && styles.searchInputPlaceholder]}>
+                        {roomSearch ? roomSearch : 'Search room...'}
+                      </Text>
+                      <Image
+                        source={require('../../../assets/icons/dropdown-arrow.png')}
+                        style={[styles.dropdownArrowIcon, showRoomDropdown && styles.dropdownArrowIconOpen]}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+
+                    {showRoomDropdown && (
+                      <View style={styles.dropdownMenu}>
                         <TextInput
-                          style={styles.roomSearchInput}
-                          placeholder="Search room number..."
-                          placeholderTextColor="#9ca3af"
+                          style={styles.dropdownSearchInput}
+                          placeholder="Search room..."
                           value={roomSearch}
                           onChangeText={setRoomSearch}
+                          placeholderTextColor="#999"
+                          autoFocus
                         />
+
+                        <ScrollView style={styles.roomsDropdownList} nestedScrollEnabled>
+                          {rooms
+                            .filter((room) =>
+                              room.number.toLowerCase().includes(roomSearch.trim().toLowerCase())
+                            )
+                            .map((room) => (
+                              <TouchableOpacity
+                                key={room.id ?? room.number}
+                                style={styles.roomCard}
+                                onPress={() => {
+                                  setSelectedRoom(room);
+                                  setShowRoomDropdown(false);
+                                  setRoomSearch('');
+                                }}
+                                activeOpacity={0.7}
+                              >
+                                <View style={styles.roomCardContent}>
+                                  <View style={styles.roomNumberSection}>
+                                    <Text style={styles.roomNumberText}>Room {room.number}</Text>
+                                  </View>
+
+                                  {room.guestName ? (
+                                    <>
+                                      <View style={styles.verticalDivider} />
+                                      <View style={styles.guestInfoSection}>
+                                        <View style={styles.guestImageContainer}>
+                                          {room.image_url ? (
+                                            <Image source={{ uri: room.image_url }} style={styles.guestImage} />
+                                          ) : (
+                                            <View style={styles.guestImagePlaceholder} />
+                                          )}
+                                          {room.vip_code ? (
+                                            <View style={styles.vipBadge}>
+                                              <Text style={styles.vipBadgeText}>!</Text>
+                                            </View>
+                                          ) : null}
+                                        </View>
+
+                                        <View style={styles.guestDetails}>
+                                          <View style={styles.guestNameRow}>
+                                            <Text style={styles.guestNameText}>{room.guestName}</Text>
+                                            {room.vip_code ? (
+                                              <Text style={styles.vipCodeText}>{room.vip_code}</Text>
+                                            ) : null}
+                                          </View>
+                                          <View style={styles.guestMetaRow}>
+                                            <Text style={styles.guestDatesText}>
+                                              {formatDateStr(room.check_in)}-{formatDateStr(room.check_out)}
+                                            </Text>
+                                            {typeof room.guest_count === 'number' ? (
+                                              <>
+                                                <Image
+                                                  source={require('../../../assets/icons/people-icon.png')}
+                                                  style={styles.guestCountIcon}
+                                                  resizeMode="contain"
+                                                />
+                                                <Text style={styles.guestCountText}>{room.guest_count}/2</Text>
+                                              </>
+                                            ) : null}
+                                          </View>
+                                        </View>
+                                      </View>
+                                    </>
+                                  ) : null}
+                                </View>
+                              </TouchableOpacity>
+                            ))}
+                        </ScrollView>
                       </View>
-                      <ScrollView
-                        nestedScrollEnabled={true}
-                        showsVerticalScrollIndicator={false}
-                      >
-                        {rooms
-                          .filter((room) =>
-                            room.number
-                              .toLowerCase()
-                              .includes(roomSearch.trim().toLowerCase()),
-                          )
-                          .map((room) => (
-                            <TouchableOpacity
-                              key={room.number}
-                              style={[
-                                styles.roomDropdownItem,
-                                selectedRoom.number === room.number && styles.roomDropdownItemSelected,
-                              ]}
-                              onPress={() => {
-                                setSelectedRoom(room);
-                                setShowRoomDropdown(false);
-                              }}
-                              activeOpacity={0.7}
-                            >
-                              <View style={styles.roomDropdownItemContent}>
-                                <Text style={styles.roomDropdownRoomText}>Room {room.number}</Text>
-                                {room.guestName ? (
+                    )}
+                  </>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.roomCard, styles.selectedRoomCard]}
+                    onPress={() => setSelectedRoom(null)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.roomCardContent}>
+                      <View style={styles.roomNumberSection}>
+                        <Text style={styles.roomNumberText}>Room {selectedRoom.number}</Text>
+                      </View>
+
+                      {selectedRoom.guestName ? (
+                        <>
+                          <View style={styles.verticalDivider} />
+                          <View style={styles.guestInfoSection}>
+                            <View style={styles.guestImageContainer}>
+                              {selectedRoom.image_url ? (
+                                <Image source={{ uri: selectedRoom.image_url }} style={styles.guestImage} />
+                              ) : (
+                                <View style={styles.guestImagePlaceholder} />
+                              )}
+                              {selectedRoom.vip_code ? (
+                                <View style={styles.vipBadge}>
+                                  <Text style={styles.vipBadgeText}>!</Text>
+                                </View>
+                              ) : null}
+                            </View>
+
+                            <View style={styles.guestDetails}>
+                              <View style={styles.guestNameRow}>
+                                <Text style={styles.guestNameText}>{selectedRoom.guestName}</Text>
+                                {selectedRoom.vip_code ? (
+                                  <Text style={styles.vipCodeText}>{selectedRoom.vip_code}</Text>
+                                ) : null}
+                              </View>
+                              <View style={styles.guestMetaRow}>
+                                <Text style={styles.guestDatesText}>
+                                  {formatDateStr(selectedRoom.check_in)}-{formatDateStr(selectedRoom.check_out)}
+                                </Text>
+                                {typeof selectedRoom.guest_count === 'number' ? (
                                   <>
-                                    <View style={styles.roomDropdownDivider} />
-                                    <Text style={styles.roomDropdownGuestText}>{room.guestName}</Text>
+                                    <Image
+                                      source={require('../../../assets/icons/people-icon.png')}
+                                      style={styles.guestCountIcon}
+                                      resizeMode="contain"
+                                    />
+                                    <Text style={styles.guestCountText}>{selectedRoom.guest_count}/2</Text>
                                   </>
                                 ) : null}
                               </View>
-                              {selectedRoom.number === room.number && (
-                                <Text style={styles.roomDropdownCheckmark}>✓</Text>
-                              )}
-                            </TouchableOpacity>
-                          ))}
-                      </ScrollView>
+                            </View>
+                          </View>
+                        </>
+                      ) : null}
                     </View>
-                  </>
+                  </TouchableOpacity>
                 )}
+
+              </View>
+            </>
+          )}
+
+          {/* Public Area Selection */}
+          {selectedLocation === 'publicArea' && currentStep === 1 && (
+            <>
+              <Text style={styles.sectionLabelLight}>Select Public Area</Text>
+              <View style={styles.publicAreasContainer}>
+                {PUBLIC_AREAS.map((area) => (
+                  <TouchableOpacity
+                    key={area}
+                    style={styles.publicAreaItem}
+                    onPress={() => setSelectedPublicArea(area)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.publicAreaContent}>
+                      <Image
+                        source={require('../../../assets/icons/location-pin-icon.png')}
+                        style={styles.publicAreaIcon}
+                        resizeMode="contain"
+                      />
+                      <Text style={styles.publicAreaText}>{area}</Text>
+                    </View>
+                    {selectedPublicArea === area ? (
+                      <Text style={styles.publicAreaCheckmark}>✓</Text>
+                    ) : null}
+                  </TouchableOpacity>
+                ))}
               </View>
             </>
           )}
@@ -1193,7 +1362,8 @@ export default function RegisterLostAndFoundModal({
               {currentStep === 3 ? 'Done' : 'Next'}
             </Text>
           </TouchableOpacity>
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
         {/* Date Picker Modal */}
         <DatePickerModal
@@ -1256,6 +1426,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   header: {
     position: 'relative',
     height: REGISTER_FORM.header.height * scaleX,
@@ -1299,7 +1472,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: (REGISTER_FORM.title.top - REGISTER_FORM.header.height) * scaleX,
     paddingHorizontal: 27 * scaleX,
-    paddingBottom: 50 * scaleX,
+    // Extra space so Notes can scroll above keyboard (iOS + Android)
+    paddingBottom: 240 * scaleX,
   },
   title: {
     fontSize: REGISTER_FORM.title.fontSize * scaleX,
@@ -1429,6 +1603,88 @@ const styles = StyleSheet.create({
     marginBottom: 24 * scaleX, // Relative spacing to next section
     zIndex: 100, // Ensure dropdown appears above other elements
   },
+  // Ticket-like dropdown-in-input
+  searchInputContainer: {
+    width: '100%',
+    maxWidth: REGISTER_FORM.roomNumber.selector.width * scaleX,
+    height: REGISTER_FORM.roomNumber.selector.height * scaleX,
+    borderRadius: REGISTER_FORM.roomNumber.selector.borderRadius * scaleX,
+    borderWidth: REGISTER_FORM.roomNumber.selector.borderWidth,
+    borderColor: REGISTER_FORM.roomNumber.selector.borderColor,
+    backgroundColor: '#ffffff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20 * scaleX,
+  },
+  searchInputText: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300' as any,
+    color: '#111827',
+  },
+  searchInputPlaceholder: {
+    color: '#9ca3af',
+  },
+  dropdownArrowIcon: {
+    width: 14 * scaleX,
+    height: 14 * scaleX,
+    tintColor: '#5a759d',
+    transform: [{ rotate: '180deg' }],
+  },
+  dropdownArrowIconOpen: {
+    transform: [{ rotate: '0deg' }],
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: REGISTER_FORM.roomNumber.selector.height * scaleX + 8 * scaleX,
+    left: 0,
+    right: 0,
+    maxWidth: REGISTER_FORM.roomNumber.selector.width * scaleX,
+    backgroundColor: '#ffffff',
+    borderRadius: 12 * scaleX,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 6,
+    zIndex: 101,
+  },
+  dropdownSearchInput: {
+    paddingHorizontal: 16 * scaleX,
+    paddingVertical: 12 * scaleX,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eef2f7',
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: '#111827',
+  },
+  roomsDropdownList: {
+    maxHeight: 260 * scaleX,
+  },
+  roomCard: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#eef2f7',
+    backgroundColor: '#ffffff',
+  },
+  selectedRoomCard: {
+    width: '100%',
+    maxWidth: REGISTER_FORM.roomNumber.selector.width * scaleX,
+    height: REGISTER_FORM.roomNumber.selector.height * scaleX,
+    borderRadius: REGISTER_FORM.roomNumber.selector.borderRadius * scaleX,
+    borderWidth: 2,
+    borderColor: '#5a759d',
+    backgroundColor: '#f0f4ff',
+    overflow: 'hidden',
+  },
+  roomCardContent: {
+    flexDirection: 'row',
+    minHeight: REGISTER_FORM.roomNumber.selector.height * scaleX,
+    alignItems: 'center',
+  },
   roomSelector: {
     width: '100%',
     maxWidth: REGISTER_FORM.roomNumber.selector.width * scaleX,
@@ -1446,6 +1702,148 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+
+  // Create-ticket-like room card (used inside Lost & Found Location selector)
+  roomNumberSection: {
+    justifyContent: 'center',
+    paddingHorizontal: 18 * scaleX,
+    minWidth: 150 * scaleX,
+  },
+  roomNumberText: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#5a759d',
+  },
+  verticalDivider: {
+    width: 1,
+    height: 54 * scaleX,
+    backgroundColor: '#e5e7eb',
+  },
+  guestInfoSection: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14 * scaleX,
+  },
+  guestImageContainer: {
+    position: 'relative',
+    marginRight: 14 * scaleX,
+  },
+  guestImage: {
+    width: 35 * scaleX,
+    height: 35 * scaleX,
+    borderRadius: 5 * scaleX,
+  },
+  guestImagePlaceholder: {
+    width: 35 * scaleX,
+    height: 35 * scaleX,
+    borderRadius: 5 * scaleX,
+    backgroundColor: '#e5e7eb',
+  },
+  vipBadge: {
+    position: 'absolute',
+    right: -4 * scaleX,
+    bottom: -4 * scaleX,
+    width: 14 * scaleX,
+    height: 14 * scaleX,
+    borderRadius: 7 * scaleX,
+    backgroundColor: '#ff0000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vipBadgeText: {
+    fontSize: 10 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  guestDetails: {
+    flex: 1,
+  },
+  guestNameRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 4 * scaleX,
+  },
+  guestNameText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#000',
+  },
+  vipCodeText: {
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#334866',
+    marginLeft: 6 * scaleX,
+  },
+  guestMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  guestDatesText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000',
+    marginRight: 12 * scaleX,
+    flexShrink: 1,
+  },
+  guestCountIcon: {
+    width: 12 * scaleX,
+    height: 12 * scaleX,
+    marginRight: 4 * scaleX,
+    tintColor: '#666',
+  },
+  guestCountText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000',
+  },
+
+  publicAreasContainer: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12 * scaleX,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: REGISTER_FORM.roomNumber.selector.width * scaleX,
+    marginBottom: 24 * scaleX,
+  },
+  publicAreaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 18 * scaleX,
+    paddingHorizontal: 20 * scaleX,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  publicAreaContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  publicAreaIcon: {
+    width: 16 * scaleX,
+    height: 16 * scaleX,
+    tintColor: '#999',
+    marginRight: 16 * scaleX,
+  },
+  publicAreaText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000',
+  },
+  publicAreaCheckmark: {
+    fontSize: 18 * scaleX,
+    color: '#5a759d',
+    fontWeight: 'bold',
   },
   roomText: {
     fontSize: REGISTER_FORM.roomNumber.roomText.fontSize * scaleX,
@@ -1562,16 +1960,34 @@ const styles = StyleSheet.create({
     color: REGISTER_FORM.roomNumber.roomText.color,
   },
   roomDropdownDivider: {
-    width: 0,
+    width: 1,
     height: 20 * scaleX,
     backgroundColor: REGISTER_FORM.roomNumber.divider.color,
-    marginHorizontal: 20 * scaleX,
+    marginHorizontal: 12 * scaleX,
   },
   roomDropdownGuestText: {
     fontSize: REGISTER_FORM.roomNumber.guestText.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: REGISTER_FORM.roomNumber.guestText.fontWeight as any,
     color: REGISTER_FORM.roomNumber.guestText.color,
+  },
+  roomDropdownGuestNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  roomDropdownGuestImage: {
+    width: 18 * scaleX,
+    height: 18 * scaleX,
+    borderRadius: 4 * scaleX,
+    marginRight: 8 * scaleX,
+  },
+  roomDropdownVipCodeText: {
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#334866',
+    marginLeft: 6 * scaleX,
   },
   roomDropdownCheckmark: {
     fontSize: 18 * scaleX,
