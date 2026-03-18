@@ -9,6 +9,8 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -170,20 +172,29 @@ export default function SelectTicketLocationScreen() {
         <Text style={styles.headerTitle}>Create Ticket</Text>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* AI Create Ticket Button */}
-        <View style={styles.aiButtonSection}>
-          <TouchableOpacity style={styles.aiButton} activeOpacity={0.7}>
-            <Text style={styles.aiButtonText}>Create Ticket</Text>
-            <View style={styles.aiBadge}>
-              <Text style={styles.aiBadgeText}>AI</Text>
-            </View>
-          </TouchableOpacity>
-          <Text style={styles.betaLabel}>BETA</Text>
-          <Text style={styles.aiDescription}>
-            AI detects issues and auto-creates tickets for the right department no manual reporting needed.
-          </Text>
-        </View>
+      <KeyboardAvoidingView
+        style={styles.scrollView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* AI Create Ticket Button */}
+          <View style={styles.aiButtonSection}>
+            <TouchableOpacity style={styles.aiButton} activeOpacity={0.7}>
+              <Text style={styles.aiButtonText}>Create Ticket</Text>
+              <View style={styles.aiBadge}>
+                <Text style={styles.aiBadgeText}>AI</Text>
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.betaLabel}>BETA</Text>
+            <Text style={styles.aiDescription}>
+              AI detects issues and auto-creates tickets for the right department no manual reporting needed.
+            </Text>
+          </View>
 
         {/* Location Section */}
         <Text style={styles.sectionTitle}>Location</Text>
@@ -192,7 +203,13 @@ export default function SelectTicketLocationScreen() {
         <View style={styles.locationToggles}>
           <TouchableOpacity
             style={[styles.toggleButton, locationType === 'room' && styles.toggleButtonActive]}
-            onPress={() => setLocationType('room')}
+            onPress={() => {
+              setLocationType('room');
+              setSelectedRoom(null); // When coming back to Room, show dropdown again
+              setSelectedPublicArea(null);
+              setShowDropdown(false);
+              setSearchQuery('');
+            }}
             activeOpacity={0.7}
           >
             <View style={[styles.checkbox, locationType === 'room' && styles.checkboxActive]}>
@@ -203,7 +220,12 @@ export default function SelectTicketLocationScreen() {
 
           <TouchableOpacity
             style={[styles.toggleButton, locationType === 'publicArea' && styles.toggleButtonActive]}
-            onPress={() => setLocationType('publicArea')}
+            onPress={() => {
+              setLocationType('publicArea');
+              setSelectedRoom(null); // Unchecking Room should return to dropdown state
+              setShowDropdown(false);
+              setSearchQuery('');
+            }}
             activeOpacity={0.7}
           >
             <View style={[styles.checkbox, locationType === 'publicArea' && styles.checkboxActive]}>
@@ -398,7 +420,8 @@ export default function SelectTicketLocationScreen() {
             </View>
           </>
         )}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Continue Button */}
       <TouchableOpacity
@@ -452,7 +475,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24 * scaleX,
-    paddingBottom: 100 * scaleX,
+    // Give extra space for dropdown + keyboard so user can scroll up freely.
+    paddingBottom: 220 * scaleX,
   },
   aiButtonSection: {
     alignItems: 'center',

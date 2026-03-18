@@ -9,7 +9,9 @@ export interface TicketData {
   roomNumber: string;
   category?: string;
   categoryIcon?: any;
+  locationText?: string; // e.g. "Room 201" or "Brasserie"
   dueTime?: string; // e.g., "10 mins"
+  createdAt?: string; // ISO string from Supabase (used for "Due in" timer)
   createdBy: {
     name: string;
     avatar?: any;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, Modal, TouchableOpacity, TouchableWithoutFeedback, Text } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,7 +12,7 @@ import TicketCard from '../components/tickets/TicketCard';
 import EmptyTicketsState from '../components/tickets/EmptyTicketsState';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
-import { TicketTab, TicketData, TicketsScreenData } from '../types/tickets.types';
+import { TicketTab, TicketData, TicketsScreenData, TicketStatus } from '../types/tickets.types';
 import {
   TICKETS_HEADER,
   TICKETS_TABS,
@@ -22,7 +22,9 @@ import {
   scaleX,
 } from '../constants/ticketsStyles';
 import { dashboardService } from '../services/dashboard';
+import { updateTicketStatus } from '../services/tickets';
 import { useAuth } from '../contexts/AuthContext';
+import { typography } from '../theme';
 
 type MainTabsParamList = MainTabsParamListFromApp & {
   Tickets: { initialTab?: TicketTab } | undefined;
@@ -42,19 +44,26 @@ export default function TicketsScreen() {
   const [ticketsData, setTicketsData] = useState<TicketsScreenData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [statusMenuTicket, setStatusMenuTicket] = useState<TicketData | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
-  const loadTickets = useCallback(async () => {
+  const loadTickets = useCallback(async (overrideInitialTab?: TicketTab) => {
     try {
       setLoading(true);
       const data = await dashboardService.getTicketsData();
       setTicketsData(data);
-      if (data.selectedTab) {
+      // If we came here with an explicit initial tab (e.g. after creating a ticket),
+      // prefer that over the stored/dashboard selection.
+      if (overrideInitialTab) {
+        setSelectedTab(overrideInitialTab);
+      } else if (data.selectedTab) {
         setSelectedTab(data.selectedTab);
       }
     } catch (e) {
       console.warn('[TicketsScreen] Failed to load tickets', e);
-      setTicketsData({ selectedTab: 'myTickets', tickets: [] });
-      setSelectedTab('myTickets');
+      const fallbackTab = overrideInitialTab ?? 'myTickets';
+      setTicketsData({ selectedTab: fallbackTab, tickets: [] });
+      setSelectedTab(fallbackTab);
     } finally {
       setLoading(false);
     }
@@ -75,12 +84,10 @@ export default function TicketsScreen() {
       // When navigated with an explicit initialTab (e.g. after creating a ticket),
       // prefer that over the stored selection.
       const params = (route as any).params as { initialTab?: TicketTab } | undefined;
-      if (params?.initialTab) {
-        setSelectedTab(params.initialTab);
-      }
+      const overrideInitialTab = params?.initialTab;
 
       // Refresh tickets whenever Tickets screen gains focus
-      loadTickets();
+      loadTickets(overrideInitialTab);
     }, [route, loadTickets])
   );
 
@@ -135,8 +142,22 @@ export default function TicketsScreen() {
   };
 
   const handleStatusPress = (ticket: TicketData) => {
-    // TODO: Handle status change
-    console.log('Status pressed for ticket:', ticket.id);
+    setStatusMenuTicket(ticket);
+  };
+
+  const handleStatusSelect = async (nextStatus: TicketStatus) => {
+    if (!statusMenuTicket) return;
+    setStatusUpdating(true);
+    try {
+      await updateTicketStatus(statusMenuTicket.id, nextStatus);
+      setStatusMenuTicket(null);
+      // Refresh while keeping the current selected tab.
+      await loadTickets(selectedTab);
+    } catch (e) {
+      console.warn('[TicketsScreen] Failed to update ticket status', e);
+    } finally {
+      setStatusUpdating(false);
+    }
   };
 
   const onRefresh = React.useCallback(() => {
@@ -196,6 +217,35 @@ export default function TicketsScreen() {
         {/* Blur Overlay for content only */}
       </View>
 
+      {/* Status dropdown */}
+      <Modal
+        visible={!!statusMenuTicket}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStatusMenuTicket(null)}
+      >
+        <TouchableWithoutFeedback onPress={() => (statusUpdating ? null : setStatusMenuTicket(null))}>
+          <View style={styles.statusModalOverlay}>
+            <View style={styles.statusDropdown}>
+              <TouchableOpacity
+                style={styles.statusOption}
+                onPress={() => handleStatusSelect('done')}
+                disabled={statusUpdating}
+              >
+                <Text style={[styles.statusOptionText, styles.statusOptionDone]}>Done</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.statusOption}
+                onPress={() => handleStatusSelect('unsolved')}
+                disabled={statusUpdating}
+              >
+                <Text style={[styles.statusOptionText, styles.statusOptionUnsolved]}>Unsolved</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
       {/* Header - Fixed at top */}
       <TicketsHeader
         onBackPress={handleBackPress}
@@ -249,6 +299,36 @@ const styles = StyleSheet.create({
   blurOverlayDarkener: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(200, 200, 200, 0.6)',
+  },
+  statusModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusDropdown: {
+    width: 220 * scaleX,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e3e3e3',
+    borderRadius: 10 * scaleX,
+    paddingVertical: 8 * scaleX,
+  },
+  statusOption: {
+    paddingVertical: 12 * scaleX,
+    paddingHorizontal: 16 * scaleX,
+  },
+  statusOptionText: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  statusOptionDone: {
+    color: '#41d541',
+  },
+  statusOptionUnsolved: {
+    color: '#f92424',
   },
 });
 

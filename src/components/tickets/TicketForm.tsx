@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,31 +9,26 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
-import { useToast } from '../contexts/ToastContext';
-import { typography } from '../theme';
-import type { RootStackParamList } from '../navigation/types';
-import { getUsersByDepartment } from '../services/user';
-import type { User } from '../types';
-import { DEPARTMENT_NAME_TO_ICON } from '../constants/createTicketStyles';
-import TicketStaffSelectorModal from '../components/tickets/TicketStaffSelectorModal';
-import { createTicket } from '../services/tickets';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
+import { useToast } from '../../contexts/ToastContext';
+import { typography } from '../../theme';
+import { getUsersByDepartment } from '../../services/user';
+import type { User } from '../../types';
+import TicketStaffSelectorModal from './TicketStaffSelectorModal';
+import { createTicket } from '../../services/tickets';
+import type { RootStackParamList } from '../../navigation/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
-
-type CreateTicketFormScreenRouteProp = RouteProp<RootStackParamList, 'CreateTicketForm'>;
-type CreateTicketFormScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'CreateTicketForm'
->;
+// Photos grid inside this form uses `paddingHorizontal: 24 * scaleX`, so the
+// available width is `SCREEN_WIDTH - 48 * scaleX`. We force exactly 2 columns.
+const TWO_COL_GAP = 12 * scaleX;
+const PHOTO_GRID_ITEM_SIZE = (SCREEN_WIDTH - 48 * scaleX - TWO_COL_GAP) / 2;
 
 type Priority = 'high' | 'medium' | 'low';
 
@@ -46,29 +41,84 @@ const FREQUENT_CASES = [
 ];
 
 const DEPARTMENTS = [
-  { id: 'Engineering', name: 'Engineering', icon: require('../../assets/icons/engineering.png'), noTint: false },
-  { id: 'HSK Portier', name: 'HSK Portier', icon: require('../../assets/icons/hsk-portier.png'), noTint: true },
-  { id: 'In Room Dining', name: 'In Room Dining', icon: require('../../assets/icons/in-room-dining.png'), noTint: true },
-  { id: 'Laundry', name: 'Laundry', icon: require('../../assets/icons/laundry-icon.png'), noTint: false },
-  { id: 'Concierge', name: 'Concierge', icon: require('../../assets/icons/concierge.png'), noTint: false },
-  { id: 'Reception', name: 'Reception', icon: require('../../assets/icons/reception.png'), noTint: false },
-  { id: 'IT', name: 'IT', icon: require('../../assets/icons/it.png'), noTint: false },
+  { id: 'Engineering', name: 'Engineering', icon: require('../../../assets/icons/engineering.png'), noTint: false },
+  { id: 'HSK Portier', name: 'HSK Portier', icon: require('../../../assets/icons/hsk-portier.png'), noTint: true },
+  { id: 'In Room Dining', name: 'In Room Dining', icon: require('../../../assets/icons/in-room-dining.png'), noTint: true },
+  { id: 'Laundry', name: 'Laundry', icon: require('../../../assets/icons/laundry-icon.png'), noTint: false },
+  { id: 'Concierge', name: 'Concierge', icon: require('../../../assets/icons/concierge.png'), noTint: false },
+  { id: 'Reception', name: 'Reception', icon: require('../../../assets/icons/reception.png'), noTint: false },
+  { id: 'IT', name: 'IT', icon: require('../../../assets/icons/it.png'), noTint: false },
 ];
 
-export default function CreateTicketFormScreen() {
-  const navigation = useNavigation<CreateTicketFormScreenNavigationProp>();
-  const route = useRoute<CreateTicketFormScreenRouteProp>();
-  const paramDepartmentName = route.params?.departmentName ?? 'Engineering';
-  const paramRoomId = route.params?.roomId;
-  const paramRoomNumber = route.params?.roomNumber;
-  const paramIsPublicArea = route.params?.isPublicArea;
-  const paramPublicAreaName = route.params?.publicAreaName;
+interface TicketFormProps {
+  roomNumber: string;
+  roomId?: string;
+  departmentName?: string;
+  onSubmitSuccess?: () => void;
+}
+
+function GradientText({
+  text,
+  textStyle,
+  gradientColors = ['#ff46a3', '#4a91fc'],
+}: {
+  text: string;
+  textStyle: any;
+  gradientColors?: [string, string];
+}) {
+  const [width, setWidth] = useState(0);
+  const gradId = useMemo(() => `grad_${Math.random().toString(16).slice(2)}`, []);
+
+  const fontSize =
+    typeof textStyle?.fontSize === 'number' ? (textStyle.fontSize as number) : 16;
+  const fontFamily = textStyle?.fontFamily;
+  const fontWeight = textStyle?.fontWeight;
+
+  return (
+    <View
+      style={{ alignItems: 'center' }}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+    >
+      {width > 0 ? (
+        <Svg width={width} height={fontSize * 1.15}>
+          <Defs>
+            <SvgLinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor={gradientColors[0]} />
+              <Stop offset="1" stopColor={gradientColors[1]} />
+            </SvgLinearGradient>
+          </Defs>
+          <SvgText
+            x={width / 2}
+            y={fontSize}
+            textAnchor="middle"
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            fontWeight={fontWeight}
+            fill={`url(#${gradId})`}
+          >
+            {text}
+          </SvgText>
+        </Svg>
+      ) : (
+        <Text style={textStyle}>{text}</Text>
+      )}
+    </View>
+  );
+}
+
+export default function TicketForm({
+  roomNumber,
+  roomId,
+  departmentName = 'Engineering',
+  onSubmitSuccess,
+}: TicketFormProps) {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const toast = useToast();
 
   // Form state
   const [ticketName, setTicketName] = useState('');
   const [showFrequentCasesDropdown, setShowFrequentCasesDropdown] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState(paramDepartmentName);
+  const [selectedDepartment, setSelectedDepartment] = useState(departmentName);
   const [assignedStaff, setAssignedStaff] = useState<string[]>([]);
   const [priority, setPriority] = useState<Priority>('high');
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
@@ -78,35 +128,6 @@ export default function CreateTicketFormScreen() {
   const [departmentStaff, setDepartmentStaff] = useState<User[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [rooms, setRooms] = useState<Array<{ id: string; room_number: string }>>([]);
-  const [selectedRoom, setSelectedRoom] = useState<string>(
-    paramRoomNumber ? `Room ${paramRoomNumber}` : paramIsPublicArea ? paramPublicAreaName || 'Public Area' : 'Room 201'
-  );
-  const [activeTab, setActiveTab] = useState<'Overview' | 'Tickets' | 'Checklist' | 'History'>('Tickets');
-
-  // Load rooms
-  useEffect(() => {
-    if (!isSupabaseConfigured) return;
-    let cancelled = false;
-    supabase
-      .from('rooms')
-      .select('id, room_number')
-      .order('room_number')
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          console.warn('Failed to load rooms', error);
-          return;
-        }
-        setRooms(data ?? []);
-        if (data && data.length > 0) {
-          setSelectedRoom(`Room ${data[0].room_number}`);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Load department staff
   useEffect(() => {
@@ -129,10 +150,6 @@ export default function CreateTicketFormScreen() {
       cancelled = true;
     };
   }, [selectedDepartment]);
-
-  const handleBackPress = () => {
-    navigation.goBack();
-  };
 
   const handleFrequentCaseSelect = (caseItem: string) => {
     setTicketName(caseItem);
@@ -185,19 +202,29 @@ export default function CreateTicketFormScreen() {
     try {
       const combinedDescription = description;
       const assignedToId = assignedStaff.length > 0 ? assignedStaff[0] : null;
-      const locationType = paramIsPublicArea ? 'publicArea' : 'room';
 
       await createTicket({
         title: ticketName,
         description: combinedDescription,
         priority: priority === 'high' ? 'urgent' : priority === 'medium' ? 'medium' : 'notUrgent',
         assignedToId,
-        roomId: paramIsPublicArea ? null : (paramRoomId ?? null),
-        locationType,
-        publicAreaName: paramIsPublicArea ? (paramPublicAreaName ?? null) : null,
+        roomId: roomId ?? null,
+        locationType: 'room',
       });
 
       toast.show('Ticket created successfully', { type: 'success', title: 'Success' });
+      
+      // Reset form
+      setTicketName('');
+      setDescription('');
+      setPictures([]);
+      setAssignedStaff([]);
+      setPriority('high');
+      
+      // Call success callback
+      onSubmitSuccess?.();
+
+      // Redirect to All tickets tab
       navigation.navigate('Main', {
         screen: 'Tickets',
         params: { initialTab: 'all' },
@@ -211,54 +238,9 @@ export default function CreateTicketFormScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header with Room Info */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBackPress} activeOpacity={0.7}>
-          <Image
-            source={require('../../assets/icons/back-arrow.png')}
-            style={styles.backArrow}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.roomNumber}>{selectedRoom}</Text>
-          <Text style={styles.ticketCode}>ST2K-1.4</Text>
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>✓ Cleaned</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        {(['Overview', 'Tickets', 'Checklist', 'History'] as const).map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={styles.tab}
-            onPress={() => setActiveTab(tab)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
-            {activeTab === tab && <View style={styles.tabIndicator} />}
-          </TouchableOpacity>
-        ))}
-      </View>
-      <View style={styles.tabDivider} />
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-        {/* Create a ticket heading */}
-        <Text style={styles.heading}>Create a ticket</Text>
+    <View style={styles.formContainer}>
+      {/* Create a ticket heading */}
+      <Text style={styles.heading}>Create a ticket</Text>
         <Text style={styles.selectDepartmentLabel}>Select Department</Text>
 
         {/* Department Icons Row */}
@@ -314,7 +296,7 @@ export default function CreateTicketFormScreen() {
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Image
-                  source={require('../../assets/icons/dropdown-arrow.png')}
+                  source={require('../../../assets/icons/dropdown-arrow.png')}
                   style={[styles.dropdownArrow, showFrequentCasesDropdown && styles.dropdownArrowOpen]}
                   resizeMode="contain"
                 />
@@ -346,51 +328,63 @@ export default function CreateTicketFormScreen() {
 
         {/* Tag Staff */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tag Staff</Text>
-          <Text style={styles.sectionSubtitle}>Tag people to the ticket</Text>
-          <View style={styles.tagStaffContainer}>
-            <View style={styles.taggedStaffRow}>
-              {assignedStaff.length > 0 ? (
-                <>
-                  {departmentStaff
-                    .filter((staff) => assignedStaff.includes(staff.id))
-                    .map((staff, index) => (
-                      <View key={staff.id} style={[styles.staffAvatarItem, { marginLeft: index > 0 ? 16 : 0 }]}>
-                        <View style={styles.staffAvatarCircle}>
-                          {staff.avatar ? (
-                            <Image source={{ uri: staff.avatar }} style={styles.avatarImage} />
-                          ) : (
-                            <View style={styles.avatarPlaceholder}>
-                              <Text style={styles.avatarInitials}>
-                                {staff.name
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .join('')
-                                  .slice(0, 2)
-                                  .toUpperCase()}
-                              </Text>
-                            </View>
-                          )}
+          <View style={styles.tagStaffFrame}>
+            <View style={styles.tagStaffHeader}>
+              <Text style={styles.sectionTitle}>Tag Staff</Text>
+              <Text style={styles.sectionSubtitle}>Tag people to the ticket</Text>
+            </View>
+            <View style={styles.tagStaffDivider} />
+            <View style={styles.tagStaffContainer}>
+              <View style={styles.taggedStaffRow}>
+                {assignedStaff.length > 0 ? (
+                  <>
+                    {departmentStaff
+                      .filter((staff) => assignedStaff.includes(staff.id))
+                      .map((staff, index) => (
+                        <View
+                          key={staff.id}
+                          style={[styles.staffAvatarItem, { marginLeft: index > 0 ? 16 : 0 }]}
+                        >
+                          <View style={styles.staffAvatarCircle}>
+                            {staff.avatar ? (
+                              <Image source={{ uri: staff.avatar }} style={styles.avatarImage} />
+                            ) : (
+                              <View style={styles.avatarPlaceholder}>
+                                <Text style={styles.avatarInitials}>
+                                  {staff.name
+                                    .split(' ')
+                                    .map((n) => n[0])
+                                    .join('')
+                                    .slice(0, 2)
+                                    .toUpperCase()}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text style={styles.staffName}>{staff.name}</Text>
                         </View>
-                        <Text style={styles.staffName}>{staff.name}</Text>
-                      </View>
-                    ))}
-                </>
-              ) : null}
-              <TouchableOpacity
-                style={[styles.addStaffButton, assignedStaff.length === 0 && { marginLeft: 0 }]}
-                onPress={() => setShowStaffModal(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.addStaffText}>+</Text>
-              </TouchableOpacity>
+                      ))}
+                  </>
+                ) : null}
+
+                <TouchableOpacity
+                  style={[
+                    styles.addStaffButton,
+                    { marginLeft: assignedStaff.length > 0 ? 16 * scaleX : 0 },
+                  ]}
+                  onPress={() => setShowStaffModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.addStaffText}>+</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
 
         {/* Priority */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Priority</Text>
+          <Text style={styles.priorityTitle}>Priority</Text>
           <TouchableOpacity
             style={styles.prioritySelectContainer}
             onPress={() => setShowPriorityDropdown(!showPriorityDropdown)}
@@ -410,7 +404,7 @@ export default function CreateTicketFormScreen() {
               </Text>
             </View>
             <Image
-              source={require('../../assets/icons/dropdown-arrow.png')}
+              source={require('../../../assets/icons/dropdown-arrow.png')}
               style={[styles.dropdownArrow, showPriorityDropdown && styles.dropdownArrowOpen]}
               resizeMode="contain"
             />
@@ -470,8 +464,8 @@ export default function CreateTicketFormScreen() {
         <View style={styles.section}>
           {pictures.length === 0 ? (
             <TouchableOpacity style={styles.addPhotoContainer} onPress={handleAddPicture} activeOpacity={0.7}>
-              <Image source={require('../../assets/icons/add-photos.png')} style={styles.addPhotoIcon} resizeMode="contain" />
-              <Text style={styles.addPhotoTitle}>Add Photo</Text>
+              <Image source={require('../../../assets/icons/add-photos.png')} style={styles.addPhotoIcon} resizeMode="contain" />
+              <GradientText text="Add Photo" textStyle={styles.addPhotoTitle} />
               <Text style={styles.addPhotoSubtitle}>Add photos of the item and our AI will do the rest</Text>
             </TouchableOpacity>
           ) : (
@@ -489,8 +483,8 @@ export default function CreateTicketFormScreen() {
                 </View>
               ))}
               <TouchableOpacity style={styles.addPhotoGridItem} onPress={handleAddPicture} activeOpacity={0.7}>
-                <Image source={require('../../assets/icons/add-photos.png')} style={styles.addPhotoGridIcon} resizeMode="contain" />
-                <Text style={styles.addPhotoGridTitle}>Add Photo</Text>
+                <Image source={require('../../../assets/icons/add-photos.png')} style={styles.addPhotoGridIcon} resizeMode="contain" />
+                <GradientText text="Add Photo" textStyle={styles.addPhotoGridTitle} />
               </TouchableOpacity>
             </View>
           )}
@@ -531,8 +525,6 @@ export default function CreateTicketFormScreen() {
             <Text style={styles.submitButtonText}>Submit Ticket</Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
-      </KeyboardAvoidingView>
 
       {/* Staff Selector Modal */}
       <TicketStaffSelectorModal
@@ -543,7 +535,7 @@ export default function CreateTicketFormScreen() {
         onSelect={(staffIds) => {
           setAssignedStaff(staffIds);
         }}
-        departmentName={paramDepartmentName || 'Department'}
+        departmentName={departmentName || 'Department'}
         loading={loadingStaff}
       />
     </View>
@@ -551,99 +543,9 @@ export default function CreateTicketFormScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  header: {
-    height: 232 * scaleX,
-    backgroundColor: '#4a91fc',
-    paddingTop: 50 * scaleX,
+  formContainer: {
     paddingHorizontal: 24 * scaleX,
-  },
-  backButton: {
-    width: 40 * scaleX,
-    height: 40 * scaleX,
-    justifyContent: 'center',
-  },
-  backArrow: {
-    width: 28 * scaleX,
-    height: 28 * scaleX,
-    tintColor: '#ffffff',
-    transform: [{ rotate: '270deg' }],
-  },
-  headerContent: {
-    alignItems: 'center',
-    marginTop: 8 * scaleX,
-  },
-  roomNumber: {
-    fontSize: 24 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 4 * scaleX,
-  },
-  ticketCode: {
-    fontSize: 17 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '300',
-    color: '#ffffff',
-    marginBottom: 12 * scaleX,
-  },
-  statusBadge: {
-    paddingHorizontal: 16 * scaleX,
-    paddingVertical: 8 * scaleX,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20 * scaleX,
-  },
-  statusText: {
-    fontSize: 18 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 20 * scaleX,
-    height: 52 * scaleX,
-    alignItems: 'center',
-  },
-  tab: {
-    marginRight: 32 * scaleX,
-    height: '100%',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  tabText: {
-    fontSize: 16 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '300',
-    color: '#5a759d',
-  },
-  tabTextActive: {
-    fontWeight: '700',
-  },
-  tabIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 4 * scaleX,
-    backgroundColor: '#5a759d',
-  },
-  tabDivider: {
-    height: 1,
-    backgroundColor: '#e3e3e3',
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 24 * scaleX,
+    paddingTop: 24 * scaleX,
     paddingBottom: 100 * scaleX,
   },
   heading: {
@@ -651,46 +553,48 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700',
     color: '#607aa1',
-    marginTop: 24 * scaleX,
-    marginBottom: 8 * scaleX,
+    marginBottom: 24 * scaleX,
   },
   selectDepartmentLabel: {
     fontSize: 14 * scaleX,
-    fontFamily: 'Inter',
+    fontFamily: typography.fontFamily.primary,
     fontWeight: '300',
-    color: '#000000',
+    color: '#5a759d',
     marginBottom: 16 * scaleX,
   },
   departmentScrollView: {
-    marginBottom: 32 * scaleX,
+    marginBottom: 24 * scaleX,
   },
   departmentIconsContainer: {
     flexDirection: 'row',
-    paddingRight: 24 * scaleX,
+    paddingVertical: 8 * scaleX,
   },
   departmentItem: {
     alignItems: 'center',
     marginRight: 24 * scaleX,
   },
   departmentIconContainer: {
-    width: 55.482 * scaleX,
-    height: 55.482 * scaleX,
-    borderRadius: 37 * scaleX,
-    backgroundColor: '#ffebeb',
+    width: 56 * scaleX,
+    height: 56 * scaleX,
+    borderRadius: 28 * scaleX,
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#e3e3e3',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8 * scaleX,
   },
   departmentIconSelected: {
-    backgroundColor: '#ffebeb',
+    borderColor: '#F92424',
+    backgroundColor: '#FEE8EC',
   },
   departmentIcon: {
-    width: 24 * scaleX,
-    height: 24 * scaleX,
+    width: 32 * scaleX,
+    height: 32 * scaleX,
   },
   departmentLabel: {
     fontSize: 14 * scaleX,
-    fontFamily: 'Inter',
+    fontFamily: typography.fontFamily.primary,
     fontWeight: '300',
     color: '#000000',
     textAlign: 'center',
@@ -698,17 +602,17 @@ const styles = StyleSheet.create({
   },
   departmentLabelSelected: {
     fontWeight: '600',
-    color: '#f92424',
+    color: '#F92424',
   },
   section: {
-    marginBottom: 32 * scaleX,
+    marginBottom: 24 * scaleX,
   },
   sectionTitle: {
     fontSize: 20 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700',
     color: '#607aa1',
-    marginBottom: 12 * scaleX,
+    marginBottom: 8 * scaleX,
   },
   sectionSubtitle: {
     fontSize: 12 * scaleX,
@@ -726,43 +630,50 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ff4dd8',
     borderRadius: 8 * scaleX,
-    height: 68 * scaleX,
     paddingHorizontal: 16 * scaleX,
+    paddingVertical: 12 * scaleX,
+    backgroundColor: '#ffffff',
   },
   textInput: {
     flex: 1,
     fontSize: 16 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    color: '#5a759d',
+    fontWeight: '400',
+    color: '#1e1e1e',
   },
   dropdownArrow: {
-    width: 14 * scaleX,
-    height: 11 * scaleX,
+    width: 16 * scaleX,
+    height: 16 * scaleX,
     tintColor: '#5a759d',
   },
   dropdownArrowOpen: {
     transform: [{ rotate: '180deg' }],
   },
   frequentCasesDropdown: {
-    marginTop: 8 * scaleX,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8 * scaleX,
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
     backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e3e3e3',
+    borderRadius: 8 * scaleX,
+    marginTop: 4 * scaleX,
+    paddingVertical: 8 * scaleX,
+    zIndex: 1000,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 4,
   },
   frequentCasesTitle: {
     fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700',
-    color: '#607aa1',
+    color: '#000000',
     paddingHorizontal: 16 * scaleX,
-    paddingTop: 12 * scaleX,
-    paddingBottom: 8 * scaleX,
+    paddingVertical: 8 * scaleX,
   },
   dropdownItem: {
     flexDirection: 'row',
@@ -770,59 +681,51 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16 * scaleX,
     paddingVertical: 12 * scaleX,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
   },
   dropdownItemText: {
     fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '300',
     color: '#000000',
+    flex: 1,
   },
   dropdownCheckmark: {
-    fontSize: 14 * scaleX,
-    color: '#10b981',
-    fontWeight: 'bold',
+    fontSize: 18 * scaleX,
+    color: '#5a759d',
+    fontWeight: '700',
   },
   tagStaffContainer: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8 * scaleX,
-    padding: 16 * scaleX,
-    minHeight: 100 * scaleX,
+    paddingVertical: 12 * scaleX,
   },
   taggedStaffRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     flexWrap: 'wrap',
   },
   staffAvatarItem: {
     alignItems: 'center',
-    marginBottom: 8 * scaleX,
   },
   staffAvatarCircle: {
-    width: 30 * scaleX,
-    height: 30 * scaleX,
-    borderRadius: 15 * scaleX,
+    width: 48 * scaleX,
+    height: 48 * scaleX,
+    borderRadius: 24 * scaleX,
+    overflow: 'hidden',
     marginBottom: 4 * scaleX,
   },
   avatarImage: {
-    width: 30 * scaleX,
-    height: 30 * scaleX,
-    borderRadius: 15 * scaleX,
+    width: '100%',
+    height: '100%',
   },
   avatarPlaceholder: {
-    width: 30 * scaleX,
-    height: 30 * scaleX,
-    borderRadius: 15 * scaleX,
+    width: '100%',
+    height: '100%',
     backgroundColor: '#5a759d',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarInitials: {
-    fontSize: 12 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '600',
+    fontSize: 16 * scaleX,
+    fontWeight: '700',
     color: '#ffffff',
   },
   staffName: {
@@ -831,32 +734,50 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     color: '#5a759d',
     textAlign: 'center',
-    maxWidth: 80 * scaleX,
   },
   addStaffButton: {
-    width: 53 * scaleX,
-    height: 49 * scaleX,
-    borderRadius: 41 * scaleX,
-    backgroundColor: '#f1f6fc',
+    width: 48 * scaleX,
+    height: 48 * scaleX,
+    borderRadius: 24 * scaleX,
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#5a759d',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 16 * scaleX,
+  },
+  tagStaffFrame: {
+    borderWidth: 1,
+    borderColor: '#e3e3e3',
+    backgroundColor: '#ffffff',
+    borderRadius: 8 * scaleX,
+    paddingHorizontal: 16 * scaleX,
+    paddingTop: 14 * scaleX,
+    paddingBottom: 8 * scaleX,
+  },
+  tagStaffHeader: {
+    // Keep title/subtitle inside the frame (Figma shows header + divider)
+  },
+  tagStaffDivider: {
+    height: 1 * scaleX,
+    backgroundColor: '#e3e3e3',
+    marginTop: 10 * scaleX,
+    marginBottom: 10 * scaleX,
   },
   addStaffText: {
-    fontSize: 29 * scaleX,
-    fontFamily: typography.fontFamily.primary,
+    fontSize: 24 * scaleX,
     color: '#5a759d',
+    fontWeight: '300',
   },
   prioritySelectContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    height: 68 * scaleX,
     borderWidth: 1,
     borderColor: '#ff4dd8',
     borderRadius: 8 * scaleX,
     paddingHorizontal: 16 * scaleX,
-    backgroundColor: '#fff',
+    paddingVertical: 12 * scaleX,
+    backgroundColor: '#ffffff',
   },
   priorityContent: {
     flexDirection: 'row',
@@ -865,55 +786,59 @@ const styles = StyleSheet.create({
   priorityIcon: {
     fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: 'bold',
-    marginRight: 16 * scaleX,
+    fontWeight: '700',
+    marginRight: 12 * scaleX,
   },
   priorityIconHigh: {
     color: '#F92424',
   },
   priorityIconMedium: {
-    color: '#F0BE1B',
+    color: '#ffc107',
   },
   priorityIconLow: {
-    color: '#D9D9D9',
+    color: '#999999',
   },
   priorityLabel: {
     fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
     color: '#000000',
   },
   priorityDropdown: {
-    marginTop: 8 * scaleX,
+    marginTop: 4 * scaleX,
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#e3e3e3',
     borderRadius: 8 * scaleX,
-    backgroundColor: '#fff',
-    overflow: 'hidden',
+    paddingVertical: 8 * scaleX,
   },
   addPhotoContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 32 * scaleX,
-    paddingHorizontal: 16 * scaleX,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8 * scaleX,
+    paddingVertical: 48 * scaleX,
+    borderWidth: 2,
+    borderColor: '#e3e3e3',
+    borderRadius: 12 * scaleX,
     borderStyle: 'dashed',
   },
   addPhotoIcon: {
-    width: 60 * scaleX,
-    height: 60 * scaleX,
-    marginBottom: 12 * scaleX,
+    width: 48 * scaleX,
+    height: 48 * scaleX,
+    marginBottom: 16 * scaleX,
   },
   addPhotoTitle: {
     fontSize: 19 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700',
-    background: 'linear-gradient(to right, #ff46a3, #4a91fc)',
-    backgroundClip: 'text',
     color: '#ff46a3',
     marginBottom: 8 * scaleX,
-    textAlign: 'center',
+  },
+  priorityTitle: {
+    fontSize: 13 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '400',
+    color: '#5a759d',
+    marginBottom: 8 * scaleX,
   },
   addPhotoSubtitle: {
     fontSize: 13 * scaleX,
@@ -921,7 +846,7 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     color: '#000000',
     textAlign: 'center',
-    maxWidth: 160 * scaleX,
+    maxWidth: 280 * scaleX,
   },
   photosGrid: {
     flexDirection: 'row',
@@ -929,34 +854,11 @@ const styles = StyleSheet.create({
     gap: 12 * scaleX,
   },
   photoItem: {
-    width: (SCREEN_WIDTH - 60 * scaleX) / 2,
-    height: 120 * scaleX,
+    width: PHOTO_GRID_ITEM_SIZE,
+    height: PHOTO_GRID_ITEM_SIZE,
     borderRadius: 8 * scaleX,
     overflow: 'hidden',
     position: 'relative',
-  },
-  addPhotoGridItem: {
-    width: (SCREEN_WIDTH - 60 * scaleX) / 2,
-    height: 120 * scaleX,
-    borderRadius: 8 * scaleX,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  addPhotoGridIcon: {
-    width: 40 * scaleX,
-    height: 40 * scaleX,
-    marginBottom: 8 * scaleX,
-  },
-  addPhotoGridTitle: {
-    fontSize: 14 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '700',
-    color: '#ff46a3',
-    textAlign: 'center',
   },
   photoImage: {
     width: '100%',
@@ -964,8 +866,8 @@ const styles = StyleSheet.create({
   },
   removePhotoButton: {
     position: 'absolute',
-    top: 8 * scaleX,
-    right: 8 * scaleX,
+    top: 4 * scaleX,
+    right: 4 * scaleX,
     width: 24 * scaleX,
     height: 24 * scaleX,
     borderRadius: 12 * scaleX,
@@ -976,51 +878,68 @@ const styles = StyleSheet.create({
   removePhotoText: {
     color: '#ffffff',
     fontSize: 18 * scaleX,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
-  descriptionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12 * scaleX,
-  },
-  descriptionAIBadge: {
-    width: 30 * scaleX,
-    height: 30 * scaleX,
-    borderRadius: 15 * scaleX,
-    backgroundColor: '#ffffff',
+  addPhotoGridItem: {
+    width: PHOTO_GRID_ITEM_SIZE,
+    height: PHOTO_GRID_ITEM_SIZE,
+    borderRadius: 8 * scaleX,
     borderWidth: 2,
-    borderColor: '#e5e7eb',
+    borderColor: '#e3e3e3',
+    borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8 * scaleX,
   },
-  descriptionAIText: {
+  addPhotoGridIcon: {
+    width: 32 * scaleX,
+    height: 32 * scaleX,
+    marginBottom: 4 * scaleX,
+  },
+  addPhotoGridTitle: {
     fontSize: 12 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700',
     color: '#ff46a3',
   },
+  descriptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8 * scaleX,
+  },
+  descriptionAIBadge: {
+    marginLeft: 8 * scaleX,
+    paddingHorizontal: 8 * scaleX,
+    paddingVertical: 2 * scaleX,
+    backgroundColor: '#5a759d',
+    borderRadius: 4 * scaleX,
+  },
+  descriptionAIText: {
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
   descriptionContainer: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#e3e3e3',
     borderRadius: 8 * scaleX,
-    padding: 16 * scaleX,
-    minHeight: 120 * scaleX,
+    backgroundColor: '#ffffff',
   },
   descriptionInput: {
     fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '300',
     color: '#000000',
-    minHeight: 80 * scaleX,
+    paddingHorizontal: 16 * scaleX,
+    paddingVertical: 12 * scaleX,
+    minHeight: 100 * scaleX,
   },
   submitButton: {
-    height: 70 * scaleX,
     backgroundColor: '#5a759d',
+    paddingVertical: 16 * scaleX,
     borderRadius: 8 * scaleX,
-    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 32 * scaleX,
+    marginTop: 16 * scaleX,
   },
   submitButtonDisabled: {
     opacity: 0.6,
@@ -1028,7 +947,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 18 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: '400',
+    fontWeight: '700',
     color: '#ffffff',
   },
 });
