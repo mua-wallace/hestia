@@ -19,11 +19,13 @@ import { useMessageModal } from '../../contexts/MessageModalContext';
 import { typography } from '../../theme';
 import { REGISTER_FORM, scaleX, LOST_AND_FOUND_COLORS } from '../../constants/lostAndFoundStyles';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { fetchStaffFromSupabase } from '../../services/staff';
 import DatePickerModal from './DatePickerModal';
 import TimePickerModal from './TimePickerModal';
 import StaffSelectorModal from './StaffSelectorModal';
 import StatusDropdown, { StatusOption } from './StatusDropdown';
 import StoredLocationDropdown, { StoredLocationOption } from './StoredLocationDropdown';
+import type { StaffMember } from '../../types/staff.types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TWO_COL_GAP = 12 * scaleX;
@@ -174,10 +176,11 @@ export default function RegisterLostAndFoundModal({
   const [showRegisteredByModal, setShowRegisteredByModal] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showStoredLocationDropdown, setShowStoredLocationDropdown] = useState(false);
-  const [foundedBy, setFoundedBy] = useState<string>('2'); // Default to Stella Kitou
-  const [registeredBy, setRegisteredBy] = useState<string>('2'); // Default to Stella Kitou
+  const [foundedBy, setFoundedBy] = useState<string>(''); 
+  const [registeredBy, setRegisteredBy] = useState<string>('');
   const [status, setStatus] = useState<StatusOption>('stored');
   const [storedLocation, setStoredLocation] = useState<StoredLocationOption>('hskOffice');
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   
   // Pictures state
   const [pictures, setPictures] = useState<string[]>([]);
@@ -204,6 +207,25 @@ export default function RegisterLostAndFoundModal({
       setNotes('');
     }
   }, [visible]);
+
+  // Load staff from Supabase when available (used for Founded by / Registered by)
+  useEffect(() => {
+    let cancelled = false;
+    fetchStaffFromSupabase()
+      .then((rows) => {
+        if (cancelled) return;
+        setStaff(rows);
+        if (rows.length > 0) {
+          // Default to current user if known; otherwise first staff
+          setFoundedBy((prev) => prev || rows[0].id);
+          setRegisteredBy((prev) => prev || rows[0].id);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Load rooms from Supabase for Location dropdown when configured
   useEffect(() => {
@@ -455,37 +477,14 @@ export default function RegisterLostAndFoundModal({
     }
   };
 
-  // Get staff member name by ID
-  const getStaffName = (staffId: string): string => {
-    const staffMap: { [key: string]: string } = {
-      '1': 'Etleva Hoxha',
-      '2': 'Stella Kitou',
-      '3': 'Zoe Tsakeri',
-      '4': 'Felix F',
-    };
-    return staffMap[staffId] || 'Unknown';
-  };
+  const getStaffName = (staffId: string): string =>
+    staff.find((s) => s.id === staffId)?.name ?? 'Unknown';
 
-  // Get staff department by ID
-  const getStaffDepartment = (staffId: string): string => {
-    const departmentMap: { [key: string]: string } = {
-      '1': 'HSK',
-      '2': 'HSK',
-      '3': 'HSK',
-      '4': 'F&B',
-    };
-    return departmentMap[staffId] || 'HSK';
-  };
+  const getStaffDepartment = (staffId: string): string =>
+    staff.find((s) => s.id === staffId)?.department ?? 'HSK';
 
-  // Get staff avatar by ID
-  const getStaffAvatar = (staffId: string) => {
-    const avatarMap: { [key: string]: any } = {
-      '1': require('../../../assets/images/Etleva_Hoxha.png'),
-      '2': require('../../../assets/images/Stella_Kitou.png'),
-      '4': require('../../../assets/images/Felix_F.png'),
-    };
-    return avatarMap[staffId];
-  };
+  const getStaffAvatar = (staffId: string) =>
+    staff.find((s) => s.id === staffId)?.avatar;
 
   // Get first letter for initial
   const getInitial = (name: string): string => {
@@ -1466,6 +1465,7 @@ export default function RegisterLostAndFoundModal({
           onSelect={setFoundedBy}
           selectedStaffId={foundedBy}
           title="Founded by"
+          staff={staff}
           showMeOption={true}
           currentUserId="1"
           inputFieldPosition={foundedByFieldPosition}
@@ -1476,6 +1476,7 @@ export default function RegisterLostAndFoundModal({
           onSelect={setRegisteredBy}
           selectedStaffId={registeredBy}
           title="Registered by"
+          staff={staff}
           showMeOption={false}
           inputFieldPosition={registeredByFieldPosition}
         />
