@@ -172,9 +172,20 @@ export default function LostAndFoundScreen() {
     let trackingNumberFromDb: string = data.trackingNumber ?? '';
     const firstImageUri: string | undefined = data.itemImage;
 
+    // Close the register modal first; then show success.
+    // iOS can drop a second Modal if it’s shown while another Modal is dismissing.
+    setSuccessData({
+      trackingNumber: trackingNumberFromDb,
+      itemImage: data.itemImage,
+      itemData: data.itemData,
+    });
+    setShowRegisterModal(false);
+    setTimeout(() => setShowSuccessModal(true), 250);
+
     try {
       if (isSupabaseConfigured) {
         const itemData = data.itemData ?? {};
+        const title: string = itemData.title ?? '';
         const notes: string = itemData.notes ?? '';
         const status: string = itemData.status ?? 'stored';
         const storedLocation: string | null = itemData.storedLocation ?? null;
@@ -206,14 +217,16 @@ export default function LostAndFoundScreen() {
               ? selectedPublicArea
               : 'Public Area';
 
-        // Derive a simple item_name from notes (fallback to generic)
+        // Use Title when provided; fallback to deriving from notes
         const itemName =
+          title.trim() ||
           (notes || '')
             .split(/[.!]/)[0]
             .trim()
             .split(' ')
             .slice(0, 4)
-            .join(' ') || 'Lost item';
+            .join(' ') ||
+          'Lost item';
 
         // Upload first image to Supabase storage (lost-and-found bucket), if present.
         // Fallback: if upload/storage fails, still use the local URI so the card shows an image.
@@ -298,13 +311,11 @@ export default function LostAndFoundScreen() {
       console.warn('[LostAndFoundScreen] Failed to persist lost & found item', e);
     }
 
-    setSuccessData({
+    // Update the success screen with the final tracking number, if we got one.
+    setSuccessData((prev) => ({
+      ...(prev ?? { itemData: data.itemData, itemImage: data.itemImage, trackingNumber: '' }),
       trackingNumber: trackingNumberFromDb,
-      itemImage: data.itemImage,
-      itemData: data.itemData,
-    });
-    setShowRegisterModal(false);
-    setShowSuccessModal(true);
+    }));
   };
 
   const handleCloseSuccessModal = () => {

@@ -9,6 +9,7 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -25,10 +26,7 @@ import type { RootStackParamList } from '../../navigation/types';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
-// Photos grid inside this form uses `paddingHorizontal: 24 * scaleX`, so the
-// available width is `SCREEN_WIDTH - 48 * scaleX`. We force exactly 2 columns.
 const TWO_COL_GAP = 12 * scaleX;
-const PHOTO_GRID_ITEM_SIZE = (SCREEN_WIDTH - 48 * scaleX - TWO_COL_GAP) / 2;
 
 type Priority = 'high' | 'medium' | 'low';
 
@@ -125,6 +123,7 @@ export default function TicketForm({
   const [priority, setPriority] = useState<Priority>('high');
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [pictures, setPictures] = useState<string[]>([]);
+  const [photoGridWidth, setPhotoGridWidth] = useState<number | null>(null);
   const [description, setDescription] = useState('');
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [departmentStaff, setDepartmentStaff] = useState<User[]>([]);
@@ -182,6 +181,13 @@ export default function TicketForm({
       toast.show('Failed to add photo. Please try again.', { type: 'error' });
     }
   };
+
+  const photoItemSize = useMemo(() => {
+    // Use measured width to guarantee 2 columns on iOS/Android even when the form
+    // is rendered in a narrower container (e.g. inside Room Details).
+    const available = photoGridWidth && photoGridWidth > 0 ? photoGridWidth : SCREEN_WIDTH - 48 * scaleX;
+    return (available - TWO_COL_GAP) / 2;
+  }, [photoGridWidth]);
 
   const handleRemovePicture = (index: number) => {
     setPictures((prev) => prev.filter((_, i) => i !== index));
@@ -471,23 +477,51 @@ export default function TicketForm({
               <Text style={styles.addPhotoSubtitle}>Add photos of the item and our AI will do the rest</Text>
             </TouchableOpacity>
           ) : (
-            <View style={styles.photosGrid}>
-              {pictures.map((uri, index) => (
-                <View key={index} style={styles.photoItem}>
-                  <Image source={{ uri }} style={styles.photoImage} />
-                  <TouchableOpacity
-                    style={styles.removePhotoButton}
-                    onPress={() => handleRemovePicture(index)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.removePhotoText}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-              <TouchableOpacity style={styles.addPhotoGridItem} onPress={handleAddPicture} activeOpacity={0.7}>
-                <Image source={require('../../../assets/icons/add-photos.png')} style={styles.addPhotoGridIcon} resizeMode="contain" />
-                <GradientText text="Add Photo" textStyle={styles.addPhotoGridTitle} />
-              </TouchableOpacity>
+            <View
+              style={styles.photosGridContainer}
+              onLayout={(e) => setPhotoGridWidth(e.nativeEvent.layout.width)}
+            >
+              <FlatList
+                data={[...pictures, '__ADD__'] as const}
+                keyExtractor={(item, index) =>
+                  item === '__ADD__' ? '__ADD__' : `${item}-${index}`
+                }
+                numColumns={2}
+                scrollEnabled={false}
+                showsVerticalScrollIndicator={false}
+                columnWrapperStyle={styles.photosGridRow}
+                renderItem={({ item, index }) => {
+                  if (item === '__ADD__') {
+                    return (
+                      <TouchableOpacity
+                        style={[styles.addPhotoGridItem, { width: photoItemSize, height: photoItemSize }]}
+                        onPress={handleAddPicture}
+                        activeOpacity={0.7}
+                      >
+                        <Image
+                          source={require('../../../assets/icons/add-photos.png')}
+                          style={styles.addPhotoGridIcon}
+                          resizeMode="contain"
+                        />
+                        <GradientText text="Add Photo" textStyle={styles.addPhotoGridTitle} />
+                      </TouchableOpacity>
+                    );
+                  }
+
+                  return (
+                    <View style={[styles.photoItem, { width: photoItemSize, height: photoItemSize }]}>
+                      <Image source={{ uri: item }} style={styles.photoImage} />
+                      <TouchableOpacity
+                        style={styles.removePhotoButton}
+                        onPress={() => handleRemovePicture(index)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.removePhotoText}>×</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                }}
+              />
             </View>
           )}
         </View>
@@ -855,14 +889,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 280 * scaleX,
   },
-  photosGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12 * scaleX,
+  photosGridContainer: {
+    width: '100%',
+  },
+  photosGridRow: {
+    justifyContent: 'space-between',
+    marginBottom: TWO_COL_GAP,
   },
   photoItem: {
-    width: PHOTO_GRID_ITEM_SIZE,
-    height: PHOTO_GRID_ITEM_SIZE,
     borderRadius: 8 * scaleX,
     overflow: 'hidden',
     position: 'relative',
@@ -888,8 +922,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   addPhotoGridItem: {
-    width: PHOTO_GRID_ITEM_SIZE,
-    height: PHOTO_GRID_ITEM_SIZE,
     borderRadius: 8 * scaleX,
     borderWidth: 2,
     borderColor: '#e3e3e3',

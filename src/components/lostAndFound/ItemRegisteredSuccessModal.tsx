@@ -211,13 +211,6 @@ export default function ItemRegisteredSuccessModal({
           {/* Item Registered Text */}
           <Text style={styles.itemRegisteredText}>Item Registered</Text>
 
-          {/* Item Image (first uploaded image, if any) */}
-          {itemImage ? (
-            <View style={styles.itemImageContainer}>
-              <Image source={{ uri: itemImage }} style={styles.itemImageStyle} />
-            </View>
-          ) : null}
-
           {/* Tracking Number Label */}
           <Text style={styles.trackingNumberLabel}>Tracking Number</Text>
 
