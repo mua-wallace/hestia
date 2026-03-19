@@ -19,7 +19,7 @@ export async function fetchStaffFromSupabase(): Promise<StaffMember[]> {
 
   type UserRow = {
     id: string;
-    full_name: string;
+    full_name: string | null;
     avatar_url: string | null;
     departments: { name: string } | null;
     roles: { name: string } | null;
@@ -27,7 +27,7 @@ export async function fetchStaffFromSupabase(): Promise<StaffMember[]> {
 
   return (data as UserRow[]).map((row) => ({
     id: row.id,
-    name: row.full_name,
+    name: row.full_name ?? 'Staff',
     avatar: row.avatar_url ?? undefined,
     department: row.departments?.name ?? undefined,
     role: row.roles?.name ?? undefined,

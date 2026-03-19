@@ -42,7 +42,7 @@ export default function StaffListContainer({
     const lowerQuery = query.toLowerCase();
     return staffList.filter(
       (s) =>
-        s.name.toLowerCase().includes(lowerQuery) ||
+        (s.name ?? '').toLowerCase().includes(lowerQuery) ||
         (s.department ?? '').toLowerCase().includes(lowerQuery) ||
         (s.role ?? '').toLowerCase().includes(lowerQuery)
     );

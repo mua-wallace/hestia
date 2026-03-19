@@ -310,17 +310,19 @@ const styles = StyleSheet.create({
     left: LOST_AND_FOUND_CONTENT.guestName.left * scaleX,
     top: LOST_AND_FOUND_CONTENT.guestName.top * scaleX,
     maxWidth: (LOST_AND_FOUND_IMAGE.left - LOST_AND_FOUND_CONTENT.guestName.left - 4) * scaleX,
+    maxHeight: (LOST_AND_FOUND_STORED_LOCATION.icon.top - LOST_AND_FOUND_CONTENT.guestName.top - 2) * scaleX,
     borderRadius: 6 * scaleX,
     backgroundColor: 'rgba(100,131,176,0.07)',
     paddingHorizontal: 12 * scaleX,
-    paddingVertical: 6 * scaleX,
+    paddingVertical: 8 * scaleX,
+    overflow: 'hidden',
   },
   foundInCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   foundInLocationSection: {
-    minWidth: 80 * scaleX,
+    minWidth: 90 * scaleX,
   },
   foundInLocationText: {
     fontSize: 14 * scaleX,
@@ -330,9 +332,9 @@ const styles = StyleSheet.create({
   },
   foundInDivider: {
     width: 1,
-    height: 28 * scaleX,
+    height: 36 * scaleX,
     backgroundColor: '#e5e7eb',
-    marginHorizontal: 10 * scaleX,
+    marginHorizontal: 12 * scaleX,
   },
   foundInGuestSection: {
     flex: 1,
@@ -341,11 +343,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   foundInImageThumbContainer: {
-    width: 26 * scaleX,
-    height: 26 * scaleX,
+    width: 34 * scaleX,
+    height: 34 * scaleX,
     borderRadius: 5 * scaleX,
     overflow: 'hidden',
-    marginRight: 8 * scaleX,
+    marginRight: 10 * scaleX,
   },
   foundInImageThumb: {
     width: '100%',
@@ -363,7 +365,7 @@ const styles = StyleSheet.create({
     fontWeight: LOST_AND_FOUND_CONTENT.guestName.fontWeight as any,
     color: LOST_AND_FOUND_CONTENT.guestName.color,
     marginRight: 6 * scaleX,
-    marginBottom: 2 * scaleX,
+    marginBottom: 0,
     flexShrink: 1,
     minWidth: 0,
   },
@@ -411,7 +413,7 @@ const styles = StyleSheet.create({
     top: LOST_AND_FOUND_STORED_LOCATION.label.top * scaleX,
     fontSize: LOST_AND_FOUND_TYPOGRAPHY.storedLocationLabel.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: LOST_AND_FOUND_TYPOGRAPHY.storedLocationLabel.fontWeight as any,
+    fontWeight: '300' as any,
     color: LOST_AND_FOUND_TYPOGRAPHY.storedLocationLabel.color,
   },
   storedLocationName: {
@@ -422,7 +424,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: LOST_AND_FOUND_TYPOGRAPHY.storedLocationName.fontWeight as any,
     color: LOST_AND_FOUND_TYPOGRAPHY.storedLocationName.color,
-    maxWidth: 150 * scaleX,
+    maxWidth: 220 * scaleX,
   },
   itemImage: {
     position: 'absolute',

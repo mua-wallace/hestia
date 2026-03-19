@@ -21,6 +21,8 @@ import {
 import type { ReturnToTab } from '../navigation/types';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import * as FileSystem from 'expo-file-system/legacy';
+import { base64ToArrayBuffer } from '../utils/encoding';
 
 type MainTabsParamList = {
   Home: undefined;
@@ -108,12 +110,35 @@ export default function LostAndFoundScreen() {
         const guest = reservation?.guests?.[0];
         const guestCount = (reservation?.adults || 0) + (reservation?.kids || 0);
 
+        // Normalize image URL: legacy rows may store only the storage path.
+        let imageUri: string | undefined;
+        if (row.image_url) {
+          if (typeof row.image_url === 'string') {
+            const raw = row.image_url.trim();
+            if (raw.startsWith('http')) {
+              imageUri = raw;
+            } else {
+            const { data: publicUrlData } = supabase.storage
+              .from('lost-and-found')
+              .getPublicUrl(raw);
+            imageUri = publicUrlData.publicUrl || undefined;
+            }
+          } else {
+            const raw = String(row.image_url).trim();
+            const { data: publicUrlData } = supabase.storage
+              .from('lost-and-found')
+              .getPublicUrl(raw);
+            imageUri = publicUrlData.publicUrl || undefined;
+          }
+        }
+
         return {
           id: row.id,
           itemName: row.item_name,
           // Use tracking_number (e.g. FH31390); fall back to id if missing
           itemId: row.tracking_number ?? row.id,
-          location: row.found_location ?? (room?.room_number ? `Room ${room.room_number}` : 'Public Area'),
+          location:
+            row.found_location ?? (room?.room_number ? `Room ${room.room_number}` : 'Public Area'),
           guestName: guest?.full_name,
           roomNumber: room?.room_number ? Number(room.room_number) : undefined,
           guestDates: formatGuestDates(reservation?.arrival_date, reservation?.departure_date),
@@ -125,8 +150,8 @@ export default function LostAndFoundScreen() {
             avatar: undefined,
             timestamp: '',
           },
-          // Use Supabase image_url (first uploaded image) if present
-          image: row.image_url ? { uri: row.image_url } : undefined,
+          // Prefer normalized public URL for the item image
+          image: imageUri ? { uri: imageUri } : undefined,
           status: (row.status as LostAndFoundItem['status']) ?? 'stored',
           createdAt: '',
         };
@@ -276,43 +301,138 @@ export default function LostAndFoundScreen() {
           'Lost item';
 
         // Upload first image to Supabase storage (lost-and-found bucket), if present.
-        // Fallback: if upload/storage fails, still use the local URI so the card shows an image.
+        // Only persist a remote URL so the image displays when loading from DB (iOS and Android).
         let imageUrl: string | null = null;
         if (firstImageUri) {
           try {
-            const response = await fetch(firstImageUri);
-            const blob = await response.blob();
+            let body: ArrayBuffer | Blob;
+            let contentType = 'image/jpeg';
             const extMatch = firstImageUri.split('.').pop();
             const rawExt = (extMatch || 'jpg').split('?')[0].toLowerCase();
             const normalizedExt = rawExt === 'heic' ? 'jpg' : rawExt;
+
+            if (firstImageUri.startsWith('file://')) {
+              // Prefer reading local file as base64 -> ArrayBuffer (more consistent for RN uploads).
+              // This avoids relying on fetch() for `file://` URIs.
+              const base64 = await FileSystem.readAsStringAsync(firstImageUri, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+              body = base64ToArrayBuffer(base64);
+              contentType = normalizedExt === 'png' ? 'image/png' : 'image/jpeg';
+            } else {
+              // content:// or ph:// (Android / iOS library) – copy to cache then read as base64
+              let uriToRead = firstImageUri;
+              if (!firstImageUri.startsWith('file://')) {
+                const tempPath = `${FileSystem.cacheDirectory}lost_found_${Date.now()}.${normalizedExt}`;
+                await FileSystem.copyAsync({ from: firstImageUri, to: tempPath });
+                uriToRead = tempPath;
+              }
+              const base64 = await FileSystem.readAsStringAsync(uriToRead, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+              contentType = normalizedExt === 'png' ? 'image/png' : 'image/jpeg';
+              // Supabase storage upload is most reliable with an ArrayBuffer in React Native.
+              body = base64ToArrayBuffer(base64);
+            }
+
             const fileName = `items/${Date.now()}-${Math.random()
               .toString(36)
               .slice(2)}.${normalizedExt}`;
 
-            const normalizedContentType =
-              blob.type === 'image/heic' ? 'image/jpeg' : blob.type || 'image/jpeg';
+            const bodyByteLength =
+              body && typeof (body as any).byteLength === 'number'
+                ? (body as any).byteLength
+                : body && typeof (body as any).size === 'number'
+                  ? (body as any).size
+                  : undefined;
 
-            const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('lost-and-found')
-              .upload(fileName, blob, {
-                contentType: normalizedContentType,
-                upsert: false,
-              });
+            console.log('[LostAndFoundScreen] Uploading lost-and-found image', {
+              firstImageUri,
+              normalizedExt,
+              contentType,
+              fileName,
+              bodyByteLength,
+            });
+
+            let uploadData: any = null;
+            let uploadError: any = null;
+
+            // 1) Try signed upload first (often more reliable in RN)
+            try {
+              const { data: signedUpload, error: signedUrlError } = await supabase.storage
+                .from('lost-and-found')
+                .createSignedUploadUrl(fileName, { upsert: false });
+
+              if (!signedUrlError && signedUpload?.token) {
+                console.log('[LostAndFoundScreen] Using signed upload', {
+                  fileName,
+                  tokenLength: String(signedUpload.token).length,
+                    signedUrl: signedUpload.signedUrl,
+                    bodyType: typeof body,
+                });
+
+                const { data: signedUploadData, error: signedUploadError } = await supabase.storage
+                  .from('lost-and-found')
+                  .uploadToSignedUrl(fileName, signedUpload.token, body, {
+                    contentType,
+                  });
+
+                uploadData = signedUploadData;
+                uploadError = signedUploadError;
+                if (signedUploadError) {
+                  console.warn('[LostAndFoundScreen] uploadToSignedUrl failed', {
+                    message: String(signedUploadError?.message ?? signedUploadError ?? ''),
+                    status: (signedUploadError as any)?.status,
+                    statusCode: (signedUploadError as any)?.statusCode,
+                  });
+                }
+              } else if (signedUrlError) {
+                console.warn('[LostAndFoundScreen] createSignedUploadUrl failed', signedUrlError);
+              }
+            } catch (signedException) {
+              console.warn('[LostAndFoundScreen] Signed upload exception', signedException);
+            }
+
+            // 2) Fallback to direct upload with retry
+            if (uploadError || !uploadData?.path) {
+              const maxAttempts = 3;
+              for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                // eslint-disable-next-line no-await-in-loop
+                const result = await supabase.storage.from('lost-and-found').upload(fileName, body, {
+                  contentType,
+                  upsert: false,
+                });
+                uploadData = result.data;
+                uploadError = result.error;
+
+                if (!uploadError) break;
+
+                const message = String(uploadError?.message ?? uploadError ?? '');
+                const isTransientNetwork = message.includes('Network request failed');
+                if (!isTransientNetwork || attempt === maxAttempts) break;
+
+                console.warn('[LostAndFoundScreen] Upload attempt failed, retrying', {
+                  attempt,
+                  maxAttempts,
+                  message,
+                });
+                // eslint-disable-next-line no-await-in-loop
+                await new Promise((r) => setTimeout(r, attempt * 800));
+              }
+            }
 
             if (!uploadError && uploadData?.path) {
               const { data: publicUrlData } = supabase.storage
                 .from('lost-and-found')
                 .getPublicUrl(uploadData.path);
-              imageUrl = publicUrlData.publicUrl ?? null;
+              const url = publicUrlData.publicUrl ?? null;
+              // Only use URL for DB if it's a remote URL (so it displays when we load items)
+              if (url) imageUrl = url;
             } else if (uploadError) {
               console.warn('[LostAndFoundScreen] Failed to upload lost-and-found image', uploadError);
-              // Fallback to local URI so UI still shows the image on the card
-              imageUrl = firstImageUri;
             }
           } catch (uploadException) {
             console.warn('[LostAndFoundScreen] Unexpected error uploading image', uploadException);
-            // Fallback to local URI so UI still shows the image on the card
-            imageUrl = firstImageUri;
           }
         }
 
@@ -341,8 +461,8 @@ export default function LostAndFoundScreen() {
           await loadItems();
           // Ensure the newly created item shows image and (for rooms) guest name on the Created tab
           if (inserted?.id) {
-            const finalImageUri =
-              inserted.image_url ?? imageUrl ?? (firstImageUri || undefined);
+            // Only use a remote URL that we successfully wrote to the DB/upload.
+            const finalImageUri = inserted.image_url ?? imageUrl;
             const guestNameForCard =
               selectedLocation === 'room' && (selectedRoom as any)?.guestName
                 ? `Mr ${(selectedRoom as any).guestName}`

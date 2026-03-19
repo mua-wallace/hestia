@@ -114,7 +114,7 @@ export default function ReassignModal({
       const lowerQuery = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (s) =>
-          s.name.toLowerCase().includes(lowerQuery) ||
+          (s.name ?? '').toLowerCase().includes(lowerQuery) ||
           (s.department ?? '').toLowerCase().includes(lowerQuery) ||
           (s.role ?? '').toLowerCase().includes(lowerQuery)
       );

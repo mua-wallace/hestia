@@ -34,6 +34,7 @@ import { generateHistoryReport } from '../utils/generateHistoryReport';
 import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
 import { getDefaultTaskText } from '../utils/defaultTasks';
 import { getRoomNotes, addRoomNote, getRoomDetailsById, fullRoomDetailsToRoomCardData, type FullRoomDetails } from '../services/rooms';
+import { fetchStaffFromSupabase } from '../services/staff';
 
 type RoomDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -612,23 +613,74 @@ export default function RoomDetailScreen() {
 
   const handleStaffSelect = (staffId: string) => {
     console.log('Staff selected:', staffId);
-    // Staff data should come from Supabase, not mock data
-    if (staffId) {
-      setAssignedStaff({
-        id: staffId,
-        name: 'Staff Member',
-        avatar: require('../../assets/icons/profile-avatar.png'),
-        initials: selectedStaff.initials,
-        department: selectedStaff.department,
-        avatarColor: selectedStaff.avatarColor || (() => {
-          const colors = ['#ff4dd8', '#5a759d', '#607aa1', '#f0be1b'];
-          const index = selectedStaff.name.charCodeAt(0) % colors.length;
-          return colors[index];
-        })(),
-      });
-      console.log('Room assigned to:', selectedStaff.name);
+
+    // Important: never reference variables that don't exist in this scope.
+    // iOS was crashing because `selectedStaff` was undefined here.
+    if (!staffId) {
+      setShowReassignModal(false);
+      return;
     }
+
+    const safeName = 'Staff Member';
+    const initials =
+      safeName
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((s) => s[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || '?';
+
+    const colors = ['#ff4dd8', '#5a759d', '#607aa1', '#f0be1b'];
+    const index = safeName.charCodeAt(0) % colors.length;
+    const avatarColor = colors[index];
+
+    // Set immediately with safe placeholder so the UI doesn't crash.
+    setAssignedStaff({
+      id: staffId,
+      name: safeName,
+      avatar: require('../../assets/icons/profile-avatar.png'),
+      initials,
+      department: undefined,
+      avatarColor,
+    });
     setShowReassignModal(false);
+
+    // Best-effort: fill in real name/department if we can fetch staff list.
+    // (ReassignModal already fetched staff; we keep this lightweight and safe.)
+    (async () => {
+      try {
+        const staffList = await fetchStaffFromSupabase();
+        const selected = staffList.find((s) => s.id === staffId);
+        if (!selected) return;
+
+        setAssignedStaff({
+          id: selected.id,
+          name: selected.name || safeName,
+          avatar: selected.avatar ?? require('../../assets/icons/profile-avatar.png'),
+          initials:
+            selected.initials ??
+            selected.name
+              .split(/\s+/)
+              .filter(Boolean)
+              .map((s) => s[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase() ??
+            initials,
+          department: selected.department,
+          avatarColor:
+            selected.avatarColor ??
+            (() => {
+              const n = (selected.name || safeName).trim();
+              const i = n ? n.charCodeAt(0) : safeName.charCodeAt(0);
+              return colors[i % colors.length];
+            })(),
+        });
+      } catch (e) {
+        console.warn('[RoomDetailScreen] Failed to refine assigned staff', e);
+      }
+    })();
   };
 
   const handleAutoAssign = () => {

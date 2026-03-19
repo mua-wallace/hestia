@@ -1199,15 +1199,15 @@ export default function RegisterLostAndFoundModal({
                   </View>
                 </View>
 
-                {selectedLocation === 'room' && selectedRoom ? (
+                {selectedLocation === 'room' ? (
                   <View style={styles.step3FoundInCard}>
                     <View style={styles.step3FoundInCardContent}>
-                      <Text style={styles.step3FoundInRoomText}>Room {selectedRoom.number}</Text>
+                      <Text style={styles.step3FoundInRoomText}>Room {selectedRoom?.number ?? '—'}</Text>
                       <View style={styles.step3FoundInDivider} />
 
                       <View style={styles.step3FoundInGuestSection}>
                         <View style={styles.step3FoundInGuestImageContainer}>
-                          {selectedRoom.image_url ? (
+                          {selectedRoom?.image_url ? (
                             <Image
                               source={{ uri: selectedRoom.image_url }}
                               style={styles.step3FoundInGuestImage}
@@ -1216,7 +1216,7 @@ export default function RegisterLostAndFoundModal({
                           ) : (
                             <View style={styles.step3FoundInGuestImagePlaceholder} />
                           )}
-                          {selectedRoom.vip_code ? (
+                          {selectedRoom?.vip_code ? (
                             <View style={styles.step3FoundInVipBadge}>
                               <Text style={styles.step3FoundInVipBadgeText}>!</Text>
                             </View>
@@ -1226,18 +1226,18 @@ export default function RegisterLostAndFoundModal({
                         <View style={styles.step3FoundInGuestDetails}>
                           <View style={styles.step3FoundInGuestNameRow}>
                             <Text style={styles.step3FoundInGuestName}>
-                              {selectedRoom.guestName ? `Mr ${selectedRoom.guestName}` : '—'}
+                              {selectedRoom?.guestName ? `Mr ${selectedRoom.guestName}` : '—'}
                             </Text>
-                            {selectedRoom.vip_code ? (
+                            {selectedRoom?.vip_code ? (
                               <Text style={styles.step3FoundInVipCode}>{selectedRoom.vip_code}</Text>
                             ) : null}
                           </View>
 
                           <View style={styles.step3FoundInGuestMetaRow}>
                             <Text style={styles.step3FoundInDates}>
-                              {formatDateStr(selectedRoom.check_in)}-{formatDateStr(selectedRoom.check_out)}
+                              {formatDateStr(selectedRoom?.check_in)}-{formatDateStr(selectedRoom?.check_out)}
                             </Text>
-                            {typeof selectedRoom.guest_count === 'number' ? (
+                            {typeof selectedRoom?.guest_count === 'number' ? (
                               <>
                                 <Image
                                   source={require('../../../assets/icons/people-icon.png')}
