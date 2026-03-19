@@ -17,7 +17,7 @@ interface LostAndFoundTabsProps {
 
 export default function LostAndFoundTabs({ selectedTab, onTabPress, onSearchPress }: LostAndFoundTabsProps) {
   const tabs = [
-    { id: 'created' as LostAndFoundTab, label: 'Created' },
+    { id: 'created' as LostAndFoundTab, label: 'All' },
     { id: 'stored' as LostAndFoundTab, label: 'Stored' },
     { id: 'returned' as LostAndFoundTab, label: 'Returned' },
     { id: 'discarded' as LostAndFoundTab, label: 'Discarded' },

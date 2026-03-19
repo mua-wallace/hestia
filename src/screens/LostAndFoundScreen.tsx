@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, Modal, TouchableOpacity, Text } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
@@ -11,7 +11,7 @@ import RegisterLostAndFoundModal from '../components/lostAndFound/RegisterLostAn
 import ItemRegisteredSuccessModal from '../components/lostAndFound/ItemRegisteredSuccessModal';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
-import { LostAndFoundTab, LostAndFoundItem } from '../types/lostAndFound.types';
+import { LostAndFoundTab, LostAndFoundItem, LostAndFoundStatus } from '../types/lostAndFound.types';
 import {
   LOST_AND_FOUND_SPACING,
   LOST_AND_FOUND_COLORS,
@@ -50,8 +50,19 @@ export default function LostAndFoundScreen() {
     itemImage?: string;
     itemData: any;
   } | null>(null);
+  const [statusModalItem, setStatusModalItem] = useState<LostAndFoundItem | null>(null);
 
-  // Load items from Supabase lost_and_found_items table
+  const formatGuestDates = (arrival?: string | null, departure?: string | null): string => {
+    if (!arrival || !departure) return '';
+    const a = new Date(arrival);
+    const d = new Date(departure);
+    if (Number.isNaN(a.getTime()) || Number.isNaN(d.getTime())) return '';
+    const fmt = (dt: Date) =>
+      `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}`;
+    return `${fmt(a)}-${fmt(d)}`;
+  };
+
+  // Load items from Supabase lost_and_found_items table (with room + guest info)
   const loadItems = React.useCallback(async () => {
     if (!isSupabaseConfigured) {
       setItems([]);
@@ -60,30 +71,66 @@ export default function LostAndFoundScreen() {
     try {
       const { data, error } = await supabase
         .from('lost_and_found_items')
-        .select('id, item_name, description, status, storage_location, room_id, found_location, tracking_number, image_url')
+        .select(`
+          id,
+          item_name,
+          description,
+          status,
+          storage_location,
+          room_id,
+          found_location,
+          tracking_number,
+          image_url,
+          rooms (
+            room_number,
+            reservations (
+              guests (
+                full_name,
+                vip_code,
+                image_url
+              ),
+              arrival_date,
+              departure_date,
+              adults,
+              kids
+            )
+          )
+        `)
         .order('found_at', { ascending: false });
       if (error || !data) {
         console.warn('[LostAndFoundScreen] Failed to load items', error);
         setItems([]);
         return;
       }
-      const mapped: LostAndFoundItem[] = (data as any[]).map((row) => ({
-        id: row.id,
-        itemName: row.item_name,
-        // Use tracking_number (e.g. FH31390); fall back to id if missing
-        itemId: row.tracking_number ?? row.id,
-        location: row.found_location ?? 'Room',
-        storedLocation: row.storage_location ?? '',
-        registeredBy: {
-          name: 'Staff',
-          avatar: undefined,
-          timestamp: '',
-        },
-        // Use Supabase image_url (first uploaded image) if present
-        image: row.image_url ? { uri: row.image_url } : undefined,
-        status: (row.status as LostAndFoundItem['status']) ?? 'stored',
-        createdAt: '',
-      }));
+      const mapped: LostAndFoundItem[] = (data as any[]).map((row) => {
+        const room = (row as any).rooms;
+        const reservation = room?.reservations?.[0];
+        const guest = reservation?.guests?.[0];
+        const guestCount = (reservation?.adults || 0) + (reservation?.kids || 0);
+
+        return {
+          id: row.id,
+          itemName: row.item_name,
+          // Use tracking_number (e.g. FH31390); fall back to id if missing
+          itemId: row.tracking_number ?? row.id,
+          location: row.found_location ?? (room?.room_number ? `Room ${room.room_number}` : 'Public Area'),
+          guestName: guest?.full_name,
+          roomNumber: room?.room_number ? Number(room.room_number) : undefined,
+          guestDates: formatGuestDates(reservation?.arrival_date, reservation?.departure_date),
+          guestCount: guestCount || undefined,
+          guestImage: guest?.image_url ? { uri: guest.image_url } : undefined,
+          storedLocation: row.storage_location ?? '',
+          registeredBy: {
+            name: 'Staff',
+            avatar: undefined,
+            timestamp: '',
+          },
+          // Use Supabase image_url (first uploaded image) if present
+          image: row.image_url ? { uri: row.image_url } : undefined,
+          status: (row.status as LostAndFoundItem['status']) ?? 'stored',
+          createdAt: '',
+        };
+      });
       setItems(mapped);
     } catch (e) {
       console.warn('[LostAndFoundScreen] Unexpected error loading items', e);
@@ -236,13 +283,19 @@ export default function LostAndFoundScreen() {
             const response = await fetch(firstImageUri);
             const blob = await response.blob();
             const extMatch = firstImageUri.split('.').pop();
-            const fileExt = (extMatch || 'jpg').split('?')[0];
-            const fileName = `items/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+            const rawExt = (extMatch || 'jpg').split('?')[0].toLowerCase();
+            const normalizedExt = rawExt === 'heic' ? 'jpg' : rawExt;
+            const fileName = `items/${Date.now()}-${Math.random()
+              .toString(36)
+              .slice(2)}.${normalizedExt}`;
+
+            const normalizedContentType =
+              blob.type === 'image/heic' ? 'image/jpeg' : blob.type || 'image/jpeg';
 
             const { data: uploadData, error: uploadError } = await supabase.storage
               .from('lost-and-found')
               .upload(fileName, blob, {
-                contentType: blob.type || 'image/jpeg',
+                contentType: normalizedContentType,
                 upsert: false,
               });
 
@@ -274,6 +327,10 @@ export default function LostAndFoundScreen() {
               found_at: foundAt,
               found_by_id: userId,
               found_location: foundLocation,
+              room_id:
+                selectedLocation === 'room' && selectedRoom
+                  ? (selectedRoom as any).id
+                  : null,
               image_url: imageUrl,
             })
             .select('id, tracking_number, image_url')
@@ -333,8 +390,26 @@ export default function LostAndFoundScreen() {
   };
 
   const handleStatusPress = (item: LostAndFoundItem) => {
-    // TODO: Handle status change modal when implemented
-    console.log('Status pressed for item:', item.id);
+    setStatusModalItem(item);
+  };
+
+  const handleStatusSelect = async (newStatus: LostAndFoundStatus) => {
+    const item = statusModalItem;
+    setStatusModalItem(null);
+    if (!item || !isSupabaseConfigured) return;
+    try {
+      const { error } = await supabase
+        .from('lost_and_found_items')
+        .update({ status: newStatus })
+        .eq('id', item.id);
+      if (error) {
+        console.warn('[LostAndFoundScreen] Failed to update status', error);
+        return;
+      }
+      await loadItems();
+    } catch (e) {
+      console.warn('[LostAndFoundScreen] Error updating status', e);
+    }
   };
 
   const onRefresh = React.useCallback(() => {
@@ -371,19 +446,14 @@ export default function LostAndFoundScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {/* Item Cards */}
-          {filteredItems.map((item, index) => (
-            <React.Fragment key={item.id}>
-              <LostAndFoundItemCard
-                item={item}
-                onPress={() => handleItemPress(item)}
-                onStatusPress={() => handleStatusPress(item)}
-              />
-              {/* Divider */}
-              {index < filteredItems.length - 1 && (
-                <View style={styles.divider} />
-              )}
-            </React.Fragment>
+          {/* Item Cards - spacing from Figma 733-662 (card marginBottom only) */}
+          {filteredItems.map((item) => (
+            <LostAndFoundItemCard
+              key={item.id}
+              item={item}
+              onPress={() => handleItemPress(item)}
+              onStatusPress={() => handleStatusPress(item)}
+            />
           ))}
         </ScrollView>
 
@@ -420,6 +490,45 @@ export default function LostAndFoundScreen() {
         trackingNumber={successData?.trackingNumber || ''}
         itemImage={successData?.itemImage}
       />
+
+      {/* Change status modal */}
+      <Modal
+        visible={!!statusModalItem}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStatusModalItem(null)}
+      >
+        <TouchableOpacity
+          style={styles.statusModalOverlay}
+          activeOpacity={1}
+          onPress={() => setStatusModalItem(null)}
+        >
+          <View style={styles.statusModalContent} onStartShouldSetResponder={() => true}>
+            <Text style={styles.statusModalTitle}>Change status</Text>
+            <TouchableOpacity
+              style={[styles.statusOption, statusModalItem?.status === 'stored' && styles.statusOptionActive]}
+              onPress={() => handleStatusSelect('stored')}
+            >
+              <Text style={styles.statusOptionText}>Stored</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.statusOption, (statusModalItem?.status === 'shipped' || statusModalItem?.status === 'returned') && styles.statusOptionActive]}
+              onPress={() => handleStatusSelect('shipped')}
+            >
+              <Text style={styles.statusOptionText}>Returned</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.statusOption, statusModalItem?.status === 'discarded' && styles.statusOptionActive]}
+              onPress={() => handleStatusSelect('discarded')}
+            >
+              <Text style={styles.statusOptionText}>Discarded</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.statusModalCancel} onPress={() => setStatusModalItem(null)}>
+              <Text style={styles.statusModalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -439,13 +548,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: LOST_AND_FOUND_SPACING.contentPaddingTop * scaleX,
     paddingBottom: LOST_AND_FOUND_SPACING.contentPaddingBottom * scaleX,
+    paddingHorizontal: 0,
     minHeight: '100%',
-  },
-  divider: {
-    height: LOST_AND_FOUND_DIVIDER.height,
-    backgroundColor: LOST_AND_FOUND_DIVIDER.color,
-    marginHorizontal: 16 * scaleX,
-    marginVertical: 8 * scaleX,
   },
   contentBlurOverlay: {
     position: 'absolute',
@@ -458,5 +562,47 @@ const styles = StyleSheet.create({
   blurOverlayDarkener: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(200, 200, 200, 0.6)',
+  },
+  statusModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    paddingHorizontal: 24 * scaleX,
+  },
+  statusModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  statusModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: LOST_AND_FOUND_COLORS.tabActive,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  statusOption: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  statusOptionActive: {
+    backgroundColor: 'rgba(96, 122, 161, 0.15)',
+  },
+  statusOptionText: {
+    fontSize: 16,
+    color: '#1e1e1e',
+  },
+  statusModalCancel: {
+    marginTop: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  statusModalCancelText: {
+    fontSize: 16,
+    color: LOST_AND_FOUND_COLORS.tabActive,
   },
 });

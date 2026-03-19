@@ -25,12 +25,15 @@ interface LostAndFoundItemCardProps {
 
 export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: LostAndFoundItemCardProps) {
   const toast = useToast();
-  const statusConfig = item.status === 'shipped'
-    ? LOST_AND_FOUND_STATUS.shipped
-    : LOST_AND_FOUND_STATUS.stored;
+  const statusConfig =
+    item.status === 'shipped' || item.status === 'returned'
+      ? LOST_AND_FOUND_STATUS.shipped
+      : item.status === 'discarded'
+        ? LOST_AND_FOUND_STATUS.discarded
+        : LOST_AND_FOUND_STATUS.stored;
 
-  // Determine if we should show "Stored by" or "Registered by"
-  const registeredByLabel = item.status === 'stored' ? 'Stored by' : 'Registered by';
+  // Always show "Registered by" and the person who registered the item
+  const registeredByLabel = 'Registered by';
 
   const handleCopyId = async () => {
     try {
@@ -48,51 +51,74 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
       onPress={onPress}
       activeOpacity={0.7}
     >
-      {/* Item Name and ID Container */}
-      <View style={styles.itemNameIdContainer}>
-        <Text style={styles.itemName} numberOfLines={1}>
-          {item.itemName}
-        </Text>
-        <View style={styles.itemIdContainer}>
-          <Text style={styles.itemId} numberOfLines={1}>
-            {item.itemId}
-          </Text>
-          <TouchableOpacity
-            style={styles.copyIconButton}
-            onPress={handleCopyId}
-            activeOpacity={0.7}
-          >
-            <Image
-              source={require('../../../assets/icons/clip-board.png')}
-              style={styles.copyIcon}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Location */}
-      <Text style={styles.location} numberOfLines={1}>
-        {item.location}
+      {/* Item Title (can wrap) */}
+      <Text style={styles.itemName} numberOfLines={2}>
+        {item.itemName}
       </Text>
 
-      {/* Guest Name or Public Area with Badge */}
-      <View style={styles.guestNameContainer}>
-        {item.guestName && (
-          <Text style={styles.guestName} numberOfLines={1}>
-            {item.guestName}
-          </Text>
-        )}
-        {item.publicArea && (
-          <Text style={styles.guestName} numberOfLines={1}>
-            {item.publicArea}
-          </Text>
-        )}
-        {item.roomNumber && (
-          <View style={styles.roomBadge}>
-            <Text style={styles.roomBadgeText}>{item.roomNumber}</Text>
+      {/* Tracking Number + copy icon (fixed position, as in Figma) */}
+      <View style={styles.itemIdContainer}>
+        <Text style={styles.itemId} numberOfLines={1}>
+          {item.itemId}
+        </Text>
+        <TouchableOpacity
+          style={styles.copyIconButton}
+          onPress={handleCopyId}
+          activeOpacity={0.7}
+        >
+          <Image
+            source={require('../../../assets/icons/clip-board.png')}
+            style={styles.copyIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Found In */}
+      <Text style={styles.foundInLabel}>Found in</Text>
+      <View style={styles.foundInCard}>
+        <View style={styles.foundInCardContent}>
+          {/* Left: primary location text (Room / Public Area) */}
+          <View style={styles.foundInLocationSection}>
+            <Text style={styles.foundInLocationText} numberOfLines={1}>
+              {item.location}
+            </Text>
           </View>
-        )}
+
+          {/* Right: guest info / room badge (for room-based items) */}
+          {item.guestName || item.roomNumber || item.guestImage ? (
+            <>
+              <View style={styles.foundInDivider} />
+              <View style={styles.foundInGuestSection}>
+                {/* Small guest image thumbnail on the right, as in Figma */}
+                {item.guestImage && (
+                  <View style={styles.foundInImageThumbContainer}>
+                    <Image source={item.guestImage} style={styles.foundInImageThumb} resizeMode="cover" />
+                  </View>
+                )}
+
+                <View style={styles.foundInGuestTextContainer}>
+                  {item.guestName && (
+                    <Text style={styles.foundInGuestName} numberOfLines={1} ellipsizeMode="tail">
+                      {item.guestName}
+                    </Text>
+                  )}
+                  {item.roomNumber != null && (
+                    <View style={styles.roomBadge}>
+                      <Text style={styles.roomBadgeText}>{item.roomNumber}</Text>
+                    </View>
+                  )}
+                  {!!item.guestDates && (
+                    <Text style={styles.foundInGuestDates} numberOfLines={1} ellipsizeMode="tail">
+                      {item.guestDates}
+                      {typeof item.guestCount === 'number' ? `  ${item.guestCount}/2` : ''}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </>
+          ) : null}
+        </View>
       </View>
 
       {/* Stored Location Section */}
@@ -126,7 +152,11 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
       {/* Registered/Stored By Section */}
       {item.registeredBy.avatar ? (
         <Image
-          source={item.registeredBy.avatar}
+          source={
+            typeof item.registeredBy.avatar === 'string'
+              ? { uri: item.registeredBy.avatar }
+              : item.registeredBy.avatar
+          }
           style={styles.avatar}
           resizeMode="cover"
         />
@@ -159,7 +189,7 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
         activeOpacity={0.7}
       >
         {/* Status Icon */}
-        {item.status === 'shipped' ? (
+        {(item.status === 'shipped' || item.status === 'returned') ? (
           <Image
             source={require('../../../assets/icons/tick.png')}
             style={[
@@ -203,7 +233,11 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
             },
           ]}
         >
-          {item.status === 'shipped' ? 'Shipped' : 'Stored'}
+          {item.status === 'shipped' || item.status === 'returned'
+            ? 'Returned'
+            : item.status === 'discarded'
+              ? 'Discarded'
+              : 'Stored'}
         </Text>
       </TouchableOpacity>
     </TouchableOpacity>
@@ -222,22 +256,24 @@ const styles = StyleSheet.create({
     marginBottom: LOST_AND_FOUND_CARD.marginBottom * scaleX,
     position: 'relative',
   },
-  itemNameIdContainer: {
+  itemName: {
     position: 'absolute',
     left: LOST_AND_FOUND_CONTENT.itemName.left * scaleX,
     top: LOST_AND_FOUND_CONTENT.itemName.top * scaleX,
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  itemName: {
     fontSize: LOST_AND_FOUND_TYPOGRAPHY.itemName.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: LOST_AND_FOUND_TYPOGRAPHY.itemName.fontWeight as any,
     color: LOST_AND_FOUND_TYPOGRAPHY.itemName.color,
-    marginRight: 8 * scaleX, // Space between item name and ID
+    maxWidth:
+      (LOST_AND_FOUND_CONTENT.itemId.left -
+        LOST_AND_FOUND_CONTENT.itemName.left -
+        8) *
+      scaleX,
   },
   itemIdContainer: {
+    position: 'absolute',
+    left: LOST_AND_FOUND_CONTENT.itemId.left * scaleX,
+    top: LOST_AND_FOUND_CONTENT.itemId.top * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -260,30 +296,84 @@ const styles = StyleSheet.create({
     tintColor: LOST_AND_FOUND_COLORS.textPrimary,
     opacity: 0.6,
   },
-  location: {
+  foundInLabel: {
     position: 'absolute',
     left: LOST_AND_FOUND_CONTENT.location.left * scaleX,
     top: LOST_AND_FOUND_CONTENT.location.top * scaleX,
-    fontSize: LOST_AND_FOUND_TYPOGRAPHY.location.fontSize * scaleX,
+    fontSize: LOST_AND_FOUND_CONTENT.location.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: LOST_AND_FOUND_TYPOGRAPHY.location.fontWeight as any,
-    color: LOST_AND_FOUND_TYPOGRAPHY.location.color,
-    maxWidth: 200 * scaleX,
+    fontWeight: '300' as any,
+    color: LOST_AND_FOUND_CONTENT.location.color,
   },
-  guestNameContainer: {
+  foundInCard: {
     position: 'absolute',
     left: LOST_AND_FOUND_CONTENT.guestName.left * scaleX,
     top: LOST_AND_FOUND_CONTENT.guestName.top * scaleX,
+    maxWidth: (LOST_AND_FOUND_IMAGE.left - LOST_AND_FOUND_CONTENT.guestName.left - 4) * scaleX,
+    borderRadius: 6 * scaleX,
+    backgroundColor: 'rgba(100,131,176,0.07)',
+    paddingHorizontal: 12 * scaleX,
+    paddingVertical: 6 * scaleX,
+  },
+  foundInCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
   },
-  guestName: {
-    fontSize: LOST_AND_FOUND_TYPOGRAPHY.guestName.fontSize * scaleX,
+  foundInLocationSection: {
+    minWidth: 80 * scaleX,
+  },
+  foundInLocationText: {
+    fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: LOST_AND_FOUND_TYPOGRAPHY.guestName.fontWeight as any,
-    color: LOST_AND_FOUND_TYPOGRAPHY.guestName.color,
-    marginRight: 8 * scaleX, // Space between guest name and badge
+    fontWeight: '300' as any,
+    color: LOST_AND_FOUND_COLORS.tabActive,
+  },
+  foundInDivider: {
+    width: 1,
+    height: 28 * scaleX,
+    backgroundColor: '#e5e7eb',
+    marginHorizontal: 10 * scaleX,
+  },
+  foundInGuestSection: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  foundInImageThumbContainer: {
+    width: 26 * scaleX,
+    height: 26 * scaleX,
+    borderRadius: 5 * scaleX,
+    overflow: 'hidden',
+    marginRight: 8 * scaleX,
+  },
+  foundInImageThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  foundInGuestTextContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    minWidth: 0,
+  },
+  foundInGuestName: {
+    fontSize: LOST_AND_FOUND_CONTENT.guestName.fontSize * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: LOST_AND_FOUND_CONTENT.guestName.fontWeight as any,
+    color: LOST_AND_FOUND_CONTENT.guestName.color,
+    marginRight: 6 * scaleX,
+    marginBottom: 2 * scaleX,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  foundInGuestDates: {
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300' as any,
+    color: LOST_AND_FOUND_CONTENT.guestName.color,
+    flexShrink: 1,
+    minWidth: 0,
   },
   roomBadge: {
     width: LOST_AND_FOUND_CONTENT.roomBadge.width * scaleX,
@@ -336,9 +426,9 @@ const styles = StyleSheet.create({
   },
   itemImage: {
     position: 'absolute',
-    left: LOST_AND_FOUND_IMAGE.left * scaleX,
+    left: (LOST_AND_FOUND_IMAGE.left + 8) * scaleX,
     top: LOST_AND_FOUND_IMAGE.top * scaleX,
-    width: LOST_AND_FOUND_IMAGE.width * scaleX,
+    width: (LOST_AND_FOUND_IMAGE.width - 8) * scaleX,
     height: LOST_AND_FOUND_IMAGE.height * scaleX,
     borderRadius: LOST_AND_FOUND_IMAGE.borderRadius * scaleX,
   },
@@ -346,7 +436,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: LOST_AND_FOUND_DIVIDER.left * scaleX,
     top: LOST_AND_FOUND_DIVIDER.top * scaleX,
-    width: LOST_AND_FOUND_DIVIDER.width * scaleX,
+    width: (LOST_AND_FOUND_CARD.width - 2 * LOST_AND_FOUND_DIVIDER.left) * scaleX,
     height: LOST_AND_FOUND_DIVIDER.height,
     backgroundColor: LOST_AND_FOUND_DIVIDER.color,
   },
