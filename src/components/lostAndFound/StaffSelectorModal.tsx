@@ -19,6 +19,7 @@ interface StaffSelectorModalProps {
   onSelect: (staffId: string) => void;
   selectedStaffId?: string;
   title: string;
+  staff?: StaffMember[];
   showMeOption?: boolean;
   currentUserId?: string;
   inputFieldPosition?: { x: number; y: number; width: number; height: number } | null;
@@ -154,6 +155,23 @@ const getStyles = (inputFieldPosition?: { x: number; y: number; width: number; h
     height: REGISTER_FORM.step2.staffSelector.divider.height,
     backgroundColor: REGISTER_FORM.step2.staffSelector.divider.backgroundColor,
   },
+  searchContainer: {
+    paddingHorizontal: REGISTER_FORM.step2.staffSelector.header.paddingHorizontal * scaleX,
+    paddingVertical: 10 * scaleX,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  searchInput: {
+    height: 42 * scaleX,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8 * scaleX,
+    paddingHorizontal: 12 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: '#111827',
+    backgroundColor: '#ffffff',
+  },
   listContainer: {
     maxHeight: 200 * scaleX,
   },
@@ -240,6 +258,7 @@ export default function StaffSelectorModal({
   onSelect,
   selectedStaffId,
   title,
+  staff,
   showMeOption = false,
   currentUserId = '1', // Default to Etleva Hoxha
   inputFieldPosition,
@@ -248,7 +267,8 @@ export default function StaffSelectorModal({
 
   // Filter staff by search query and exclude current user if "Me" option is shown
   const filteredStaff = useMemo(() => {
-    let staffList = mockStaffForLostAndFound;
+    let staffList =
+      staff && Array.isArray(staff) && staff.length > 0 ? staff : mockStaffForLostAndFound;
     
     // If "Me" option is shown, exclude the current user from the regular list
     if (showMeOption && currentUserId) {
@@ -261,14 +281,15 @@ export default function StaffSelectorModal({
     return staffList.filter(
       (s) =>
         s.name.toLowerCase().includes(lowerQuery) ||
-        s.department.toLowerCase().includes(lowerQuery)
+        (s.department ?? '').toLowerCase().includes(lowerQuery)
     );
-  }, [searchQuery, showMeOption, currentUserId]);
+  }, [searchQuery, showMeOption, currentUserId, staff]);
 
   // Get current user (Me option)
   const currentUser = useMemo(() => {
-    return mockStaffForLostAndFound.find((s) => s.id === currentUserId);
-  }, [currentUserId]);
+    const base = staff && Array.isArray(staff) && staff.length > 0 ? staff : mockStaffForLostAndFound;
+    return base.find((s) => s.id === currentUserId);
+  }, [currentUserId, staff]);
 
   // Get first letter for initial if no avatar
   const getInitial = (name: string): string => {
@@ -333,6 +354,19 @@ export default function StaffSelectorModal({
 
           {/* Divider */}
           <View style={dynamicStyles.divider} />
+
+          {/* Search */}
+          <View style={dynamicStyles.searchContainer}>
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search staff..."
+              placeholderTextColor="#9ca3af"
+              style={dynamicStyles.searchInput}
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+          </View>
 
           {/* Staff List */}
           <ScrollView

@@ -52,12 +52,12 @@ export const CREATE_TICKET_CONTENT = {
     text: 'Create a ticket',
   },
   selectDepartmentLabel: {
-    left: 24, // From Figma: x=24
-    top: 186, // From Figma: y=186
+    left: 27, // Aligned with back button
+    top: 198, // Adjusted to match screenshot
     fontSize: 14,
     fontWeight: '300' as const, // Inter:Light (300)
     fontFamily: 'Inter', // Inter:Light
-    color: '#000000',
+    color: '#5E6A7A', // Slightly muted color from screenshot
     text: 'Select Department',
   },
 } as const;
@@ -65,7 +65,7 @@ export const CREATE_TICKET_CONTENT = {
 // Department Grid Styles
 export const DEPARTMENT_GRID = {
   container: {
-    top: 238, // From Figma: first department icon at y=238
+    top: 248, // Adjusted to give more space after "Select Department" label
     left: 50, // From Figma: first icon at x=50
   },
   item: {
@@ -143,13 +143,48 @@ export const DEPARTMENT_GRID = {
   },
 } as const;
 
+/** Map frontend department slug to DB department name (for API and staff filtering). */
+export const DEPARTMENT_SLUG_TO_DB_NAME: Record<string, string> = {
+  engineering: 'Engineering',
+  hskPortier: 'HSK Portier',
+  inRoomDining: 'In Room Dining',
+  laundry: 'Laundry',
+  concierge: 'Concierge',
+  reception: 'Reception',
+  it: 'IT',
+};
+
+/** Grid layout for dynamic department list (Figma node 1085-2628): 3 columns, same spacing as fixed grid. */
+export const DEPARTMENT_GRID_LAYOUT = {
+  colLeft: [50, 184, 332] as const,
+  rowTopStart: 248, // Adjusted to match container top
+  rowGap: 116,
+  labelOffset: 68,
+  iconSize: 55.482,
+  maxLabelWidth: 120,
+};
+
+/** Map DB department name to local icon and whether to skip red tint (HSK Portier, In Room Dining). */
+export const DEPARTMENT_NAME_TO_ICON: Record<string, { icon: any; noTint?: boolean }> = {
+  Engineering: { icon: require('../../assets/icons/engineering.png'), noTint: false },
+  'HSK Portier': { icon: require('../../assets/icons/hsk-portier.png'), noTint: true },
+  'In Room Dining': { icon: require('../../assets/icons/in-room-dining.png'), noTint: true },
+  Laundry: { icon: require('../../assets/icons/laundry-icon.png'), noTint: false },
+  Concierge: { icon: require('../../assets/icons/concierge.png'), noTint: false },
+  Reception: { icon: require('../../assets/icons/reception.png'), noTint: false },
+  IT: { icon: require('../../assets/icons/it.png'), noTint: false },
+  'Front Office': { icon: require('../../assets/icons/reception.png'), noTint: false },
+  'Food and Beverage': { icon: require('../../assets/icons/in-room-dining.png'), noTint: true },
+  'Executive Administration': { icon: require('../../assets/icons/reception.png'), noTint: false },
+};
+
 // AI Button Styles
 export const CREATE_TICKET_AI_BUTTON = {
   container: {
     // From Figma: left-1/2 top-[618px] translate-x-[-50%] - centered
-    // Moved even closer to divider (divider at 586px, button at 588px for 2px gap)
+    // Positioned below divider with appropriate spacing
     left: '50%', // Centered
-    top: 588, // Moved further up, closer to divider (was 590, now 588)
+    top: 630, // Positioned below divider (divider at 590px + 40px spacing)
     width: 152,
     height: 74,
   },
@@ -198,7 +233,7 @@ export const CREATE_TICKET_AI_BUTTON = {
     // From Figma: left-[calc(50%-14px)] - centered
     left: '50%', // Centered
     leftOffset: -14, // Offset for centering
-    top: 656, // Adjusted: button moved from 590 to 588, so beta moved from 658 to 656 (maintains same relative spacing of 68px)
+    top: 698, // Adjusted: button moved to 630, so beta at 630 + 68 = 698
     fontSize: 9,
     fontWeight: 'bold' as const,
     fontFamily: 'Helvetica', // Helvetica:Bold
@@ -209,12 +244,12 @@ export const CREATE_TICKET_AI_BUTTON = {
   description: {
     // From Figma: left-[220px] translate-x-[-50%] - centered
     left: 220, // From Figma: x=220
-    top: 692, // Adjusted: button moved from 590 to 588, so description moved from 694 to 692 (maintains same relative spacing of 104px)
+    top: 734, // Adjusted: button moved to 630, so description at 630 + 104 = 734
     width: 318, // From Figma: width=318
     fontSize: 14,
     fontWeight: '300' as const, // Helvetica:Light (300)
     fontFamily: 'Helvetica', // Helvetica:Light
-    color: '#000000',
+    color: '#6B7280', // Slightly muted grey from screenshot
     textAlign: 'center' as const,
     lineHeight: 'normal' as const,
     text: 'AI detects issues and auto-creates tickets for the right department no manual reporting needed.',
@@ -225,11 +260,11 @@ export const CREATE_TICKET_AI_BUTTON = {
 export const CREATE_TICKET_DIVIDER = {
   // From Figma: left-[calc(50%+4px)] - centered with offset
   left: '50%', // Centered
-  leftOffset: 4, // Offset for centering
-  top: 586, // From Figma: y=586
-  width: 448, // From Figma: width=448
+  leftOffset: 0, // Centered horizontally
+  top: 590, // Positioned below IT department label (529 + 60px spacing to ensure clear separation)
+  width: 392, // Narrower width to match screenshot
   height: 1, // 0.5px stroke in Figma, rendered as 1px
-  color: '#e3e3e3', // Light grey
+  color: '#D1D5DB', // Light grey from screenshot
 } as const;
 
 // Spacing
@@ -273,7 +308,7 @@ export const CREATE_TICKET_TYPOGRAPHY = {
     fontSize: 14,
     fontWeight: '300' as const, // Inter:Light (300)
     fontFamily: 'Inter', // Inter:Light
-    color: '#000000',
+    color: '#5E6A7A', // Muted grey from screenshot
   },
   departmentLabel: {
     fontSize: 14,
@@ -305,7 +340,7 @@ export const CREATE_TICKET_TYPOGRAPHY = {
     fontSize: 14,
     fontWeight: '300' as const, // Helvetica:Light (300)
     fontFamily: 'Helvetica', // Helvetica:Light
-    color: '#000000',
+    color: '#6B7280', // Muted grey from screenshot
     lineHeight: 'normal' as const,
   },
 } as const;

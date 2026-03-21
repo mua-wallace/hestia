@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 import { colors, typography } from '../../theme';
 import { normalizedScaleX } from '../../utils/responsive';
 
@@ -34,7 +35,9 @@ export default function TabBarItem({ icon, label, active = false, badge, onPress
     <TouchableOpacity
       style={styles.container}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeOpacity={0.6}
+      hitSlop={{ top: 24, bottom: 24, left: 20, right: 20 }}
+      accessibilityRole="button"
     >
       <View style={styles.contentWrapper}>
         <View style={styles.iconWrapper}>
@@ -44,16 +47,16 @@ export default function TabBarItem({ icon, label, active = false, badge, onPress
               style={iconStyle}
               resizeMode="contain"
             />
-            {badge !== undefined && badge > 0 && (
+            {(badge !== undefined && badge > 0) ? (
               <View style={styles.badgeContainer}>
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{badge}</Text>
+                  <Text style={styles.badgeText}>{String(badge)}</Text>
                 </View>
               </View>
-            )}
+            ) : null}
           </View>
         </View>
-        <Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
+        {label ? <Text style={[styles.label, active && styles.labelActive]}>{label}</Text> : null}
       </View>
     </TouchableOpacity>
   );
@@ -67,23 +70,23 @@ const styles = StyleSheet.create({
     minWidth: Math.round(40 * normalizedScaleX), // Rounded for pixel-perfect rendering
   },
   contentWrapper: {
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconWrapper: {
-    alignItems: 'center', // Center icon wrapper horizontally
-    justifyContent: 'center', // Center icon wrapper vertically
-    alignSelf: 'center', // Ensure wrapper itself is centered
-    marginBottom: Math.round(4 * normalizedScaleX), // Reduced gap between icon and text
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 0, // No gap – label sits right below icon
   },
   iconContainer: {
     position: 'relative',
     width: Math.round(70 * normalizedScaleX), // Accommodate largest icon (70)
-    height: Math.round(68 * normalizedScaleX), // Accommodate tallest icon (68)
+    height: Math.round(56 * normalizedScaleX), // Match max icon height – less vertical gap
     justifyContent: 'center', // Center icon vertically
-    alignItems: 'center', // Center icon horizontally
-    alignSelf: 'center', // Ensure container itself is centered
-    overflow: 'visible', // Allow badge to overflow without affecting layout
+    alignItems: 'center',
+    overflow: 'visible',
   },
   icon: {
     width: '100%',

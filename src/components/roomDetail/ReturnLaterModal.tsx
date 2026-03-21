@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, LayoutChangeEvent, Alert } from 'react-native';
+import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, LayoutChangeEvent } from 'react-native';
+import { useMessageModal } from '../../contexts/MessageModalContext';
 import { typography } from '../../theme';
 import { ShiftType } from '../../types/home.types';
 import { RETURN_LATER_MODAL } from '../../constants/returnLaterModalStyles';
@@ -56,6 +57,7 @@ export default function ReturnLaterModal({
   onReassignPress,
   taskDescription: initialTaskDescription,
 }: ReturnLaterModalProps) {
+  const messageModal = useMessageModal();
   const [selectedSuggestion, setSelectedSuggestion] = useState<string | null>(null);
   const [returnTime, setReturnTime] = useState<string>('');
   const dummyTaskText = 'Deep clean bathroom (heavy bath use). Change all linens + pillow protectors. Vacuum under bed. Restock all amenities. Light at entrance flickering report to maintenance.';
@@ -410,11 +412,11 @@ export default function ReturnLaterModal({
 
   const handleConfirm = () => {
     if (!isAtLeast5MinFromNow(selectedDate, selectedHour, selectedMinute, selectedPeriod)) {
-      Alert.alert(
-        'Invalid time',
-        `Return time must be at least ${MIN_MINUTES_FROM_NOW} minutes from now.`,
-        [{ text: 'OK' }]
-      );
+      messageModal.show({
+        title: 'Invalid time',
+        message: `Return time must be at least ${MIN_MINUTES_FROM_NOW} minutes from now.`,
+        buttons: [{ text: 'OK' }],
+      });
       return;
     }
     const timeString = `${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')} ${selectedPeriod}`;
@@ -874,6 +876,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   wheelDateTextDisabled: {
+    color: RETURN_LATER_MODAL.timePicker.unselectedColor,
+    opacity: 0.5,
+  },
+  wheelNumberTextDisabled: {
     color: RETURN_LATER_MODAL.timePicker.unselectedColor,
     opacity: 0.5,
   },

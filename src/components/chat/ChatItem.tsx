@@ -24,10 +24,10 @@ interface ChatItemProps {
 }
 
 export default function ChatItem({ chat, onPress }: ChatItemProps) {
-  const hasUnread = chat.unreadCount && chat.unreadCount > 0;
-  const messageText = chat.lastMessageSender
-    ? `${chat.lastMessageSender} ${chat.lastMessage}`
-    : chat.lastMessage;
+  const hasUnread = Boolean(chat.unreadCount && chat.unreadCount > 0);
+  const lastMsg = typeof chat.lastMessage === 'string' ? chat.lastMessage : '';
+  const sender = typeof chat.lastMessageSender === 'string' ? chat.lastMessageSender : '';
+  const messageText = sender ? `${sender} ${lastMsg}` : lastMsg;
 
   return (
     <TouchableOpacity
@@ -42,7 +42,7 @@ export default function ChatItem({ chat, onPress }: ChatItemProps) {
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Text style={styles.avatarInitial}>
-              {chat.name.charAt(0).toUpperCase()}
+              {(typeof chat.name === 'string' ? chat.name : '?').charAt(0).toUpperCase()}
             </Text>
           </View>
         )}
@@ -51,13 +51,13 @@ export default function ChatItem({ chat, onPress }: ChatItemProps) {
       {/* Content */}
       <View style={styles.contentContainer}>
         {/* Name */}
-        <Text style={styles.name}>{chat.name}</Text>
+        <Text style={styles.name}>{typeof chat.name === 'string' ? chat.name : 'Chat'}</Text>
 
         {/* Last Message */}
         <Text
           style={[
             styles.message,
-            chat.lastMessageSender && styles.messageLight,
+            sender ? styles.messageLight : null,
           ]}
           numberOfLines={1}
         >
@@ -65,23 +65,23 @@ export default function ChatItem({ chat, onPress }: ChatItemProps) {
         </Text>
 
         {/* Group Label */}
-        {chat.isGroup && (
+        {chat.isGroup ? (
           <View style={styles.groupLabel}>
             <Text style={styles.groupLabelText}>Group</Text>
           </View>
-        )}
+        ) : null}
       </View>
 
       {/* Unread Badge */}
-      {hasUnread && (
+      {hasUnread ? (
         <View style={styles.badgeContainer}>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>
-              {chat.unreadCount && chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+              {typeof chat.unreadCount === 'number' && chat.unreadCount > 99 ? '99+' : String(chat.unreadCount ?? 0)}
             </Text>
           </View>
         </View>
-      )}
+      ) : null}
     </TouchableOpacity>
   );
 }

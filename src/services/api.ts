@@ -1,6 +1,6 @@
 /**
- * API service layer
- * Handles all API calls and data fetching
+ * Legacy HTTP API client (not used – all APIs go through Supabase).
+ * Kept for possible future non-Supabase endpoints. Not exported from services/index.
  */
 
 export interface ApiResponse<T> {

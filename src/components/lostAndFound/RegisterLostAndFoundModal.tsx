@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,27 +9,84 @@ import {
   TextInput,
   StyleSheet,
   Dimensions,
-  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
+import { useToast } from '../../contexts/ToastContext';
+import { useMessageModal } from '../../contexts/MessageModalContext';
 import { typography } from '../../theme';
 import { REGISTER_FORM, scaleX, LOST_AND_FOUND_COLORS } from '../../constants/lostAndFoundStyles';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
+import { fetchStaffFromSupabase } from '../../services/staff';
 import DatePickerModal from './DatePickerModal';
 import TimePickerModal from './TimePickerModal';
 import StaffSelectorModal from './StaffSelectorModal';
 import StatusDropdown, { StatusOption } from './StatusDropdown';
 import StoredLocationDropdown, { StoredLocationOption } from './StoredLocationDropdown';
+import type { StaffMember } from '../../types/staff.types';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const TWO_COL_GAP = 12 * scaleX;
+const PHOTO_GRID_ITEM_SIZE = (SCREEN_WIDTH - 2 * (27 * scaleX) - TWO_COL_GAP) / 2;
+
+function GradientText({
+  text,
+  textStyle,
+  gradientColors = ['#ff46a3', '#4a91fc'],
+}: {
+  text: string;
+  textStyle: any;
+  gradientColors?: [string, string];
+}) {
+  const [width, setWidth] = useState(0);
+  const gradId = useMemo(() => `grad_${Math.random().toString(16).slice(2)}`, []);
+  const fontSize = typeof textStyle?.fontSize === 'number' ? (textStyle.fontSize as number) : 16;
+  const fontFamily = textStyle?.fontFamily;
+  const fontWeight = textStyle?.fontWeight;
+
+  return (
+    <View style={{ alignItems: 'center' }} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      {width > 0 ? (
+        <Svg width={width} height={fontSize * 1.5}>
+          <Defs>
+            <SvgLinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor={gradientColors[0]} />
+              <Stop offset="1" stopColor={gradientColors[1]} />
+            </SvgLinearGradient>
+          </Defs>
+          <SvgText
+            x={width / 2}
+            y={fontSize * 1.2}
+            textAnchor="middle"
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            fontWeight={fontWeight}
+            fill={`url(#${gradId})`}
+          >
+            {text}
+          </SvgText>
+        </Svg>
+      ) : (
+        <Text style={textStyle}>{text}</Text>
+      )}
+    </View>
+  );
+}
 
 interface RegisterLostAndFoundModalProps {
   visible: boolean;
   onClose: () => void;
   onNext?: (data: {
-    trackingNumber: string;
+    trackingNumber?: string;
     itemImage?: string;
     itemData: {
+      title: string;
       notes: string;
       selectedLocation: 'room' | 'publicArea';
       selectedRoom?: any;
+      selectedPublicArea?: string | null;
       foundedBy: string;
       registeredBy: string;
       status: StatusOption;
@@ -47,6 +104,8 @@ export default function RegisterLostAndFoundModal({
   onClose,
   onNext,
 }: RegisterLostAndFoundModalProps) {
+  const toast = useToast();
+  const messageModal = useMessageModal();
   const [selectedLocation, setSelectedLocation] = useState<'room' | 'publicArea'>('room');
   // Default to current date and time
   const getCurrentDateTime = () => {
@@ -73,36 +132,55 @@ export default function RegisterLostAndFoundModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showRoomDropdown, setShowRoomDropdown] = useState(false);
+  const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   
-  // Mock room data with guest names
-  const mockRooms = [
-    { number: '201', guestName: 'Mohamed B', badgeCount: 11 },
-    { number: '202', guestName: 'Sarah Johnson', badgeCount: 3 },
-    { number: '203', guestName: 'Ahmed Al-Mansouri', badgeCount: 7 },
-    { number: '204', guestName: 'Emma Williams', badgeCount: 2 },
-    { number: '205', guestName: 'John Smith', badgeCount: 5 },
-    { number: '301', guestName: 'Maria Garcia', badgeCount: 9 },
-    { number: '302', guestName: 'David Chen', badgeCount: 4 },
-    { number: '303', guestName: 'Fatima Ali', badgeCount: 6 },
+  interface RoomSelection {
+    id?: string;
+    number: string;
+    guestName: string; // Used by Lost & Found cards
+    badgeCount: number; // Backward-compat (used by older UI)
+    // Create-ticket-like guest info (optional)
+    guest_count?: number;
+    vip_code?: string | null;
+    image_url?: string | null;
+    check_in?: string | null;
+    check_out?: string | null;
+  }
+
+  // Fallback to mock data when Supabase is not configured.
+  // Note: keep `number` + `guestName` because the parent Lost&Found screen reads those.
+  const fallbackRooms: RoomSelection[] = [
+    { number: '201', guestName: 'Mohamed B', badgeCount: 11, guest_count: 11, vip_code: '11' },
+    { number: '202', guestName: 'Sarah Johnson', badgeCount: 3, guest_count: 3, vip_code: '3' },
+    { number: '203', guestName: 'Ahmed Al-Mansouri', badgeCount: 7, guest_count: 7, vip_code: '7' },
+    { number: '204', guestName: 'Emma Williams', badgeCount: 2, guest_count: 2, vip_code: '2' },
+    { number: '205', guestName: 'John Smith', badgeCount: 5, guest_count: 5, vip_code: '5' },
+    { number: '301', guestName: 'Maria Garcia', badgeCount: 9, guest_count: 9, vip_code: '9' },
+    { number: '302', guestName: 'David Chen', badgeCount: 4, guest_count: 4, vip_code: '4' },
+    { number: '303', guestName: 'Fatima Ali', badgeCount: 6, guest_count: 6, vip_code: '6' },
   ];
 
-  // Select a random default room
-  const getRandomRoom = () => {
-    return mockRooms[Math.floor(Math.random() * mockRooms.length)];
-  };
+  const [rooms, setRooms] = useState<RoomSelection[]>(fallbackRooms);
+  const [roomSearch, setRoomSearch] = useState('');
+  const [selectedPublicArea, setSelectedPublicArea] = useState<string | null>(null);
 
-  const [selectedRoom, setSelectedRoom] = useState(() => getRandomRoom());
+  const PUBLIC_AREAS = ['Brasserie', 'Gym', 'Toilet', 'Reception', 'Elevator'];
+
+  const getInitialRoom = (): RoomSelection =>
+    rooms[0] ?? { number: '—', guestName: '', badgeCount: 0, guest_count: 0, vip_code: null, image_url: null };
+  const [selectedRoom, setSelectedRoom] = useState<RoomSelection | null>(getInitialRoom());
   
   // Step 2 state
   const [showFoundedByModal, setShowFoundedByModal] = useState(false);
   const [showRegisteredByModal, setShowRegisteredByModal] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showStoredLocationDropdown, setShowStoredLocationDropdown] = useState(false);
-  const [foundedBy, setFoundedBy] = useState<string>('2'); // Default to Stella Kitou
-  const [registeredBy, setRegisteredBy] = useState<string>('2'); // Default to Stella Kitou
+  const [foundedBy, setFoundedBy] = useState<string>(''); 
+  const [registeredBy, setRegisteredBy] = useState<string>('');
   const [status, setStatus] = useState<StatusOption>('stored');
   const [storedLocation, setStoredLocation] = useState<StoredLocationOption>('hskOffice');
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   
   // Pictures state
   const [pictures, setPictures] = useState<string[]>([]);
@@ -112,6 +190,7 @@ export default function RegisterLostAndFoundModal({
   
   // Validation state
   const [showPictureError, setShowPictureError] = useState(false);
+  const [showTitleError, setShowTitleError] = useState(false);
   
   // Reset to step 1 when modal opens
   useEffect(() => {
@@ -120,95 +199,131 @@ export default function RegisterLostAndFoundModal({
       setSendEmailToGuest(true); // Reset email checkbox
       setPictures([]); // Reset pictures
       setShowPictureError(false); // Reset error state
+      setShowTitleError(false);
+      setRoomSearch('');
+      setShowRoomDropdown(false);
+      setSelectedPublicArea(null);
+      setTitle('');
+      setNotes('');
     }
   }, [visible]);
 
-  // Handle adding pictures
+  // Load staff from Supabase when available (used for Founded by / Registered by)
+  useEffect(() => {
+    let cancelled = false;
+    fetchStaffFromSupabase()
+      .then((rows) => {
+        if (cancelled) return;
+        setStaff(rows);
+        if (rows.length > 0) {
+          // Default to current user if known; otherwise first staff
+          setFoundedBy((prev) => prev || rows[0].id);
+          setRegisteredBy((prev) => prev || rows[0].id);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Load rooms from Supabase for Location dropdown when configured
+  useEffect(() => {
+    let cancelled = false;
+    if (!isSupabaseConfigured) return;
+    supabase
+      .from('rooms')
+      .select(`
+        id,
+        room_number,
+        reservations (
+          guests (
+            full_name,
+            vip_code,
+            image_url
+          ),
+          arrival_date,
+          departure_date,
+          adults,
+          kids
+        )
+      `)
+      .order('room_number', { ascending: true })
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        const mapped: RoomSelection[] = (data as any[]).map((room) => {
+          const reservation = room.reservations?.[0];
+          const guest = reservation?.guests?.[0];
+          const guestCount = (reservation?.adults || 0) + (reservation?.kids || 0);
+
+          return {
+            id: room.id,
+            number: room.room_number,
+            guestName: guest?.full_name ?? '',
+            badgeCount: guestCount,
+            guest_count: guestCount,
+            vip_code: guest?.vip_code ?? null,
+            image_url: guest?.image_url ?? null,
+            check_in: reservation?.arrival_date ?? null,
+            check_out: reservation?.departure_date ?? null,
+          };
+        });
+        if (mapped.length) {
+          setRooms(mapped);
+          setSelectedRoom(mapped[0]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Handle adding pictures – align behavior with Tickets (direct gallery picker)
   const handleAddPicture = async () => {
-    setShowPictureError(false); // Clear error when user tries to add picture
+    setShowPictureError(false);
     try {
-      // Show action sheet to choose camera or gallery
-      Alert.alert(
-        'Add Picture',
-        'Choose an option',
-        [
-          {
-            text: 'Camera',
-            onPress: async () => {
-              try {
-                const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
-                if (cameraStatus.status !== 'granted') {
-                  Alert.alert('Permission needed', 'We need camera permissions to take photos.');
-                  return;
-                }
-                const result = await ImagePicker.launchCameraAsync({
-                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                  allowsEditing: false, // No cropping - use full picture
-                  quality: 0.8,
-                });
-                if (!result.canceled && result.assets && result.assets[0]) {
-                  setPictures([...pictures, result.assets[0].uri]);
-                }
-              } catch (error) {
-                console.error('Camera error:', error);
-                Alert.alert('Error', 'Failed to open camera. Please try again.');
-              }
-            },
-          },
-          {
-            text: 'Gallery',
-            onPress: async () => {
-              try {
-                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                if (status !== 'granted') {
-                  Alert.alert('Permission needed', 'We need camera roll permissions to add pictures.');
-                  return;
-                }
-                const result = await ImagePicker.launchImageLibraryAsync({
-                  mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                  allowsEditing: false, // No cropping - use full picture
-                  quality: 0.8,
-                });
-                if (!result.canceled && result.assets && result.assets[0]) {
-                  setPictures([...pictures, result.assets[0].uri]);
-                }
-              } catch (error) {
-                console.error('Gallery error:', error);
-                Alert.alert('Error', 'Failed to open gallery. Please try again.');
-              }
-            },
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-        ],
-        { cancelable: true }
-      );
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        toast.show('We need camera roll permissions to add pictures.', {
+          type: 'error',
+          title: 'Permission needed',
+        });
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        allowsMultipleSelection: false,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setPictures((prev) => [...prev, result.assets[0].uri]);
+      }
     } catch (error) {
-      console.error('Error showing picture options:', error);
+      console.error('Gallery error:', error);
+      toast.show('Failed to open gallery. Please try again.', {
+        type: 'error',
+        title: 'Error',
+      });
     }
   };
 
   // Handle removing a picture
   const handleRemovePicture = (index: number) => {
-    Alert.alert(
-      'Remove Picture',
-      'Are you sure you want to remove this picture?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+    messageModal.show({
+      title: 'Remove Picture',
+      message: 'Are you sure you want to remove this picture?',
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: () => {
-            setPictures(pictures.filter((_, i) => i !== index));
-          },
+          onPress: () => setPictures(pictures.filter((_, i) => i !== index)),
         },
-      ]
-    );
+      ],
+    });
   };
   
   // Refs for measuring input field positions
@@ -302,6 +417,14 @@ export default function RegisterLostAndFoundModal({
     return `${day} ${month} ${year}`;
   };
 
+  // Format ISO date strings as "07/10"
+  const formatDateStr = (dateStr?: string | null): string => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return '';
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+  };
+
   // Format time as "15:00"
   const formatTime = (hour: number, minute: number): string => {
     return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
@@ -316,30 +439,29 @@ export default function RegisterLostAndFoundModal({
     setSelectedMinute(minute);
   };
 
-  // Generate tracking number
-  const generateTrackingNumber = (): string => {
-    const prefix = 'FH';
-    const randomNumber = Math.floor(10000 + Math.random() * 90000); // 5-digit number
-    return `${prefix}${randomNumber}`;
-  };
-
   const handleNext = () => {
     if (currentStep === 1) {
-      // Validation is handled by disabled state - button won't be clickable if invalid
+      const isTitleValid = title.trim().length > 0;
+      if (!isTitleValid) {
+        setShowTitleError(true);
+        toast.show('Title is required', { type: 'error', title: 'Missing title' });
+        return;
+      }
+      setShowTitleError(false);
       setCurrentStep(2);
     } else if (currentStep === 2) {
       setCurrentStep(3);
     } else if (currentStep === 3) {
-      // Generate tracking number and submit
-      const trackingNumber = generateTrackingNumber();
+      // Submit; tracking number is assigned by DB (trigger)
       if (onNext) {
         onNext({
-          trackingNumber,
           itemImage: pictures.length > 0 ? pictures[0] : undefined,
           itemData: {
+            title,
             notes,
             selectedLocation,
             selectedRoom: selectedLocation === 'room' ? selectedRoom : undefined,
+            selectedPublicArea: selectedLocation === 'publicArea' ? selectedPublicArea : undefined,
             foundedBy,
             registeredBy,
             status,
@@ -351,41 +473,18 @@ export default function RegisterLostAndFoundModal({
           },
         });
       }
-      onClose();
+      // Parent handles closing + success flow (avoids iOS modal race).
     }
   };
 
-  // Get staff member name by ID
-  const getStaffName = (staffId: string): string => {
-    const staffMap: { [key: string]: string } = {
-      '1': 'Etleva Hoxha',
-      '2': 'Stella Kitou',
-      '3': 'Zoe Tsakeri',
-      '4': 'Felix F',
-    };
-    return staffMap[staffId] || 'Unknown';
-  };
+  const getStaffName = (staffId: string): string =>
+    staff.find((s) => s.id === staffId)?.name ?? 'Unknown';
 
-  // Get staff department by ID
-  const getStaffDepartment = (staffId: string): string => {
-    const departmentMap: { [key: string]: string } = {
-      '1': 'HSK',
-      '2': 'HSK',
-      '3': 'HSK',
-      '4': 'F&B',
-    };
-    return departmentMap[staffId] || 'HSK';
-  };
+  const getStaffDepartment = (staffId: string): string =>
+    staff.find((s) => s.id === staffId)?.department ?? 'HSK';
 
-  // Get staff avatar by ID
-  const getStaffAvatar = (staffId: string) => {
-    const avatarMap: { [key: string]: any } = {
-      '1': require('../../../assets/images/Etleva_Hoxha.png'),
-      '2': require('../../../assets/images/Stella_Kitou.png'),
-      '4': require('../../../assets/images/Felix_F.png'),
-    };
-    return avatarMap[staffId];
-  };
+  const getStaffAvatar = (staffId: string) =>
+    staff.find((s) => s.id === staffId)?.avatar;
 
   // Get first letter for initial
   const getInitial = (name: string): string => {
@@ -446,28 +545,52 @@ export default function RegisterLostAndFoundModal({
           <Text style={styles.headerTitle}>Lost & Found</Text>
         </View>
 
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+        <KeyboardAvoidingView
+          style={styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          // On Android, offset by header height so focused inputs (e.g. Notes)
+          // can scroll above the keyboard reliably.
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : REGISTER_FORM.header.height * scaleX}
         >
-          {/* Title */}
-          <Text style={styles.title}>Register</Text>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Title */}
+            <Text style={styles.title}>Register</Text>
 
           {/* Step Indicator */}
           <Text style={styles.stepIndicator}>Step {currentStep}</Text>
 
           {/* Progress Bar */}
-          <View style={styles.progressBarContainer}>
+            <View style={styles.progressBarContainer}>
             <View style={[styles.progressBar, currentStep >= 1 ? styles.progressBarActive : styles.progressBarInactive]} />
             <View style={[styles.progressBar, currentStep >= 2 ? styles.progressBarActive : styles.progressBarInactive]} />
             <View style={[styles.progressBar, currentStep >= 3 ? styles.progressBarActive : styles.progressBarInactive]} />
-          </View>
+            </View>
 
           {/* Step 1 Content */}
           {currentStep === 1 && (
             <>
+              {/* Title Field (Figma: "Wrist Watch") */}
+              <Text style={styles.sectionLabel}>Title</Text>
+              <View style={[styles.titleInputContainer, showTitleError && styles.titleInputError]}>
+                <TextInput
+                  style={styles.titleInput}
+                  placeholder="Wrist Watch"
+                  placeholderTextColor="#9ca3af"
+                  value={title}
+                  onChangeText={(v) => {
+                    setTitle(v);
+                    if (showTitleError && v.trim().length > 0) setShowTitleError(false);
+                  }}
+                  returnKeyType="done"
+                />
+              </View>
+
               {/* Date and Time Section */}
               <Text style={styles.sectionLabel}>Date and time</Text>
               <View style={styles.dateTimeContainer}>
@@ -555,67 +678,192 @@ export default function RegisterLostAndFoundModal({
             <>
               <Text style={styles.sectionLabelLight}>Room Number</Text>
               <View style={styles.roomSelectorWrapper}>
-                <TouchableOpacity
-                  style={styles.roomSelector}
-                  activeOpacity={0.7}
-                  onPress={() => setShowRoomDropdown(!showRoomDropdown)}
-                >
-                  <View style={styles.roomSelectorContent}>
-                    <Text style={styles.roomText}>Room {selectedRoom.number}</Text>
-                    <View style={styles.roomDivider} />
-                    <View style={styles.guestNameContainer}>
-                      <Text style={styles.guestText}>{selectedRoom.guestName}</Text>
-                      <Image
-                        source={require('../../../assets/icons/spinner.png')}
-                        style={styles.spinnerIcon}
-                        resizeMode="contain"
-                      />
-                    </View>
-                  </View>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{selectedRoom.badgeCount}</Text>
-                  </View>
-                </TouchableOpacity>
-
-                {/* Room Dropdown */}
-                {showRoomDropdown && (
+                {!selectedRoom ? (
                   <>
                     <TouchableOpacity
-                      style={styles.dropdownBackdrop}
-                      activeOpacity={1}
-                      onPress={() => setShowRoomDropdown(false)}
-                    />
-                    <ScrollView
-                      style={styles.roomDropdown}
-                      nestedScrollEnabled={true}
-                      showsVerticalScrollIndicator={false}
+                      style={styles.searchInputContainer}
+                      onPress={() => setShowRoomDropdown((v) => !v)}
+                      activeOpacity={0.7}
                     >
-                      {mockRooms.map((room) => (
-                        <TouchableOpacity
-                          key={room.number}
-                          style={[
-                            styles.roomDropdownItem,
-                            selectedRoom.number === room.number && styles.roomDropdownItemSelected,
-                          ]}
-                          onPress={() => {
-                            setSelectedRoom(room);
-                            setShowRoomDropdown(false);
-                          }}
-                          activeOpacity={0.7}
-                        >
-                          <View style={styles.roomDropdownItemContent}>
-                            <Text style={styles.roomDropdownRoomText}>Room {room.number}</Text>
-                            <View style={styles.roomDropdownDivider} />
-                            <Text style={styles.roomDropdownGuestText}>{room.guestName}</Text>
-                          </View>
-                          {selectedRoom.number === room.number && (
-                            <Text style={styles.roomDropdownCheckmark}>✓</Text>
-                          )}
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
+                      <Text style={[styles.searchInputText, !roomSearch && styles.searchInputPlaceholder]}>
+                        {roomSearch ? roomSearch : 'Search room...'}
+                      </Text>
+                      <Image
+                        source={require('../../../assets/icons/dropdown-arrow.png')}
+                        style={[styles.dropdownArrowIcon, showRoomDropdown && styles.dropdownArrowIconOpen]}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+
+                    {showRoomDropdown && (
+                      <View style={styles.dropdownMenu}>
+                        <TextInput
+                          style={styles.dropdownSearchInput}
+                          placeholder="Search room..."
+                          value={roomSearch}
+                          onChangeText={setRoomSearch}
+                          placeholderTextColor="#999"
+                          autoFocus
+                        />
+
+                        <ScrollView style={styles.roomsDropdownList} nestedScrollEnabled>
+                          {rooms
+                            .filter((room) =>
+                              room.number.toLowerCase().includes(roomSearch.trim().toLowerCase())
+                            )
+                            .map((room) => (
+                              <TouchableOpacity
+                                key={room.id ?? room.number}
+                                style={styles.roomCard}
+                                onPress={() => {
+                                  setSelectedRoom(room);
+                                  setShowRoomDropdown(false);
+                                  setRoomSearch('');
+                                }}
+                                activeOpacity={0.7}
+                              >
+                                <View style={styles.roomCardContent}>
+                                  <View style={styles.roomNumberSection}>
+                                    <Text style={styles.roomNumberText}>Room {room.number}</Text>
+                                  </View>
+
+                                  {room.guestName ? (
+                                    <>
+                                      <View style={styles.verticalDivider} />
+                                      <View style={styles.guestInfoSection}>
+                                        <View style={styles.guestImageContainer}>
+                                          {room.image_url ? (
+                                            <Image source={{ uri: room.image_url }} style={styles.guestImage} />
+                                          ) : (
+                                            <View style={styles.guestImagePlaceholder} />
+                                          )}
+                                          {room.vip_code ? (
+                                            <View style={styles.vipBadge}>
+                                              <Text style={styles.vipBadgeText}>!</Text>
+                                            </View>
+                                          ) : null}
+                                        </View>
+
+                                        <View style={styles.guestDetails}>
+                                          <View style={styles.guestNameRow}>
+                                            <Text style={styles.guestNameText}>{room.guestName}</Text>
+                                            {room.vip_code ? (
+                                              <Text style={styles.vipCodeText}>{room.vip_code}</Text>
+                                            ) : null}
+                                          </View>
+                                          <View style={styles.guestMetaRow}>
+                                            <Text style={styles.guestDatesText}>
+                                              {formatDateStr(room.check_in)}-{formatDateStr(room.check_out)}
+                                            </Text>
+                                            {typeof room.guest_count === 'number' ? (
+                                              <>
+                                                <Image
+                                                  source={require('../../../assets/icons/people-icon.png')}
+                                                  style={styles.guestCountIcon}
+                                                  resizeMode="contain"
+                                                />
+                                                <Text style={styles.guestCountText}>{room.guest_count}/2</Text>
+                                              </>
+                                            ) : null}
+                                          </View>
+                                        </View>
+                                      </View>
+                                    </>
+                                  ) : null}
+                                </View>
+                              </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                      </View>
+                    )}
                   </>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.roomCard, styles.selectedRoomCard]}
+                    onPress={() => setSelectedRoom(null)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.roomCardContent}>
+                      <View style={styles.roomNumberSection}>
+                        <Text style={styles.roomNumberText}>Room {selectedRoom.number}</Text>
+                      </View>
+
+                      {selectedRoom.guestName ? (
+                        <>
+                          <View style={styles.verticalDivider} />
+                          <View style={styles.guestInfoSection}>
+                            <View style={styles.guestImageContainer}>
+                              {selectedRoom.image_url ? (
+                                <Image source={{ uri: selectedRoom.image_url }} style={styles.guestImage} />
+                              ) : (
+                                <View style={styles.guestImagePlaceholder} />
+                              )}
+                              {selectedRoom.vip_code ? (
+                                <View style={styles.vipBadge}>
+                                  <Text style={styles.vipBadgeText}>!</Text>
+                                </View>
+                              ) : null}
+                            </View>
+
+                            <View style={styles.guestDetails}>
+                              <View style={styles.guestNameRow}>
+                                <Text style={styles.guestNameText}>{selectedRoom.guestName}</Text>
+                                {selectedRoom.vip_code ? (
+                                  <Text style={styles.vipCodeText}>{selectedRoom.vip_code}</Text>
+                                ) : null}
+                              </View>
+                              <View style={styles.guestMetaRow}>
+                                <Text style={styles.guestDatesText}>
+                                  {formatDateStr(selectedRoom.check_in)}-{formatDateStr(selectedRoom.check_out)}
+                                </Text>
+                                {typeof selectedRoom.guest_count === 'number' ? (
+                                  <>
+                                    <Image
+                                      source={require('../../../assets/icons/people-icon.png')}
+                                      style={styles.guestCountIcon}
+                                      resizeMode="contain"
+                                    />
+                                    <Text style={styles.guestCountText}>{selectedRoom.guest_count}/2</Text>
+                                  </>
+                                ) : null}
+                              </View>
+                            </View>
+                          </View>
+                        </>
+                      ) : null}
+                    </View>
+                  </TouchableOpacity>
                 )}
+
+              </View>
+            </>
+          )}
+
+          {/* Public Area Selection */}
+          {selectedLocation === 'publicArea' && currentStep === 1 && (
+            <>
+              <Text style={styles.sectionLabelLight}>Select Public Area</Text>
+              <View style={styles.publicAreasContainer}>
+                {PUBLIC_AREAS.map((area) => (
+                  <TouchableOpacity
+                    key={area}
+                    style={styles.publicAreaItem}
+                    onPress={() => setSelectedPublicArea(area)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.publicAreaContent}>
+                      <Image
+                        source={require('../../../assets/icons/location-pin-icon.png')}
+                        style={styles.publicAreaIcon}
+                        resizeMode="contain"
+                      />
+                      <Text style={styles.publicAreaText}>{area}</Text>
+                    </View>
+                    {selectedPublicArea === area ? (
+                      <Text style={styles.publicAreaCheckmark}>✓</Text>
+                    ) : null}
+                  </TouchableOpacity>
+                ))}
               </View>
             </>
           )}
@@ -626,22 +874,11 @@ export default function RegisterLostAndFoundModal({
           {currentStep === 1 && (
             <>
               <Text style={[styles.sectionLabel, styles.picturesLabel]}>Pictures</Text>
-              <View
-                style={[
-                  styles.picturesContainer,
-                  {
-                    minHeight:
-                      pictures.length === 0
-                        ? REGISTER_FORM.pictures.image2.height * scaleX
-                        : Math.ceil((pictures.length + 1) / 2) *
-                            (REGISTER_FORM.pictures.image1.height * scaleX + 12 * scaleX), // Always use grid calculation, +1 accounts for add button
-                  },
-                ]}
-              >
+              <View style={styles.picturesContainer}>
                 {pictures.length === 0 ? (
                   <TouchableOpacity
                     style={[
-                      styles.picture2FullWidth,
+                      styles.addPhotoContainer,
                       showPictureError && styles.picture2Error,
                     ]}
                     activeOpacity={0.7}
@@ -649,84 +886,43 @@ export default function RegisterLostAndFoundModal({
                   >
                     <Image
                       source={require('../../../assets/icons/add-photos.png')}
-                      style={styles.addIcon}
+                      style={styles.addPhotoIcon}
                       resizeMode="contain"
                     />
+                    <GradientText text="Add Photo" textStyle={styles.addPhotoTitle} />
+                    <Text style={styles.addPhotoSubtitle}>
+                      Add photos of the item and our AI will do the rest
+                    </Text>
                   </TouchableOpacity>
                 ) : (
-                  <>
-                    {/* Always use 2-column grid layout for all pictures - centered */}
-                    {(() => {
-                      const screenWidth = Dimensions.get('window').width;
-                      const containerPadding = 27 * scaleX;
-                      const gap = 12 * scaleX;
-                      const containerWidth = screenWidth - (containerPadding * 2);
-                      
-                      // Calculate picture width and total grid width
-                      const pictureWidth = (containerWidth - gap) / 2;
-                      const totalGridWidth = 2 * pictureWidth + gap;
-                      
-                      // Calculate center offset to ensure equal margins on both sides
-                      const centerOffset = (containerWidth - totalGridWidth) / 2;
-                      
-                      // Starting position: container padding + center offset
-                      const gridStartLeft = containerPadding + centerOffset;
-                      
-                      return (
-                        <>
-                          {pictures.map((uri, index) => {
-                            const row = Math.floor(index / 2);
-                            const col = index % 2;
-                            const left = gridStartLeft + col * (pictureWidth + gap);
-                            const top = row * (REGISTER_FORM.pictures.image1.height * scaleX + gap);
-                            return (
-                              <TouchableOpacity
-                                key={index}
-                                style={[
-                                  styles.picture1Grid,
-                                  {
-                                    left,
-                                    top,
-                                    width: pictureWidth, // Use calculated width for centering
-                                  },
-                                ]}
-                                activeOpacity={0.7}
-                                onPress={() => handleRemovePicture(index)}
-                              >
-                                <Image
-                                  source={{ uri }}
-                                  style={[styles.picture1Grid, { width: pictureWidth }]}
-                                  resizeMode="cover"
-                                />
-                                <View style={styles.pictureRemoveOverlay}>
-                                  <Text style={styles.pictureRemoveText}>×</Text>
-                                </View>
-                              </TouchableOpacity>
-                            );
-                          })}
-                          {/* Add more button in next grid position - centered */}
-                          <TouchableOpacity
-                            style={[
-                              styles.picture2,
-                              {
-                                left: gridStartLeft + (pictures.length % 2) * (pictureWidth + gap),
-                                top: Math.floor(pictures.length / 2) * (REGISTER_FORM.pictures.image1.height * scaleX + gap),
-                                width: pictureWidth, // Use calculated width to match grid
-                              },
-                            ]}
-                            activeOpacity={0.7}
-                            onPress={handleAddPicture}
-                          >
-                            <Image
-                              source={require('../../../assets/icons/add-photos.png')}
-                              style={styles.addIcon}
-                              resizeMode="contain"
-                            />
-                          </TouchableOpacity>
-                        </>
-                      );
-                    })()}
-                  </>
+                  <View style={styles.photosGrid}>
+                    {pictures.map((uri, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={styles.photoItem}
+                        activeOpacity={0.7}
+                        onPress={() => handleRemovePicture(index)}
+                      >
+                        <Image source={{ uri }} style={styles.photoImage} resizeMode="cover" />
+                        <View style={styles.pictureRemoveOverlay}>
+                          <Text style={styles.pictureRemoveText}>×</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+
+                    <TouchableOpacity
+                      style={styles.addPhotoGridItem}
+                      activeOpacity={0.7}
+                      onPress={handleAddPicture}
+                    >
+                      <Image
+                        source={require('../../../assets/icons/add-photos.png')}
+                        style={styles.addPhotoGridIcon}
+                        resizeMode="contain"
+                      />
+                      <GradientText text="Add Photo" textStyle={styles.addPhotoGridTitle} />
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
             </>
@@ -982,38 +1178,114 @@ export default function RegisterLostAndFoundModal({
               {/* Found In Section */}
               <Text style={styles.step3FoundInLabel}>Found in</Text>
               <View style={styles.step3FoundInContent}>
-                <View style={styles.step3CheckboxContainer}>
-                  <View style={[styles.step3Checkbox, selectedLocation === 'room' && styles.step3CheckboxChecked]}>
-                    {selectedLocation === 'room' && (
-                      <Text style={styles.step3Checkmark}>✓</Text>
-                    )}
-                  </View>
-                  <Text style={styles.step3CheckboxLabel}>Room</Text>
-                </View>
-                {selectedLocation === 'room' && selectedRoom && (
-                  <View style={styles.step3GuestInfo}>
-                    <Image
-                      source={require('../../../assets/icons/guest-departure-icon.png')}
-                      style={styles.step3GuestIcon}
-                      resizeMode="contain"
-                    />
-                    <View style={styles.step3GuestDetails}>
-                      <Text style={styles.step3GuestName}>Mr {selectedRoom.guestName}</Text>
-                      <Text style={styles.step3RoomNumber}>Room {selectedRoom.number}</Text>
+                <View style={styles.step3FoundInOptionsRow}>
+                  <View style={styles.step3CheckboxContainer}>
+                    <View style={[styles.step3Checkbox, selectedLocation === 'room' && styles.step3CheckboxChecked]}>
+                      {selectedLocation === 'room' && <Text style={styles.step3Checkmark}>✓</Text>}
                     </View>
-                    <TouchableOpacity
-                      style={styles.step3EditIcon}
-                      onPress={() => setCurrentStep(1)}
-                      activeOpacity={0.7}
-                    >
-                      <Image
-                        source={require('../../../assets/icons/notes-icon.png')}
-                        style={styles.step3EditIconImage}
-                        resizeMode="contain"
-                      />
-                    </TouchableOpacity>
+                    <Text style={styles.step3CheckboxLabel}>Room</Text>
                   </View>
-                )}
+
+                  <View style={styles.step3CheckboxContainer}>
+                    <View
+                      style={[
+                        styles.step3Checkbox,
+                        selectedLocation === 'publicArea' && styles.step3CheckboxChecked,
+                      ]}
+                    >
+                      {selectedLocation === 'publicArea' && <Text style={styles.step3Checkmark}>✓</Text>}
+                    </View>
+                    <Text style={styles.step3CheckboxLabel}>Public Area</Text>
+                  </View>
+                </View>
+
+                {selectedLocation === 'room' ? (
+                  <View style={styles.step3FoundInCard}>
+                    <View style={styles.step3FoundInCardContent}>
+                      <Text style={styles.step3FoundInRoomText}>Room {selectedRoom?.number ?? '—'}</Text>
+                      <View style={styles.step3FoundInDivider} />
+
+                      <View style={styles.step3FoundInGuestSection}>
+                        <View style={styles.step3FoundInGuestImageContainer}>
+                          {selectedRoom?.image_url ? (
+                            <Image
+                              source={{ uri: selectedRoom.image_url }}
+                              style={styles.step3FoundInGuestImage}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <View style={styles.step3FoundInGuestImagePlaceholder} />
+                          )}
+                          {selectedRoom?.vip_code ? (
+                            <View style={styles.step3FoundInVipBadge}>
+                              <Text style={styles.step3FoundInVipBadgeText}>!</Text>
+                            </View>
+                          ) : null}
+                        </View>
+
+                        <View style={styles.step3FoundInGuestDetails}>
+                          <View style={styles.step3FoundInGuestNameRow}>
+                            <Text style={styles.step3FoundInGuestName}>
+                              {selectedRoom?.guestName ? `Mr ${selectedRoom.guestName}` : '—'}
+                            </Text>
+                            {selectedRoom?.vip_code ? (
+                              <Text style={styles.step3FoundInVipCode}>{selectedRoom.vip_code}</Text>
+                            ) : null}
+                          </View>
+
+                          <View style={styles.step3FoundInGuestMetaRow}>
+                            <Text style={styles.step3FoundInDates}>
+                              {formatDateStr(selectedRoom?.check_in)}-{formatDateStr(selectedRoom?.check_out)}
+                            </Text>
+                            {typeof selectedRoom?.guest_count === 'number' ? (
+                              <>
+                                <Image
+                                  source={require('../../../assets/icons/people-icon.png')}
+                                  style={styles.step3FoundInGuestCountIcon}
+                                  resizeMode="contain"
+                                />
+                                <Text style={styles.step3FoundInGuestCountText}>
+                                  {selectedRoom.guest_count}/2
+                                </Text>
+                              </>
+                            ) : null}
+                          </View>
+                        </View>
+                      </View>
+
+                      <TouchableOpacity
+                        style={styles.step3EditIcon}
+                        onPress={() => setCurrentStep(1)}
+                        activeOpacity={0.7}
+                      >
+                        <Image
+                          source={require('../../../assets/icons/notes-icon.png')}
+                          style={styles.step3EditIconImage}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : selectedLocation === 'publicArea' ? (
+                  <View style={styles.step3FoundInCard}>
+                    <View style={styles.step3FoundInCardContent}>
+                      <Text style={styles.step3FoundInPublicAreaText}>
+                        {selectedPublicArea ?? 'Public Area'}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.step3EditIcon}
+                        onPress={() => setCurrentStep(1)}
+                        activeOpacity={0.7}
+                      >
+                        <Image
+                          source={require('../../../assets/icons/notes-icon.png')}
+                          style={styles.step3EditIconImage}
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : null}
               </View>
 
               {/* Email Checkbox */}
@@ -1147,22 +1419,27 @@ export default function RegisterLostAndFoundModal({
           <TouchableOpacity
             style={[
               styles.nextButton,
-              (currentStep === 1 && (pictures.length === 0 || notes.trim() === '')) && styles.nextButtonDisabled,
+              (currentStep === 1 &&
+                (pictures.length === 0 || notes.trim() === '' || title.trim() === '')) &&
+                styles.nextButtonDisabled,
             ]}
             onPress={handleNext}
             activeOpacity={0.7}
-            disabled={currentStep === 1 && (pictures.length === 0 || notes.trim() === '')}
+            disabled={currentStep === 1 && (pictures.length === 0 || notes.trim() === '' || title.trim() === '')}
           >
             <Text
               style={[
                 styles.nextButtonText,
-                (currentStep === 1 && (pictures.length === 0 || notes.trim() === '')) && styles.nextButtonTextDisabled,
+                (currentStep === 1 &&
+                  (pictures.length === 0 || notes.trim() === '' || title.trim() === '')) &&
+                  styles.nextButtonTextDisabled,
               ]}
             >
               {currentStep === 3 ? 'Done' : 'Next'}
             </Text>
           </TouchableOpacity>
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
         {/* Date Picker Modal */}
         <DatePickerModal
@@ -1188,6 +1465,7 @@ export default function RegisterLostAndFoundModal({
           onSelect={setFoundedBy}
           selectedStaffId={foundedBy}
           title="Founded by"
+          staff={staff}
           showMeOption={true}
           currentUserId="1"
           inputFieldPosition={foundedByFieldPosition}
@@ -1198,6 +1476,7 @@ export default function RegisterLostAndFoundModal({
           onSelect={setRegisteredBy}
           selectedStaffId={registeredBy}
           title="Registered by"
+          staff={staff}
           showMeOption={false}
           inputFieldPosition={registeredByFieldPosition}
         />
@@ -1224,6 +1503,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   header: {
     position: 'relative',
@@ -1268,7 +1550,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: (REGISTER_FORM.title.top - REGISTER_FORM.header.height) * scaleX,
     paddingHorizontal: 27 * scaleX,
-    paddingBottom: 50 * scaleX,
+    // Extra space so Notes can scroll above keyboard (iOS + Android)
+    paddingBottom: 240 * scaleX,
   },
   title: {
     fontSize: REGISTER_FORM.title.fontSize * scaleX,
@@ -1309,6 +1592,27 @@ const styles = StyleSheet.create({
     fontWeight: REGISTER_FORM.dateTime.label.fontWeight as any,
     color: REGISTER_FORM.dateTime.label.color,
     marginBottom: 16 * scaleX, // Relative spacing from label to input
+  },
+  titleInputContainer: {
+    width: '100%',
+    height: 68 * scaleX,
+    borderRadius: 8 * scaleX,
+    borderWidth: 1,
+    borderColor: '#afa9ad',
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    paddingHorizontal: 16 * scaleX,
+    marginBottom: 24 * scaleX,
+  },
+  titleInputError: {
+    borderColor: '#ff0000',
+    borderWidth: 2,
+  },
+  titleInput: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300' as any,
+    color: '#111827',
   },
   dateTimeContainer: {
     flexDirection: 'row',
@@ -1396,7 +1700,91 @@ const styles = StyleSheet.create({
   roomSelectorWrapper: {
     position: 'relative',
     marginBottom: 24 * scaleX, // Relative spacing to next section
-    zIndex: 100, // Ensure dropdown appears above other elements
+    zIndex: 9999, // Stronger layering (Android needs extra help)
+    elevation: 12,
+  },
+  // Ticket-like dropdown-in-input
+  searchInputContainer: {
+    width: '100%',
+    maxWidth: REGISTER_FORM.roomNumber.selector.width * scaleX,
+    height: 50 * scaleX,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8 * scaleX,
+    paddingHorizontal: 16 * scaleX,
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  searchInputText: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: '#000',
+    flex: 1,
+  },
+  searchInputPlaceholder: {
+    color: '#999',
+  },
+  dropdownArrowIcon: {
+    width: 12 * scaleX,
+    height: 12 * scaleX,
+    tintColor: '#5a759d',
+  },
+  dropdownArrowIconOpen: {
+    transform: [{ rotate: '180deg' }],
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 55 * scaleX,
+    left: 0,
+    right: 0,
+    maxWidth: REGISTER_FORM.roomNumber.selector.width * scaleX,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8 * scaleX,
+    maxHeight: 400 * scaleX,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 16, // Android stacking
+    zIndex: 10001,
+  },
+  dropdownSearchInput: {
+    height: 50 * scaleX,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    paddingHorizontal: 16 * scaleX,
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+  },
+  roomsDropdownList: {
+    maxHeight: 350 * scaleX,
+  },
+  roomCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12 * scaleX,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 12 * scaleX,
+    overflow: 'hidden',
+  },
+  selectedRoomCard: {
+    width: '100%',
+    maxWidth: REGISTER_FORM.roomNumber.selector.width * scaleX,
+    height: REGISTER_FORM.roomNumber.selector.height * scaleX,
+    borderRadius: REGISTER_FORM.roomNumber.selector.borderRadius * scaleX,
+    borderWidth: 2,
+    borderColor: '#5a759d',
+    backgroundColor: '#f0f4ff',
+    overflow: 'hidden',
+  },
+  roomCardContent: {
+    flexDirection: 'row',
+    minHeight: REGISTER_FORM.roomNumber.selector.height * scaleX,
+    alignItems: 'center',
   },
   roomSelector: {
     width: '100%',
@@ -1415,6 +1803,148 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+
+  // Create-ticket-like room card (used inside Lost & Found Location selector)
+  roomNumberSection: {
+    justifyContent: 'center',
+    paddingHorizontal: 18 * scaleX,
+    minWidth: 150 * scaleX,
+  },
+  roomNumberText: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#5a759d',
+  },
+  verticalDivider: {
+    width: 1,
+    height: 54 * scaleX,
+    backgroundColor: '#e5e7eb',
+  },
+  guestInfoSection: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14 * scaleX,
+  },
+  guestImageContainer: {
+    position: 'relative',
+    marginRight: 14 * scaleX,
+  },
+  guestImage: {
+    width: 35 * scaleX,
+    height: 35 * scaleX,
+    borderRadius: 5 * scaleX,
+  },
+  guestImagePlaceholder: {
+    width: 35 * scaleX,
+    height: 35 * scaleX,
+    borderRadius: 5 * scaleX,
+    backgroundColor: '#e5e7eb',
+  },
+  vipBadge: {
+    position: 'absolute',
+    right: -4 * scaleX,
+    bottom: -4 * scaleX,
+    width: 14 * scaleX,
+    height: 14 * scaleX,
+    borderRadius: 7 * scaleX,
+    backgroundColor: '#ff0000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vipBadgeText: {
+    fontSize: 10 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  guestDetails: {
+    flex: 1,
+  },
+  guestNameRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 4 * scaleX,
+  },
+  guestNameText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#000',
+  },
+  vipCodeText: {
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#334866',
+    marginLeft: 6 * scaleX,
+  },
+  guestMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  guestDatesText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000',
+    marginRight: 12 * scaleX,
+    flexShrink: 1,
+  },
+  guestCountIcon: {
+    width: 12 * scaleX,
+    height: 12 * scaleX,
+    marginRight: 4 * scaleX,
+    tintColor: '#666',
+  },
+  guestCountText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000',
+  },
+
+  publicAreasContainer: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12 * scaleX,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: REGISTER_FORM.roomNumber.selector.width * scaleX,
+    marginBottom: 24 * scaleX,
+  },
+  publicAreaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 18 * scaleX,
+    paddingHorizontal: 20 * scaleX,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  publicAreaContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  publicAreaIcon: {
+    width: 16 * scaleX,
+    height: 16 * scaleX,
+    tintColor: '#999',
+    marginRight: 16 * scaleX,
+  },
+  publicAreaText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000',
+  },
+  publicAreaCheckmark: {
+    fontSize: 18 * scaleX,
+    color: '#5a759d',
+    fontWeight: 'bold',
   },
   roomText: {
     fontSize: REGISTER_FORM.roomNumber.roomText.fontSize * scaleX,
@@ -1488,13 +2018,24 @@ const styles = StyleSheet.create({
     borderRadius: 8 * scaleX,
     borderWidth: 1,
     borderColor: '#afa9ad',
-    maxHeight: 200 * scaleX,
+    maxHeight: 260 * scaleX,
     zIndex: 101,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
+  },
+  roomSearchContainer: {
+    paddingHorizontal: 12 * scaleX,
+    paddingVertical: 8 * scaleX,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  roomSearchInput: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: '#111827',
   },
   roomDropdownItem: {
     flexDirection: 'row',
@@ -1520,16 +2061,34 @@ const styles = StyleSheet.create({
     color: REGISTER_FORM.roomNumber.roomText.color,
   },
   roomDropdownDivider: {
-    width: 0,
+    width: 1,
     height: 20 * scaleX,
     backgroundColor: REGISTER_FORM.roomNumber.divider.color,
-    marginHorizontal: 20 * scaleX,
+    marginHorizontal: 12 * scaleX,
   },
   roomDropdownGuestText: {
     fontSize: REGISTER_FORM.roomNumber.guestText.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: REGISTER_FORM.roomNumber.guestText.fontWeight as any,
     color: REGISTER_FORM.roomNumber.guestText.color,
+  },
+  roomDropdownGuestNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  roomDropdownGuestImage: {
+    width: 18 * scaleX,
+    height: 18 * scaleX,
+    borderRadius: 4 * scaleX,
+    marginRight: 8 * scaleX,
+  },
+  roomDropdownVipCodeText: {
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#334866',
+    marginLeft: 6 * scaleX,
   },
   roomDropdownCheckmark: {
     fontSize: 18 * scaleX,
@@ -1545,6 +2104,74 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginBottom: 24 * scaleX, // Relative spacing to next section
   },
+  photosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: TWO_COL_GAP,
+  },
+  photoItem: {
+    width: PHOTO_GRID_ITEM_SIZE,
+    height: PHOTO_GRID_ITEM_SIZE,
+    borderRadius: 16 * scaleX,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  addPhotoGridItem: {
+    width: PHOTO_GRID_ITEM_SIZE,
+    height: PHOTO_GRID_ITEM_SIZE,
+    borderRadius: 11 * scaleX,
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#e3e3e3',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addPhotoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48 * scaleX,
+    borderWidth: 2,
+    borderColor: '#e3e3e3',
+    borderRadius: 12 * scaleX,
+    borderStyle: 'dashed',
+    width: '100%',
+  },
+  addPhotoIcon: {
+    width: 48 * scaleX,
+    height: 48 * scaleX,
+    marginBottom: 16 * scaleX,
+  },
+  addPhotoTitle: {
+    fontSize: 19 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#ff46a3',
+    marginBottom: 8 * scaleX,
+  },
+  addPhotoSubtitle: {
+    fontSize: 13 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000000',
+    textAlign: 'center',
+    maxWidth: 280 * scaleX,
+  },
+  addPhotoGridIcon: {
+    width: 32 * scaleX,
+    height: 32 * scaleX,
+    marginBottom: 4 * scaleX,
+  },
+  addPhotoGridTitle: {
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#ff46a3',
+  },
   picture1Grid: {
     position: 'absolute',
     width: ((Dimensions.get('window').width - (27 * 2 * scaleX) - (12 * scaleX)) / 2), // Two columns: (container width - padding - margin) / 2
@@ -1557,7 +2184,10 @@ const styles = StyleSheet.create({
     width: ((Dimensions.get('window').width - (27 * 2 * scaleX) - (12 * scaleX)) / 2), // Same width as picture1 for two-column layout
     height: REGISTER_FORM.pictures.image2.height * scaleX,
     borderRadius: REGISTER_FORM.pictures.image2.borderRadius * scaleX,
-    backgroundColor: REGISTER_FORM.pictures.image2.backgroundColor,
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#e3e3e3',
+    borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1802,6 +2432,125 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingRight: 20 * scaleX,
     marginBottom: 0,
+  },
+  step3FoundInOptionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 40 * scaleX,
+  },
+  step3FoundInCard: {
+    marginTop: 14 * scaleX,
+    backgroundColor: 'rgba(100,131,176,0.07)',
+    borderRadius: 6 * scaleX,
+    paddingHorizontal: 12 * scaleX,
+    paddingVertical: 12 * scaleX,
+    width: '100%',
+  },
+  step3FoundInCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  step3FoundInRoomText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300' as any,
+    color: '#5a759d',
+    minWidth: 78 * scaleX,
+  },
+  step3FoundInDivider: {
+    width: 1,
+    height: 54 * scaleX,
+    backgroundColor: '#5a759d',
+    marginHorizontal: 12 * scaleX,
+  },
+  step3FoundInGuestSection: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  step3FoundInGuestImageContainer: {
+    position: 'relative',
+    marginRight: 12 * scaleX,
+  },
+  step3FoundInGuestImage: {
+    width: 34.588 * scaleX,
+    height: 34.588 * scaleX,
+    borderRadius: 5 * scaleX,
+  },
+  step3FoundInGuestImagePlaceholder: {
+    width: 34.588 * scaleX,
+    height: 34.588 * scaleX,
+    borderRadius: 5 * scaleX,
+    backgroundColor: '#e5e7eb',
+  },
+  step3FoundInVipBadge: {
+    position: 'absolute',
+    right: -4 * scaleX,
+    bottom: -4 * scaleX,
+    width: 14.118 * scaleX,
+    height: 14.118 * scaleX,
+    borderRadius: 7.059 * scaleX,
+    backgroundColor: '#ff0000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  step3FoundInVipBadgeText: {
+    fontSize: 10 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  step3FoundInGuestDetails: {
+    flex: 1,
+  },
+  step3FoundInGuestNameRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 4 * scaleX,
+  },
+  step3FoundInGuestName: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#000',
+    flexShrink: 1,
+  },
+  step3FoundInVipCode: {
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#334866',
+    marginLeft: 6 * scaleX,
+  },
+  step3FoundInGuestMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  step3FoundInDates: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000',
+    marginRight: 12 * scaleX,
+  },
+  step3FoundInGuestCountIcon: {
+    width: 12 * scaleX,
+    height: 12 * scaleX,
+    marginRight: 4 * scaleX,
+    tintColor: '#666',
+  },
+  step3FoundInGuestCountText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000',
+  },
+  step3FoundInPublicAreaText: {
+    flex: 1,
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300' as any,
+    color: '#5a759d',
   },
   step3CheckboxContainer: {
     flexDirection: 'row',

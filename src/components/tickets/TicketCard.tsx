@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
 import {
@@ -25,6 +25,37 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
     ? TICKET_STATUS.done 
     : TICKET_STATUS.unsolved;
 
+  const getInitials = (name: string) => {
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+  };
+
+  const [nowMs, setNowMs] = useState(Date.now());
+
+  useEffect(() => {
+    if (ticket.status !== 'unsolved' || !ticket.createdAt) return;
+    const t = setInterval(() => setNowMs(Date.now()), 60000); // update each minute
+    return () => clearInterval(t);
+  }, [ticket.status, ticket.createdAt]);
+
+  const dueTimeText = useMemo(() => {
+    if (ticket.status !== 'unsolved') return undefined;
+    if (ticket.createdAt) {
+      const createdAtMs = new Date(ticket.createdAt).getTime();
+      if (!Number.isFinite(createdAtMs)) return undefined;
+      const elapsedMinutes = (nowMs - createdAtMs) / 60000;
+      const totalMins = Math.max(0, Math.floor(elapsedMinutes));
+      const hours = Math.floor(totalMins / 60);
+      const mins = totalMins % 60;
+      if (hours <= 0) return mins === 1 ? '1 min' : `${mins} mins`;
+      return `${hours} hrs ${mins} mins`;
+    }
+    // No createdAt from Supabase: hide the badge instead of using any mock/fallback values.
+    return undefined;
+  }, [ticket.status, ticket.createdAt, nowMs]);
+
   return (
     <TouchableOpacity
       style={styles.card}
@@ -32,13 +63,13 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
       activeOpacity={0.7}
     >
       {/* Due Date Badge */}
-      {ticket.dueTime && (
+      {dueTimeText && (
         <View style={[
           styles.dueDateBadge,
           styles.dueDateBadgeTopLeft
         ]}>
           <Text style={styles.dueDateText} numberOfLines={1}>
-            Due in: {ticket.dueTime}
+            Due in: {dueTimeText}
           </Text>
         </View>
       )}
@@ -81,19 +112,24 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
       <Text style={styles.locationLabel}>Location</Text>
 
       {/* Room Number */}
-      <Text style={styles.locationRoom}>Room {ticket.roomNumber}</Text>
+      <Text style={styles.locationRoom} numberOfLines={1} ellipsizeMode="tail">
+        {ticket.locationText ?? `Room ${ticket.roomNumber}`}
+      </Text>
 
       {/* Creator Avatar */}
       {ticket.createdBy.avatar ? (
         <Image
-          source={ticket.createdBy.avatar}
+          // Supabase may return `avatar_url` as a string URL, while mock data uses `require()`.
+          source={typeof ticket.createdBy.avatar === 'string'
+            ? { uri: ticket.createdBy.avatar }
+            : ticket.createdBy.avatar}
           style={styles.creatorAvatar}
           resizeMode="cover"
         />
       ) : (
         <View style={styles.creatorAvatarPlaceholder}>
           <Text style={styles.creatorInitial}>
-            {ticket.createdBy.name.charAt(0).toUpperCase()}
+            {getInitials(ticket.createdBy.name)}
           </Text>
         </View>
       )}
@@ -138,8 +174,8 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
                 width: statusConfig.iconWidth * scaleX,
                 height: statusConfig.iconHeight * scaleX,
                 tintColor: ticket.status === 'done' ? '#ffffff' : '#f92424',
-                transform: statusConfig.iconRotate
-                  ? [{ rotate: `${statusConfig.iconRotate}deg` }]
+                transform: 'iconRotate' in statusConfig && statusConfig.iconRotate != null
+                  ? [{ rotate: `${(statusConfig as { iconRotate: number }).iconRotate}deg` }]
                   : [],
               },
             ]}
@@ -282,6 +318,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: TICKETS_TYPOGRAPHY.locationRoom.fontWeight as any,
     color: TICKETS_TYPOGRAPHY.locationRoom.color,
+    maxWidth: 92 * scaleX,
   },
   creatorAvatar: {
     position: 'absolute',

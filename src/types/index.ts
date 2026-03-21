@@ -4,7 +4,7 @@
  */
 
 // Re-export navigation types
-export type { RootStackParamList, MainTabsParamList } from '@navigation/types';
+export type { RootStackParamList, MainTabsParamList } from '../navigation/types';
 
 // Room types
 export type RoomStatus = 'dirty' | 'inProgress' | 'cleaned' | 'inspected' | 'priority';
@@ -47,6 +47,13 @@ export interface Ticket {
   createdAt: string;
 }
 
+/** Reply-to quote shown above the message content */
+export interface ChatMessageReplyTo {
+  id: string;
+  senderName: string;
+  message: string; // snippet, e.g. first 100 chars
+}
+
 export interface ChatMessage {
   id: string;
   chatId: string;
@@ -54,12 +61,16 @@ export interface ChatMessage {
   senderName: string;
   message: string;
   timestamp: string;
-  type?: 'text' | 'image' | 'voice';
+  type?: 'text' | 'image' | 'voice' | 'file';
   imageUri?: string;
   voiceUri?: string;
   voiceDuration?: number; // Duration in seconds
-  taggedUserId?: string; // User ID of the tagged person
-  taggedUserName?: string; // Name of the tagged person
+  fileUri?: string;
+  fileName?: string;
+  taggedUserId?: string;
+  taggedUserName?: string;
+  /** When set, this message is a reply to another message */
+  replyTo?: ChatMessageReplyTo;
 }
 
 export interface Chat {

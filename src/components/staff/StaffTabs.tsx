@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, LayoutChangeEvent } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../../theme';
 import { scaleX, STAFF_TABS } from '../../constants/staffStyles';
 import { StaffTab } from '../../types/staff.types';
@@ -7,9 +8,35 @@ import { StaffTab } from '../../types/staff.types';
 interface StaffTabsProps {
   selectedTab: StaffTab;
   onTabPress: (tab: StaffTab) => void;
+  /** When true, tabs are replaced by search input + close. */
+  searchExpanded?: boolean;
+  searchQuery?: string;
+  onSearchQueryChange?: (query: string) => void;
+  onSearchPress?: () => void;
+  onSearchClose?: () => void;
 }
 
-export default function StaffTabs({ selectedTab, onTabPress }: StaffTabsProps) {
+export default function StaffTabs({
+  selectedTab,
+  onTabPress,
+  searchExpanded = false,
+  searchQuery = '',
+  onSearchQueryChange,
+  onSearchPress,
+  onSearchClose,
+}: StaffTabsProps) {
+  const searchInputRef = useRef<TextInput>(null);
+  const [tabWidths, setTabWidths] = useState<Partial<Record<StaffTab, number>>>({});
+
+  const handleTabLayout = (tabId: StaffTab) => (e: LayoutChangeEvent) => {
+    const { width } = e.nativeEvent.layout;
+    setTabWidths((prev) => (prev[tabId] === width ? prev : { ...prev, [tabId]: width }));
+  };
+
+  useEffect(() => {
+    if (searchExpanded) setTimeout(() => searchInputRef.current?.focus(), 100);
+  }, [searchExpanded]);
+
   const tabs: { id: StaffTab; label: string }[] = [
     { id: 'onShift', label: 'On Shift' },
     { id: 'am', label: 'AM' },
@@ -19,13 +46,41 @@ export default function StaffTabs({ selectedTab, onTabPress }: StaffTabsProps) {
 
   const getIndicatorPosition = () => {
     const selectedTabConfig = STAFF_TABS.tabs[selectedTab];
+    const measuredWidth = tabWidths[selectedTab];
     return {
       left: selectedTabConfig.indicatorLeft * scaleX,
-      width: selectedTabConfig.indicatorWidth * scaleX,
+      width: (measuredWidth ?? selectedTabConfig.indicatorWidth) * (measuredWidth != null ? 1 : scaleX),
     };
   };
 
   const indicatorPos = getIndicatorPosition();
+
+  if (searchExpanded) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.tabsWrapper}>
+          <TextInput
+            ref={searchInputRef}
+            style={styles.searchInput}
+            placeholder="Search staff and departments..."
+            placeholderTextColor={STAFF_TABS.tab.inactiveColor}
+            value={searchQuery}
+            onChangeText={onSearchQueryChange}
+            returnKeyType="search"
+          />
+          <TouchableOpacity
+            style={styles.searchCloseBtn}
+            onPress={onSearchClose}
+            activeOpacity={0.7}
+            hitSlop={12}
+          >
+            <Ionicons name="close" size={24 * scaleX} color={STAFF_TABS.searchIcon.color} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.divider} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -39,6 +94,7 @@ export default function StaffTabs({ selectedTab, onTabPress }: StaffTabsProps) {
               key={tab.id}
               style={[styles.tab, { left: tabConfig.left * scaleX }]}
               onPress={() => onTabPress(tab.id)}
+              onLayout={handleTabLayout(tab.id)}
               activeOpacity={0.7}
             >
               <Text
@@ -52,6 +108,20 @@ export default function StaffTabs({ selectedTab, onTabPress }: StaffTabsProps) {
             </TouchableOpacity>
           );
         })}
+        
+        {/* Search icon - right of tabs (On Shift | AM | PM | Departments | Search) */}
+        <TouchableOpacity
+          style={styles.searchIconBtn}
+          onPress={onSearchPress}
+          activeOpacity={0.7}
+          hitSlop={12}
+        >
+          <Ionicons
+            name="search"
+            size={STAFF_TABS.searchIcon.size * scaleX}
+            color={STAFF_TABS.searchIcon.color}
+          />
+        </TouchableOpacity>
         
         {/* Active Indicator */}
         <View
@@ -100,6 +170,32 @@ const styles = StyleSheet.create({
   },
   tabTextInactive: {
     color: STAFF_TABS.tab.inactiveColor,
+  },
+  searchIconBtn: {
+    position: 'absolute',
+    right: STAFF_TABS.searchIcon.right * scaleX,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
+  searchInput: {
+    position: 'absolute',
+    left: STAFF_TABS.tabs.onShift.left * scaleX,
+    right: (STAFF_TABS.searchIcon.right + 32) * scaleX,
+    top: 0,
+    bottom: 0,
+    fontSize: STAFF_TABS.tab.fontSize * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: STAFF_TABS.tab.color,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+  },
+  searchCloseBtn: {
+    position: 'absolute',
+    right: STAFF_TABS.searchIcon.right * scaleX,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
   },
   indicator: {
     position: 'absolute',

@@ -49,6 +49,40 @@ export const authService = {
   },
 
   /**
+   * Get the current user's avatar image URL (e.g. from user_metadata.avatar_url).
+   * Returns null if not available.
+   */
+  async getCurrentUserAvatarUrl(): Promise<string | null> {
+    const session = await this.getSession();
+    if (!session?.user) return null;
+    const u = session.user;
+    return (u.user_metadata?.avatar_url as string) || (u.user_metadata?.picture as string) || null;
+  },
+
+  /**
+   * Get display name for the current user (e.g. "Stella Kitou at 09:00am").
+   * Uses user_metadata.full_name, then email, then "Staff".
+   */
+  async getCurrentUserNoteLabel(): Promise<string> {
+    const session = await this.getSession();
+    if (!session?.user) return 'Staff';
+    const u = session.user;
+    const name =
+      (u.user_metadata?.full_name as string) ||
+      (u.user_metadata?.name as string) ||
+      u.email?.split('@')[0] ||
+      'Staff';
+    const now = new Date();
+    const hours = now.getHours();
+    const mins = now.getMinutes();
+    const am = hours < 12;
+    const h = hours % 12 || 12;
+    const m = mins.toString().padStart(2, '0');
+    const ampm = am ? 'am' : 'pm';
+    return `${name} at ${h}:${m}${ampm}`;
+  },
+
+  /**
    * Get the current session
    */
   async getSession(): Promise<Session | null> {
@@ -66,12 +100,30 @@ export const authService = {
         error,
       } = await Promise.race([sessionPromise, timeoutPromise]);
       if (error) {
-        console.error('[Auth] getSession error:', error.message);
+        const msg = error.message ?? '';
+        const isInvalidRefreshToken =
+          /refresh token not found|invalid refresh token/i.test(msg);
+        if (isInvalidRefreshToken) {
+          await supabase.auth.signOut();
+        }
+        if (!isInvalidRefreshToken) {
+          console.error('[Auth] getSession error:', error.message);
+        }
         return null;
       }
       return session;
     } catch (err) {
-      console.error('[Auth] getSession error:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      const isInvalidRefreshToken =
+        /refresh token not found|invalid refresh token/i.test(message);
+      if (isInvalidRefreshToken) {
+        try {
+          await supabase.auth.signOut();
+        } catch (_) {}
+      }
+      if (!isInvalidRefreshToken) {
+        console.error('[Auth] getSession error:', err);
+      }
       return null;
     }
   },

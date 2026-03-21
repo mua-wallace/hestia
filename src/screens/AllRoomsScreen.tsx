@@ -6,21 +6,25 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme';
 import { ShiftType } from '../types/home.types';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
+import { type RoomStateUpdate } from '../services/dashboard';
+import { useRoomsStore } from '../store/useRoomsStore';
+import { dashboardService } from '../services/dashboard';
+import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import { mockHomeData } from '../data/mockHomeData';
-import { mockChatData } from '../data/mockChatData';
+import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
+import { useChatStore } from '../store/useChatStore';
 import { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import AllRoomsHeader from '../components/allRooms/AllRoomsHeader';
 import RoomCard from '../components/allRooms/RoomCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
-import MorePopup from '../components/more/MorePopup';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
-import { MoreMenuItemId } from '../types/more.types';
 import type { RootStackParamList } from '../navigation/types';
 import { BlurView } from 'expo-blur';
 import { FilterState, FilterCounts } from '../types/filter.types';
 import type { CategoryName } from '../types/home.types';
 import AllRoomsFilterModal from '../components/allRooms/AllRoomsFilterModal';
+import ReassignModal from '../components/roomDetail/ReassignModal';
 import { CARD_DIMENSIONS, CARD_COLORS } from '../constants/allRoomsStyles';
 import { getShiftFromTime } from '../utils/shiftUtils';
 import { getStayoverWithLinen } from '../utils/stayoverLinen';
@@ -57,27 +61,34 @@ type AllRoomsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, '
 
 export default function AllRoomsScreen() {
   const navigation = useNavigation<AllRoomsScreenNavigationProp>();
+  const { open: openAIChatOverlay } = useAIChatOverlay();
   const route = useRoute();
-  // Get shift from route params if provided (from HomeScreen), otherwise use time-based shift
   const routeShift = (route.params as any)?.selectedShift as ShiftType | undefined;
-  const [allRoomsData, setAllRoomsData] = useState(() => ({
-    ...mockAllRoomsData,
-    selectedShift: routeShift || getShiftFromTime(),
-  }));
-  const [refreshing, setRefreshing] = useState(false);
+  const initialShift = routeShift || getShiftFromTime();
+  const { data: allRoomsData, loading, refreshing, fetchRooms, updateRoom, setSelectedShift, setRoomAttendant } = useRoomsStore();
+
+  React.useEffect(() => {
+    fetchRooms(initialShift);
+  }, [initialShift]);
+
+  const loadRoomsData = React.useCallback((shift: ShiftType) => { fetchRooms(shift); }, [fetchRooms]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('Rooms');
-  const [showMorePopup, setShowMorePopup] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showInspectedModal, setShowInspectedModal] = useState(false);
   const [roomForInspection, setRoomForInspection] = useState<RoomCardData | null>(null);
   const [buttonPositionForInspection, setButtonPositionForInspection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedRoomForStatusChange, setSelectedRoomForStatusChange] = useState<RoomCardData | null>(null);
+  const [roomToAssign, setRoomToAssign] = useState<RoomCardData | null>(null);
+  const [showAssignStaffModal, setShowAssignStaffModal] = useState(false);
   const [selectedCardTop, setSelectedCardTop] = useState<number>(0);
   const [selectedCardHeight, setSelectedCardHeight] = useState<number>(0);
   const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [originalScrollY, setOriginalScrollY] = useState<number>(0); // Store original scroll position before modal opens
+  const [changingStatusRoomId, setChangingStatusRoomId] = useState<string | null>(null); // Track which room is updating status
+  const [assigningStaffRoomId, setAssigningStaffRoomId] = useState<string | null>(null); // Track which room is assigning staff
   const currentScrollYRef = useRef<number>(0); // Track current scroll position
   const cardRefs = useRef<{ [key: string]: any }>({});
   const statusButtonRefs = useRef<{ [key: string]: any }>({});
@@ -106,21 +117,20 @@ export default function AllRoomsScreen() {
     return rf;
   });
 
-  // Sync shift from route params when navigating from HomeScreen
-  // Use useFocusEffect to ensure it works properly on both iOS and Android
   useFocusEffect(
     React.useCallback(() => {
       const params = route.params as any;
       const currentRouteShift = params?.selectedShift as ShiftType | undefined;
-      // Only update if shift is provided and different from current
       if (currentRouteShift && currentRouteShift !== allRoomsData?.selectedShift) {
-        setAllRoomsData(prev => ({ ...prev, selectedShift: currentRouteShift }));
-        // Reset filters when shift changes via navigation
+        setSelectedShift(currentRouteShift);
+        fetchRooms(currentRouteShift);
         setLocalFilters(undefined);
         setSearchQuery('');
       }
-    }, [route.params, allRoomsData?.selectedShift])
+    }, [route.params, allRoomsData?.selectedShift, fetchRooms, setSelectedShift])
   );
+
+  const displayData = allRoomsData ?? { ...mockAllRoomsData, selectedShift: initialShift };
 
   // Sync local filters with route params when navigating (e.g. from Home with categoryFilter)
   React.useEffect(() => {
@@ -155,10 +165,10 @@ export default function AllRoomsScreen() {
   }, [activeFilters, searchQuery]);
 
   const handleShiftToggle = (shift: ShiftType) => {
-    setAllRoomsData(prev => ({ ...prev, selectedShift: shift }));
-    // Reset filters when shift changes - filters should be per shift
+    setSelectedShift(shift);
+    fetchRooms(shift);
     setLocalFilters(undefined);
-    setSearchQuery(''); // Also reset search query
+    setSearchQuery('');
   };
 
   const handleSearch = (text: string) => {
@@ -169,11 +179,37 @@ export default function AllRoomsScreen() {
     setShowFilterModal(true);
   };
 
+  const handleAssignStaffPress = (room: RoomCardData) => {
+    setRoomToAssign(room);
+    setShowAssignStaffModal(true);
+  };
+
+  const handleAssignStaffSelect = async (staffId: string) => {
+    if (!roomToAssign) return;
+    const shift = displayData.selectedShift ?? 'AM';
+    
+    // Show loading indicator
+    setAssigningStaffRoomId(roomToAssign.id);
+    
+    try {
+      const staffInfo = await dashboardService.assignRoomToStaff(roomToAssign.id, staffId, shift);
+      if (staffInfo) setRoomAttendant(roomToAssign.id, staffInfo);
+    } catch (e) {
+      console.warn('Assign room failed', e);
+    } finally {
+      // Hide loading indicator
+      setAssigningStaffRoomId(null);
+    }
+    
+    setShowAssignStaffModal(false);
+    setRoomToAssign(null);
+  };
+
   // Calculate filter counts from current shift's room list (AM: rooms, PM: roomsPM)
   const filterCounts: FilterCounts = useMemo(() => {
-    const roomsPM = allRoomsData?.roomsPM ?? [];
-    const usePMRooms = allRoomsData?.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    const sourceRooms = usePMRooms ? roomsPM : (allRoomsData?.rooms ?? []);
+    const roomsPM = displayData.roomsPM ?? [];
+    const usePMRooms = displayData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const sourceRooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
 
     const roomStates = {
       dirty: 0,
@@ -258,7 +294,7 @@ export default function AllRoomsScreen() {
     };
 
     return { roomStates, guests, reservations, floors, totalRooms };
-  }, [allRoomsData?.rooms, allRoomsData?.roomsPM, allRoomsData?.selectedShift]);
+  }, [displayData.rooms, displayData.roomsPM, displayData.selectedShift]);
 
   const handleApplyFilters = (appliedFilters: FilterState) => {
     setLocalFilters(appliedFilters);
@@ -308,8 +344,8 @@ export default function AllRoomsScreen() {
 
     const roomType = mapCategoryToRoomType(room.frontOfficeStatus);
     
-    // Navigate to the new reusable RoomDetail screen
-    navigation.navigate('RoomDetail', { room, roomType } as any);
+    // Navigate to Room Detail; pass roomId so screen can fetch full details via getRoomDetailsById
+    navigation.navigate('RoomDetail', { room, roomType, roomId: room.id } as any);
   };
 
   const handleStatusPress = (room: RoomCardData) => {
@@ -443,10 +479,12 @@ export default function AllRoomsScreen() {
     }
   };
 
-  const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['status'] => {
+  const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['houseKeepingStatus'] => {
     switch (option) {
       case 'Dirty':
         return 'Dirty';
+      case 'InProgress':
+        return 'InProgress';
       case 'Cleaned':
         return 'Cleaned';
       case 'Inspected':
@@ -456,34 +494,42 @@ export default function AllRoomsScreen() {
       case 'ReturnLater':
       case 'RefuseService':
       case 'PromisedTime':
-        // These might be actions/metadata, not status changes
-        // For now, keep InProgress status
         return 'InProgress';
       default:
         return 'InProgress';
     }
   };
 
-  const handleStatusSelect = (statusOption: StatusChangeOption, roomOverride?: RoomCardData | null) => {
+  const handleStatusSelect = async (statusOption: StatusChangeOption, roomOverride?: RoomCardData | null) => {
     const roomToUpdate = roomOverride ?? selectedRoomForStatusChange;
     if (!roomToUpdate) return;
 
     // Map status option to RoomStatus
     const newStatus = mapStatusOptionToRoomStatus(statusOption);
 
-    // Update room status in state; Priority option also sets isPriority true
-    setAllRoomsData((prev) => ({
-      ...prev,
-      rooms: prev.rooms.map((room) =>
-        room.id === roomToUpdate.id
-          ? {
-              ...room,
-              houseKeepingStatus: newStatus,
-              ...(statusOption === 'Priority' && { isPriority: true }),
-            }
-          : room
-      ),
-    }));
+    // Priority toggles: if already priority, clicking Priority resets to normal
+    const isPriorityToggle = statusOption === 'Priority';
+    const newIsPriority = isPriorityToggle ? !roomToUpdate.isPriority : roomToUpdate.isPriority;
+    const priorityPayload = isPriorityToggle ? (newIsPriority ? 'high' : 'normal') : undefined;
+
+    const supabaseUpdates: RoomStateUpdate = {
+      house_keeping_status: newStatus,
+    };
+    if (priorityPayload !== undefined) {
+      supabaseUpdates.priority = priorityPayload;
+    }
+
+    // Show loading indicator
+    setChangingStatusRoomId(roomToUpdate.id);
+
+    try {
+      await updateRoom(roomToUpdate.id, supabaseUpdates);
+    } catch (e) {
+      console.warn('Failed to update room status in Supabase', e);
+    } finally {
+      // Hide loading indicator
+      setChangingStatusRoomId(null);
+    }
 
     // Reset state
     setShowStatusModal(false);
@@ -491,9 +537,6 @@ export default function AllRoomsScreen() {
     setShowInspectedModal(false);
     setRoomForInspection(null);
     setButtonPositionForInspection(null);
-
-    // TODO: Save to backend/API
-    console.log('Status changed for room:', roomToUpdate.roomNumber, 'to:', newStatus);
   };
 
   // Sync activeTab with current route
@@ -507,13 +550,20 @@ export default function AllRoomsScreen() {
   );
 
   // Calculate total unread chat messages for badge
-  const chatBadgeCount = React.useMemo(() => {
-    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
-  }, []);
+  const { chats } = useChatStore();
+  const chatBadgeCount = React.useMemo(
+    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
+    [chats]
+  );
 
   const handleTabPress = (tab: string) => {
+    if (tab === 'AIHome') {
+      openAIChatOverlay();
+      return;
+    }
     setActiveTab(tab); // Update immediately
-    setShowMorePopup(false);
+    const currentScreen = (route.params as any)?.showBackButton ? 'Rooms' : (route.name as string);
+    const returnToTab = currentScreen as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
@@ -522,49 +572,23 @@ export default function AllRoomsScreen() {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
       navigation.navigate('Tickets' as any);
+    } else if (tab === 'LostAndFound') {
+      (navigation as any).navigate('LostAndFound', { returnToTab });
+    } else if (tab === 'Staff') {
+      (navigation as any).navigate('Staff', { returnToTab });
+    } else if (tab === 'Settings') {
+      (navigation as any).navigate('Settings', { returnToTab });
     }
-  };
-
-  const handleMorePress = () => {
-    setShowMorePopup(true);
-  };
-
-  const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
-    setShowMorePopup(false);
-    const currentScreen = (route.params as any)?.showBackButton ? 'Rooms' : (route.name as string);
-    const returnToTab = currentScreen as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
-    switch (menuItem) {
-      case 'lostAndFound':
-        navigation.navigate('LostAndFound', { returnToTab });
-        break;
-      case 'staff':
-        navigation.navigate('Staff', { returnToTab });
-        break;
-      case 'settings':
-        navigation.navigate('Settings', { returnToTab });
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleClosePopup = () => {
-    setShowMorePopup(false);
   };
 
   const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  }, []);
+    fetchRooms(allRoomsData?.selectedShift ?? getShiftFromTime());
+  }, [fetchRooms, allRoomsData?.selectedShift]);
 
-  // Filter rooms based on search query and filters
   const filteredRooms = useMemo(() => {
-    // PM: use roomsPM from pm-operational-data.csv when available; else filter AM rooms
-    const roomsPM = allRoomsData?.roomsPM ?? [];
-    const usePMRooms = allRoomsData?.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    let rooms = usePMRooms ? roomsPM : (allRoomsData?.rooms ?? []);
+    const roomsPM = displayData.roomsPM ?? [];
+    const usePMRooms = displayData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    let rooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
 
     // When user tapped a status badge or priority badge on Home
     if (routeCategoryFilter) {
@@ -676,8 +700,7 @@ export default function AllRoomsScreen() {
       );
     }
 
-    // PM mode: when using roomsPM list it's already Turndown/No Task/Vacant; else filter to those
-    if (allRoomsData?.selectedShift === 'PM' && !usePMRooms) {
+    if (displayData.selectedShift === 'PM' && !usePMRooms) {
       rooms = rooms.filter(
         (room) =>
           room.frontOfficeStatus === 'Turndown' ||
@@ -685,19 +708,19 @@ export default function AllRoomsScreen() {
           room.reservationStatus === 'Vacant'
       );
     }
-    // AM mode: hide Turndown cards entirely
-    if (allRoomsData?.selectedShift === 'AM') {
+    if (displayData.selectedShift === 'AM') {
       rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');
     }
 
     return rooms;
-  }, [allRoomsData?.rooms, allRoomsData?.roomsPM, allRoomsData?.selectedShift, activeFilters, searchQuery, routeCategoryFilter]);
+  }, [displayData.rooms, displayData.roomsPM, displayData.selectedShift, activeFilters, searchQuery, routeCategoryFilter]);
 
   return (
     <View style={[
       styles.container,
-      allRoomsData?.selectedShift === 'PM' && styles.containerPM
+      displayData?.selectedShift === 'PM' && styles.containerPM
     ]}>
+      {loading && !allRoomsData && <LoadingOverlay fullScreen message="Loading rooms…" />}
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -710,8 +733,7 @@ export default function AllRoomsScreen() {
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            scrollEnabled={!showMorePopup && !showStatusModal}
-            clipsToBounds={false}
+            scrollEnabled={!showStatusModal}
             contentInsetAdjustmentBehavior="automatic"
             keyboardShouldPersistTaps="handled"
             onScroll={(event) => {
@@ -761,23 +783,19 @@ export default function AllRoomsScreen() {
                 room={room}
                 onPress={() => handleRoomPress(room)}
                 onStatusPress={() => handleStatusPress(room)}
+                onAssignStaffPress={handleAssignStaffPress}
                 statusButtonRef={(ref) => {
                   if (ref) {
                     statusButtonRefs.current[room.id] = ref;
                   }
                 }}
-                selectedShift={allRoomsData?.selectedShift ?? 'AM'}
+                selectedShift={displayData.selectedShift}
+                isChangingStatus={changingStatusRoomId === room.id}
+                isAssigningStaff={assigningStaffRoomId === room.id}
               />
             ))
           )}
         </ScrollView>
-        
-        {/* Blur Overlay for More Popup - covers content area */}
-        {showMorePopup && (
-          <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
-            <View style={styles.blurOverlayDarkener} />
-          </BlurView>
-        )}
         
         {/* Blur Overlay for Status Modal - starts from bottom of target card, covers everything below including tabs */}
         {showStatusModal && selectedCardTop > 0 && (
@@ -796,7 +814,7 @@ export default function AllRoomsScreen() {
 
         {/* Header - Fixed at top (no blur) */}
         <AllRoomsHeader
-          selectedShift={allRoomsData?.selectedShift ?? 'AM'}
+          selectedShift={displayData.selectedShift}
           onShiftToggle={handleShiftToggle}
           onSearch={handleSearch}
           searchQuery={searchQuery}
@@ -810,15 +828,7 @@ export default function AllRoomsScreen() {
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
-        onMorePress={handleMorePress}
         chatBadgeCount={chatBadgeCount}
-      />
-
-      {/* More Popup */}
-      <MorePopup
-        visible={showMorePopup}
-        onClose={handleClosePopup}
-        onMenuItemPress={handleMenuItemPress}
       />
 
       {/* Status Change Modal */}
@@ -852,6 +862,14 @@ export default function AllRoomsScreen() {
         room={selectedRoomForStatusChange || undefined}
         buttonPosition={statusButtonPosition}
         headerHeight={217} // AllRoomsScreen header height
+        onFlagToggle={(flagged) => {
+          if (selectedRoomForStatusChange) {
+            setSelectedRoomForStatusChange((prev) => (prev ? { ...prev, flagged } : null));
+            updateRoom(selectedRoomForStatusChange.id, { flagged }).catch((e) =>
+              console.warn('Failed to update room flag in Supabase', e)
+            );
+          }
+        }}
       />
 
       {/* Inspection Checklist Modal - shown when changing to Inspected */}
@@ -877,7 +895,20 @@ export default function AllRoomsScreen() {
         showTriangle={true}
       />
 
-      {/* Filter Modal - Use AllRoomsFilterModal for both AM and PM shifts */}
+      {/* Assign Staff Modal - staff list when room has no assignee */}
+      <ReassignModal
+        visible={showAssignStaffModal}
+        onClose={() => {
+          setShowAssignStaffModal(false);
+          setRoomToAssign(null);
+        }}
+        onStaffSelect={handleAssignStaffSelect}
+        onAutoAssign={() => {}}
+        roomNumber={roomToAssign?.roomNumber}
+        showAutoAssign={false}
+      />
+
+      {/* Filter Modal */}
       <AllRoomsFilterModal
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}

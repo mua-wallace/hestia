@@ -41,14 +41,24 @@ export interface CalculatedPositions {
   notesDividerTop: number;
 }
 
+/** Approximate chars per line for special instructions at ~13px and ~390px width */
+const SPECIAL_INSTRUCTIONS_CHARS_PER_LINE = 48;
+const SPECIAL_INSTRUCTIONS_LINE_HEIGHT = 18;
+
 /**
  * Calculate all positions for a given room type
  * All positions are absolute from the top of the screen
  * @param config Room type configuration
  * @param hasSpecialInstructionsData Whether special instructions are actually present in the room data
  * @param firstGuestName Optional first guest name to check if it wraps (for Arrival/Departure rooms)
+ * @param specialInstructionsText Optional text to estimate wrapped height so divider/second guest don't overlap
  */
-export function calculatePositions(config: RoomTypeConfig, hasSpecialInstructionsData?: boolean, firstGuestName?: string): CalculatedPositions {
+export function calculatePositions(
+  config: RoomTypeConfig,
+  hasSpecialInstructionsData?: boolean,
+  firstGuestName?: string,
+  specialInstructionsText?: string | null
+): CalculatedPositions {
   const { guestInfoStartTop, hasSpecialInstructions, numberOfGuests, cardHeight } = config;
   
   // Use actual presence of special instructions data if provided, otherwise fall back to config
@@ -58,10 +68,10 @@ export function calculatePositions(config: RoomTypeConfig, hasSpecialInstruction
   
   // Guest Info Section
   const guestInfoTitle = guestInfoStartTop;
-  // Gap from title to guest name varies by room type:
+  // Gap from title to guest name varies by room type (Figma):
   // - Arrival: 46px (303 -> 349)
   // - Departure: 66px (303 -> 369)
-  // - Stayover/Turndown: 50px (318 -> 368)
+  // - Stayover/Turndown: 50px (310 -> 360, Figma 1772-406)
   const gapToGuest = config.type === 'Departure' ? 66 : config.type === 'Stayover' || config.type === 'Turndown' ? 50 : 46;
   const firstGuestTop = guestInfoTitle + gapToGuest;
   
@@ -95,17 +105,21 @@ export function calculatePositions(config: RoomTypeConfig, hasSpecialInstruction
   
   // Special Instructions (if applicable AND actually present)
   if (actuallyHasSpecialInstructions) {
-    // For Stayover/Turndown: dates at 396, special title at 441, text at 466, divider at 536
-    // For Arrival: dates at 377, special title at 417, text at 442, divider at 510
+    // Figma: Stayover 1772-406 dates 388, special title 441, text 466, divider 536
+    // Figma: Arrival 1772-104 dates 377, special title 417, text 442, divider 510
     const isStayoverOrTurndown = config.type === 'Stayover' || config.type === 'Turndown';
-    const gapToTitle = isStayoverOrTurndown ? 45 : 40; // 45px for Stayover/Turndown, 40px for Arrival
+    const gapToTitle = isStayoverOrTurndown ? 53 : 40; // 53px Stayover/Turndown (441-388), 40px Arrival
     
     positions.specialInstructionsTitle = currentTop + gapToTitle;
-    positions.specialInstructionsText = positions.specialInstructionsTitle + 25; // 25px below title
+    positions.specialInstructionsText = positions.specialInstructionsTitle + 25; // 25px below title (Figma)
     
-    // Calculate divider position - margin top from special instructions text
-    const gapFromTextToDivider = isStayoverOrTurndown ? 44 : 40;
-    positions.divider1 = positions.specialInstructionsText + gapFromTextToDivider;
+    // Divider below special instructions text (Figma: 536 = 466+70 Stayover; 510 Arrival)
+    const gapFromTextToDivider = isStayoverOrTurndown ? 52 : 40; // 52 so 466+18+52=536; 40 for Arrival
+    const estimatedLines = specialInstructionsText && specialInstructionsText.length > 0
+      ? Math.min(5, Math.max(1, Math.ceil(specialInstructionsText.length / SPECIAL_INSTRUCTIONS_CHARS_PER_LINE)))
+      : 1;
+    const specialInstructionsTextHeight = estimatedLines * SPECIAL_INSTRUCTIONS_LINE_HEIGHT;
+    positions.divider1 = positions.specialInstructionsText + specialInstructionsTextHeight + gapFromTextToDivider;
   } else {
     // No special instructions - place divider closer to dates
     // For Departure: dates at 397, divider at 436 (39px gap)
@@ -164,13 +178,10 @@ export function calculatePositions(config: RoomTypeConfig, hasSpecialInstruction
   
   const cardEnd = positions.cardTop + cardHeight;
   
-  // Lost & Found Section
-  // Gaps vary by room type:
-  // - Stayover/Turndown: 44px to title, 32px to box (768 -> 812 -> 844)
-  // - Others: 26px to title, 34px to box
+  // Lost & Found Section (Figma 1772-406: card ends 768, L&F title 806, box 844)
   const isStayoverOrTurndown = config.type === 'Stayover' || config.type === 'Turndown';
-  const gapToLostFoundTitle = isStayoverOrTurndown ? 44 : 26;
-  const gapToLostFoundBox = isStayoverOrTurndown ? 32 : 34;
+  const gapToLostFoundTitle = isStayoverOrTurndown ? 38 : 26; // 806-768=38
+  const gapToLostFoundBox = isStayoverOrTurndown ? 38 : 34;   // 844-806=38
   
   positions.lostAndFoundTitle = cardEnd + gapToLostFoundTitle;
   positions.lostAndFoundBox = positions.lostAndFoundTitle + gapToLostFoundBox;

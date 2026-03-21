@@ -63,6 +63,7 @@ export default function AddTaskModal({
                 style={styles.backButton}
                 onPress={handleClose}
                 activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
                 <Text style={styles.backButtonText}>Cancel</Text>
               </TouchableOpacity>
@@ -72,6 +73,7 @@ export default function AddTaskModal({
                 onPress={handleSave}
                 activeOpacity={0.7}
                 disabled={!taskText.trim()}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Text style={[styles.saveButtonText, !taskText.trim() && styles.saveButtonTextDisabled]}>
                   Save

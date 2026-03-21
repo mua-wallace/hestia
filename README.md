@@ -2,21 +2,22 @@
 
 A mobile application for housekeeping management built with Expo and React Native.
 
-## Project Structure
+## Project structure
 
 ```
 hestia/
-├── src/
-│   ├── components/       # Reusable UI components
-│   ├── screens/          # Screen components
-│   ├── navigation/       # Navigation configuration
-│   ├── theme/           # Theme and design system utilities
-│   ├── utils/           # Helper functions
-│   └── types/           # TypeScript type definitions
-├── assets/              # Images, fonts, etc.
-├── design-system.json   # Design tokens and variables
-└── App.tsx             # Root component
+├── src/                 # App source (components, screens, services, store, etc.)
+├── assets/              # Images, fonts, icons
+├── docs/                # Documentation (design, implementation, guides, architecture)
+├── data/                # Reference data (CSV, JSON, PDF extracts)
+├── scripts/             # Build/seed/utility scripts
+├── supabase/            # Supabase config and migrations
+├── design-system.json   # Design tokens
+├── app.json             # Expo config
+└── App.tsx              # Root component
 ```
+
+See **[docs/README.md](docs/README.md)** for the full documentation index.
 
 ## Design System
 
@@ -98,9 +99,18 @@ The app uses a comprehensive design system defined in `design-system.json`. Key 
 2. Add route to `src/navigation/AppNavigator.tsx`
 3. Update navigation types if needed
 
-## Project Status
+## Documentation
 
-This is an active development project. See `IMPLEMENTATION_PLAN.md` for detailed implementation roadmap.
+- **Getting started / setup** → [docs/guides/](docs/guides/) (e.g. `START_HERE.md`, `SUPABASE_SETUP.md`)
+- **Design specs & Figma** → [docs/design/](docs/design/)
+- **Implementation plans** → [docs/implementation/](docs/implementation/)
+- **Architecture & refactors** → [docs/architecture/](docs/architecture/)
+
+Full index: [docs/README.md](docs/README.md).
+
+## Project status
+
+Active development. See [docs/implementation/IMPLEMENTATION_PLAN.md](docs/implementation/IMPLEMENTATION_PLAN.md) for the implementation roadmap.
 
 ## License
 

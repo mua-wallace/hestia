@@ -259,20 +259,27 @@ export const LOST_AND_FOUND_STATUS = {
     backgroundColor: '#41d541', // Green
     width: 118,
     textColor: '#ffffff',
-    // Center text and icon in button with equal padding
-    // Button width: 118px, center at 59px
-    // Text width: 64px, Icon width: 14px, spacing: 6px
-    // Total content width: 64 + 6 + 14 = 84px
-    // To center: (118 - 84) / 2 = 17px padding on each side
-    // Text left: 17px from button left
-    // Icon left: 17 + 64 + 6 = 87px from button left
-    textLeft: 295, // 278 (button left) + 17 (centered padding) = 295px relative to card
-    textTop: 217, // From Figma: text y=726, second card y=509, so 726-509=217px (centered: 199 + 27 - 9 = 217)
-    textHeight: 18, // From Figma: text height=18px
-    iconLeft: 365, // 278 (button left) + 87 (centered icon position) = 365px relative to card
-    iconTop: 221, // From Figma: icon y=730, second card y=509, so 730-509=221px (centered: 199 + 27 - 5 = 221)
-    iconWidth: 14, // From Figma: icon width=14px
-    iconHeight: 10, // From Figma: icon height=10px
+    textLeft: 295,
+    textTop: 217,
+    textHeight: 18,
+    iconLeft: 365,
+    iconTop: 221,
+    iconWidth: 14,
+    iconHeight: 10,
+  },
+  discarded: {
+    left: 278,
+    top: 199,
+    backgroundColor: '#9ca3af', // Gray
+    width: 118,
+    textColor: '#ffffff',
+    textLeft: 295,
+    textTop: 217,
+    textHeight: 18,
+    iconLeft: 365,
+    iconTop: 221,
+    iconWidth: 14,
+    iconHeight: 10,
   },
   text: {
     fontSize: 16, // From Figma: font-size: 16px
@@ -1098,7 +1105,8 @@ export const ITEM_REGISTERED_SUCCESS = {
       trackingNumberValue: {
         top: 558,
         left: 144,
-        fontSize: 37,
+        // Slightly larger than original for better readability
+        fontSize: 42,
         fontWeight: 'light' as const,
         color: '#000000',
       },

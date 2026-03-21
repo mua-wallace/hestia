@@ -5,7 +5,7 @@ import { REASSIGN_MODAL, scaleX } from '../../constants/reassignModalStyles';
 
 interface ReassignHeaderProps {
   onBackPress: () => void;
-  onAutoAssignPress: () => void;
+  onAutoAssignPress?: () => void;
   onSearchPress?: () => void;
 }
 
@@ -21,25 +21,29 @@ export default function ReassignHeader({
         style={styles.backButton}
         onPress={onBackPress}
         activeOpacity={0.7}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       >
         <View style={styles.backArrowContainer}>
           <Image
             source={require('../../../assets/icons/back-arrow.png')}
-            style={styles.backArrow}
+            style={[styles.backArrow, { tintColor: REASSIGN_MODAL.header.backButton.color }]}
             resizeMode="contain"
           />
         </View>
         <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
 
-      {/* Auto Assign Button */}
-      <TouchableOpacity
-        style={styles.autoAssignButton}
-        onPress={onAutoAssignPress}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.autoAssignText}>Auto Assign</Text>
-      </TouchableOpacity>
+      {/* Auto Assign Button - only when provided */}
+      {onAutoAssignPress != null && (
+        <TouchableOpacity
+          style={styles.autoAssignButton}
+          onPress={onAutoAssignPress}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.autoAssignText}>Auto Assign</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Search Icon */}
       {onSearchPress && (
@@ -47,6 +51,7 @@ export default function ReassignHeader({
           style={styles.searchButton}
           onPress={onSearchPress}
           activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Image
             source={require('../../../assets/icons/search-icon.png')}
@@ -78,7 +83,6 @@ const styles = StyleSheet.create({
     height: 28 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
-    transform: [{ rotate: '270deg' }],
   },
   backArrow: {
     width: 14 * scaleX,

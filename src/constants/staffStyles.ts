@@ -90,6 +90,11 @@ export const STAFF_TABS = {
     width: 448,
     color: '#e3e3e3',
   },
+  searchIcon: {
+    right: 24,
+    size: 24,
+    color: '#5a759d',
+  },
 } as const;
 
 export const STAFF_DATE = {
@@ -184,6 +189,161 @@ export const STAFF_CARD = {
       activeColor: '#f92424',
       inactiveColor: '#1e1e1e',
     },
+  },
+} as const;
+
+/** Department row in Staff > Departments tab (Figma node 1085-3083).
+ * Replaced by STAFF_DEPARTMENT_GRID to match Figma (same as Create Ticket grid). */
+export const STAFF_DEPARTMENT = {
+  card: {
+    width: 401,
+    height: 72,
+    borderRadius: 9,
+    backgroundColor: '#f9fafc',
+    borderColor: '#e3e3e3',
+    borderWidth: 1,
+    marginHorizontal: 17,
+    marginBottom: 16,
+  },
+  iconWrap: {
+    left: 20,
+    top: 18,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ffebeb',
+  },
+  name: {
+    left: 68,
+    top: 26,
+    fontSize: 16,
+    fontWeight: 'bold' as const,
+    color: '#1e1e1e',
+  },
+} as const;
+
+/** Staff > Departments tab – vertical list, name below icon (Figma node 1085-3057).
+ * Icon on top, department name directly below. No cards, icons on screen. */
+export const STAFF_DEPARTMENT_LIST = {
+  container: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
+  item: {
+    marginBottom: 20,
+    alignItems: 'flex-start' as const,
+  },
+  icon: {
+    width: 55.482,
+    height: 55.482,
+    aspectRatio: 1,
+    size: 55.482,
+    borderRadius: 37,
+    backgroundColor: '#ffebeb',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '300' as const,
+    fontFamily: 'Inter',
+    color: '#000000',
+    marginTop: 8,
+    textAlign: 'left' as const,
+  },
+  /** When a department panel is open, its name uses these styles. */
+  labelActive: {
+    color: '#F92424',
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontStyle: 'normal' as const,
+    fontWeight: '600' as const,
+    lineHeight: undefined,
+  },
+  row: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingVertical: 14,
+    gap: 16,
+  },
+} as const;
+
+/** Staff > Departments tab grid – matches Figma (same as Create Ticket DEPARTMENT_GRID).
+ * Circular icon + label below. Kept for reference; list uses STAFF_DEPARTMENT_LIST. */
+export const STAFF_DEPARTMENT_GRID = {
+  container: {
+    paddingHorizontal: 17,
+    paddingTop: 8,
+    paddingBottom: 24,
+    columnGap: 16,
+    rowGap: 24,
+  },
+  item: {
+    size: 55.482,
+    borderRadius: 37,
+    backgroundColor: '#ffebeb',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '300' as const,
+    fontFamily: 'Inter',
+    color: '#000000',
+    marginTop: 8,
+    textAlign: 'center' as const,
+  },
+} as const;
+
+/** Staff-by-department panel (slides in from right with triangle pointing to department row).
+ * Figma: https://www.figma.com/design/q59hfVJCVzzUixq1HFRGEh/HESTIA-APP-AND-DASHBOARD?node-id=1085-3083
+ * Matches InspectedStatusSlideModal triangle/shadow and Reassign modal staff list layout. */
+export const STAFF_DEPARTMENT_PANEL = {
+  width: 280,
+  backgroundColor: '#ffffff',
+  borderRadius: 12,
+  shadowColor: 'rgba(100, 131, 176, 0.4)',
+  shadowOffset: { width: -4, height: 0 },
+  shadowOpacity: 1,
+  shadowRadius: 35,
+  triangle: {
+    borderRightWidth: 12,
+    borderTopWidth: 10,
+    borderBottomWidth: 10,
+    borderRightColor: '#ffffff',
+    shadowColor: 'rgba(100, 131, 176, 0.4)',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e3e3e3',
+    titleFontSize: 18,
+    titleColor: '#1e1e1e',
+    closeIconColor: '#5a759d',
+  },
+  listItem: {
+    profilePictureSize: 32,
+    nameLeft: 83,
+    profilePictureLeft: 37,
+    paddingVertical: 20,
+    paddingRight: 20,
+    nameFontSize: 16,
+    departmentFontSize: 14,
+    nameColor: '#1e1e1e',
+    departmentColor: '#334866',
+    itemMinHeight: 76,
+  },
+  /** Row below header divider showing "X selected" when any staff selected. */
+  selectedCount: {
+    paddingHorizontal: 24,
+    paddingTop: 10,
+    paddingBottom: 12,
+    fontSize: 14,
+    fontFamily: 'Inter',
+    fontWeight: '400' as const,
+    color: '#334866',
   },
 } as const;
 

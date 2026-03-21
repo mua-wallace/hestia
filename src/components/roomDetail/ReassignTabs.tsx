@@ -22,6 +22,7 @@ export default function ReassignTabs({
         style={[styles.tab, { left: REASSIGN_MODAL.tabs.onShift.left * scaleX }]}
         onPress={() => onTabChange('OnShift')}
         activeOpacity={0.7}
+        hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
       >
         <Text
           style={[
@@ -37,6 +38,7 @@ export default function ReassignTabs({
         style={[styles.tab, { left: REASSIGN_MODAL.tabs.am.left * scaleX }]}
         onPress={() => onTabChange('AM')}
         activeOpacity={0.7}
+        hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
       >
         <Text
           style={[
@@ -52,6 +54,7 @@ export default function ReassignTabs({
         style={[styles.tab, { left: REASSIGN_MODAL.tabs.pm.left * scaleX }]}
         onPress={() => onTabChange('PM')}
         activeOpacity={0.7}
+        hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
       >
         <Text
           style={[
@@ -78,6 +81,7 @@ export default function ReassignTabs({
         style={styles.searchButton}
         onPress={onSearchPress || (() => {})}
         activeOpacity={0.7}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <Image
           source={require('../../../assets/icons/search-icon.png')}

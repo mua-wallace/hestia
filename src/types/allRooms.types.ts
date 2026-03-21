@@ -17,7 +17,7 @@ export type RoomStatus = 'Dirty' | 'InProgress' | 'Cleaned' | 'Inspected';
 /** Promised ready time for the room: 12:00, 13:00, or null */
 export type PromisedTime = '12:00' | '13:00' | null;
 
-export type StatusChangeOption = 'Priority' | 'Dirty' | 'Cleaned' | 'Inspected' | 'Pause' | 'ReturnLater' | 'RefuseService' | 'PromisedTime';
+export type StatusChangeOption = 'Priority' | 'Dirty' | 'InProgress' | 'Cleaned' | 'Inspected' | 'Pause' | 'ReturnLater' | 'RefuseService' | 'PromisedTime';
 
 /** Guest count: adults/kids. For ETA (arrival) = checking in; for EDT (departure) = checking out */
 export interface GuestCount {
@@ -55,6 +55,7 @@ export interface StaffInfo {
   statusText: string; // "Not Started", "Started: 40 mins", "Finished: 60 mins", etc.
   statusColor: string; // Color for the status text
   promiseTime?: string; // Optional, for departure rooms: "Promise time: 18:00"
+  avatarColor?: string; // Optional, for initial circle when no avatar
 }
 
 export interface NotesInfo {
@@ -81,7 +82,8 @@ export interface RoomCardData {
   reservationStatus?: ReservationStatus; // Due in / Due out, Occupied, Checked out / Due in, Checked in, Checked out, Due out, Vacant, Out Of Order, Due Out / Out Of Order, Checked out / Out Of Order
   promisedTime?: PromisedTime; // 12:00, 13:00, or null
   guests: GuestInfo[]; // Array to support Arrival/Departure rooms with 2 guests
-  roomAttendantAssigned: StaffInfo;
+  /** When null, room card shows "Assign Staff" button; when set, shows staff info. */
+  roomAttendantAssigned: StaffInfo | null;
   isPriority: boolean; // Must be true or false; red border for priority rooms when true
   flagged: boolean; // Must be true or false; when true, room contributes to "Flagged" category on Home
   notes?: NotesInfo;
@@ -119,7 +121,7 @@ export const STATUS_CONFIGS: Record<RoomStatus, StatusConfig> = {
     label: 'Dirty',
   },
   InProgress: {
-    color: '#ffc107',
+    color: '#F0BE1B',
     icon: require('../../assets/icons/in-progess-state-icon.png'),
     label: 'In Progress',
   },
@@ -161,6 +163,11 @@ export const STATUS_OPTIONS: StatusOptionConfig[] = [
     id: 'Dirty',
     label: 'Dirty',
     icon: require('../../assets/icons/dirty-status.png'),
+  },
+  {
+    id: 'InProgress',
+    label: 'In Progress',
+    icon: require('../../assets/icons/in-progress-icon.png'),
   },
   {
     id: 'Cleaned',

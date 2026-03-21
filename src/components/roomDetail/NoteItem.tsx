@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, LayoutChangeEvent } from 'react-native';
-import { typography } from '../../theme';
 import { scaleX, NOTES_SECTION } from '../../constants/roomDetailStyles';
 import type { Note } from '../../types/roomDetail.types';
 
@@ -63,7 +62,11 @@ export default function NoteItem({ note, absoluteTop, contentAreaTop, onHeightMe
       {textHeight > 0 && (
         <>
           <Image
-            source={note.staff.avatar || require('../../../assets/icons/profile-avatar.png')}
+            source={
+              typeof note.staff.avatar === 'string'
+                ? { uri: note.staff.avatar }
+                : (note.staff.avatar || require('../../../assets/icons/profile-avatar.png'))
+            }
             style={[styles.profilePicture, { top: profileTop }]}
             resizeMode="cover"
           />
@@ -86,12 +89,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: NOTES_SECTION.note.text.left * scaleX,
     top: 0,
+    fontFamily: NOTES_SECTION.note.text.fontFamily,
     fontSize: NOTES_SECTION.note.text.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
+    fontStyle: NOTES_SECTION.note.text.fontStyle,
+    fontWeight: NOTES_SECTION.note.text.fontWeight as any,
     color: NOTES_SECTION.note.text.color,
     width: NOTES_SECTION.note.text.width * scaleX,
-    lineHeight: 18 * scaleX,
+    // line-height: normal (default)
   },
   profilePicture: {
     position: 'absolute',
@@ -103,9 +107,10 @@ const styles = StyleSheet.create({
   staffName: {
     position: 'absolute',
     left: NOTES_SECTION.note.staffName.left * scaleX,
+    fontFamily: NOTES_SECTION.note.staffName.fontFamily,
     fontSize: NOTES_SECTION.note.staffName.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular as any,
+    fontStyle: NOTES_SECTION.note.staffName.fontStyle,
+    fontWeight: NOTES_SECTION.note.staffName.fontWeight as any,
     color: NOTES_SECTION.note.staffName.color,
   },
 });

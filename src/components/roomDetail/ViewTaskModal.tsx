@@ -45,6 +45,7 @@ export default function ViewTaskModal({
                 style={styles.closeButton}
                 onPress={onClose}
                 activeOpacity={0.7}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
                 <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>

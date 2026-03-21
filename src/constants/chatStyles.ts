@@ -9,7 +9,10 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 export const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
-// Header Styles
+// Compact chat header bar height (WhatsApp-style, used for chat detail)
+export const CHAT_HEADER_BAR_HEIGHT = 56;
+
+// Header Styles (legacy / list header)
 export const CHAT_HEADER = {
   height: 217,
   background: {

@@ -71,7 +71,7 @@ export default function SearchInput({
             </Text>
           ) : (
             <Text style={[styles.placeholderText, styles.placeholderBold, placeholderStyle]}>
-              {placeholder}
+              {typeof placeholder === 'string' ? placeholder : String(placeholder ?? '')}
             </Text>
           )}
         </View>
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     opacity: 0.36,
   },
   placeholderBold: {
-    fontWeight: typography.fontWeights.semiBold as any,
+    fontWeight: typography.fontWeights.semibold as any,
   },
   placeholderNormal: {
     fontWeight: typography.fontWeights.light as any,

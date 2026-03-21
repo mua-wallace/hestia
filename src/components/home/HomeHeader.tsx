@@ -47,13 +47,13 @@ export default function HomeHeader({
             <View style={styles.initialsCircle}>
               <Text style={[
                 styles.initialsText,
-                selectedShift === 'PM' && styles.initialsTextPM
+                selectedShift === 'PM' ? styles.initialsTextPM : null
               ]}>
-                {getInitialsFromFullName(user.name)}
+                {getInitialsFromFullName(typeof user.name === 'string' ? user.name : '')}
               </Text>
             </View>
           )}
-          {user.hasFlag && (
+          {user.hasFlag ? (
             <View style={styles.flagContainer}>
               <View style={styles.flagCircle}>
                 <Image
@@ -63,20 +63,20 @@ export default function HomeHeader({
                 />
               </View>
             </View>
-          )}
+          ) : null}
         </View>
         <View style={styles.profileInfo}>
           <Text style={[
             styles.userName,
-            selectedShift === 'PM' && styles.userNamePM
+            selectedShift === 'PM' ? styles.userNamePM : null
           ]}>
-            {user.name}
+            {typeof user.name === 'string' ? user.name : ''}
           </Text>
           <Text style={[
             styles.userRole,
-            selectedShift === 'PM' && styles.userRolePM
+            selectedShift === 'PM' ? styles.userRolePM : null
           ]}>
-            {user.role}
+            {typeof user.role === 'string' ? user.role : ''}
           </Text>
         </View>
       </ProfileWrapper>

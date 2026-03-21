@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { colors } from '../theme';
+import { colors, typography } from '../theme';
 import { scaleX, ROOM_DETAIL_HEADER, DETAIL_TABS, CONTENT_AREA, GUEST_INFO, NOTES_SECTION, LOST_AND_FOUND, ASSIGNED_TO, ASSIGNED_TASK_CARD } from '../constants/roomDetailStyles';
 import RoomDetailHeader from '../components/roomDetail/RoomDetailHeader';
 import DetailTabNavigation from '../components/roomDetail/DetailTabNavigation';
@@ -11,10 +11,10 @@ import NotesSection from '../components/roomDetail/NotesSection';
 import LostAndFoundSection from '../components/roomDetail/LostAndFoundSection';
 import AssignedToSection from '../components/roomDetail/AssignedToSection';
 import TaskSection from '../components/roomDetail/TaskSection';
-import ChecklistSection from '../components/roomDetail/ChecklistSection';
-import RoomTicketsSection from '../components/roomDetail/RoomTicketsSection';
+import CleanChecklistSection from '../components/roomDetail/CleanChecklistSection';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
+import CleanChecklistModal from '../components/allRooms/CleanChecklistModal';
 import ReturnLaterModal from '../components/roomDetail/ReturnLaterModal';
 import PromiseTimeModal from '../components/roomDetail/PromiseTimeModal';
 import RefuseServiceModal from '../components/roomDetail/RefuseServiceModal';
@@ -26,8 +26,10 @@ import type { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import { STATUS_OPTIONS } from '../types/allRooms.types';
 import type { RoomDetailData, DetailTab, Note, Task } from '../types/roomDetail.types';
 import type { RootStackParamList } from '../navigation/types';
-import { mockStaffData } from '../data/mockStaffData';
+import { useRoomsStore } from '../store/useRoomsStore';
+import { authService } from '../services/auth';
 import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
+import { getRoomNotes, addRoomNote } from '../services/rooms';
 
 type ArrivalDepartureDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -38,10 +40,15 @@ export default function ArrivalDepartureDetailScreen() {
   const navigation = useNavigation<ArrivalDepartureDetailScreenNavigationProp>();
   const route = useRoute();
   const room = (route.params as any)?.room as RoomCardData;
+  const initialTab = (route.params as any)?.initialTab as DetailTab | undefined;
+  const departmentName = (route.params as any)?.departmentName as string | undefined;
+  const { updateRoom, updatingRoomId } = useRoomsStore();
+  const isUpdating = room && updatingRoomId === room.id;
 
-  const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
+  const [activeTab, setActiveTab] = useState<DetailTab>(initialTab || 'Overview');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showInspectedModal, setShowInspectedModal] = useState(false);
+  const [showCleanChecklistModal, setShowCleanChecklistModal] = useState(false);
   const [buttonPositionForInspection, setButtonPositionForInspection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showReturnLaterModal, setShowReturnLaterModal] = useState(false);
   const [showPromiseTimeModal, setShowPromiseTimeModal] = useState(false);
@@ -52,7 +59,7 @@ export default function ArrivalDepartureDetailScreen() {
   const [showViewTaskModal, setShowViewTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [statusButtonPosition, setStatusButtonPosition] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const statusButtonRef = useRef<TouchableOpacity>(null);
+  const statusButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   // Track current status to update header background color
   const [currentStatus, setCurrentStatus] = useState<RoomCardData['houseKeepingStatus']>(room.houseKeepingStatus);
   // Track selected status option text to display in header
@@ -66,18 +73,19 @@ export default function ArrivalDepartureDetailScreen() {
   // Track room data locally to allow updates (e.g., flagged status)
   const [localRoom, setLocalRoom] = useState<RoomCardData>(room);
   // Track notes and assigned staff in state
-  // Initial notes: room note (roomNotes + noteMadeBy) if present, else default InProgress notes or empty
+  // Initial notes: parse room notes (split by \n\n) if present, else default InProgress notes or empty
   const [notes, setNotes] = useState<Note[]>(() => {
-    const roomNote: Note[] = room.roomNotes && room.noteMadeBy
-      ? [{
-          id: 'room-note',
-          text: room.roomNotes,
+    // Parse notes from Supabase: split by \n\n to get individual notes
+    const roomNote: Note[] = room.roomNotes && room.roomNotes.trim()
+      ? room.roomNotes.split(/\n\n+/).filter(text => text.trim()).map((text, index) => ({
+          id: `room-note-${index}`,
+          text: text.trim(),
           staff: {
-            name: room.noteMadeBy.name,
-            avatar: room.noteMadeBy.avatar ?? require('../../assets/icons/profile-avatar.png'),
+            name: room.noteMadeBy?.name || 'Staff',
+            avatar: room.noteMadeBy?.avatar ?? require('../../assets/icons/profile-avatar.png'),
           },
           createdAt: new Date().toISOString(),
-        }]
+        }))
       : [];
     if (room.houseKeepingStatus === 'InProgress' && roomNote.length === 0) {
       return [
@@ -103,6 +111,17 @@ export default function ArrivalDepartureDetailScreen() {
     }
     return roomNote;
   });
+
+  // Load notes from room_notes when room is from Supabase (valid UUID)
+  useEffect(() => {
+    if (!room?.id) return;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(room.id)) return;
+    getRoomNotes(room.id).then((loaded) => {
+      if (loaded.length > 0) setNotes(loaded);
+    }).catch(() => {});
+  }, [room?.id]);
+
   const [assignedStaff, setAssignedStaff] = useState<{
     id: string;
     name: string;
@@ -119,10 +138,7 @@ export default function ArrivalDepartureDetailScreen() {
           initials: room.roomAttendantAssigned.initials,
           avatarColor: room.roomAttendantAssigned.avatarColor,
           // Get department from mock data by matching name
-          department: (() => {
-            const staffMember = mockStaffData.find(s => s.name === room.roomAttendantAssigned?.name);
-            return staffMember?.department;
-          })(),
+          department: undefined,
         }
       : undefined
   );
@@ -138,6 +154,7 @@ export default function ArrivalDepartureDetailScreen() {
   // In a real app, this would come from an API or be passed directly
   const roomDetail: RoomDetailData = {
     ...room,
+    roomType: 'ArrivalDeparture',
     specialInstructions: room.specialInstructions ?? undefined,
     notes: notes,
     tasks: tasks,
@@ -151,14 +168,14 @@ export default function ArrivalDepartureDetailScreen() {
       navigation.goBack();
     } else {
       // Fallback: navigate to AllRooms if can't go back
-      navigation.navigate('AllRooms');
+      navigation.navigate('AllRooms' as any, {} as any);
     }
   };
 
   const handleStatusPress = () => {
     // Measure the status button position
     if (statusButtonRef.current) {
-      statusButtonRef.current.measure((x, y, width, height, pageX, pageY) => {
+      statusButtonRef.current.measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
         setStatusButtonPosition({
           x: pageX,
           y: pageY,
@@ -209,10 +226,12 @@ export default function ArrivalDepartureDetailScreen() {
     }
 
     // Map status option to RoomStatus
-    const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['status'] => {
+    const mapStatusOptionToRoomStatus = (option: StatusChangeOption): RoomCardData['houseKeepingStatus'] => {
       switch (option) {
         case 'Dirty':
           return 'Dirty';
+        case 'InProgress':
+          return 'InProgress';
         case 'Cleaned':
           return 'Cleaned';
         case 'Inspected':
@@ -222,25 +241,32 @@ export default function ArrivalDepartureDetailScreen() {
         case 'ReturnLater':
         case 'RefuseService':
         case 'PromisedTime':
-          // These might be actions/metadata, not status changes
-          // For now, keep InProgress status
           return 'InProgress';
         default:
           return 'InProgress';
       }
     };
 
-    const newStatus = mapStatusOptionToRoomStatus(statusOption);
-
-    // Update local status state to change header background color
-    setCurrentStatus(newStatus);
-
-    // Priority: set room as priority and show "In Progress" (not "Priority")
+    // Priority only toggles rush icon on room card; do not change room detail background or status icon
     if (statusOption === 'Priority') {
-      setLocalRoom((prev) => (prev ? { ...prev, isPriority: true } : prev));
+      const newIsPriority = !localRoom?.isPriority;
+      setLocalRoom((prev) => (prev ? { ...prev, isPriority: newIsPriority } : prev));
       setSelectedStatusText(undefined);
       setPausedAt(undefined);
-    } else if (statusOption === 'Pause') {
+      const priorityPayload = newIsPriority ? 'high' : 'normal';
+      updateRoom(room.id, {
+        ...(localRoom?.houseKeepingStatus && { house_keeping_status: localRoom.houseKeepingStatus }),
+        priority: priorityPayload,
+      }).catch((e) => console.warn('Failed to update room status in Supabase', e));
+      setShowStatusModal(false);
+      setStatusButtonPosition(null);
+      return;
+    }
+
+    const newStatus = mapStatusOptionToRoomStatus(statusOption);
+    setCurrentStatus(newStatus);
+
+    if (statusOption === 'Pause') {
       const now = new Date();
       const hours = now.getHours().toString().padStart(2, '0');
       const minutes = now.getMinutes().toString().padStart(2, '0');
@@ -251,10 +277,10 @@ export default function ArrivalDepartureDetailScreen() {
       setPausedAt(undefined);
     }
 
-    // TODO: Update room status in backend/API
-    console.log('Status changed for room:', room.roomNumber, 'to:', newStatus);
+    updateRoom(room.id, {
+      house_keeping_status: newStatus,
+    }).catch((e) => console.warn('Failed to update room status in Supabase', e));
 
-    // Close modal
     setShowStatusModal(false);
     setStatusButtonPosition(null);
   };
@@ -327,24 +353,50 @@ export default function ArrivalDepartureDetailScreen() {
     console.log('Task added for room:', room.roomNumber, 'task:', taskText);
   };
 
-  const handleSaveNote = (noteText: string) => {
-    // Get current logged-in user (default to first staff member)
-    // In real app, get from auth context
-    const currentUser = mockStaffData[0]; // Default logged-in user
-    
-    // Create a new note with current user info
+  const handleSaveNote = async (noteText: string): Promise<void> => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (room.id && uuidRegex.test(room.id)) {
+      try {
+        const newNote = await addRoomNote(room.id, noteText);
+        setNotes((prev) => [...prev, newNote]);
+        setLocalRoom((prev) =>
+          prev
+            ? {
+                ...prev,
+                notes: { count: (prev.notes?.count ?? 0) + 1, hasRushed: prev.notes?.hasRushed || false },
+                noteMadeBy: { name: newNote.staff.name, avatar: newNote.staff.avatar },
+              }
+            : prev
+        );
+      } catch (e) {
+        console.warn('Failed to save note to Supabase', e);
+      }
+      return;
+    }
+    const [noteAuthorLabel, avatarUrl] = await Promise.all([
+      authService.getCurrentUserNoteLabel(),
+      authService.getCurrentUserAvatarUrl(),
+    ]);
     const newNote: Note = {
       id: Date.now().toString(),
       text: noteText,
       staff: {
-        name: currentUser.name,
-        avatar: currentUser.avatar || require('../../assets/icons/profile-avatar.png'),
+        name: noteAuthorLabel,
+        avatar: avatarUrl || require('../../assets/icons/profile-avatar.png'),
       },
       createdAt: new Date().toISOString(),
     };
-    setNotes([...notes, newNote]);
-    // TODO: Save note to backend/API
-    console.log('Note saved:', noteText);
+    const updatedNotes = [...notes, newNote];
+    setNotes(updatedNotes);
+    setLocalRoom((prev) =>
+      prev
+        ? {
+            ...prev,
+            notes: { count: updatedNotes.length, hasRushed: prev.notes?.hasRushed || false },
+            noteMadeBy: { name: noteAuthorLabel, avatar: avatarUrl || undefined },
+          }
+        : prev
+    );
   };
 
   const handleAddPhotos = () => {
@@ -369,11 +421,10 @@ export default function ArrivalDepartureDetailScreen() {
 
   const handleStaffSelect = (staffId: string) => {
     console.log('Staff selected:', staffId);
-    // Find the selected staff member from mock data
-    const selectedStaff = mockStaffData.find((s) => s.id === staffId);
-    if (selectedStaff) {
+    // Staff data should come from Supabase, not mock data
+    if (staffId) {
       setAssignedStaff({
-        id: selectedStaff.id,
+        id: staffId,
         name: selectedStaff.name,
         avatar: selectedStaff.avatar,
         initials: selectedStaff.initials,
@@ -412,7 +463,11 @@ export default function ArrivalDepartureDetailScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Gray Background - Behind everything (0-285px) */}
+      {isUpdating && (
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(255,255,255,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }]}>
+          <ActivityIndicator size="large" color={colors.primary.main} />
+        </View>
+      )}
       <View style={styles.backgroundTop} />
 
       {/* Header - Yellow (0-232px) */}
@@ -435,6 +490,7 @@ export default function ArrivalDepartureDetailScreen() {
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceReason={refuseServiceReason}
         isPriority={localRoom?.isPriority === true}
+        flagged={localRoom?.flagged === true}
         frontOfficeLabel={room.frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}
         showWithLinenBadge={room.frontOfficeStatus === 'Stayover' && showStayoverWithLinenBadge(localRoom)}
       />
@@ -446,31 +502,34 @@ export default function ArrivalDepartureDetailScreen() {
       />
 
       {/* Content Area - Starts at 285px */}
-      {/* Checklist and Tickets Tabs have their own ScrollView, so render separately */}
+      {/* Checklist Tab has its own ScrollView, so render separately */}
       {activeTab === 'Checklist' ? (
-        <ChecklistSection
+        <CleanChecklistSection
           roomNumber={room.roomNumber}
           roomCode={`${room.roomCategory} - ${room.credit}`}
-          roomStatus={currentStatus}
-          onSubmit={(data) => {
-            // TODO: Handle checklist submission
-            console.log('Checklist submitted:', data);
-            // Optionally show success message or navigate back
-          }}
-          onCancel={() => {
-            // TODO: Handle cancel - could navigate back or reset
-            console.log('Checklist cancelled');
-          }}
+          onComplete={() => console.log('Clean checklist completed')}
+          onAddPhoto={() => console.log('Add photo')}
+          onAddNotes={() => console.log('Add notes')}
         />
       ) : activeTab === 'Tickets' ? (
-        <RoomTicketsSection
-          roomNumber={room.roomNumber}
-          onSubmit={(ticketData) => {
-            // TODO: Handle ticket submission
-            console.log('Ticket submitted:', ticketData);
-            // Optionally show success message or navigate back
-          }}
-        />
+        <View style={styles.ticketsTabContainer}>
+          <TouchableOpacity
+            style={styles.createTicketButton}
+            onPress={() => {
+              navigation.navigate('CreateTicketForm', {
+                roomId: room.id,
+                roomNumber: room.roomNumber,
+                departmentName: departmentName,
+              });
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.createTicketButtonText}>+ Create Ticket</Text>
+          </TouchableOpacity>
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+            <Text style={styles.noTicketsText}>No tickets yet. Create one to get started.</Text>
+          </ScrollView>
+        </View>
       ) : (
         <ScrollView
           style={styles.scrollView}
@@ -552,6 +611,7 @@ export default function ArrivalDepartureDetailScreen() {
 
             {/* Lost and Found Section */}
             <LostAndFoundSection 
+              displayType="empty"
               onAddPhotosPress={handleAddPhotos}
               onTitlePress={handleLostAndFoundTitlePress}
             />
@@ -587,10 +647,15 @@ export default function ArrivalDepartureDetailScreen() {
           setButtonPositionForInspection(statusButtonPosition);
           setShowInspectedModal(true);
         }}
+        onCleanedSelect={() => setShowCleanChecklistModal(true)}
         currentStatus={currentStatus}
         room={localRoom}
         buttonPosition={statusButtonPosition}
         showTriangle={false}
+        onFlagToggle={(flagged) => {
+          setLocalRoom((prev) => ({ ...prev, flagged }));
+          updateRoom(room.id, { flagged }).catch((e) => console.warn('Failed to update room flag in Supabase', e));
+        }}
       />
 
       <InspectedStatusSlideModal
@@ -606,7 +671,18 @@ export default function ArrivalDepartureDetailScreen() {
         }}
         buttonPosition={buttonPositionForInspection}
         headerHeight={232}
-        showTriangle={!!buttonPositionForInspection}
+        showTriangle={false}
+      />
+
+      <CleanChecklistModal
+        visible={showCleanChecklistModal}
+        onClose={() => setShowCleanChecklistModal(false)}
+        onComplete={() => {
+          handleStatusSelect('Cleaned');
+          setShowCleanChecklistModal(false);
+        }}
+        headerHeight={232}
+        showTriangle={false}
       />
 
       <ReturnLaterModal
@@ -796,5 +872,31 @@ const styles = StyleSheet.create({
     height: ASSIGNED_TASK_CARD.divider.height, // 1px
     backgroundColor: ASSIGNED_TASK_CARD.divider.backgroundColor,
     zIndex: 2, // Above both Assigned to (zIndex: 1) and Task sections (zIndex: 0)
+  },
+  ticketsTabContainer: {
+    flex: 1,
+    backgroundColor: colors.background.primary,
+  },
+  createTicketButton: {
+    backgroundColor: '#5a759d',
+    marginHorizontal: 24 * scaleX,
+    marginTop: 20 * scaleX,
+    marginBottom: 16 * scaleX,
+    paddingVertical: 14 * scaleX,
+    borderRadius: 10 * scaleX,
+    alignItems: 'center',
+  },
+  createTicketButtonText: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  noTicketsText: {
+    fontSize: 15 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 40 * scaleX,
   },
 });

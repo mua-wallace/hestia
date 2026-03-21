@@ -77,12 +77,41 @@ export default function ItemRegisteredSuccessModal({
       height: ITEM_REGISTERED_SUCCESS.successIcon.height * scaleX,
     },
     itemRegisteredText: {
-      marginTop: (ITEM_REGISTERED_SUCCESS.itemRegisteredText.top - (ITEM_REGISTERED_SUCCESS.successIcon.top + ITEM_REGISTERED_SUCCESS.successIcon.height)) * scaleX * 0.5,
+      marginTop:
+        (ITEM_REGISTERED_SUCCESS.itemRegisteredText.top -
+          (ITEM_REGISTERED_SUCCESS.successIcon.top +
+            ITEM_REGISTERED_SUCCESS.successIcon.height)) *
+        scaleX *
+        0.5,
       fontSize: ITEM_REGISTERED_SUCCESS.itemRegisteredText.fontSize * scaleX,
       fontFamily: typography.fontFamily.primary,
       fontWeight: ITEM_REGISTERED_SUCCESS.itemRegisteredText.fontWeight as any,
       color: ITEM_REGISTERED_SUCCESS.itemRegisteredText.color,
       textAlign: 'center',
+    },
+    itemImageContainer: {
+      marginTop:
+        (ITEM_REGISTERED_SUCCESS.itemRegisteredText.top -
+          (ITEM_REGISTERED_SUCCESS.successIcon.top +
+            ITEM_REGISTERED_SUCCESS.successIcon.height)) *
+        scaleX *
+        0.3,
+      marginBottom: 8 * scaleX,
+      width: Math.min(
+        ITEM_REGISTERED_SUCCESS.successIcon.width * scaleX,
+        SCREEN_WIDTH - 40 * scaleX
+      ),
+      aspectRatio: 1.2,
+      borderRadius: 16 * scaleX,
+      overflow: 'hidden',
+      backgroundColor: '#f3f4f6',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    itemImageStyle: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
     },
     trackingNumberLabel: {
       marginTop: (ITEM_REGISTERED_SUCCESS.trackingNumberLabel.top - ITEM_REGISTERED_SUCCESS.itemRegisteredText.top) * scaleX * 0.5,

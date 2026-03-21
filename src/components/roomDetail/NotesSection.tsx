@@ -104,6 +104,7 @@ export default function NotesSection({ notes, onAddPress }: NotesSectionProps) {
         style={styles.addButton}
         onPress={onAddPress}
         activeOpacity={0.7}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       >
         <Text style={styles.addButtonText}>Add</Text>
       </TouchableOpacity>

@@ -8,8 +8,8 @@ const fs = require('fs');
 const path = require('path');
 
 const projectRoot = path.join(__dirname, '..');
-const csvPathAM = path.join(projectRoot, 'operational-data.csv');
-const csvPathPM = path.join(projectRoot, 'pm-operational-data.csv');
+const csvPathAM = path.join(projectRoot, 'data', 'operational-data.csv');
+const csvPathPM = path.join(projectRoot, 'data', 'pm-operational-data.csv');
 const outPath = path.join(projectRoot, 'src', 'data', 'mockAllRoomsData.ts');
 
 function parseCSVLine(line) {

@@ -1,20 +1,18 @@
-import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, ScrollView, StyleSheet, RefreshControl, Modal, TouchableOpacity, TouchableWithoutFeedback, Text } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/AppNavigator';
-import { BlurView } from 'expo-blur';
+import type { RootStackParamList, MainTabsParamList as MainTabsParamListFromApp } from '../navigation/types';
 import BottomTabBar from '../components/navigation/BottomTabBar';
-import MorePopup from '../components/more/MorePopup';
+import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import TicketsHeader from '../components/tickets/TicketsHeader';
 import TicketsTabs from '../components/tickets/TicketsTabs';
 import TicketCard from '../components/tickets/TicketCard';
-import { mockHomeData } from '../data/mockHomeData';
-import { mockTicketsData } from '../data/mockTicketsData';
-import { mockChatData } from '../data/mockChatData';
-import { MoreMenuItemId } from '../types/more.types';
-import { TicketTab, TicketData } from '../types/tickets.types';
+import EmptyTicketsState from '../components/tickets/EmptyTicketsState';
+import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
+import { useChatStore } from '../store/useChatStore';
+import { TicketTab, TicketData, TicketsScreenData, TicketStatus } from '../types/tickets.types';
 import {
   TICKETS_HEADER,
   TICKETS_TABS,
@@ -23,15 +21,13 @@ import {
   TICKET_DIVIDER,
   scaleX,
 } from '../constants/ticketsStyles';
+import { dashboardService } from '../services/dashboard';
+import { updateTicketStatus } from '../services/tickets';
+import { useAuth } from '../contexts/AuthContext';
+import { typography } from '../theme';
 
-type MainTabsParamList = {
-  Home: undefined;
-  Rooms: undefined;
-  Chat: undefined;
-  Tickets: undefined;
-  LostAndFound: undefined;
-  Staff: undefined;
-  Settings: undefined;
+type MainTabsParamList = MainTabsParamListFromApp & {
+  Tickets: { initialTab?: TicketTab } | undefined;
 };
 
 type TicketsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, 'Tickets'>;
@@ -41,11 +37,41 @@ export default function TicketsScreen() {
   const navigation = useNavigation<TicketsScreenNavigationProp>();
   const stackNavigation = useNavigation<StackNavigationProp>();
   const route = useRoute();
+  const { open: openAIChatOverlay } = useAIChatOverlay();
+  const { session } = useAuth();
   const [activeTab, setActiveTab] = useState('Tickets');
-  const [showMorePopup, setShowMorePopup] = useState(false);
   const [selectedTab, setSelectedTab] = useState<TicketTab>('myTickets');
-  const [tickets] = useState<TicketData[]>(mockTicketsData.tickets);
+  const [ticketsData, setTicketsData] = useState<TicketsScreenData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [statusMenuTicket, setStatusMenuTicket] = useState<TicketData | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+
+  const loadTickets = useCallback(async (overrideInitialTab?: TicketTab) => {
+    try {
+      setLoading(true);
+      const data = await dashboardService.getTicketsData();
+      setTicketsData(data);
+      // If we came here with an explicit initial tab (e.g. after creating a ticket),
+      // prefer that over the stored/dashboard selection.
+      if (overrideInitialTab) {
+        setSelectedTab(overrideInitialTab);
+      } else if (data.selectedTab) {
+        setSelectedTab(data.selectedTab);
+      }
+    } catch (e) {
+      console.warn('[TicketsScreen] Failed to load tickets', e);
+      const fallbackTab = overrideInitialTab ?? 'myTickets';
+      setTicketsData({ selectedTab: fallbackTab, tickets: [] });
+      setSelectedTab(fallbackTab);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTickets();
+  }, [loadTickets]);
 
   // Sync activeTab with current route
   useFocusEffect(
@@ -54,17 +80,31 @@ export default function TicketsScreen() {
       if (routeName === 'Home' || routeName === 'Rooms' || routeName === 'Chat' || routeName === 'Tickets') {
         setActiveTab(routeName);
       }
-    }, [route.name])
+
+      // When navigated with an explicit initialTab (e.g. after creating a ticket),
+      // prefer that over the stored selection.
+      const params = (route as any).params as { initialTab?: TicketTab } | undefined;
+      const overrideInitialTab = params?.initialTab;
+
+      // Refresh tickets whenever Tickets screen gains focus
+      loadTickets(overrideInitialTab);
+    }, [route, loadTickets])
   );
 
   // Calculate total unread chat messages for badge
-  const chatBadgeCount = React.useMemo(() => {
-    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
-  }, []);
+  const { chats } = useChatStore();
+  const chatBadgeCount = React.useMemo(
+    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
+    [chats]
+  );
 
   const handleTabPress = (tab: string) => {
+    if (tab === 'AIHome') {
+      openAIChatOverlay();
+      return;
+    }
     setActiveTab(tab); // Update immediately
-    setShowMorePopup(false);
+    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
@@ -73,33 +113,13 @@ export default function TicketsScreen() {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
       navigation.navigate('Tickets' as any);
+    } else if (tab === 'LostAndFound') {
+      (navigation as any).navigate('LostAndFound', { returnToTab });
+    } else if (tab === 'Staff') {
+      (navigation as any).navigate('Staff', { returnToTab });
+    } else if (tab === 'Settings') {
+      (navigation as any).navigate('Settings', { returnToTab });
     }
-  };
-
-  const handleMorePress = () => {
-    setShowMorePopup(true);
-  };
-
-  const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
-    setShowMorePopup(false);
-    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
-    switch (menuItem) {
-      case 'lostAndFound':
-        navigation.navigate('LostAndFound', { returnToTab });
-        break;
-      case 'staff':
-        navigation.navigate('Staff', { returnToTab });
-        break;
-      case 'settings':
-        navigation.navigate('Settings', { returnToTab });
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleClosePopup = () => {
-    setShowMorePopup(false);
   };
 
   const handleBackPress = () => {
@@ -122,22 +142,37 @@ export default function TicketsScreen() {
   };
 
   const handleStatusPress = (ticket: TicketData) => {
-    // TODO: Handle status change
-    console.log('Status pressed for ticket:', ticket.id);
+    setStatusMenuTicket(ticket);
+  };
+
+  const handleStatusSelect = async (nextStatus: TicketStatus) => {
+    if (!statusMenuTicket) return;
+    setStatusUpdating(true);
+    try {
+      await updateTicketStatus(statusMenuTicket.id, nextStatus);
+      setStatusMenuTicket(null);
+      // Refresh while keeping the current selected tab.
+      await loadTickets(selectedTab);
+    } catch (e) {
+      console.warn('[TicketsScreen] Failed to update ticket status', e);
+    } finally {
+      setStatusUpdating(false);
+    }
   };
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    loadTickets().finally(() => setRefreshing(false));
   }, []);
+
+  const tickets: TicketData[] = ticketsData?.tickets ?? [];
+  const currentUserId = session?.user?.id;
 
   // Filter tickets based on selected tab
   const filteredTickets = tickets.filter((ticket) => {
     if (selectedTab === 'myTickets') {
-      // TODO: Filter by current user's tickets
-      return true;
+      if (!currentUserId) return false;
+      return ticket.assignedToId === currentUserId;
     } else if (selectedTab === 'open') {
       return ticket.status === 'unsolved';
     } else if (selectedTab === 'closed') {
@@ -148,40 +183,68 @@ export default function TicketsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Scrollable Content */}
+      {(loading || refreshing) && <LoadingOverlay fullScreen message={loading ? 'Loading tickets…' : 'Refreshing…'} />}
       <View style={styles.scrollContainer}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          scrollEnabled={!showMorePopup}
+          scrollEnabled={true}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {/* Ticket Cards */}
-          {filteredTickets.map((ticket, index) => (
-            <React.Fragment key={ticket.id}>
-              <TicketCard
-                ticket={ticket}
-                onPress={() => handleTicketPress(ticket)}
-                onStatusPress={() => handleStatusPress(ticket)}
-              />
-              {/* Divider */}
-              {index < filteredTickets.length - 1 && (
-                <View style={styles.divider} />
-              )}
-            </React.Fragment>
-          ))}
+          {/* Ticket Cards or Empty State */}
+          {filteredTickets.length === 0 ? (
+            <EmptyTicketsState selectedTab={selectedTab} />
+          ) : (
+            filteredTickets.map((ticket, index) => (
+              <React.Fragment key={ticket.id}>
+                <TicketCard
+                  ticket={ticket}
+                  onPress={() => handleTicketPress(ticket)}
+                  onStatusPress={() => handleStatusPress(ticket)}
+                />
+                {/* Divider */}
+                {index < filteredTickets.length - 1 && (
+                  <View style={styles.divider} />
+                )}
+              </React.Fragment>
+            ))
+          )}
         </ScrollView>
 
         {/* Blur Overlay for content only */}
-        {showMorePopup && (
-          <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
-            <View style={styles.blurOverlayDarkener} />
-          </BlurView>
-        )}
       </View>
+
+      {/* Status dropdown */}
+      <Modal
+        visible={!!statusMenuTicket}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStatusMenuTicket(null)}
+      >
+        <TouchableWithoutFeedback onPress={() => (statusUpdating ? null : setStatusMenuTicket(null))}>
+          <View style={styles.statusModalOverlay}>
+            <View style={styles.statusDropdown}>
+              <TouchableOpacity
+                style={styles.statusOption}
+                onPress={() => handleStatusSelect('done')}
+                disabled={statusUpdating}
+              >
+                <Text style={[styles.statusOptionText, styles.statusOptionDone]}>Done</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.statusOption}
+                onPress={() => handleStatusSelect('unsolved')}
+                disabled={statusUpdating}
+              >
+                <Text style={[styles.statusOptionText, styles.statusOptionUnsolved]}>Unsolved</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       {/* Header - Fixed at top */}
       <TicketsHeader
@@ -196,15 +259,7 @@ export default function TicketsScreen() {
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
-        onMorePress={handleMorePress}
         chatBadgeCount={chatBadgeCount}
-      />
-
-      {/* More Popup */}
-      <MorePopup
-        visible={showMorePopup}
-        onClose={handleClosePopup}
-        onMenuItemPress={handleMenuItemPress}
       />
     </View>
   );
@@ -244,6 +299,36 @@ const styles = StyleSheet.create({
   blurOverlayDarkener: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(200, 200, 200, 0.6)',
+  },
+  statusModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusDropdown: {
+    width: 220 * scaleX,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e3e3e3',
+    borderRadius: 10 * scaleX,
+    paddingVertical: 8 * scaleX,
+  },
+  statusOption: {
+    paddingVertical: 12 * scaleX,
+    paddingHorizontal: 16 * scaleX,
+  },
+  statusOptionText: {
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  statusOptionDone: {
+    color: '#41d541',
+  },
+  statusOptionUnsolved: {
+    color: '#f92424',
   },
 });
 

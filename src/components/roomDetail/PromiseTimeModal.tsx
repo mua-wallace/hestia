@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { useMessageModal } from '../../contexts/MessageModalContext';
 import { RETURN_LATER_MODAL } from '../../constants/returnLaterModalStyles';
 import TimeSuggestionButton from './TimeSuggestionButton';
 
@@ -34,6 +35,7 @@ export default function PromiseTimeModal({
   onConfirm,
   roomNumber,
 }: PromiseTimeModalProps) {
+  const messageModal = useMessageModal();
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [selectedHour, setSelectedHour] = useState(() => 12);
   const [selectedMinute, setSelectedMinute] = useState(() => 0);
@@ -267,11 +269,11 @@ export default function PromiseTimeModal({
 
   const handleConfirm = () => {
     if (!isAtLeast5MinFromNow(selectedDate, selectedHour, selectedMinute, selectedPeriod)) {
-      Alert.alert(
-        'Invalid time',
-        `Promise time must be at least ${MIN_MINUTES_FROM_NOW} minutes from now.`,
-        [{ text: 'OK' }]
-      );
+      messageModal.show({
+        title: 'Invalid time',
+        message: `Promise time must be at least ${MIN_MINUTES_FROM_NOW} minutes from now.`,
+        buttons: [{ text: 'OK' }],
+      });
       return;
     }
     const timeString = `${selectedHour.toString().padStart(2, '0')}:${selectedMinute.toString().padStart(2, '0')} ${selectedPeriod}`;

@@ -9,14 +9,18 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 export const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
-// Card Dimensions
+/** Extra space between room header and guest/status block so content isn't flush */
+export const CONTENT_OFFSET_TOP = 12;
+
+// Card Dimensions - different card types have different content so heights differ
+// Heights include CONTENT_OFFSET_TOP so guest/status block has breathing room below header
 export const CARD_DIMENSIONS = {
   width: 426,
   heights: {
-    standard: 177,        // Single guest, no notes
-    withGuestInfo: 185,   // Standard with guest info
-    withNotes: 222,       // With notes section
-    arrivalDeparture: 292, // Arrival/Departure with 2 guests
+    standard: 177 + CONTENT_OFFSET_TOP,        // Departure: 1 guest only
+    withGuestInfo: 185 + CONTENT_OFFSET_TOP,   // Arrival / Stayover / Turndown: 1 guest
+    withNotes: 244 + CONTENT_OFFSET_TOP,       // Any type with notes/rush section: 1 guest + notes container
+    arrivalDeparture: 292 + CONTENT_OFFSET_TOP, // Arrival/Departure: 2 guest infos
   },
   marginHorizontal: 7,
   marginBottom: 16,
@@ -115,35 +119,35 @@ export const GUEST_INFO = {
   },
   /** Two-column layout: image left, info right (Figma) */
   guestImage: {
-    width: 53,
-    height: 53,
+    width: 65, // Increased to be taller than guest info height
+    height: 65, // Increased to be taller than guest info height
     borderRadius: 5,
-    marginRight: 8, // Gap between image and info column
+    marginRight: 12, // Gap between image and info column (increased for better spacing)
   },
   infoColumn: {
     marginTop: 0,
-    gapBetweenNameAndDate: 4,
+    gapBetweenNameAndDate: 2,
     gapBetweenDateAndTime: 4,
   },
   iconArrivalDeparture: {
     width: 28.371, // Larger icon size for Arrival/Departure guest icons
     height: 29.919,
     positions: {
-      firstGuest: { left: 17, top: 88 }, // Room 201 first guest icon: x=17, y=88 (from Figma)
-      secondGuest: { left: 18, top: 173 }, // Room 201 second guest icon: x=18, y=173 (from Figma)
+      firstGuest: { left: 17, top: 88 + CONTENT_OFFSET_TOP }, // Room 201 first guest icon
+      secondGuest: { left: 18, top: 173 + CONTENT_OFFSET_TOP }, // Room 201 second guest icon
     },
   },
   iconStandardDeparture: {
-    left: 17, // Room 202 (Departure): icon at x=24 from screen, x=24-7=17px from card
-    top: 93, // Room 202: icon at y=656 from screen, y=656-563=93px from card
+    left: 17,
+    top: 93 + CONTENT_OFFSET_TOP,
   },
   iconStandardArrival: {
-    left: 17, // Room 204/301 (Arrival): icon should align with name row, similar to Departure positioning
-    top: 87, // Room 204: name at top: 87px, icon should align with name
+    left: 17,
+    top: 87 + CONTENT_OFFSET_TOP,
   },
   iconWithNotes: {
-    left: 14, // Room 203 (with notes): icon at x=21 from screen, card at x=7, so 21-7=14px from card
-    top: 89, // Room 203: icon at y=860 from screen, card at y=771, so 860-771=89px from card
+    left: 14,
+    top: 89 + CONTENT_OFFSET_TOP,
   },
   // Guest name styles and positions
   name: {
@@ -151,19 +155,19 @@ export const GUEST_INFO = {
     fontWeight: 'bold' as const,
     color: '#000000',
     lineHeight: 18, // Increased from 10px to 18px to prevent text clipping (font size 14px needs at least 18px line height)
-    top: 87, // Room 201 first guest: top-[87px]
+    top: 87 + CONTENT_OFFSET_TOP, // Room 201 first guest
   },
   nameSecond: {
-    top: 162, // Room 201 second guest: top-[162px]
+    top: 162 + CONTENT_OFFSET_TOP, // Room 201 second guest
   },
   nameStandard: {
-    top: 92, // Room 202 (Departure, 177px height): top-[655px] relative (655-563=92px)
+    top: 92 + CONTENT_OFFSET_TOP, // Room 202 (Departure)
   },
   nameStandardArrival: {
-    top: 87, // Room 204 (Arrival, 185px height): top-[1111px] relative (1111-1024=87px), Room 205: top-[1327px] relative (1327-1240=87px)
+    top: 87 + CONTENT_OFFSET_TOP, // Room 204 (Arrival)
   },
   nameWithNotes: {
-    top: 80, // Room 203: top-[851px] relative (851-771=80px)
+    top: 86 + CONTENT_OFFSET_TOP, // Room 203
   },
   // Date range styles and positions
   dateRange: {
@@ -171,32 +175,32 @@ export const GUEST_INFO = {
     fontWeight: 'light' as const,
     color: '#000000',
     lineHeight: 17,
-    top: 109, // Room 201 first: top-[109px]
+    top: 109 + CONTENT_OFFSET_TOP, // Room 201 first
   },
   dateRangeSecond: {
-    top: 184, // Room 201 second: top-[184px]
+    top: 184 + CONTENT_OFFSET_TOP, // Room 201 second
   },
   dateRangeStandard: {
-    top: 114, // Room 202 (Departure): top-[677px] relative (677-563=114px)
+    top: 114 + CONTENT_OFFSET_TOP, // Room 202 (Departure)
   },
   dateRangeStandardArrival: {
-    top: 109, // Room 204 (Arrival): top-[1133px] relative (1133-1024=109px), Room 205: top-[1349px] relative (1349-1240=109px)
+    top: 105 + CONTENT_OFFSET_TOP, // Room 204 (Arrival) - reduced from 109 to 105 for much tighter spacing
   },
   dateRangeWithNotes: {
-    top: 102, // Room 203: top-[873px] relative (873-771=102px)
+    top: 108 + CONTENT_OFFSET_TOP, // Room 203
   },
   // Time (ETA/EDT) positions - Exact from Figma
   time: {
     fontSize: 14,
     fontWeight: 'regular' as const,
     color: '#000000',
-    lineHeight: 18, // Increased from 11px to 18px to prevent text clipping (font size 14px needs at least 18px line height)
+    lineHeight: 18,
     positions: {
-      priorityFirst: { left: 75, top: 130 }, // Room 201 first guest: left-[75px] top-[130px] ETA: 17:00 (exact from Figma)
-      prioritySecond: { left: 73, top: 204 }, // Room 201 second guest: left-[73px] top-[204px] EDT: 12:00 (exact from Figma)
-      standardDeparture: { left: 154, top: 115 }, // Room 202 (Departure): EDT positioned below date range, similar to arrival cards. Date at top-[677px]=114px, so EDT at 115px (1px below). Left matches arrival pattern at x=154px (161-7=154 from card)
-      standardArrival: { left: 154, top: 110 }, // Room 204: ETA at x=161 absolute, card starts at x=7, so relative to card: 161-7=154px. Top: 1134-1024=110px
-      withNotes: { left: 151, top: 103 }, // Room 203: ETA at x=158 absolute, card starts at x=7, so relative to card: 158-7=151px. Top: 874-771=103px
+      priorityFirst: { left: 75, top: 130 + CONTENT_OFFSET_TOP },
+      prioritySecond: { left: 73, top: 204 + CONTENT_OFFSET_TOP },
+      standardDeparture: { left: 154, top: 115 + CONTENT_OFFSET_TOP },
+      standardArrival: { left: 154, top: 105 + CONTENT_OFFSET_TOP }, // Aligned with date (was 110, now 105)
+      withNotes: { left: 151, top: 109 + CONTENT_OFFSET_TOP },
     },
   },
   // Guest count positions - Exact from Figma
@@ -204,28 +208,28 @@ export const GUEST_INFO = {
     fontSize: 14,
     fontWeight: 'light' as const,
     color: '#000000',
-    lineHeight: 18, // Increased from 13px to 18px to prevent text clipping (font size 14px needs at least 18px line height)
+    lineHeight: 18,
     icon: {
-      width: 13, // Person icon size for guest count
+      width: 13,
       height: 12,
     },
     positions: {
-      priorityFirst: { iconLeft: 151, textLeft: 170, iconTop: 109, textTop: 109 }, // Room 201 first: icon at left-[158px] absolute, card at left-[7px], so iconLeft=151px relative to card. Text at left-[177px] absolute, so textLeft=170px relative to card. Top: 109px (aligned with date range) relative to card
-      prioritySecond: { iconLeft: 151, textLeft: 170, iconTop: 184, textTop: 184 }, // Room 201 second: icon at left-[158px] absolute, card at left-[7px], so iconLeft=151px relative to card. Text at left-[177px] absolute, so textLeft=170px relative to card. Top: 184px (aligned with date range) relative to card
-      standardDeparture: { iconLeft: 151, textLeft: 177, iconTop: 116, textTop: 116 }, // Room 202 (Departure): count at left-[184px] absolute, card at left-[7px], so textLeft=177px relative to card. Icon at left-[158px] absolute, so iconLeft=151px relative to card. Top: 679-563=116px relative to card
-      standardArrival: { iconLeft: 73, textLeft: 92, iconTop: 109, textTop: 109 }, // Room 204 (Arrival): icon at left-[80px] absolute, card at left-[7px], so iconLeft=73px relative to card. Text at left-[99px] absolute, so textLeft=92px relative to card. Positioned at top 109px (same as date range) to align with date range row
-      withNotes: { iconLeft: 70, textLeft: 89, iconTop: 125, textTop: 124 }, // Room 203: icon at x=77, y=896 (screen) = x=70, y=125 (card). Text at x=96, y=895 (screen) = x=89, y=124 (card). Container at x=70, so icon at 70-70=0, text at 89-70=19 relative to container
+      priorityFirst: { iconLeft: 151, textLeft: 170, iconTop: 109 + CONTENT_OFFSET_TOP, textTop: 109 + CONTENT_OFFSET_TOP },
+      prioritySecond: { iconLeft: 151, textLeft: 170, iconTop: 184 + CONTENT_OFFSET_TOP, textTop: 184 + CONTENT_OFFSET_TOP },
+      standardDeparture: { iconLeft: 151, textLeft: 177, iconTop: 116 + CONTENT_OFFSET_TOP, textTop: 116 + CONTENT_OFFSET_TOP },
+      standardArrival: { iconLeft: 73, textLeft: 92, iconTop: 105 + CONTENT_OFFSET_TOP, textTop: 105 + CONTENT_OFFSET_TOP }, // Aligned with date (was 109, now 105)
+      withNotes: { iconLeft: 70, textLeft: 89, iconTop: 131 + CONTENT_OFFSET_TOP, textTop: 130 + CONTENT_OFFSET_TOP },
     },
   },
   priorityBadge: {
     fontSize: 12,
     fontWeight: 'light' as const,
     color: '#334866',
-    lineHeight: 11, // Figma shows h-[11px]
+    lineHeight: 11,
     positions: {
-      firstGuest: { left: 165, top: 89 }, // Room 201 first guest badge "11" - moved closer to name (was 182)
-      secondGuest: { left: 135, top: 164 }, // Room 201 second guest badge "22" - moved closer to name (was 152)
-      standard: { left: 161, top: 82 }, // Room 203 badge "11" - moved closer to name (was 178)
+      firstGuest: { left: 165, top: 89 + CONTENT_OFFSET_TOP },
+      secondGuest: { left: 135, top: 164 + CONTENT_OFFSET_TOP },
+      standard: { left: 161, top: 82 + CONTENT_OFFSET_TOP },
     },
   },
 } as const;
@@ -314,42 +318,39 @@ export const STAFF_SECTION = {
   },
 } as const;
 
-// Status Button Styles - Exact values from Figma
+// Status Button Styles - Exact values from Figma (+ CONTENT_OFFSET_TOP so not flush with header)
 export const STATUS_BUTTON = {
   width: 134,
   height: 70,
   borderRadius: 35,
-  left: 255, // Room 201: left-[255px], Room 202: left-[262px], Room 203: left-[256px], Room 204/205: left-[270px]
-  top: 114, // Room 201: top-[114px], Room 202: top-[644px] relative (644-563=81px), Room 203: top-[845px] relative (845-771=74px), Room 204: top-[1111px] relative (1111-1024=87px)
+  left: 255,
+  top: 114 + CONTENT_OFFSET_TOP,
   icon: {
     width: 31,
     height: 31,
   },
   iconInProgress: {
-    width: 134, // Same size as button container for InProgress icon
+    width: 134,
     height: 70,
   },
   chevron: {
     width: 7,
     height: 14,
-    right: 12, // Relative to button
+    right: 12,
   },
-  // Gap between left icon and dropdown (matches Room Detail status indicator: 8px)
   iconGap: 8,
   colors: {
     dirty: '#f92424',
-    inProgress: '#ffc107',
+    inProgress: '#F0BE1B',
     cleaned: '#5a759d',
     inspected: '#41d541',
   },
-  // Different positions for different card types
   positions: {
-    arrivalDeparture: { left: 255, top: 114 }, // Room 201
-    departure: { left: 262, top: 81 }, // Room 202
-    arrivalWithNotes: { left: 256, top: 74 }, // Room 203
-    standard: { left: 270, top: 87 }, // Room 204/205
+    arrivalDeparture: { left: 255, top: 114 + CONTENT_OFFSET_TOP }, // Room 201
+    departure: { left: 262, top: 81 + CONTENT_OFFSET_TOP }, // Room 202
+    arrivalWithNotes: { left: 256, top: 80 + CONTENT_OFFSET_TOP }, // Room 203
+    standard: { left: 270, top: 87 + CONTENT_OFFSET_TOP }, // Room 204/205
   },
-  // Flagged state: same position/size/margins as status button; only background, borderRadius and icons differ
   flagged: {
     borderRadius: 45,
     background: '#FFEBEB',
@@ -361,13 +362,14 @@ export const STATUS_BUTTON = {
 
 // Notes Section Styles - Exact values from Figma
 export const NOTES_SECTION = {
-  width: 416, // Increased from 414 to be more full width (card is 426px, so 5px margin on each side)
+  width: 414, // Figma node 1061:1243; card 426 so 6px padding from card left/right
   height: 54,
   borderRadius: 10,
   background: '#ffffff', // Arrival/Departure cards
   backgroundWithNotes: 'rgba(223, 230, 240, 0.4)', // Cards with notes (Room 203)
-  paddingHorizontal: 12,
-  paddingVertical: 8,
+  paddingHorizontal: 16, // Clear internal padding from container edges
+  paddingVertical: 10,
+  paddingTop: 14, // Small padding top inside container so icons don't sit flush with top edge
   // Room 201 (Arrival/Departure): From Figma metadata
   // Container should span full width within card (card is 426px, container is 416px with 5px margin on each side)
   // Card height is 292px, container height is 54px
@@ -375,9 +377,15 @@ export const NOTES_SECTION = {
   // Elements: rushed icon x=19 y=245, notes icon x=45.03 y=245, badge x=75 y=247, text x=112 y=252 (all relative to card)
   // For top: icons at y=245, so container top should be ~238 (245-7=238 where 7 accounts for visual alignment)
   // But we need padding from bottom: card height 292 - container height 54 - bottom padding 5 = 233px top
+  // Figma: container centered in card (426−414)/2 = 6px from left; top from Figma frame (e.g. 897−758 = 139 for Room 203)
+  /** Bottom margin from card bottom (px). When cardHeight is passed, notes container is positioned so it stays this far from bottom. */
+  bottomMarginFromCard: {
+    arrivalDeparture: 5,  // 292−54−233=5
+    withNotes: 8,         // 244−182−54=8
+  },
   positions: {
-    arrivalDeparture: { left: 5, top: 233 }, // Container at x=5 (5px margin from card left), top=233 gives 5px padding from bottom (292-54-233=5)
-    withNotes: { left: 5, top: 161 }, // Room 203: card height 222, container 54, so 222-54-7=161 (7px padding from bottom)
+    arrivalDeparture: { left: 6, top: 240 + CONTENT_OFFSET_TOP }, // 6px from card left; increased top to avoid overlap with second guest time
+    withNotes: { left: 6, top: 182 + CONTENT_OFFSET_TOP }, // 6px from card left; 8px gap below guest info
   },
   icon: {
     width: 31.974,
@@ -386,22 +394,17 @@ export const NOTES_SECTION = {
     // Container at x=5, so icon at 45.03-5=40.03 from container edge (absolute positioning, padding doesn't affect)
     // Container top is now 233 (was 238), so icon top relative to container: 245-233=12
     positions: {
-      arrivalDeparture: { left: 40.03, top: 12 }, // 45.03-5=40.03 from container left, 245-233=12 from container top
-      withNotes: { left: 4, top: 11 }, // Room 203: maintained relative positioning
+      arrivalDeparture: { left: 40.03, top: 10 }, // Figma: notes at 45.03; top (54-34)/2 for alignment
+      withNotes: { left: 40.03, top: 10 }, // Same as arrival for consistent Figma alignment
     },
   },
   rushedIcon: {
-    width: 33.974, // Increased by 2px from notes icon (31.974 + 2 = 33.974)
-    height: 33.974, // Increased by 2px from notes icon (31.974 + 2 = 33.974)
-    // Priority icon (rushed) should overlap with notes icon
-    // Notes icon at x=45.03, priority icon at x=19 (card coordinates)
-    // Container at x=5, so priority icon at 19-5=14 from container edge
-    // To overlap: position priority icon so it overlaps with notes icon
-    // Notes icon is at left: 40.03, so priority should be positioned to overlap
-    // Container top is now 233 (was 238), so icon top relative to container: 245-233=12
+    width: 33.974,
+    height: 33.974,
+    // Figma: priority at x=19 → 14 from container; same top as notes for alignment
     positions: {
-      arrivalDeparture: { left: 14, top: 12 }, // 19-5=14 from container left, 245-233=12 from container top (overlaps with notes icon at 40.03)
-      withNotes: { left: 14.03, top: 11 }, // Same horizontal, adjusted vertical
+      arrivalDeparture: { left: 14, top: 10 },
+      withNotes: { left: 14, top: 10 },
     },
   },
   badge: {
@@ -409,12 +412,10 @@ export const NOTES_SECTION = {
     height: 20.455,
     borderRadius: 10.2275,
     backgroundColor: '#FF46A3',
-    // Badge position: From Figma - badge at x=75, y=247 (card coordinates)
-    // Container at x=5, so badge at 75-5=70 from container edge
-    // Container top is now 233 (was 238), so badge top relative to container: 247-233=14
+    // Figma: badge at x=75 y=247 → left 70, top 14
     positions: {
-      arrivalDeparture: { left: 70, top: 14 }, // 75-5=70 from container left, 247-233=14 from container top
-      withNotes: { left: 31, top: 15 }, // Room 203: 43-12=31, 15 maintained
+      arrivalDeparture: { left: 70, top: 14 },
+      withNotes: { left: 70, top: 14 }, // Align with notes icon (40.03 + 31.97 - 10.23 ≈ 62, use 70 for Figma)
     },
     fontSize: 15,
     fontWeight: 'light' as const,
@@ -429,11 +430,13 @@ export const NOTES_SECTION = {
     // Container at x=5, so text at 112-5=107 from container edge
     // Container top is now 233 (was 238), so text top relative to container: 252-233=19
     positions: {
-      arrivalDeparture: { left: 107, top: 19 }, // 112-5=107 from container left, 252-233=19 from container top
-      withNotes: { left: 72, top: 17 }, // Room 203: 84-12=72, 17 maintained
+      arrivalDeparture: { left: 107, top: 18 }, // Figma: text at 112; top (54-17)/2 for vertical center
+      withNotes: { left: 107, top: 18 },
     },
     lineHeight: 17,
   },
+  // Priority badge: top-right of priority icon, vertically centered on icon (14+33.97-10.23, 10+(33.97-20.46)/2)
+  priorityBadge: { left: 37.74, top: 17 },
 } as const;
 
 // Guest Container Background - Exact values from Figma
@@ -442,12 +445,12 @@ export const GUEST_CONTAINER_BG = {
   borderRadius: 10,
   background: 'rgba(223, 230, 240, 0.4)',
   left: 6, // Relative to card (centered: (426-414)/2 = 6px)
-  // Different heights and positions for different card types
+  // Different heights and positions for different card types (+ CONTENT_OFFSET_TOP so not flush with header)
   positions: {
-    departure: { height: 101, top: 70 }, // Room 202: h-[101px] top-[633px] relative (633-563=70px)
-    arrival: { height: 100, top: 74 }, // Room 204: h-[100px] top-[1098px] relative (1098-1024=74px)
-    stayover: { height: 100, top: 74 }, // Room 205: h-[100px] top-[1314px] relative (1314-1240=74px)
-    turndown: { height: 100, top: 74 }, // Room 205 (Turndown): h-[100px] top-[1530px] relative (1530-1456=74px)
+    departure: { height: 101, top: 70 + CONTENT_OFFSET_TOP }, // Room 202
+    arrival: { height: 100, top: 74 + CONTENT_OFFSET_TOP }, // Room 204
+    stayover: { height: 100, top: 74 + CONTENT_OFFSET_TOP }, // Room 205
+    turndown: { height: 100, top: 74 + CONTENT_OFFSET_TOP }, // Room 205 (Turndown)
   },
   // Note: Room 201 (Arrival/Departure) and Room 203 (with notes) don't have this background
 } as const;

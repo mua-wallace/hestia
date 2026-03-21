@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
 import { colors, typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import { useAuth } from '../contexts/AuthContext';
-import MorePopup from '../components/more/MorePopup';
 import { mockHomeData } from '../data/mockHomeData';
-import { mockChatData } from '../data/mockChatData';
-import { MoreMenuItemId } from '../types/more.types';
+import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
+import { useChatStore } from '../store/useChatStore';
+import { useMessageModal } from '../contexts/MessageModalContext';
 import type { ReturnToTab } from '../navigation/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -31,15 +31,16 @@ type SettingsScreenNavigationProp = NativeStackNavigationProp<MainTabsParamList,
 export default function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const route = useRoute();
+  const { open: openAIChatOverlay } = useAIChatOverlay();
   const { signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState('Home');
-  const [showMorePopup, setShowMorePopup] = useState(false);
+  const [activeTab, setActiveTab] = useState('Settings');
 
+  const messageModal = useMessageModal();
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
+    messageModal.show({
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out?',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign Out',
@@ -50,8 +51,8 @@ export default function SettingsScreen() {
             rootNav?.reset({ index: 0, routes: [{ name: 'Login' }] });
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   // Sync activeTab with current route
@@ -65,40 +66,22 @@ export default function SettingsScreen() {
   );
 
   // Calculate total unread chat messages for badge
-  const chatBadgeCount = React.useMemo(() => {
-    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
-  }, []);
+  const { chats } = useChatStore();
+  const chatBadgeCount = React.useMemo(
+    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
+    [chats]
+  );
 
   const handleTabPress = (tab: string) => {
-    setActiveTab(tab); // Update immediately
-    setShowMorePopup(false);
-    navigation.navigate(tab as keyof MainTabsParamList);
-  };
-
-  const handleMorePress = () => {
-    setShowMorePopup(true);
-  };
-
-  const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
-    setShowMorePopup(false);
-    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
-    switch (menuItem) {
-      case 'lostAndFound':
-        navigation.navigate('LostAndFound', { returnToTab });
-        break;
-      case 'staff':
-        navigation.navigate('Staff', { returnToTab });
-        break;
-      case 'settings':
-        navigation.navigate('Settings', { returnToTab });
-        break;
-      default:
-        break;
+    if (tab === 'AIHome') {
+      openAIChatOverlay();
+      return;
     }
-  };
-
-  const handleClosePopup = () => {
-    setShowMorePopup(false);
+    setActiveTab(tab); // Update immediately
+    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
+    if (tab === 'Home' || tab === 'Rooms' || tab === 'Chat' || tab === 'Tickets' || tab === 'LostAndFound' || tab === 'Staff' || tab === 'Settings') {
+      navigation.navigate(tab as keyof MainTabsParamList);
+    }
   };
 
   const handleBack = () => {
@@ -122,24 +105,12 @@ export default function SettingsScreen() {
           <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
         
-        {showMorePopup && (
-          <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
-            <View style={styles.blurOverlayDarkener} />
-          </BlurView>
-        )}
       </View>
       
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
-        onMorePress={handleMorePress}
         chatBadgeCount={chatBadgeCount}
-      />
-      
-      <MorePopup
-        visible={showMorePopup}
-        onClose={handleClosePopup}
-        onMenuItemPress={handleMenuItemPress}
       />
     </View>
   );

@@ -1,7 +1,13 @@
 /**
  * Reusable Room Detail Content Component
- * Accepts props for all content sections
- * Handles: Arrival/Departure, Arrival, Departure, Stayover, Turndown
+ *
+ * This is the single source for room detail layout. Any host (e.g. RoomDetailScreen)
+ * should fetch data and pass RoomDetailScreenProps; this component does not fetch.
+ * Layout and spacing follow Figma: Room Detail - Overview (node 1772-104).
+ *
+ * Sections (Overview tab): Guest Info → Special Instructions (in guest card) →
+ * Assigned to + Task card → Lost & Found → Notes.
+ * Handles: Arrival/Departure, Arrival, Departure, Stayover, Turndown.
  */
 
 import React, { useState, useRef, useMemo } from 'react';
@@ -23,10 +29,12 @@ import type { RoomDetailScreenProps, DetailTab, HistoryEvent } from '../../types
 import type { RoomStatus } from '../../types/allRooms.types';
 
 export default function RoomDetailContent({
+  roomId,
   roomNumber,
   roomCode,
   status,
   isPriority = false,
+  flagged = false,
   frontOfficeStatus,
   roomType,
   guests,
@@ -52,6 +60,8 @@ export default function RoomDetailContent({
   promiseTimeAtTimestamp,
   refuseServiceReason,
   showWithLinenBadge = false,
+  initialTab,
+  departmentName,
 }: RoomDetailScreenProps) {
   // Get room type configuration and calculate positions
   const config = useMemo(() => getRoomTypeConfig(roomType), [roomType]);
@@ -59,10 +69,13 @@ export default function RoomDetailContent({
   const hasSpecialInstructionsData = !!specialInstructions;
   // Get first guest name to check if it wraps (for Arrival/Departure rooms)
   const firstGuestName = guests.find(g => g.type === 'Arrival')?.guest?.name || guests[0]?.guest?.name;
-  const positions = useMemo(() => calculatePositions(config, hasSpecialInstructionsData, firstGuestName), [config, hasSpecialInstructionsData, firstGuestName]);
+  const positions = useMemo(
+    () => calculatePositions(config, hasSpecialInstructionsData, firstGuestName, specialInstructions ?? undefined),
+    [config, hasSpecialInstructionsData, firstGuestName, specialInstructions]
+  );
 
-  const [activeTab, setActiveTab] = useState<DetailTab>('Overview');
-  const statusButtonRef = useRef<TouchableOpacity>(null);
+  const [activeTab, setActiveTab] = useState<DetailTab>(initialTab || 'Overview');
+  const statusButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
   
   // Track current status - sync with parent when status changes (e.g. from StatusChangeModal)
   const [currentStatus, setCurrentStatus] = useState<RoomStatus>(status);
@@ -75,6 +88,9 @@ export default function RoomDetailContent({
     setCurrentStatus(newStatus);
     onStatusChange?.(newStatus);
   };
+
+  const handleStatusPress: () => void = onStatusPress ?? (() => {});
+  const handleBackPressSafe: () => void = onBackPress ?? (() => {});
 
   // "See More" functionality for task description
   const MAX_LINES = 2;
@@ -154,7 +170,7 @@ export default function RoomDetailContent({
   const dynamicStyles = {
     guestInfoSection: {
       paddingTop: (positions.guestInfoTitle - CONTENT_AREA.top) * scaleX,
-      minHeight: (positions.divider2 - positions.guestInfoTitle) * scaleX,
+      minHeight: (positions.divider2 - positions.guestInfoTitle + 2) * scaleX, // +2 so divider line is never clipped
     },
     guestInfoTitle: {
       top: (positions.guestInfoTitle - CONTENT_AREA.top) * scaleX,
@@ -191,8 +207,8 @@ export default function RoomDetailContent({
         roomNumber={roomNumber}
         roomCode={roomCode}
         status={currentStatus}
-        onBackPress={onBackPress}
-        onStatusPress={onStatusPress}
+        onBackPress={handleBackPressSafe}
+        onStatusPress={handleStatusPress}
         statusButtonRef={statusButtonRef}
         customStatusText={customStatusText}
         pausedAt={pausedAt}
@@ -200,6 +216,7 @@ export default function RoomDetailContent({
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceReason={refuseServiceReason}
         isPriority={isPriority}
+        flagged={flagged}
         frontOfficeLabel={frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}
         showWithLinenBadge={showWithLinenBadge}
       />
@@ -217,15 +234,14 @@ export default function RoomDetailContent({
           roomCode={roomCode}
           roomStatus={currentStatus}
           onSubmit={(data) => {
-            console.log('Checklist submitted:', data);
-          }}
-          onCancel={() => {
-            console.log('Checklist cancelled');
+            console.log('Room checklist submitted:', data);
           }}
         />
       ) : activeTab === 'Tickets' ? (
         <RoomTicketsSection
+          roomId={roomId}
           roomNumber={roomNumber}
+          departmentName={departmentName}
           onSubmit={(ticketData) => {
             console.log('Ticket submitted:', ticketData);
           }}
@@ -252,9 +268,9 @@ export default function RoomDetailContent({
                     specialInstructions={
                       // Show special instructions after Arrival guest for Arrival/Departure
                       // Or after first guest for other types if present
-                      (roomType === 'ArrivalDeparture' && firstGuest.type === 'Arrival') || 
+                      (roomType === 'ArrivalDeparture' && firstGuest.type === 'Arrival') ||
                       (roomType !== 'ArrivalDeparture')
-                        ? specialInstructions
+                        ? (specialInstructions ?? undefined)
                         : undefined
                     }
                     absoluteTop={positions.firstGuestTop}

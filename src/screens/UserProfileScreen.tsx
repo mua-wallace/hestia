@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   Dimensions,
   ScrollView,
@@ -18,31 +17,13 @@ import {
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-
-function base64ToArrayBuffer(base64: string): ArrayBuffer {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-  const lookup = new Uint8Array(256);
-  for (let i = 0; i < chars.length; i++) lookup[chars.charCodeAt(i)] = i;
-  const clean = base64.replace(/=+$/, '');
-  const bytes = Math.floor((clean.length * 3) / 4);
-  const arr = new Uint8Array(bytes);
-  let p = 0;
-  for (let i = 0; i < clean.length; i += 4) {
-    const a = lookup[clean.charCodeAt(i)] ?? 0;
-    const b = lookup[clean.charCodeAt(i + 1)] ?? 0;
-    const c = lookup[clean.charCodeAt(i + 2)] ?? 0;
-    const d = lookup[clean.charCodeAt(i + 3)] ?? 0;
-    const n = (a << 18) | (b << 12) | (c << 6) | d;
-    arr[p++] = (n >> 16) & 0xff;
-    if (p < bytes) arr[p++] = (n >> 8) & 0xff;
-    if (p < bytes) arr[p++] = n & 0xff;
-  }
-  return arr.buffer;
-}
 import { colors, typography, components } from '../theme';
 import { getInitialsFromFullName } from '../utils/formatting';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { useToast } from '../contexts/ToastContext';
+import { useMessageModal } from '../contexts/MessageModalContext';
+import { useUserStore } from '../store/useUserStore';
+import { isSupabaseConfigured } from '../lib/supabase';
 import type { UserProfile } from '../types/home.types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -53,18 +34,26 @@ type UserProfileRouteParams = {
   UserProfile: { user: UserProfile };
 };
 
+const DEFAULT_USER: UserProfile = { name: 'User', role: 'Staff', department: undefined, hasFlag: false };
+
 export default function UserProfileScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<UserProfileRouteParams, 'UserProfile'>>();
   const { signOut, session } = useAuth();
   const initialUser = route.params?.user;
-  const [user, setUser] = useState<UserProfile>(initialUser ?? { name: 'User', role: 'Staff', department: undefined, hasFlag: false });
+  const { profile, setProfile, updateAvatarUrl } = useUserStore();
+  React.useEffect(() => {
+    if (initialUser) setProfile(initialUser);
+  }, [initialUser, setProfile]);
+  const user = profile ?? initialUser ?? DEFAULT_USER;
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+  const toast = useToast();
+  const messageModal = useMessageModal();
 
   const handleChangeAvatar = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please allow access to your photo library to change your avatar.');
+      toast.show('Please allow access to your photo library to change your avatar.', { type: 'error', title: 'Permission required' });
       return;
     }
 
@@ -79,7 +68,7 @@ export default function UserProfileScreen() {
 
     const userId = session?.user?.id;
     if (!userId || !isSupabaseConfigured) {
-      Alert.alert('Update unavailable', 'Profile update requires an active session and backend.');
+      toast.show('Profile update requires an active session and backend.', { type: 'error', title: 'Update unavailable' });
       return;
     }
 
@@ -87,37 +76,13 @@ export default function UserProfileScreen() {
     try {
       const uri = result.assets[0].uri;
       const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `avatars/${userId}.${fileExt}`;
-
       const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
-      const arrayBuffer = base64ToArrayBuffer(base64);
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, arrayBuffer, { contentType: `image/${fileExt}`, upsert: true });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
-      const avatarUrl = urlData.publicUrl;
-
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ avatar_url: avatarUrl })
-        .eq('id', userId);
-
-      if (updateError) throw updateError;
-
-      await supabase.auth.updateUser({ data: { avatar_url: avatarUrl } });
-
-      setUser((prev) => ({ ...prev, avatar: avatarUrl }));
-    } catch (err: any) {
+      await updateAvatarUrl(userId, base64, fileExt);
+    } catch (err: unknown) {
       console.error('[UserProfile] Avatar update failed:', err);
-      Alert.alert(
-        'Update failed',
-        err?.message || 'Could not update avatar. Ensure the avatars storage bucket exists and has correct policies.'
+      toast.show(
+        (err instanceof Error ? err.message : null) || 'Could not update avatar. Ensure the avatars storage bucket exists and has correct policies.',
+        { type: 'error', title: 'Update failed' }
       );
     } finally {
       setIsUpdatingAvatar(false);
@@ -125,10 +90,10 @@ export default function UserProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
+    messageModal.show({
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out?',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign Out',
@@ -138,8 +103,8 @@ export default function UserProfileScreen() {
             (navigation as any).reset?.({ index: 0, routes: [{ name: 'Login' }] });
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   const handleBack = () => {

@@ -7,12 +7,30 @@ import { scaleX, NOTES_SECTION } from '../../constants/allRoomsStyles';
 interface NotesSectionProps {
   notes: NotesInfo;
   isArrivalDeparture?: boolean;
+  isPriority?: boolean; // When true, show priority icon with badge next to notes
+  /** Card height in px. When set, notes container is positioned from card bottom so margin from bottom stays constant when name wraps. */
+  cardHeight?: number;
 }
 
-export default function NotesSection({ notes, isArrivalDeparture = false }: NotesSectionProps) {
+export default function NotesSection({ notes, isArrivalDeparture = false, isPriority = false, cardHeight }: NotesSectionProps) {
+  // Only show container when there is something to show (note, rush, or priority) - per Figma
+  const hasContent = isPriority || notes.count > 0 || !!notes.hasRushed;
+  if (!hasContent) return null;
+
   const position = isArrivalDeparture 
     ? NOTES_SECTION.positions.arrivalDeparture 
     : NOTES_SECTION.positions.withNotes;
+  
+  // When cardHeight is provided, pin notes container to card bottom so margin from bottom stays constant when name wraps
+  const bottomMargin = isArrivalDeparture 
+    ? NOTES_SECTION.bottomMarginFromCard.arrivalDeparture 
+    : NOTES_SECTION.bottomMarginFromCard.withNotes;
+  const notesHeightScaled = NOTES_SECTION.height * scaleX;
+  const bottomMarginScaled = bottomMargin * scaleX;
+  const topFromBottom = cardHeight != null && cardHeight > 0
+    ? cardHeight - notesHeightScaled - bottomMarginScaled
+    : position.top * scaleX;
+
   const iconPos = isArrivalDeparture 
     ? NOTES_SECTION.icon.positions.arrivalDeparture 
     : NOTES_SECTION.icon.positions.withNotes;
@@ -27,6 +45,14 @@ export default function NotesSection({ notes, isArrivalDeparture = false }: Note
     ? NOTES_SECTION.rushedIcon.positions.arrivalDeparture
     : NOTES_SECTION.rushedIcon.positions.withNotes;
 
+  // Notes icon position: leftmost (14) when not priority, otherwise at normal position (40.03)
+  const notesIconLeft = isPriority ? iconPos.left : rushedIconPos.left;
+  const notesIconTop = iconPos.top;
+
+  // Badge position: adjust based on notes icon position
+  const notesBadgeLeft = isPriority ? badgePos.left : (rushedIconPos.left + NOTES_SECTION.rushedIcon.width - NOTES_SECTION.badge.width / 2);
+  const notesBadgeTop = badgePos.top;
+
   const containerBackground = isArrivalDeparture 
     ? NOTES_SECTION.background 
     : NOTES_SECTION.backgroundWithNotes;
@@ -36,12 +62,34 @@ export default function NotesSection({ notes, isArrivalDeparture = false }: Note
       styles.container, 
       { 
         left: position.left * scaleX, 
-        top: position.top * scaleX,
+        top: topFromBottom,
         backgroundColor: containerBackground,
       }
     ]}>
-      {/* Rushed Icon (leftmost) */}
-      {notes.hasRushed && (
+      {/* Priority Icon (leftmost) - shown when room is priority */}
+      {isPriority && (
+        <>
+          <Image
+            source={require('../../../assets/icons/priority-icon.png')}
+            style={[styles.priorityIcon, { left: rushedIconPos.left * scaleX, top: rushedIconPos.top * scaleX }]}
+            resizeMode="contain"
+          />
+          {/* Priority Icon Badge - Figma: top-right of priority icon (only show if notes exist) */}
+          {notes.count > 0 && (
+            <View style={[styles.badgeContainer, { 
+              left: NOTES_SECTION.priorityBadge.left * scaleX, 
+              top: NOTES_SECTION.priorityBadge.top * scaleX,
+            }]}>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{notes.count}</Text>
+              </View>
+            </View>
+          )}
+        </>
+      )}
+      
+      {/* Rushed Icon (leftmost, when not priority but has rushed) */}
+      {!isPriority && notes.hasRushed && (
         <Image
           source={require('../../../assets/icons/priority-icon.png')}
           style={[styles.rushedIcon, { left: rushedIconPos.left * scaleX, top: rushedIconPos.top * scaleX }]}
@@ -49,24 +97,23 @@ export default function NotesSection({ notes, isArrivalDeparture = false }: Note
         />
       )}
       
-      {/* Notes Icon (right of rushed icon) */}
-      <Image
-        source={require('../../../assets/icons/notes-icon.png')}
-        style={[styles.notesIcon, { left: iconPos.left * scaleX, top: iconPos.top * scaleX }]}
-        resizeMode="contain"
-      />
+      {/* Notes Icon - leftmost when not priority, otherwise right of priority icon */}
+      {notes.count > 0 && (
+        <>
+          <Image
+            source={require('../../../assets/icons/notes-icon.png')}
+            style={[styles.notesIcon, { left: notesIconLeft * scaleX, top: notesIconTop * scaleX }]}
+            resizeMode="contain"
+          />
 
-      {/* Count Badge */}
-      <View style={[styles.badgeContainer, { left: badgePos.left * scaleX, top: badgePos.top * scaleX }]}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{notes.count}</Text>
-        </View>
-      </View>
-
-      {/* Text */}
-      <Text style={[styles.notesText, { left: textPos.left * scaleX, top: textPos.top * scaleX }]}>
-        {notes.hasRushed ? 'Rushed and notes' : `${notes.count} notes`}
-      </Text>
+          {/* Notes Count Badge - on notes icon */}
+          <View style={[styles.badgeContainer, { left: notesBadgeLeft * scaleX, top: notesBadgeTop * scaleX }]}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{notes.count}</Text>
+            </View>
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -78,15 +125,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: NOTES_SECTION.background,
     borderRadius: NOTES_SECTION.borderRadius * scaleX,
-    paddingVertical: NOTES_SECTION.paddingVertical * scaleX,
+    paddingTop: (NOTES_SECTION.paddingTop ?? NOTES_SECTION.paddingVertical) * scaleX,
+    paddingBottom: NOTES_SECTION.paddingVertical * scaleX,
     paddingHorizontal: NOTES_SECTION.paddingHorizontal * scaleX,
     height: NOTES_SECTION.height * scaleX,
     width: NOTES_SECTION.width * scaleX,
+    overflow: 'hidden',
   },
   notesIcon: {
     position: 'absolute',
     width: NOTES_SECTION.icon.width * scaleX,
     height: NOTES_SECTION.icon.height * scaleX,
+  },
+  priorityIcon: {
+    position: 'absolute',
+    width: NOTES_SECTION.rushedIcon.width * scaleX,
+    height: NOTES_SECTION.rushedIcon.height * scaleX,
   },
   rushedIcon: {
     position: 'absolute',
@@ -118,6 +172,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.bold as any,
     color: NOTES_SECTION.text.color,
     lineHeight: NOTES_SECTION.text.lineHeight * scaleX,
+    maxWidth: (NOTES_SECTION.width - NOTES_SECTION.paddingHorizontal * 2 - NOTES_SECTION.text.positions.withNotes.left) * scaleX,
   },
 });
 

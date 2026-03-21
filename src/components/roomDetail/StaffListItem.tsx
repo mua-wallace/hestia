@@ -8,12 +8,13 @@ interface StaffListItemProps {
   staff: {
     id: string;
     name: string;
-    department: string;
+    department?: string;
+    role?: string;
     avatar?: any;
     initials?: string;
-    workload: number;
+    workload?: number;
     maxWorkload?: number;
-    onShift: boolean;
+    onShift?: boolean;
   };
   isSelected: boolean;
   onPress: () => void;
@@ -26,7 +27,14 @@ export default function StaffListItem({
 }: StaffListItemProps) {
   // Get first letter for initial if no avatar
   const initial = staff.initials || (staff.name ? staff.name.charAt(0).toUpperCase() : '?');
-  
+  // Remote URLs need { uri }; local require() is a number. Empty string = no image.
+  const avatarSource =
+    typeof staff.avatar === 'string'
+      ? staff.avatar.trim()
+        ? { uri: staff.avatar.trim() }
+        : null
+      : staff.avatar || null;
+
   // Generate color for initial circle based on name
   const getInitialColor = (name: string): string => {
     const colors = ['#ff4dd8', '#5a759d', '#607aa1', '#f0be1b'];
@@ -39,12 +47,13 @@ export default function StaffListItem({
       style={[styles.container, isSelected && styles.containerSelected]}
       onPress={onPress}
       activeOpacity={0.7}
+      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
     >
       {/* Profile Picture or Initial */}
       <View style={styles.avatarContainer}>
-        {staff.avatar ? (
+        {avatarSource ? (
           <Image
-            source={staff.avatar}
+            source={avatarSource}
             style={styles.avatar}
             resizeMode="cover"
           />
@@ -55,10 +64,12 @@ export default function StaffListItem({
         )}
       </View>
 
-      {/* Name and Department */}
+      {/* Name and Role */}
       <View style={styles.infoContainer}>
         <Text style={styles.name}>{staff.name}</Text>
-        <Text style={styles.department}>{staff.department}</Text>
+        <Text style={styles.department}>
+          {staff.role ?? ''}
+        </Text>
       </View>
 
       {/* Workload Progress Bar - Always show for all staff */}
@@ -120,13 +131,13 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: '#1e1e1e',
-    marginBottom: 5 * scaleX,
+    marginBottom: 2 * scaleX,
   },
   department: {
-    fontSize: REASSIGN_MODAL.staffList.department.fontSize * scaleX,
+    fontSize: (REASSIGN_MODAL.staffList.department.fontSize - 1) * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.light as any,
-    color: '#000000',
+    color: '#555555',
   },
   progressContainer: {
     alignItems: 'flex-end',

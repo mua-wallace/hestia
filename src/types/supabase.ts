@@ -232,6 +232,7 @@ export type Database = {
           created_at: string | null
           full_name: string
           id: string
+          image_url: string | null
           updated_at: string | null
           vip_code: string | null
         }
@@ -239,6 +240,7 @@ export type Database = {
           created_at?: string | null
           full_name: string
           id?: string
+          image_url?: string | null
           updated_at?: string | null
           vip_code?: string | null
         }
@@ -246,6 +248,7 @@ export type Database = {
           created_at?: string | null
           full_name?: string
           id?: string
+          image_url?: string | null
           updated_at?: string | null
           vip_code?: string | null
         }
@@ -260,6 +263,7 @@ export type Database = {
           found_location: string | null
           id: string
           item_name: string
+          image_url: string | null
           notes: string | null
           reservation_id: string | null
           return_info: string | null
@@ -267,6 +271,7 @@ export type Database = {
           status: string | null
           storage_location: string | null
           ticket_id: string | null
+          tracking_number: string | null
           updated_at: string | null
         }
         Insert: {
@@ -277,6 +282,7 @@ export type Database = {
           found_location?: string | null
           id?: string
           item_name: string
+          image_url?: string | null
           notes?: string | null
           reservation_id?: string | null
           return_info?: string | null
@@ -284,6 +290,7 @@ export type Database = {
           status?: string | null
           storage_location?: string | null
           ticket_id?: string | null
+          tracking_number?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -294,6 +301,7 @@ export type Database = {
           found_location?: string | null
           id?: string
           item_name?: string
+          image_url?: string | null
           notes?: string | null
           reservation_id?: string | null
           return_info?: string | null
@@ -301,6 +309,7 @@ export type Database = {
           status?: string | null
           storage_location?: string | null
           ticket_id?: string | null
+          tracking_number?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -447,6 +456,7 @@ export type Database = {
           front_office_status: string | null
           id: string
           kids: number | null
+          promised_time: string | null
           reservation_status: string | null
           room_id: string
           updated_at: string | null
@@ -460,6 +470,7 @@ export type Database = {
           front_office_status?: string | null
           id?: string
           kids?: number | null
+          promised_time?: string | null
           reservation_status?: string | null
           room_id: string
           updated_at?: string | null
@@ -473,6 +484,7 @@ export type Database = {
           front_office_status?: string | null
           id?: string
           kids?: number | null
+          promised_time?: string | null
           reservation_status?: string | null
           room_id?: string
           updated_at?: string | null
@@ -673,15 +685,54 @@ export type Database = {
           },
         ]
       }
+      room_notes: {
+        Row: {
+          id: string
+          room_id: string
+          created_by_id: string | null
+          text: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          room_id: string
+          created_by_id?: string | null
+          text: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          room_id?: string
+          created_by_id?: string | null
+          text?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_notes_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_notes_created_by_id_fkey"
+            columns: ["created_by_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           category: string | null
           created_at: string | null
           credit: number | null
           flagged: boolean | null
+          house_keeping_status: string | null
           id: string
           linen_status: string | null
-          notes: string | null
           priority: string | null
           room_number: string
           special_instructions: string | null
@@ -692,9 +743,9 @@ export type Database = {
           created_at?: string | null
           credit?: number | null
           flagged?: boolean | null
+          house_keeping_status?: string | null
           id?: string
           linen_status?: string | null
-          notes?: string | null
           priority?: string | null
           room_number: string
           special_instructions?: string | null
@@ -705,9 +756,9 @@ export type Database = {
           created_at?: string | null
           credit?: number | null
           flagged?: boolean | null
+          house_keeping_status?: string | null
           id?: string
           linen_status?: string | null
-          notes?: string | null
           priority?: string | null
           room_number?: string
           special_instructions?: string | null
@@ -744,6 +795,7 @@ export type Database = {
           assigned_to_id: string | null
           created_at: string | null
           created_by_id: string
+          department_id: string | null
           description: string | null
           id: string
           priority: string | null
@@ -759,6 +811,7 @@ export type Database = {
           assigned_to_id?: string | null
           created_at?: string | null
           created_by_id: string
+          department_id?: string | null
           description?: string | null
           id?: string
           priority?: string | null
@@ -774,6 +827,7 @@ export type Database = {
           assigned_to_id?: string | null
           created_at?: string | null
           created_by_id?: string
+          department_id?: string | null
           description?: string | null
           id?: string
           priority?: string | null

@@ -1,8 +1,9 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
 import { scaleX } from '../../constants/allRoomsStyles';
-import type { RoomCardData } from '../../types/allRooms.types';
+import type { RoomCardData, GuestInfo } from '../../types/allRooms.types';
+import type { GuestImageAnchorLayout } from '../shared/GuestProfileImageModal';
 import { FRONT_OFFICE_STATUS_ICONS, STATUS_CONFIGS } from '../../types/allRooms.types';
 import { getStayoverDisplayLabel, showStayoverWithLinenBadge } from '../../utils/stayoverLinen';
 import type { ShiftType } from '../../types/home.types';
@@ -15,8 +16,10 @@ import {
   STAFF_SECTION,
   DIVIDERS,
   STATUS_BUTTON,
+  CONTENT_OFFSET_TOP,
 } from '../../constants/allRoomsStyles';
 import GuestInfoSection from './GuestInfoSection';
+import GuestProfileImageModal from '../shared/GuestProfileImageModal';
 import StaffSection from './StaffSection';
 import StatusButton from './StatusButton';
 import NotesSection from './NotesSection';
@@ -39,13 +42,46 @@ interface RoomCardProps {
   room: RoomCardData;
   onPress: () => void;
   onStatusPress: () => void;
-  onLayout?: (event: any) => void; // Optional layout handler for position tracking
-  statusButtonRef?: (ref: any) => void; // Ref callback for status button
+  onAssignStaffPress?: (room: RoomCardData) => void;
+  onLayout?: (event: any) => void;
+  statusButtonRef?: (ref: any) => void;
   selectedShift?: ShiftType;
+  isChangingStatus?: boolean;
+  isAssigningStaff?: boolean;
 }
 
 const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardProps>(
-  ({ room, onPress, onStatusPress, onLayout, statusButtonRef, selectedShift }, ref) => {
+  ({ room, onPress, onStatusPress, onAssignStaffPress, onLayout, statusButtonRef, selectedShift, isChangingStatus, isAssigningStaff }, ref) => {
+  // Guest profile image modal - opens to the right of guest image
+  const [guestProfileModalGuest, setGuestProfileModalGuest] = useState<GuestInfo | null>(null);
+  const [guestProfileAnchorLayout, setGuestProfileAnchorLayout] = useState<GuestImageAnchorLayout | null>(null);
+  const guestImagePressRef = useRef(false);
+  const statusButtonPressRef = useRef(false);
+
+  const handleCardPress = () => {
+    if (guestImagePressRef.current) {
+      guestImagePressRef.current = false;
+      return;
+    }
+    if (statusButtonPressRef.current) {
+      statusButtonPressRef.current = false;
+      return;
+    }
+    onPress();
+  };
+
+  const handleStatusPress = () => {
+    statusButtonPressRef.current = true;
+    onStatusPress();
+  };
+
+  const handleGuestImagePress = (guest: GuestInfo, anchorLayout?: GuestImageAnchorLayout) => {
+    if (!guest.imageUrl) return;
+    guestImagePressRef.current = true;
+    setGuestProfileModalGuest(guest);
+    setGuestProfileAnchorLayout(anchorLayout ?? null);
+  };
+
   // Card type detection
   const isArrivalDeparture = room.frontOfficeStatus === 'Arrival/Departure';
   const isDeparture = room.frontOfficeStatus === 'Departure';
@@ -55,9 +91,14 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
   const isVacant = room.guests?.[0]?.isVacant === true;
   const isVacantTurndown = isTurndown && isVacant;
   const hasNotes = !!room.notes;
+  // Only show notes/rush container when there is at least one note, or rushed, or priority (per Figma)
+  const showNotesSection =
+    !!room.isPriority ||
+    (!!room.notes && (room.notes.count > 0 || !!room.notes.hasRushed));
+  const hasNotesOrPriority = showNotesSection;
 
-  // Check if any guest names wrap (longer than 23 characters)
-  const MAX_NAME_LENGTH = 23;
+  // Check if any guest names wrap (longer than 18 characters - "Daniel Thompson &")
+  const MAX_NAME_LENGTH = 18;
   const wrappedGuestCount = room.guests?.filter(guest => guest.name.length > MAX_NAME_LENGTH).length ?? 0;
   
   // Calculate additional height needed when names wrap
@@ -75,50 +116,63 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         : wrappedGuestCount * WRAP_SPACING * scaleX) // For single guest cards, add for each wrapped name
     : 0;
 
-  // Calculate card height based on type - matching Figma exactly
+  // Card height differs by type (different content = different size):
+  // - Arrival/Departure: 2 guest infos → tallest (292px base)
+  // - Departure (single): 1 guest → 177px base
+  // - Arrival, Stayover, Turndown (single): 1 guest → 185px base, or 244px when notes/rush section shown
   const getCardHeight = (): number => {
     let baseHeight: number;
     if (isArrivalDeparture) {
-      baseHeight = CARD_DIMENSIONS.heights.arrivalDeparture * scaleX; // 292px
-    } else if (hasNotes) {
-      baseHeight = CARD_DIMENSIONS.heights.withNotes * scaleX; // 222px
+      baseHeight = CARD_DIMENSIONS.heights.arrivalDeparture * scaleX; // 2 guests
+    } else if (hasNotesOrPriority) {
+      baseHeight = CARD_DIMENSIONS.heights.withNotes * scaleX; // 1 guest + notes/rush section
     } else if (isDeparture) {
-      baseHeight = CARD_DIMENSIONS.heights.standard * scaleX; // 177px
+      baseHeight = CARD_DIMENSIONS.heights.standard * scaleX; // 1 guest, departure
     } else {
-      // Arrival, Stayover, Turndown use 185px
-      baseHeight = CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 185px
+      baseHeight = CARD_DIMENSIONS.heights.withGuestInfo * scaleX; // 1 guest, arrival/stayover/turndown
     }
-    
-    // Add extra height if names wrap
     return baseHeight + wrappedNameExtraHeight;
   };
 
-  // Determine card background and border - always use AM styling (PM keeps screen bg only)
-  const getCardStyles = () => {
-    const isInProgress = room.houseKeepingStatus === 'InProgress';
-    return {
-      backgroundColor: isInProgress 
-        ? CARD_COLORS.priorityBackground 
-        : CARD_COLORS.background,
-      borderColor: isInProgress 
-        ? CARD_COLORS.priorityBorder 
-        : CARD_COLORS.border,
-      borderWidth: 1,
-    };
-  };
+  // Card background and border: do not change for priority; priority only adds/removes rush icon
+  const getCardStyles = () => ({
+    backgroundColor: CARD_COLORS.background,
+    borderColor: CARD_COLORS.border,
+    borderWidth: 1,
+  });
+
+  // Guest block height and vertical positioning for single-guest cards
+  // For cards without notes/priority, keep the guest block closer to the card bottom so layout feels grounded
+  const GUEST_BLOCK_BASE_TOP = GUEST_CONTAINER_BG.positions.arrival.top * scaleX;
+  const GUEST_BLOCK_BASE_HEIGHT = GUEST_CONTAINER_BG.positions.arrival.height * scaleX;
+  const cardHeight = getCardHeight();
+  const isSingleGuestWithBg = !isArrivalDeparture && !hasNotesOrPriority && !isVacantTurndown;
+  const guestBlockHeight = isSingleGuestWithBg
+    ? GUEST_BLOCK_BASE_HEIGHT + wrappedNameExtraHeight
+    : GUEST_BLOCK_BASE_HEIGHT;
+  const SINGLE_GUEST_BOTTOM_MARGIN = 16 * scaleX; // Space from bottom of card for single-guest block
+  const guestBlockTop = isSingleGuestWithBg
+    ? Math.max(GUEST_BLOCK_BASE_TOP, cardHeight - guestBlockHeight - SINGLE_GUEST_BOTTOM_MARGIN)
+    : GUEST_BLOCK_BASE_TOP;
+  // Offset to apply to guest content so it moves with the guest container (in px)
+  const contentVerticalOffsetPx = isSingleGuestWithBg
+    ? guestBlockTop - GUEST_BLOCK_BASE_TOP
+    : 0;
+  // Vertical center for status button within the single-guest block (so it aligns with GuestInfoDisplay)
+  const singleGuestStatusTopPx = isSingleGuestWithBg
+    ? guestBlockTop + (guestBlockHeight - STATUS_BUTTON.height * scaleX) / 2
+    : undefined;
 
   // Determine guest container background style
-  // Note: Arrival, Stayover, and Turndown all use the same positioning (height: 100, top: 74)
-  // Departure uses different positioning (height: 101, top: 70)
   const getGuestContainerBgStyle = () => {
-    if (isArrivalDeparture || hasNotes) {
-      return null; // No background for Arrival/Departure or cards with notes
+    if (isArrivalDeparture || hasNotesOrPriority) {
+      return null; // No background when notes section is shown (notes or priority)
     }
-    if (isDeparture) {
-      return styles.guestContainerBgDeparture;
+    // Single-guest cards: use bottom-anchored, expandable block (height includes wrap space). Others use fixed position.
+    if (isSingleGuestWithBg) {
+      return [styles.guestContainerBg, { top: guestBlockTop, height: guestBlockHeight }];
     }
-    // Arrival, Stayover, Turndown all use the same positioning from constants
-    return styles.guestContainerBgArrival;
+    return [styles.guestContainerBg, styles.guestContainerBgArrival];
   };
 
   const cardStyles = getCardStyles();
@@ -134,7 +188,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           ...cardStyles,
         },
       ]}
-      onPress={onPress}
+      onPress={handleCardPress}
       onLayout={onLayout}
       activeOpacity={0.6} // Slightly lower opacity for smoother press feedback
     >
@@ -166,7 +220,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           </Text>
         </View>
         
-        {/* Room Type + Credit display: "ST2K - 45", "ST2K - 60", etc. + red flag when priority */}
+        {/* Room Type + Credit display: "ST2K - 45", "ST2K - 60", etc. + red flag when room is flagged */}
         <View style={[
           styles.roomTypeRow,
           !room.isPriority && styles.roomTypeRowStandard,
@@ -174,7 +228,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           <Text style={styles.roomTypeText}>
             {`${room.roomCategory} - ${room.credit}`}
           </Text>
-          {room.isPriority && (
+          {room.flagged && (
             <Image
               source={require('../../../assets/icons/flag.png')}
               style={styles.roomTypeFlagIcon}
@@ -205,9 +259,9 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         </View>
       </View>
 
-      {/* Guest Container Background - for standard cards without notes */}
+      {/* Guest Container Background - for standard cards without notes; centered when single-guest (incl. wrapped names) */}
       {guestContainerBgStyle && (
-        <View style={[styles.guestContainerBg, guestContainerBgStyle]} />
+        <View style={guestContainerBgStyle} />
       )}
 
       {/* Horizontal divider between guests for Arrival/Departure cards - render FIRST so it's below guest names */}
@@ -244,7 +298,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           </View>
           {STATUS_CONFIGS[room.houseKeepingStatus]?.icon && (
             <TouchableOpacity
-              onPress={onStatusPress}
+              onPress={handleStatusPress}
               activeOpacity={0.8}
               style={styles.vacantStatusButton}
             >
@@ -273,6 +327,8 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
               frontOfficeStatus={room.frontOfficeStatus}
               isArrivalDeparture={isArrivalDeparture}
               selectedShift="AM"
+              onGuestImagePress={handleGuestImagePress}
+              contentVerticalOffsetPx={isFirstGuest && isSingleGuestWithBg ? contentVerticalOffsetPx : undefined}
             />
           );
         })
@@ -284,33 +340,50 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
         !room.isPriority && styles.dividerVerticalStandard
       ]} />
 
-      {/* Staff Section */}
+      {/* Staff Section - or "Assign Staff" when no one assigned */}
       <StaffSection
         staff={room.roomAttendantAssigned}
         isPriority={room.isPriority}
         frontOfficeStatus={room.frontOfficeStatus}
-        selectedShift="AM"
+        selectedShift={selectedShift ?? 'AM'}
+        onAssignPress={room.roomAttendantAssigned == null ? () => onAssignStaffPress?.(room) : undefined}
+        onStaffSectionPress={room.roomAttendantAssigned != null ? () => onAssignStaffPress?.(room) : undefined}
+        isLoading={isAssigningStaff}
       />
 
-      {/* Status Button */}
+      {/* Status Button - horizontally centered; vertically centered only on single-guest no-notes to avoid overlapping guest info */}
       {!isVacantTurndown && (
-        <StatusButton 
+        <StatusButton
           ref={statusButtonRef}
-          status={room.houseKeepingStatus} 
-          onPress={onStatusPress}
+          status={room.houseKeepingStatus}
+          onPress={handleStatusPress}
           isPriority={room.isPriority}
           isArrivalDeparture={isArrivalDeparture}
           hasNotes={hasNotes}
+          frontOfficeStatus={room.frontOfficeStatus}
+          cardHeight={cardHeight}
+          buttonTopOverridePx={singleGuestStatusTopPx}
+          isLoading={isChangingStatus}
         />
       )}
 
-      {/* Notes Section - shown for cards with notes */}
-      {hasNotes && (
-        <NotesSection 
-          notes={room.notes!} 
-          isArrivalDeparture={isArrivalDeparture} 
+      {/* Notes/Rush container - only when there is a note, rush, or priority (Figma: clear padding from card and guest info) */}
+      {showNotesSection && (
+        <NotesSection
+          notes={room.notes || { count: 0, hasRushed: false }}
+          isArrivalDeparture={isArrivalDeparture}
+          isPriority={room.isPriority}
+          cardHeight={cardHeight}
         />
       )}
+
+      {/* Guest profile image modal - opens to the right of guest image, 296×296, 5px radius */}
+      <GuestProfileImageModal
+        visible={!!guestProfileModalGuest}
+        onClose={() => { setGuestProfileModalGuest(null); setGuestProfileAnchorLayout(null); }}
+        guest={guestProfileModalGuest?.imageUrl ? { imageUrl: guestProfileModalGuest.imageUrl, name: guestProfileModalGuest.name } : null}
+        anchorLayout={guestProfileAnchorLayout}
+      />
     </TouchableOpacity>
   );
 });
@@ -498,11 +571,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 75 * scaleX, // Room 201: divider between two guests at top-[75px]
+    top: (75 + CONTENT_OFFSET_TOP) * scaleX, // Between two guests; moved down with content offset
     height: DIVIDERS.horizontal.height,
     backgroundColor: DIVIDERS.horizontal.color,
-    zIndex: 1, // Lowest z-index - below all guest info elements
-    elevation: 1, // Android elevation - lowest
+    zIndex: 1,
+    elevation: 1,
   },
   vacantRowContainer: {
     position: 'absolute',

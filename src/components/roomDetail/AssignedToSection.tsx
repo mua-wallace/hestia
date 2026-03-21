@@ -64,6 +64,7 @@ export default function AssignedToSection({
         style={styles.reassignButton}
         onPress={onReassignPress}
         activeOpacity={0.7}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <Text style={styles.reassignButtonText}>Reassign</Text>
       </TouchableOpacity>

@@ -65,3 +65,7 @@ web-build/
 .env
 .env.local
 
+/ios
+/android
+/credentials
+

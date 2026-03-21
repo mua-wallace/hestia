@@ -29,9 +29,10 @@ export interface Task {
   createdAt: string;
 }
 
-export interface RoomDetailData extends RoomCardData {
+export interface RoomDetailData extends Omit<RoomCardData, 'notes'> {
   roomType: RoomType; // NEW: Room type for dynamic layout
   specialInstructions?: string; // Special instructions for arrival guest
+  /** Full note objects for detail view (card view uses NotesInfo with count) */
   notes: Note[];
   tasks?: Task[]; // Tasks for the room
   assignedTo?: {
@@ -69,17 +70,20 @@ export interface HistoryGroup {
 }
 
 /**
- * Props interface for reusable RoomDetailScreen component
- * All content is passed as props for maximum reusability
+ * Props for the reusable RoomDetailContent component.
+ * Any screen or host that shows room details should pass these props (e.g. RoomDetailScreen).
+ * Layout is defined in RoomDetailContent; this interface is the data contract.
  */
 export interface RoomDetailScreenProps {
   // Room identification
+  roomId?: string;
   roomNumber: string;
   roomCode: string; // e.g., "ST2K - 1.4"
   
   // Room status
   status: RoomStatus;
   isPriority?: boolean;
+  flagged?: boolean; // When true, show flag badge (flag room)
   frontOfficeStatus?: 'Arrival' | 'Departure' | 'Arrival/Departure' | 'Stayover' | 'Turndown' | 'No Task';
   
   // Room type determines layout structure
@@ -141,4 +145,10 @@ export interface RoomDetailScreenProps {
   
   // Optional: Show stayover with linen badge
   showWithLinenBadge?: boolean;
+  
+  // Optional: Initial tab to display
+  initialTab?: DetailTab;
+  
+  // Optional: Department name for ticket creation
+  departmentName?: string;
 }

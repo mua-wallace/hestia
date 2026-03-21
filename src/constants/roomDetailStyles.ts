@@ -1,6 +1,7 @@
 /**
  * Room Detail Screen Styles - Exact values from Figma
- * Based on design: https://www.figma.com/design/q59hfVJCVzzUixq1HFRGEh/HESTIA-APP-AND-DASHBOARD?node-id=1-1506
+ * Layout reference: Room Detail - Overview (node 1772-104)
+ * https://www.figma.com/design/q59hfVJCVzzUixq1HFRGEh/HESTIA-APP-AND-DASHBOARD?node-id=1772-104
  */
 
 import { Dimensions } from 'react-native';
@@ -284,6 +285,75 @@ export const GUEST_INFO = {
       color: '#000000',
     },
   },
+  // Stayover/Turndown (Figma 1772-406): Guest Info at 310, guest block 360, special 441/466, divider 536
+  stayover: {
+    icon: {
+      left: 29,
+      top: 339,
+      width: 28.371,
+      height: 29.919,
+    },
+    name: {
+      left: 122,
+      top: 360,
+      fontSize: 14,
+      fontWeight: 'bold' as const,
+      color: '#000000',
+    },
+    numberBadge: {
+      left: 232,
+      top: 361,
+      fontSize: 12,
+      fontWeight: 'light' as const,
+      color: '#334866',
+    },
+    categoryBadge: {
+      left: 122,
+      top: 341,
+      fontSize: 13,
+      fontWeight: 'bold' as const,
+      color: '#3BC1F6',
+    },
+    dates: {
+      left: 122,
+      top: 388,
+      fontSize: 14,
+      fontWeight: 'light' as const,
+      color: '#000000',
+    },
+    occupancy: {
+      iconLeft: 207,
+      textLeft: 226,
+      top: 389,
+      fontSize: 14,
+      fontWeight: 'light' as const,
+      color: '#000000',
+    },
+    eta: {
+      left: 258,
+      top: 388,
+      fontSize: 14,
+      fontWeight: 'regular' as const,
+      color: '#000000',
+    },
+    specialInstructions: {
+      title: {
+        left: 24,
+        top: 441,
+        fontSize: 13,
+        fontWeight: 'bold' as const,
+        color: '#000000',
+      },
+      text: {
+        left: 24,
+        top: 466,
+        fontSize: 13,
+        fontWeight: 'light' as const,
+        color: '#000000',
+        width: 392,
+      },
+    },
+  },
 } as const;
 
 // Notes Section - Positioned after Lost and Found section
@@ -339,23 +409,29 @@ export const NOTES_SECTION = {
     text: {
       left: 27, // From Figma: calc(50%-185px) = 220-185 = 35px, but visually ~27px for left padding
       top: 1169, // From Figma: first note text at top: 1169px (absolute position)
+      fontFamily: 'Helvetica',
       fontSize: 13,
-      fontWeight: 'light' as const,
-      color: '#000000',
+      fontStyle: 'normal' as const,
+      fontWeight: '300' as const,
+      color: '#000',
       width: 353,
+      // line-height: normal (omit lineHeight for default)
     },
     profilePicture: {
       left: 36, // From Figma: left: 36px (absolute position for profile picture)
       top: 1230, // From Figma: top: 1230px (absolute position for first profile picture)
-      width: 25,
-      height: 25,
+      width: 25,  // 25px
+      height: 25, // 25px
     },
     staffName: {
       left: 70, // From Figma: left: 70px (absolute position for staff name)
       top: 1235, // From Figma: top: 1235px (absolute position for first staff name)
+      fontFamily: 'Helvetica',
       fontSize: 11,
-      fontWeight: 'regular' as const,
-      color: '#000000',
+      fontStyle: 'normal' as const,
+      fontWeight: '700' as const, // bold
+      color: '#000',
+      // line-height: normal (omit for default)
     },
     note2: {
       textTop: 1265, // Second note text (if any - from visual spacing)

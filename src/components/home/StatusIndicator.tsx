@@ -3,9 +3,10 @@ import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, typography } from '../../theme';
 import { normalizedScaleX } from '../../utils/responsive';
 
-// Calculate responsive dimensions - ensure minimum sizes for badge space
-const iconContainerWidth = (50.017 + 16) * normalizedScaleX;
-const iconContainerHeight = (50.017 + 4) * normalizedScaleX;
+// Calculate responsive dimensions – slightly smaller than original Figma to feel less heavy
+const BASE_CIRCLE_SIZE = 44; // was ~50px before
+const iconContainerWidth = (BASE_CIRCLE_SIZE + 20) * normalizedScaleX;
+const iconContainerHeight = (BASE_CIRCLE_SIZE + 8) * normalizedScaleX;
 
 interface StatusIndicatorProps {
   color: string;
@@ -113,9 +114,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   circle: {
-    width: 50.017 * normalizedScaleX,
-    height: 50.017 * normalizedScaleX,
-    borderRadius: 37 * normalizedScaleX,
+    width: BASE_CIRCLE_SIZE * normalizedScaleX,
+    aspectRatio: 1, // ensure perfect circle on all screens
+    borderRadius: (BASE_CIRCLE_SIZE / 2) * normalizedScaleX,
     justifyContent: 'center',
     alignItems: 'center',
   },

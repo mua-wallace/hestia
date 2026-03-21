@@ -1,11 +1,9 @@
 /**
- * Auth context for managing authentication state across the app
+ * Auth context – reads from Zustand auth store for useAuth() compatibility
  */
-
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { authService } from '../services/auth';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { useAuthStore } from '../store/useAuthStore';
 
 interface AuthContextType {
   session: Session | null;
@@ -19,65 +17,12 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { session, isLoading, signIn, signOut, resetPassword, init } = useAuthStore();
 
   useEffect(() => {
-    // Get initial session (returns null immediately if Supabase not configured)
-    authService.getSession().then((session) => {
-      setSession(session);
-      setIsLoading(false);
-    }).catch(() => {
-      setSession(null);
-      setIsLoading(false);
-    });
-
-    if (!isSupabaseConfigured) return;
-
-    // Listen for auth changes only when Supabase is configured
-    const {
-      data: { subscription },
-    } = authService.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { error } = await authService.signIn({ email, password });
-      if (error) console.error('[Auth] signIn failed:', error.message, error);
-      return { error: error as Error | null };
-    } catch (err) {
-      console.error('[Auth] signIn unexpected error:', err);
-      return { error: err as Error };
-    }
-  };
-
-  const signOut = async () => {
-    try {
-      const { error } = await authService.signOut();
-      if (error) console.error('[Auth] signOut failed:', error);
-      return { error: error as Error | null };
-    } catch (err) {
-      console.error('[Auth] signOut unexpected error:', err);
-      return { error: err as Error };
-    }
-  };
-
-  const resetPassword = async (email: string) => {
-    try {
-      const { error } = await authService.resetPassword(email);
-      if (error) console.error('[Auth] resetPassword failed:', error);
-      return { error: error as Error | null };
-    } catch (err) {
-      console.error('[Auth] resetPassword unexpected error:', err);
-      return { error: err as Error };
-    }
-  };
+    const cleanup = init();
+    return cleanup;
+  }, [init]);
 
   const value: AuthContextType = {
     session,

@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { typography, colors } from '../../theme';
 import {
   CHAT_HEADER,
@@ -7,6 +9,7 @@ import {
   CHAT_COLORS,
   CHAT_TYPOGRAPHY,
   CHAT_ITEM,
+  CHAT_HEADER_BAR_HEIGHT,
   scaleX,
 } from '../../constants/chatStyles';
 import SearchInput from '../SearchInput';
@@ -16,13 +19,16 @@ interface ChatHeaderProps {
   onSearch?: (text: string) => void;
   onFilterPress?: () => void;
   onMessagePress?: () => void;
-  searchPlaceholder?: string | { bold: string; normal: string }; // Optional dynamic placeholder
-  showSearch?: boolean; // Whether to show search input (default: true if onSearch provided)
-  title?: string; // Custom title (defaults to "Chat")
-  isGroup?: boolean; // Whether this is a group chat
-  avatar?: any; // Avatar image source (same as in chat list)
-  showAvatar?: boolean; // Whether to show avatar instead of back arrow (default: false)
-  showMessageButton?: boolean; // Whether to show the create chat/message button (default: true)
+  searchPlaceholder?: string | { bold: string; normal: string };
+  showSearch?: boolean;
+  title?: string;
+  /** Subtitle below title (e.g. "3 participants" for group, "last seen" for direct) */
+  subtitle?: string;
+  isGroup?: boolean;
+  avatar?: any;
+  showAvatar?: boolean;
+  showMessageButton?: boolean;
+  onGroupOptionsPress?: () => void;
 }
 
 export default function ChatHeader({
@@ -33,25 +39,84 @@ export default function ChatHeader({
   searchPlaceholder = 'Search',
   showSearch = true,
   title = 'Chat',
+  subtitle,
   isGroup = false,
   avatar,
   showAvatar = false,
   showMessageButton = true,
+  onGroupOptionsPress,
 }: ChatHeaderProps) {
-  const handleSearchChange = (text: string) => {
-    onSearch?.(text);
-  };
-  
+  const insets = useSafeAreaInsets();
+  const handleSearchChange = (text: string) => onSearch?.(text);
   const shouldShowSearch = showSearch && onSearch !== undefined;
 
+  // WhatsApp-style compact header for chat detail (no search).
+  // Top inset is applied by parent SafeAreaView; no extra padding here to avoid double gap.
+  if (!shouldShowSearch) {
+    const displayTitle = typeof title === 'string' ? title : 'Chat';
+    return (
+      <View style={styles.compactWrapper}>
+        <View style={styles.compactBar}>
+          <TouchableOpacity
+            style={styles.compactBack}
+            onPress={onBackPress}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="chevron-back" size={28} color={colors.primary.main} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.compactAvatarTitle}
+            onPress={onBackPress}
+            activeOpacity={0.9}
+          >
+            {showAvatar ? (
+              avatar?.uri ? (
+                <Image source={avatar} style={styles.compactAvatar} resizeMode="cover" />
+              ) : (
+                <View style={styles.compactAvatarPlaceholder}>
+                  <Text style={styles.compactAvatarInitial} numberOfLines={1}>
+                    {displayTitle.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )
+            ) : null}
+            <View style={styles.compactTitleBlock}>
+              <Text style={styles.compactTitle} numberOfLines={1}>{displayTitle}</Text>
+              {subtitle ? (
+                <Text style={styles.compactSubtitle} numberOfLines={1}>{subtitle}</Text>
+              ) : null}
+            </View>
+          </TouchableOpacity>
+
+          <View style={styles.compactRight}>
+            <TouchableOpacity style={styles.compactIconBtn} activeOpacity={0.7}>
+              <Ionicons name="call-outline" size={22} color={colors.primary.main} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.compactIconBtn} activeOpacity={0.7}>
+              <Ionicons name="videocam-outline" size={22} color={colors.primary.main} />
+            </TouchableOpacity>
+            {onGroupOptionsPress ? (
+              <TouchableOpacity style={styles.compactIconBtn} onPress={onGroupOptionsPress} activeOpacity={0.7}>
+                <Ionicons name="ellipsis-vertical" size={20} color={colors.primary.main} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.compactIconBtn} activeOpacity={0.7}>
+                <Ionicons name="ellipsis-vertical" size={20} color={colors.primary.main} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // Legacy list header with search
   return (
     <View style={styles.container}>
-      {/* Blue background */}
       <View style={styles.headerBackground} />
-
-      {/* Top section with back button and title */}
       <View style={styles.topSection}>
-        {/* Avatar or Back arrow */}
         <TouchableOpacity
           style={showAvatar ? styles.avatarButton : styles.backButton}
           onPress={onBackPress || (() => {})}
@@ -59,15 +124,11 @@ export default function ChatHeader({
         >
           {showAvatar ? (
             avatar ? (
-              <Image
-                source={avatar}
-                style={styles.avatar}
-                resizeMode="cover"
-              />
+              <Image source={avatar} style={styles.avatar} resizeMode="cover" />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarInitial}>
-                  {title.charAt(0).toUpperCase()}
+                  {(typeof title === 'string' ? title : 'Chat').charAt(0).toUpperCase()}
                 </Text>
               </View>
             )
@@ -80,25 +141,19 @@ export default function ChatHeader({
             />
           )}
         </TouchableOpacity>
-
-        {/* Title */}
-        <Text style={styles.title}>{title}</Text>
-
-        {/* Message Button */}
-        {showMessageButton && (
-          <TouchableOpacity
-            style={styles.messageButton}
-            onPress={onMessagePress || (() => {})}
-            activeOpacity={0.7}
-          >
+        <Text style={styles.title}>{typeof title === 'string' ? title : 'Chat'}</Text>
+        {onGroupOptionsPress ? (
+          <TouchableOpacity style={styles.messageButton} onPress={onGroupOptionsPress} activeOpacity={0.7}>
+            <Text style={styles.groupOptionsIcon}>⋮</Text>
+          </TouchableOpacity>
+        ) : showMessageButton ? (
+          <TouchableOpacity style={styles.messageButton} onPress={onMessagePress || (() => {})} activeOpacity={0.7}>
             <View style={styles.messageButtonInner}>
               <Text style={styles.messageIconText}>+</Text>
             </View>
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
-
-      {/* Search bar section */}
       {shouldShowSearch && (
         <View style={styles.searchSection}>
           <View style={styles.searchBar}>
@@ -109,11 +164,7 @@ export default function ChatHeader({
               placeholderStyle={styles.placeholderText}
               inputWrapperStyle={styles.searchInputWrapper}
             />
-
-            <TouchableOpacity
-              style={styles.searchIconContainer}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.searchIconContainer} activeOpacity={0.7}>
               <Image
                 source={require('../../../assets/icons/search-icon.png')}
                 style={styles.searchIcon}
@@ -121,13 +172,8 @@ export default function ChatHeader({
               />
             </TouchableOpacity>
           </View>
-
           {onFilterPress && (
-            <TouchableOpacity
-              style={styles.filterButton}
-              onPress={onFilterPress}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.filterButton} onPress={onFilterPress} activeOpacity={0.7}>
               <Image
                 source={require('../../../assets/icons/menu-icon.png')}
                 style={styles.filterIcon}
@@ -142,6 +188,80 @@ export default function ChatHeader({
 }
 
 const styles = StyleSheet.create({
+  // WhatsApp-style compact header (chat detail) – theme aligned with home/rooms
+  compactWrapper: {
+    backgroundColor: colors.background.header,
+    zIndex: 10,
+  },
+  compactBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: CHAT_HEADER_BAR_HEIGHT,
+    paddingHorizontal: 8,
+    backgroundColor: colors.background.header,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border.medium,
+  },
+  compactBack: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 4,
+  },
+  compactAvatarTitle: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  compactAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  compactAvatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.border.medium,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  compactAvatarInitial: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text.secondary,
+  },
+  compactTitleBlock: {
+    flex: 1,
+    marginLeft: 12,
+    minWidth: 0,
+  },
+  compactTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.text.primary,
+    ...(Platform.OS === 'android' && { includeFontPadding: false }),
+  },
+  compactSubtitle: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    marginTop: 1,
+    ...(Platform.OS === 'android' && { includeFontPadding: false }),
+  },
+  compactRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  compactIconBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
+  // Legacy list header
   container: {
     position: 'absolute',
     top: 0,
@@ -168,7 +288,7 @@ const styles = StyleSheet.create({
   backButton: {
     width: CHAT_HEADER.backButton.width * scaleX,
     height: CHAT_HEADER.backButton.height * scaleX,
-    marginRight: 17 * scaleX, // Spacing between back button and title
+    marginRight: 17 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -179,7 +299,7 @@ const styles = StyleSheet.create({
   avatarButton: {
     width: CHAT_ITEM.avatar.size * scaleX,
     height: CHAT_ITEM.avatar.size * scaleX,
-    marginRight: 17 * scaleX, // Same spacing as in ChatItem
+    marginRight: 17 * scaleX,
   },
   avatar: {
     width: '100%',
@@ -203,12 +323,17 @@ const styles = StyleSheet.create({
     fontSize: 24 * scaleX,
     fontFamily: 'Helvetica',
     fontWeight: '700' as any,
-    fontStyle: 'normal',
     color: '#607AA1',
-    lineHeight: 24 * scaleX, // Match font size for proper vertical alignment
+    lineHeight: 24 * scaleX,
     flex: 1,
     includeFontPadding: false,
     textAlignVertical: 'center',
+  },
+  groupOptionsIcon: {
+    fontSize: 24 * scaleX,
+    fontWeight: '700' as any,
+    color: '#607AA1',
+    lineHeight: 28 * scaleX,
   },
   messageButton: {
     position: 'absolute',
@@ -251,9 +376,7 @@ const styles = StyleSheet.create({
     paddingLeft: SEARCH_BAR.container.paddingLeft * scaleX,
     paddingRight: SEARCH_BAR.container.paddingRight * scaleX,
   },
-  searchInputWrapper: {
-    justifyContent: 'center',
-  },
+  searchInputWrapper: { justifyContent: 'center' },
   searchInput: {
     fontSize: CHAT_TYPOGRAPHY.searchPlaceholder.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
@@ -267,7 +390,7 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: CHAT_TYPOGRAPHY.searchPlaceholder.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.semiBold as any,
+    fontWeight: typography.fontWeights.semibold as any,
     color: CHAT_COLORS.textPlaceholder,
     opacity: CHAT_TYPOGRAPHY.searchPlaceholder.opacity,
   },
@@ -294,4 +417,3 @@ const styles = StyleSheet.create({
     height: SEARCH_BAR.filterIcon.height * scaleX,
   },
 });
-

@@ -18,7 +18,8 @@ interface RoomDetailHeaderProps {
   returnLaterAtTimestamp?: number; // Epoch ms when user will return; header shows time only + countdown
   promiseTimeAtTimestamp?: number; // Epoch ms when room will be ready; header shows time + countdown
   refuseServiceReason?: string; // Selected reason or custom reason when Refuse Service is confirmed
-  isPriority?: boolean; // When true, show red flag in circular white badge after room number
+  isPriority?: boolean; // Reserved for future priority UI
+  flagged?: boolean; // When true, show red flag in circular white badge after room number (flag room)
   frontOfficeLabel?: string; // Front office status e.g. "Stayover" - shown below room code for Stayover rooms
   showWithLinenBadge?: boolean; // When true, show "with Linen" badge next to Stayover label
 }
@@ -37,10 +38,11 @@ export default function RoomDetailHeader({
   promiseTimeAtTimestamp,
   refuseServiceReason,
   isPriority = false,
+  flagged = false,
   frontOfficeLabel,
   showWithLinenBadge = false,
 }: RoomDetailHeaderProps) {
-  const statusConfig = STATUS_CONFIGS[status];
+  const statusConfig = STATUS_CONFIGS[status] ?? STATUS_CONFIGS.Dirty;
   const isReturnLater = customStatusText === 'Return Later';
   const isPromiseTime = customStatusText === 'Promise Time' || customStatusText === 'Promised Time';
   const isRefuseService = customStatusText === 'Refuse Service' && refuseServiceReason != null;
@@ -187,7 +189,7 @@ export default function RoomDetailHeader({
         />
       </TouchableOpacity>
 
-      {/* Room Number + optional priority flag badge */}
+      {/* Room Number + optional flag badge (when room is flagged) */}
       <View style={styles.roomNumberRow}>
         <Text
           style={[
@@ -198,7 +200,7 @@ export default function RoomDetailHeader({
         >
           Room {roomNumber}
         </Text>
-        {isPriority && (
+        {flagged && (
           <View style={styles.priorityBadge}>
             <Image
               source={require('../../../assets/icons/flag.png')}
@@ -248,7 +250,8 @@ export default function RoomDetailHeader({
         ref={statusButtonRef}
         style={styles.statusIndicator}
         onPress={onStatusPress}
-        activeOpacity={0.8}
+        activeOpacity={0.7}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       >
         <>
             <Image

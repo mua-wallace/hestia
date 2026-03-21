@@ -52,7 +52,7 @@ export default function Button({
         return {
           color: colors.text.white,
           fontSize: parseInt(typography.fontSizes['3xl']),
-          fontWeight: typography.fontWeights.regular,
+          fontWeight: typography.fontWeights.regular as TextStyle['fontWeight'],
         };
       case 'secondary':
         return {

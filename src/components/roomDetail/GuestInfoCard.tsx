@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, Modal, TouchableOpacity, Dimensions, StatusBar } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { GUEST_INFO as ROOM_DETAIL_GUEST_INFO, CONTENT_AREA } from '../../constants/roomDetailStyles';
+import React, { useState, useRef } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { GUEST_INFO as ROOM_DETAIL_GUEST_INFO } from '../../constants/roomDetailStyles';
 import { GUEST_INFO } from '../../constants/allRoomsStyles';
 import { normalizedScaleX } from '../../utils/responsive';
 import { formatGuestCount, formatDatesOfStay } from '../../utils/formatting';
 import GuestInfoDisplay from '../shared/GuestInfoDisplay';
+import GuestProfileImageModal, { type GuestImageAnchorLayout } from '../shared/GuestProfileImageModal';
 import type { GuestInfo } from '../../types/allRooms.types';
 
 interface GuestInfoCardProps {
@@ -33,9 +33,18 @@ export default function GuestInfoCard({
   specialInstructionsTextTop,
   roomCategory,
 }: GuestInfoCardProps) {
-  // State for image modal
+  // State for image modal - opens to the right of guest image
   const [isImageModalVisible, setIsImageModalVisible] = useState(false);
-  
+  const [imageModalAnchorLayout, setImageModalAnchorLayout] = useState<GuestImageAnchorLayout | null>(null);
+  const guestImageWrapRef = useRef<View>(null);
+
+  const openGuestImageModal = () => {
+    guestImageWrapRef.current?.measureInWindow((x, y, width, height) => {
+      setImageModalAnchorLayout({ x, y, width, height });
+      setIsImageModalVisible(true);
+    });
+  };
+
   // Calculate relative position from content area start
   const containerTop = absoluteTop - contentAreaTop;
 
@@ -50,10 +59,9 @@ export default function GuestInfoCard({
   // Since containerTop = absoluteTop - contentAreaTop:
   // relative = absolutePosition - (contentAreaTop + absoluteTop - contentAreaTop) = absolutePosition - absoluteTop
   
-  // Select config based on roomCategory if provided, otherwise use isArrival
-  // For Stayover/Turndown, use Arrival config since they have ETA and similar layout
-  // For Departure, use Departure config
-  const configKey = roomCategory === 'Departure' ? 'departure' : 'arrival';
+  // Select config based on roomCategory (Figma: arrival 1772-104, departure 1772-255, stayover 1772-406)
+  type GuestBlockKey = 'arrival' | 'departure' | 'stayover';
+  const configKey: GuestBlockKey = roomCategory === 'Departure' ? 'departure' : roomCategory === 'Stayover' || roomCategory === 'Turndown' ? 'stayover' : 'arrival';
   const config = ROOM_DETAIL_GUEST_INFO[configKey];
   
   // Convert room detail absolute positions to relative positions within container
@@ -80,17 +88,18 @@ export default function GuestInfoCard({
   const timeTopRelative = dateRowOffset;
   const countTopRelative = dateRowOffset;
   
-  // Calculate Special Instructions spacing from date row to match Figma
-  // From Figma: dates top = 377px, Special Instructions title top = 417px
-  // Gap = 417 - 377 = 40px
-  // Date row height (lineHeight) = ~17px, so spacing after date row = 40 - 17 = 23px
+  // Calculate Special Instructions spacing from date row, per Figma config:
+  // gap = (specialInstructionsTitleTop - datesTop) - dateRowHeight
   const dateRowHeight = GUEST_INFO.dateRange.lineHeight || 17; // Use dateRange lineHeight
-  const specialInstructionsGap = 23; // Spacing between date row bottom and Special Instructions title (matches Figma)
+  const specialInstructionsGap =
+    'specialInstructions' in config && config.specialInstructions
+      ? (config.specialInstructions.title.top - config.dates.top) - dateRowHeight
+      : 23; // Fallback gap when config doesn't define special instructions
   const specialInstructionsTitleTopRelative = dateTopRelative + dateRowHeight + specialInstructionsGap;
   // Calculate text position only if specialInstructions config exists
   const specialInstructionsTextGap = 8; // Gap between title and text (from Figma: 442 - 417 - titleHeight ≈ 8px)
-  const specialInstructionsTitleHeight = config.specialInstructions?.title?.fontSize 
-    ? config.specialInstructions.title.fontSize * 1.2 
+  const specialInstructionsTitleHeight = 'specialInstructions' in config && config.specialInstructions?.title?.fontSize
+    ? config.specialInstructions.title.fontSize * 1.2
     : 13 * 1.2; // Default to fontSize 13 if not available
   const specialInstructionsTextTopRelative = specialInstructionsTitleTopRelative + specialInstructionsTitleHeight + specialInstructionsTextGap;
   
@@ -128,7 +137,9 @@ export default function GuestInfoCard({
   const dateLeftRelative = hasGuestImage ? infoColumnLeft : config.dates.left;
   // Time and count positions: inline within the date row, so they flow naturally
   // We don't need separate left positions - they're in a flex row
-  const timeLeftRelative = configKey === 'departure' ? config.edt.left : config.eta.left; // Not used when hasGuestImage
+  const timeLeftRelative = configKey === 'departure'
+    ? ('edt' in config ? config.edt.left : 0)
+    : ('eta' in config ? config.eta.left : 0); // Not used when hasGuestImage
   const countIconLeftRelative = config.occupancy.iconLeft; // Not used when hasGuestImage
   const countTextLeftRelative = config.occupancy.textLeft; // Not used when hasGuestImage
   
@@ -140,38 +151,81 @@ export default function GuestInfoCard({
       {/* Guest Image or Icon */}
       {iconLeftRelative !== undefined && (
         hasGuestImage ? (
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setIsImageModalVisible(true)}
+          <View
+            ref={guestImageWrapRef}
+            collapsable={false}
+            style={{
+              position: 'absolute',
+              left: iconLeftRelative * normalizedScaleX,
+              top: iconTopRelative * normalizedScaleX,
+              width: guestImageWidthDetail * normalizedScaleX,
+              height: guestImageHeightDetail * normalizedScaleX,
+            }}
           >
-            <Image
-              source={{ uri: guest.imageUrl }}
-              style={[
-                styles.guestImage,
-                {
-                  left: iconLeftRelative * normalizedScaleX,
-                  top: iconTopRelative * normalizedScaleX,
-                  width: guestImageWidthDetail * normalizedScaleX,
-                  height: guestImageHeightDetail * normalizedScaleX,
-                  borderRadius: GUEST_INFO.guestImage.borderRadius * normalizedScaleX,
-                },
-              ]}
-              resizeMode="cover"
-            />
-          </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={openGuestImageModal}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Image
+                source={{ uri: guest.imageUrl }}
+                style={[
+                  styles.guestImage,
+                  {
+                    width: guestImageWidthDetail * normalizedScaleX,
+                    height: guestImageHeightDetail * normalizedScaleX,
+                    borderRadius: GUEST_INFO.guestImage.borderRadius * normalizedScaleX,
+                  },
+                ]}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
+            {/* Category Badge at bottom right */}
+            {(category === 'Arrival' || category === 'Departure' || category === 'Stayover' || category === 'Turndown' || category === 'ArrivalDeparture') && (
+              <View
+                style={[
+                  styles.imageBadge,
+                  {
+                    backgroundColor: (category === 'Arrival' || (category === 'ArrivalDeparture' && guest.timeLabel === 'ETA'))
+                      ? '#41D541' // Green for Arrival
+                      : (category === 'Departure' || (category === 'ArrivalDeparture' && guest.timeLabel === 'EDT'))
+                      ? '#f92424' // Red for Departure
+                      : category === 'Stayover'
+                      ? '#3BC1F6' // Light blue for Stayover
+                      : '#9b51e0', // Purple for Turndown
+                  },
+                ]}
+              >
+                <Image
+                  source={
+                    (category === 'Arrival' || (category === 'ArrivalDeparture' && guest.timeLabel === 'ETA'))
+                      ? require('../../../assets/icons/arrow-forward.png')
+                      : (category === 'Departure' || (category === 'ArrivalDeparture' && guest.timeLabel === 'EDT'))
+                      ? require('../../../assets/icons/departure-spear.png')
+                      : category === 'Stayover'
+                      ? require('../../../assets/icons/stayover-guest_icon.png')
+                      : require('../../../assets/icons/moon.png')
+                  }
+                  style={category === 'Turndown' ? styles.imageBadgeIconNoTint : styles.imageBadgeIcon}
+                  resizeMode="contain"
+                />
+              </View>
+            )}
+          </View>
         ) : (
           <Image
             source={
               category === 'Departure'
                 ? require('../../../assets/icons/guest-departure-icon.png')
                 : category === 'Stayover'
-                ? require('../../../assets/icons/stayover-guest-icon.png')
+                ? require('../../../assets/icons/stayover-guest_icon.png')
                 : category === 'Turndown'
-                ? require('../../../assets/icons/turndown-guest-icon.png')
+                ? require('../../../assets/icons/moon.png')
                 : require('../../../assets/icons/guest-arrival-icon.png')
             }
             style={[
               styles.guestIcon,
+              category === 'Turndown' ? styles.guestIconNoTint : null,
               {
                 left: iconLeftRelative * normalizedScaleX,
                 top: iconTopRelative * normalizedScaleX,
@@ -262,8 +316,8 @@ export default function GuestInfoCard({
             </>
           )}
           
-          {/* Time (ETA/EDT) - inline if available and not N/A */}
-          {guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && (
+          {/* Time (ETA/EDT) - only when value is present and not N/A */}
+          {guest.timeLabel && guest.time && guest.timeLabel !== 'N/A' && guest.time !== 'N/A' && (
             <Text style={styles.timeInline}>
               {`${guest.timeLabel}: ${guest.time}`}
             </Text>
@@ -272,13 +326,13 @@ export default function GuestInfoCard({
       </View>
 
       {/* Special Instructions - show for all guests if available */}
-      {specialInstructions && config.specialInstructions && config.specialInstructions.title && config.specialInstructions.text && (
+      {specialInstructions && 'specialInstructions' in config && config.specialInstructions?.title && config.specialInstructions?.text && (
         <>
           <Text
             style={[
               styles.specialInstructionsTitle,
               {
-                left: config.specialInstructions.title.left * normalizedScaleX,
+                left: config.specialInstructions!.title.left * normalizedScaleX,
                 top: specialInstructionsTitleTop !== undefined 
                   ? (specialInstructionsTitleTop - absoluteTop) * normalizedScaleX
                   : (containerTop + specialInstructionsTitleTopRelative) * normalizedScaleX,
@@ -291,11 +345,11 @@ export default function GuestInfoCard({
             style={[
               styles.specialInstructionsText,
               {
-                left: config.specialInstructions.text.left * normalizedScaleX,
+                left: config.specialInstructions!.text.left * normalizedScaleX,
                 top: specialInstructionsTextTop !== undefined
                   ? (specialInstructionsTextTop - absoluteTop) * normalizedScaleX
                   : (containerTop + specialInstructionsTextTopRelative) * normalizedScaleX,
-                width: config.specialInstructions.text.width * normalizedScaleX,
+                width: config.specialInstructions!.text.width * normalizedScaleX,
               },
             ]}
           >
@@ -304,36 +358,13 @@ export default function GuestInfoCard({
         </>
       )}
 
-      {/* Image Modal - Enlarged Guest Image with Blur Background */}
-      <Modal
+      {/* Guest profile image modal - opens to the right of guest image, 296×296, 5px radius */}
+      <GuestProfileImageModal
         visible={isImageModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setIsImageModalVisible(false)}
-      >
-        <StatusBar hidden={isImageModalVisible} />
-        <BlurView intensity={80} style={styles.modalBlurOverlay} tint="light">
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setIsImageModalVisible(false)}
-          >
-            <View style={styles.modalContent} pointerEvents="box-none">
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={() => {}}
-                style={styles.enlargedImageContainer}
-              >
-                <Image
-                  source={{ uri: guest.imageUrl }}
-                  style={styles.enlargedImage}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </BlurView>
-      </Modal>
+        onClose={() => { setIsImageModalVisible(false); setImageModalAnchorLayout(null); }}
+        guest={guest.imageUrl ? { imageUrl: guest.imageUrl, name: guest.name } : null}
+        anchorLayout={imageModalAnchorLayout}
+      />
     </View>
   );
 }
@@ -350,8 +381,32 @@ const styles = StyleSheet.create({
     width: 28.371 * normalizedScaleX,
     height: 29.919 * normalizedScaleX,
   },
+  guestIconNoTint: {
+    tintColor: '#FFEA80',
+  },
   guestImage: {
     position: 'absolute',
+  },
+  imageBadge: {
+    position: 'absolute',
+    bottom: -2 * normalizedScaleX,
+    right: -2 * normalizedScaleX,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  imageBadgeIcon: {
+    width: 12 * normalizedScaleX,
+    height: 12 * normalizedScaleX,
+    tintColor: '#ffffff',
+  },
+  imageBadgeIconNoTint: {
+    width: 12 * normalizedScaleX,
+    height: 12 * normalizedScaleX,
+    tintColor: '#FFEA80',
   },
   categoryBadgeRow: {
     position: 'absolute',
@@ -459,45 +514,6 @@ const styles = StyleSheet.create({
     color: ROOM_DETAIL_GUEST_INFO.arrival.specialInstructions.text.color,
     lineHeight: 18 * normalizedScaleX,
     zIndex: 2, // Above divider
-  },
-  modalBlurOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalOverlay: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: Dimensions.get('window').width * 0.85,
-    aspectRatio: 1, // Square image as per Figma
-    justifyContent: 'center',
-    alignItems: 'center',
-    maxWidth: 350,
-    maxHeight: 350,
-  },
-  enlargedImageContainer: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 10, // Slightly rounded corners as per Figma
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  enlargedImage: {
-    width: '100%',
-    height: '100%',
   },
 });
 

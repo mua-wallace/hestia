@@ -1,23 +1,50 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { colors, typography } from '../../theme';
 import { StaffInfo } from '../../types/allRooms.types';
 import type { ShiftType } from '../../types/home.types';
 import { scaleX, STAFF_SECTION } from '../../constants/allRoomsStyles';
 
 interface StaffSectionProps {
-  staff: StaffInfo; // Room attendant assigned - passed as 'staff' for component reuse
+  staff: StaffInfo | null; // When null, show "Assign Staff" button
   isPriority?: boolean;
-  frontOfficeStatus?: string; // To determine if it's Departure card
+  frontOfficeStatus?: string;
   selectedShift?: ShiftType;
+  onAssignPress?: () => void; // When staff is null and user taps Assign Staff
+  /** When staff is assigned, tap on forward arrow opens staff list to change assignee */
+  onStaffSectionPress?: () => void;
+  isLoading?: boolean;
 }
 
-export default function StaffSection({ staff, isPriority = false, frontOfficeStatus = '', selectedShift }: StaffSectionProps) {
+export default function StaffSection({ staff, isPriority = false, frontOfficeStatus = '', selectedShift, onAssignPress, onStaffSectionPress, isLoading = false }: StaffSectionProps) {
+  const isDeparture = frontOfficeStatus === 'Departure';
+
+  // No staff assigned: show "Assign Staff" button
   if (!staff) {
-    return null;
+    return (
+      <View style={styles.container}>
+        <TouchableOpacity
+          style={[
+            styles.assignButton,
+            {
+              left: (STAFF_SECTION.nameStandard?.left ?? STAFF_SECTION.name.left) * scaleX,
+              top: (STAFF_SECTION.nameStandard?.top ?? STAFF_SECTION.name.top) * scaleX,
+            },
+          ]}
+          onPress={onAssignPress}
+          activeOpacity={0.7}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#5a759d" />
+          ) : (
+            <Text style={styles.assignButtonText}>Assign Staff</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
   }
 
-  const isDeparture = frontOfficeStatus === 'Departure';
   const hasPromiseTime = !!staff.promiseTime;
 
   // Departure cards have different positioning due to promiseTime
@@ -46,7 +73,7 @@ export default function StaffSection({ staff, isPriority = false, frontOfficeSta
       <View style={[styles.avatarContainer, { left: avatarLeft * scaleX, top: avatarTop * scaleX }]}>
         {staff.avatar ? (
           <Image
-            source={staff.avatar}
+            source={typeof staff.avatar === 'string' ? { uri: staff.avatar } : (staff.avatar as any)}
             style={styles.avatar}
             resizeMode="cover"
           />
@@ -58,11 +85,15 @@ export default function StaffSection({ staff, isPriority = false, frontOfficeSta
       </View>
 
       {/* Staff Name */}
-      <Text style={[
-        styles.staffName, 
-        { left: nameLeft * scaleX, top: nameTop * scaleX },
-        selectedShift === 'PM' && styles.staffNamePM
-      ]}>
+      <Text
+        style={[
+          styles.staffName,
+          { left: nameLeft * scaleX, top: nameTop * scaleX },
+          selectedShift === 'PM' && styles.staffNamePM
+        ]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
         {staff.name}
       </Text>
 
@@ -94,25 +125,50 @@ export default function StaffSection({ staff, isPriority = false, frontOfficeSta
         </Text>
       )}
 
-      {/* Forward Arrow Icon */}
-      <View style={[
-        styles.forwardArrowContainer,
-        {
-          left: isPriority 
-            ? STAFF_SECTION.forwardArrow.left * scaleX 
-            : (STAFF_SECTION.forwardArrowStandard?.left ?? STAFF_SECTION.forwardArrow.left) * scaleX,
-          top: STAFF_SECTION.forwardArrow.top * scaleX,
-        }
-      ]}>
-        <Image
-          source={require('../../../assets/icons/forward-arrow-icon.png')}
+      {/* Forward Arrow Icon – tappable to open staff list when assigned */}
+      {onStaffSectionPress ? (
+        <TouchableOpacity
           style={[
-            styles.forwardArrowIcon,
-            selectedShift === 'PM' && styles.forwardArrowIconPM
+            styles.forwardArrowContainer,
+            {
+              left: isPriority
+                ? STAFF_SECTION.forwardArrow.left * scaleX
+                : (STAFF_SECTION.forwardArrowStandard?.left ?? STAFF_SECTION.forwardArrow.left) * scaleX,
+              top: STAFF_SECTION.forwardArrow.top * scaleX,
+            },
           ]}
-          resizeMode="contain"
-        />
-      </View>
+          onPress={onStaffSectionPress}
+          activeOpacity={0.7}
+        >
+          <Image
+            source={require('../../../assets/icons/forward-arrow-icon.png')}
+            style={[
+              styles.forwardArrowIcon,
+              selectedShift === 'PM' && styles.forwardArrowIconPM
+            ]}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      ) : (
+        <View style={[
+          styles.forwardArrowContainer,
+          {
+            left: isPriority
+              ? STAFF_SECTION.forwardArrow.left * scaleX
+              : (STAFF_SECTION.forwardArrowStandard?.left ?? STAFF_SECTION.forwardArrow.left) * scaleX,
+            top: STAFF_SECTION.forwardArrow.top * scaleX,
+          }
+        ]}>
+          <Image
+            source={require('../../../assets/icons/forward-arrow-icon.png')}
+            style={[
+              styles.forwardArrowIcon,
+              selectedShift === 'PM' && styles.forwardArrowIconPM
+            ]}
+            resizeMode="contain"
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -199,6 +255,24 @@ const styles = StyleSheet.create({
   },
   forwardArrowIconPM: {
     tintColor: '#ffffff',
+  },
+  assignButton: {
+    position: 'absolute',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#e4eefe',
+    borderWidth: 1,
+    borderColor: '#5a759d',
+    minWidth: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  assignButtonText: {
+    fontSize: 13 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.bold as any,
+    color: '#5a759d',
   },
 });
 

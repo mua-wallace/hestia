@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { useToast } from '../../contexts/ToastContext';
 import { typography } from '../../theme';
 import { CHECKLIST_SECTION, scaleX } from '../../constants/checklistStyles';
 import { CONTENT_AREA } from '../../constants/roomDetailStyles';
@@ -8,7 +9,6 @@ import ChecklistFooter from './ChecklistFooter';
 import DownloadReportButton from './DownloadReportButton';
 import type { ChecklistData, ChecklistSubmissionData } from '../../types/checklist.types';
 import { getDefaultChecklist } from '../../data/mockChecklistData';
-import { mockStaffData } from '../../data/mockStaffData';
 import { generateChecklistReport } from '../../utils/generateChecklistReport';
 
 interface ChecklistSectionProps {
@@ -28,8 +28,9 @@ export default function ChecklistSection({
   onCancel,
   initialData,
 }: ChecklistSectionProps) {
-  // Get current user (in real app, get from auth context)
-  const currentUser = mockStaffData[0]; // Default to first staff member
+  const toast = useToast();
+  // Get current user from auth context
+  const currentUser = { id: 'user-1', name: 'Staff Member', initials: 'SM' };
 
   // Format current date and time
   const formatDate = (date: Date): string => {
@@ -95,7 +96,7 @@ export default function ChecklistSection({
       });
     } catch (error) {
       console.error('Error downloading checklist report:', error);
-      Alert.alert('Error', 'Failed to generate report. Please try again.');
+      toast.show('Failed to generate report. Please try again.', { type: 'error', title: 'Error' });
     } finally {
       setIsGeneratingReport(false);
     }

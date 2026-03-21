@@ -1,11 +1,37 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text, Animated, Platform } from 'react-native';
+import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text, Animated, Platform, Switch, Image } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RoomStatus, StatusChangeOption, STATUS_OPTIONS, RoomCardData } from '../../types/allRooms.types';
+import { RoomStatus, StatusChangeOption, STATUS_OPTIONS, STATUS_CONFIGS, RoomCardData } from '../../types/allRooms.types';
 import { STATUS_BUTTON, CARD_DIMENSIONS, scaleX } from '../../constants/allRoomsStyles';
 import { typography } from '../../theme';
 import StatusOptionItem from './StatusOptionItem';
+
+/** Option ids that map to a single room status; hide the one that matches currentStatus */
+const STATUS_OPTION_IDS: StatusChangeOption[] = ['Dirty', 'InProgress', 'Cleaned', 'Inspected'];
+
+/** Circular background color per option – matches Figma Change Status modal */
+function getOptionBackgroundColor(optionId: StatusChangeOption): string {
+  switch (optionId) {
+    case 'Priority':
+      return '#FFEBEB'; // Light pink / off-white with red tint (Figma)
+    case 'Dirty':
+      return '#f92424'; // Solid red (Figma)
+    case 'InProgress':
+      return '#F0BE1B'; // Gold / In Progress (Figma)
+    case 'Cleaned':
+      return '#B8D4F0'; // Light blue (Figma)
+    case 'Inspected':
+      return '#C8E6C9'; // Light green (Figma)
+    case 'Pause':
+    case 'ReturnLater':
+    case 'RefuseService':
+    case 'PromisedTime':
+      return '#FCF1CF'; // Light yellow (Figma – second row)
+    default:
+      return '#e8e8e8';
+  }
+}
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
@@ -16,11 +42,15 @@ interface StatusChangeModalProps {
   onStatusSelect: (status: StatusChangeOption) => void;
   /** When provided and user selects Inspected, this is called instead of onStatusSelect. Use to show Inspection Checklist slide. */
   onInspectedSelect?: () => void;
+  /** When provided and user selects Cleaned, this is called instead of onStatusSelect. Use to show Clean Checklist modal. */
+  onCleanedSelect?: () => void;
   currentStatus: RoomStatus;
   room?: RoomCardData; // Room data
   buttonPosition?: { x: number; y: number; width: number; height: number } | null; // Status button position on screen
   showTriangle?: boolean; // Whether to show the triangle pointer (default: true)
   headerHeight?: number; // Header height in design pixels (default: 232, use 217 for AllRoomsScreen)
+  /** When provided, shows the Flag room row and calls this when the user toggles it */
+  onFlagToggle?: (flagged: boolean) => void;
 }
 
 export default function StatusChangeModal({
@@ -28,11 +58,13 @@ export default function StatusChangeModal({
   onClose,
   onStatusSelect,
   onInspectedSelect,
+  onCleanedSelect,
   currentStatus,
   room,
   buttonPosition,
   showTriangle = true,
   headerHeight = 232, // Default to 232px
+  onFlagToggle,
 }: StatusChangeModalProps) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -73,6 +105,18 @@ export default function StatusChangeModal({
       return;
     }
 
+    // Cleaned requires Clean Checklist modal - delegate to onCleanedSelect if provided
+    if (option === 'Cleaned' && onCleanedSelect) {
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start(() => {
+        onCleanedSelect();
+        onClose();
+      });
+      return;
+    }
+
     // Animate out before closing
     Animated.parallel([
       Animated.timing(slideAnim, {
@@ -87,6 +131,25 @@ export default function StatusChangeModal({
       }),
     ]).start(() => {
       onStatusSelect(option);
+      onClose();
+    });
+  };
+
+  const handleFlagToggle = (value: boolean) => {
+    onFlagToggle?.(value);
+    // Animate out before closing
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       onClose();
     });
   };
@@ -113,7 +176,7 @@ export default function StatusChangeModal({
 
   // Modal width (scaled) - full card width
   const modalWidth = CARD_DIMENSIONS.width * scaleX; // 426px scaled (full card width)
-  const modalHeight = 300 * scaleX; // Modal height for status options only
+  const modalHeight = 368 * scaleX; // Modal height: status options grid + Flag room row (Figma)
   
   let modalTopPosition: number;
   let modalLeft: number;
@@ -251,14 +314,64 @@ export default function StatusChangeModal({
             <Text style={styles.headerText}>Change status</Text>
             
             <View style={styles.optionsGrid}>
-              {STATUS_OPTIONS.map((option) => (
-                <StatusOptionItem
-                  key={option.id}
-                  icon={option.icon}
-                  label={option.label}
-                  onPress={() => handleStatusSelect(option.id)}
+              {STATUS_OPTIONS.filter((option) => {
+                if (!STATUS_OPTION_IDS.includes(option.id)) return true;
+                return option.id !== currentStatus;
+              }).map((option) => {
+                const isInProgress = option.id === 'InProgress';
+                const isCleaned = option.id === 'Cleaned';
+                const isInspected = option.id === 'Inspected';
+                const isPause = option.id === 'Pause';
+                const isReturnLater = option.id === 'ReturnLater';
+                const isRefuseService = option.id === 'RefuseService';
+                const isPromisedTime = option.id === 'PromisedTime';
+                const isPriority = option.id === 'Priority';
+                const iconOnly =
+                  isCleaned ||
+                  isInspected ||
+                  isPause ||
+                  isReturnLater ||
+                  isRefuseService ||
+                  isPromisedTime ||
+                  isPriority;
+
+                return (
+                  <StatusOptionItem
+                    key={option.id}
+                    icon={option.icon}
+                    label={option.label}
+                    onPress={() => handleStatusSelect(option.id)}
+                    tintColor={isInProgress ? '#FFFFFF' : undefined}
+                    // For iconOnly statuses: no circular background – show icon only
+                    backgroundColor={iconOnly ? undefined : getOptionBackgroundColor(option.id)}
+                    // Upscale iconOnly statuses so they visually match In Progress size
+                    iconScale={iconOnly ? 2 : 1}
+                  />
+                );
+              })}
+            </View>
+
+            <View style={styles.divider} />
+
+            {/* Flag room row - matches Figma (red icon, "Flag room" label, toggle) */}
+            <View style={styles.flagRoomContainer}>
+              <View style={styles.flagIconCircle}>
+                <Image
+                  source={require('../../../assets/icons/flag.png')}
+                  style={styles.flagIcon}
+                  resizeMode="contain"
+                  tintColor="#F92424"
                 />
-              ))}
+              </View>
+              <Text style={styles.flagRoomText}>Flag room</Text>
+              <Switch
+                value={room.flagged}
+                onValueChange={handleFlagToggle}
+                trackColor={{ false: '#e3e3e3', true: '#F92424' }}
+                thumbColor="#ffffff"
+                style={styles.toggleSwitch}
+                disabled={!onFlagToggle}
+              />
             </View>
 
           </TouchableOpacity>

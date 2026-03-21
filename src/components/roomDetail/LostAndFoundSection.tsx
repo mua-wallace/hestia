@@ -30,6 +30,7 @@ export default function LostAndFoundSection({
         onPress={onTitlePress}
         activeOpacity={0.7}
         disabled={!onTitlePress}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <Text style={styles.title}>Lost & Found</Text>
       </TouchableOpacity>
@@ -40,6 +41,7 @@ export default function LostAndFoundSection({
           style={styles.box}
           onPress={onAddPhotosPress}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           {/* Left: Icon with plus sign overlay */}
           <View style={styles.iconContainer}>

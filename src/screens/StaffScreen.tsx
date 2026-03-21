@@ -2,24 +2,29 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  TouchableOpacity,
   StyleSheet,
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
 import { colors, typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
-import MorePopup from '../components/more/MorePopup';
 import { mockHomeData } from '../data/mockHomeData';
-import { mockChatData } from '../data/mockChatData';
-import { MoreMenuItemId } from '../types/more.types';
+import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
+import { useChatStore } from '../store/useChatStore';
 import StaffHeader from '../components/staff/StaffHeader';
 import StaffTabs from '../components/staff/StaffTabs';
 import StaffCard from '../components/staff/StaffCard';
+import StaffDepartmentList from '../components/staff/StaffDepartmentList';
+import StaffDepartmentStaffPanel, { type DepartmentRowPosition } from '../components/staff/StaffDepartmentStaffPanel';
+import type { StaffDepartmentId } from '../components/staff/StaffDepartmentList';
+import { STAFF_DEPARTMENTS_LIST } from '../components/staff/StaffDepartmentList';
 import { StaffTab, StaffMember } from '../types/staff.types';
-import { scaleX, STAFF_DATE } from '../constants/staffStyles';
+import { scaleX, STAFF_DATE, STAFF_TABS } from '../constants/staffStyles';
 import type { ReturnToTab } from '../navigation/types';
 
 const DESIGN_WIDTH = 440;
@@ -88,13 +93,21 @@ const mockStaffData: StaffMember[] = [
 export default function StaffScreen() {
   const navigation = useNavigation<StaffScreenNavigationProp>();
   const route = useRoute();
+  const insets = useSafeAreaInsets();
+  const { open: openAIChatOverlay } = useAIChatOverlay();
   const { width: SCREEN_WIDTH } = useWindowDimensions();
   const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
   
-  const [activeTab, setActiveTab] = useState('Home');
-  const [showMorePopup, setShowMorePopup] = useState(false);
+  const [activeTab, setActiveTab] = useState('Staff');
   const [selectedTab, setSelectedTab] = useState<StaffTab>('onShift');
   const [staffMembers] = useState<StaffMember[]>(mockStaffData);
+  const [departmentPanel, setDepartmentPanel] = useState<{
+    departmentId: StaffDepartmentId;
+    departmentName: string;
+    rowPosition: DepartmentRowPosition | null;
+  } | null>(null);
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Format current date
   const currentDate = new Date();
@@ -116,40 +129,22 @@ export default function StaffScreen() {
   );
 
   // Calculate total unread chat messages for badge
-  const chatBadgeCount = React.useMemo(() => {
-    return mockChatData.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
-  }, []);
+  const { chats } = useChatStore();
+  const chatBadgeCount = React.useMemo(
+    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
+    [chats]
+  );
 
   const handleTabPress = (tab: string) => {
-    setActiveTab(tab); // Update immediately
-    setShowMorePopup(false);
-    navigation.navigate(tab as keyof MainTabsParamList);
-  };
-
-  const handleMorePress = () => {
-    setShowMorePopup(true);
-  };
-
-  const handleMenuItemPress = (menuItem: MoreMenuItemId) => {
-    setShowMorePopup(false);
-    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
-    switch (menuItem) {
-      case 'lostAndFound':
-        navigation.navigate('LostAndFound', { returnToTab });
-        break;
-      case 'staff':
-        navigation.navigate('Staff', { returnToTab });
-        break;
-      case 'settings':
-        navigation.navigate('Settings', { returnToTab });
-        break;
-      default:
-        break;
+    if (tab === 'AIHome') {
+      openAIChatOverlay();
+      return;
     }
-  };
-
-  const handleClosePopup = () => {
-    setShowMorePopup(false);
+    setActiveTab(tab); // Update immediately
+    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
+    if (tab === 'Home' || tab === 'Rooms' || tab === 'Chat' || tab === 'Tickets' || tab === 'LostAndFound' || tab === 'Staff' || tab === 'Settings') {
+      navigation.navigate(tab as keyof MainTabsParamList);
+    }
   };
 
   const handleBack = () => {
@@ -170,6 +165,32 @@ export default function StaffScreen() {
     setSelectedTab(tab);
     // TODO: Filter staff members based on selected tab
   };
+
+  const handleDepartmentPress = (department: { id: StaffDepartmentId; name: string }, rowPosition: DepartmentRowPosition) => {
+    setDepartmentPanel({
+      departmentId: department.id,
+      departmentName: department.name,
+      rowPosition,
+    });
+  };
+
+  const handleSearchPress = () => setSearchExpanded(true);
+  const handleSearchClose = () => {
+    setSearchExpanded(false);
+    setSearchQuery('');
+  };
+
+  const filteredStaffForSearch = React.useMemo(() => {
+    if (!searchQuery.trim()) return staffMembers;
+    const q = searchQuery.trim().toLowerCase();
+    return staffMembers.filter((s) => s.name.toLowerCase().includes(q));
+  }, [staffMembers, searchQuery]);
+
+  const filteredDepartmentsForSearch = React.useMemo(() => {
+    if (!searchQuery.trim()) return STAFF_DEPARTMENTS_LIST;
+    const q = searchQuery.trim().toLowerCase();
+    return STAFF_DEPARTMENTS_LIST.filter((d) => d.name.toLowerCase().includes(q));
+  }, [searchQuery]);
 
   const styles = StyleSheet.create({
     container: {
@@ -204,6 +225,35 @@ export default function StaffScreen() {
     staffListContent: {
       paddingBottom: 152 * scaleX, // Space for bottom tab bar
     },
+    searchEmptyText: {
+      paddingHorizontal: 24 * scaleX,
+      paddingTop: 24 * scaleX,
+      fontSize: 14 * scaleX,
+      color: STAFF_TABS.tab.inactiveColor,
+    },
+    searchSection: {
+      marginTop: 16 * scaleX,
+    },
+    searchSectionTitle: {
+      fontSize: 12 * scaleX,
+      fontFamily: typography.fontFamily.primary,
+      fontWeight: '700',
+      color: STAFF_TABS.tab.inactiveColor,
+      marginBottom: 12 * scaleX,
+      paddingHorizontal: 17 * scaleX,
+    },
+    searchDepartmentRow: {
+      paddingVertical: 14 * scaleX,
+      paddingHorizontal: 24 * scaleX,
+      borderBottomWidth: 1,
+      borderBottomColor: '#e3e3e3',
+    },
+    searchDepartmentName: {
+      fontSize: 16 * scaleX,
+      fontFamily: typography.fontFamily.primary,
+      fontWeight: '700',
+      color: '#1e1e1e',
+    },
   });
 
   return (
@@ -215,44 +265,89 @@ export default function StaffScreen() {
           onSearchPress={handleSearch}
         />
 
-        {/* Tabs - Absolutely positioned below header */}
+        {/* Tabs - Absolutely positioned below header (or search input when search open) */}
         <StaffTabs
           selectedTab={selectedTab}
           onTabPress={handleStaffTabPress}
+          searchExpanded={searchExpanded}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          onSearchPress={handleSearchPress}
+          onSearchClose={handleSearchClose}
         />
 
         {/* Date - Absolutely positioned */}
         <Text style={styles.dateText}>{formattedDate}</Text>
 
-        {/* Staff List - Scrollable content starting after date */}
+        {/* Staff List, Departments, or Search results - Scrollable content starting after date */}
         <ScrollView
           style={styles.staffList}
           contentContainerStyle={styles.staffListContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {staffMembers.map((staff) => (
-            <StaffCard key={staff.id} staff={staff} />
-          ))}
+          {searchExpanded ? (
+            <>
+              {filteredStaffForSearch.length === 0 && filteredDepartmentsForSearch.length === 0 ? (
+                <Text style={styles.searchEmptyText}>
+                  {searchQuery.trim() ? 'No staff or departments match your search' : 'Type to search staff and departments'}
+                </Text>
+              ) : null}
+              {filteredStaffForSearch.length > 0 ? (
+                <View style={styles.searchSection}>
+                  <Text style={styles.searchSectionTitle}>Staff</Text>
+                  {filteredStaffForSearch.map((staff) => (
+                    <StaffCard key={staff.id} staff={staff} />
+                  ))}
+                </View>
+              ) : null}
+              {filteredDepartmentsForSearch.length > 0 ? (
+                <View style={styles.searchSection}>
+                  <Text style={styles.searchSectionTitle}>Departments</Text>
+                  {filteredDepartmentsForSearch.map((dept) => (
+                    <TouchableOpacity
+                      key={dept.id}
+                      style={styles.searchDepartmentRow}
+                      activeOpacity={0.7}
+                      onPress={() => setDepartmentPanel({
+                        departmentId: dept.id,
+                        departmentName: dept.name,
+                        rowPosition: null,
+                      })}
+                    >
+                      <Text style={styles.searchDepartmentName}>{dept.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : null}
+            </>
+          ) : selectedTab === 'departments' ? (
+            <StaffDepartmentList
+              activeDepartmentId={departmentPanel?.departmentId ?? null}
+              onDepartmentPress={handleDepartmentPress}
+            />
+          ) : (
+            staffMembers.map((staff) => (
+              <StaffCard key={staff.id} staff={staff} />
+            ))
+          )}
         </ScrollView>
 
-        {showMorePopup && (
-          <BlurView intensity={80} style={styles.contentBlurOverlay} tint="light">
-            <View style={styles.blurOverlayDarkener} />
-          </BlurView>
-        )}
       </View>
+
+      <StaffDepartmentStaffPanel
+        visible={departmentPanel != null}
+        onClose={() => setDepartmentPanel(null)}
+        departmentId={departmentPanel?.departmentId ?? null}
+        departmentName={departmentPanel?.departmentName ?? ''}
+        rowPosition={departmentPanel?.rowPosition ?? null}
+        topOffset={insets.top + (STAFF_TABS.container.top + STAFF_TABS.container.height + 1) * scaleX}
+      />
 
       <BottomTabBar
         activeTab={activeTab}
         onTabPress={handleTabPress}
-        onMorePress={handleMorePress}
         chatBadgeCount={chatBadgeCount}
-      />
-
-      <MorePopup
-        visible={showMorePopup}
-        onClose={handleClosePopup}
-        onMenuItemPress={handleMenuItemPress}
       />
     </View>
   );
