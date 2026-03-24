@@ -215,6 +215,7 @@ export default function TicketForm({
         title: ticketName,
         description: combinedDescription,
         priority: priority === 'high' ? 'urgent' : priority === 'medium' ? 'medium' : 'notUrgent',
+        departmentName: selectedDepartment,
         assignedToId,
         roomId: roomId ?? null,
         locationType: 'room',

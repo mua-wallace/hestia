@@ -72,9 +72,11 @@ export async function updateAvatar(
   if (!isSupabaseConfigured) {
     throw new Error('Profile update requires Supabase to be configured.');
   }
-  const fileName = `avatars/${userId}.${fileExtension}`;
+  const normalizedExt = fileExtension.toLowerCase() === 'jpg' ? 'jpeg' : fileExtension.toLowerCase();
+  const contentType = normalizedExt === 'png' ? 'image/png' : 'image/jpeg';
+  // Use unique file names to avoid stale CDN/image cache showing old avatar.
+  const fileName = `avatars/${userId}-${Date.now()}.${normalizedExt}`;
   const arrayBuffer = base64ToArrayBuffer(imageBase64);
-  const contentType = `image/${fileExtension}`;
 
   const { error: uploadError } = await supabase.storage
     .from('avatars')

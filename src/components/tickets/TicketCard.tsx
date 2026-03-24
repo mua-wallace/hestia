@@ -56,6 +56,16 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
     return undefined;
   }, [ticket.status, ticket.createdAt, nowMs]);
 
+  // Figma order request: Department above, Due below.
+  // When both are present, move due badge down to avoid overlap.
+  const dueBadgeTop = (() => {
+    const baseTop = TICKET_CONTENT.dueDateBadgeTopLeft.top;
+    if (dueTimeText && ticket.category && ticket.categoryIcon) {
+      return baseTop + 24;
+    }
+    return baseTop;
+  })();
+
   return (
     <TouchableOpacity
       style={styles.card}
@@ -66,7 +76,8 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
       {dueTimeText && (
         <View style={[
           styles.dueDateBadge,
-          styles.dueDateBadgeTopLeft
+          styles.dueDateBadgeTopLeft,
+          { top: dueBadgeTop * scaleX },
         ]}>
           <Text style={styles.dueDateText} numberOfLines={1}>
             Due in: {dueTimeText}
@@ -91,11 +102,13 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
             source={ticket.categoryIcon}
             style={[
               styles.categoryIcon,
-              ticket.category.toLowerCase() === 'laundry' && { tintColor: '#f92424' },
+              { tintColor: '#f92424' },
             ]}
             resizeMode="contain"
           />
-          <Text style={styles.categoryText}>{ticket.category}</Text>
+          <Text style={styles.categoryText}>
+            {ticket.category}
+          </Text>
         </>
       )}
 

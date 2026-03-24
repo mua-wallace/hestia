@@ -75,9 +75,12 @@ export default function UserProfileScreen() {
     setIsUpdatingAvatar(true);
     try {
       const uri = result.assets[0].uri;
-      const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const uriWithoutQuery = uri.split('?')[0];
+      const rawExt = uriWithoutQuery.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileExt = rawExt === 'heic' ? 'jpg' : rawExt;
       const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
       await updateAvatarUrl(userId, base64, fileExt);
+      toast.show('Profile photo updated successfully.', { type: 'success', title: 'Updated' });
     } catch (err: unknown) {
       console.error('[UserProfile] Avatar update failed:', err);
       toast.show(

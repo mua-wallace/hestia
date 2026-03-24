@@ -191,6 +191,7 @@ export default function CreateTicketFormScreen() {
         title: ticketName,
         description: combinedDescription,
         priority: priority === 'high' ? 'urgent' : priority === 'medium' ? 'medium' : 'notUrgent',
+        departmentName: selectedDepartment,
         assignedToId,
         roomId: paramIsPublicArea ? null : (paramRoomId ?? null),
         locationType,
