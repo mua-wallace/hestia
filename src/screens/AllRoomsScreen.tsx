@@ -30,6 +30,12 @@ import { getShiftFromTime } from '../utils/shiftUtils';
 import { getStayoverWithLinen } from '../utils/stayoverLinen';
 import { getFloorFromRoomNumber } from '../utils/formatting';
 
+/** PM All Rooms list: Turndown + reservation Occupied (aligned with reservations cron / DB). */
+function isPmTurndownOccupiedRoom(room: RoomCardData): boolean {
+  const res = (room.reservationStatus || '').toLowerCase();
+  return room.frontOfficeStatus === 'Turndown' && res === 'occupied';
+}
+
 /** When user taps a status badge or priority badge on Home. */
 export type CategoryFilterParam = {
   category: CategoryName;
@@ -209,7 +215,10 @@ export default function AllRoomsScreen() {
   const filterCounts: FilterCounts = useMemo(() => {
     const roomsPM = displayData.roomsPM ?? [];
     const usePMRooms = displayData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    const sourceRooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
+    let sourceRooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
+    if (displayData.selectedShift === 'PM') {
+      sourceRooms = sourceRooms.filter(isPmTurndownOccupiedRoom);
+    }
 
     const roomStates = {
       dirty: 0,
@@ -656,7 +665,7 @@ export default function AllRoomsScreen() {
             }
           }
 
-          // Check guest filters (AM: Arrival/Departure/Stayover/Turndown; PM: Turndown/No Task + reservation Vacant)
+          // Check guest filters (AM: Arrival/Departure/Stayover; PM list is Turndown+Occupied before this)
           if (hasGuestFilter) {
             const matchesGuest =
               (activeFilters.guests.arrivals && (room.frontOfficeStatus === 'Arrival' || room.frontOfficeStatus === 'Arrival/Departure')) ||
@@ -700,13 +709,8 @@ export default function AllRoomsScreen() {
       );
     }
 
-    if (displayData.selectedShift === 'PM' && !usePMRooms) {
-      rooms = rooms.filter(
-        (room) =>
-          room.frontOfficeStatus === 'Turndown' ||
-          room.frontOfficeStatus === 'No Task' ||
-          room.reservationStatus === 'Vacant'
-      );
+    if (displayData.selectedShift === 'PM') {
+      rooms = rooms.filter(isPmTurndownOccupiedRoom);
     }
     if (displayData.selectedShift === 'AM') {
       rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');

@@ -12,9 +12,9 @@ LANGUAGE sql
 SECURITY DEFINER
 AS $$
   UPDATE reservations
-  SET front_office_status = 'turndown'
-  WHERE front_office_status = 'stayover'
-    AND reservation_status = 'checked_in';
+  SET front_office_status = 'Turndown'
+  WHERE front_office_status = 'Stayover'
+    AND reservation_status = 'Occupied';
 $$;
 
 CREATE OR REPLACE FUNCTION public.am_turndown_to_stayover()
@@ -23,7 +23,7 @@ LANGUAGE sql
 SECURITY DEFINER
 AS $$
   UPDATE reservations
-  SET front_office_status = 'stayover'
-  WHERE front_office_status = 'turndown'
-    AND reservation_status = 'checked_in';
+  SET front_office_status = 'Stayover'
+  WHERE front_office_status = 'Turndown'
+    AND reservation_status = 'Occupied';
 $$;
