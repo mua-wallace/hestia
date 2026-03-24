@@ -205,7 +205,18 @@ export default function InspectedStatusSlideModal({
               />
             )}
             <View style={styles.modalContainer}>
-              <Text style={styles.checklistTitle}>Inspection Checklist</Text>
+              <View style={styles.titleRow}>
+                <Text style={styles.checklistTitle}>Inspection Checklist</Text>
+                <TouchableOpacity
+                  onPress={handleClose}
+                  style={styles.closeButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close inspection checklist"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close" size={22 * scaleX} color="#607AA1" />
+                </TouchableOpacity>
+              </View>
               <View style={styles.dividerAfterTitle} />
                 {INSPECTION_CHECKLIST_ITEMS.map((item) => (
                   <TouchableOpacity
@@ -342,6 +353,21 @@ const styles = StyleSheet.create({
     color: '#41d541',
     marginBottom: 0,
     textAlign: 'left',
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 8 * scaleX,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  closeButton: {
+    width: Math.max(32, 28 * scaleX),
+    height: Math.max(32, 28 * scaleX),
+    borderRadius: Math.max(16, 14 * scaleX),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checklistItem: {
     flexDirection: 'row',

@@ -198,7 +198,18 @@ export default function CleanChecklistModal({
               />
             )}
             <View style={styles.modalContainer}>
-              <Text style={styles.checklistTitle}>Clean Checklist</Text>
+              <View style={styles.titleRow}>
+                <Text style={styles.checklistTitle}>Clean Checklist</Text>
+                <TouchableOpacity
+                  onPress={handleClose}
+                  style={styles.closeButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close clean checklist"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close" size={22 * scaleX} color="#607AA1" />
+                </TouchableOpacity>
+              </View>
               <View style={styles.dividerAfterTitle} />
               {CLEAN_CHECKLIST_ITEMS.map((item) => (
                 <TouchableOpacity
@@ -335,6 +346,21 @@ const styles = StyleSheet.create({
     color: '#4a91fc',
     marginBottom: 0,
     textAlign: 'left',
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 8 * scaleX,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  closeButton: {
+    width: Math.max(32, 28 * scaleX),
+    height: Math.max(32, 28 * scaleX),
+    borderRadius: Math.max(16, 14 * scaleX),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checklistItem: {
     flexDirection: 'row',

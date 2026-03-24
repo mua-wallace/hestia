@@ -21,19 +21,30 @@ interface CategoryCardProps {
 }
 
 // Status configuration
+/** Default icon box (design px); dirty asset has more padding so it gets a larger box to match others visually. */
+const DEFAULT_STATUS_ICON_W = 29.478;
+const DEFAULT_STATUS_ICON_H = 30.769;
+
 const STATUS_CONFIG: Record<
   keyof RoomStatus,
   {
     color: string;
     icon: any;
     label: string;
+    iconTintColor?: string;
     rightLabelIcon?: any;
+    iconWidth?: number;
+    iconHeight?: number;
   }
 > = {
   dirty: {
     color: '#f92424',
-    icon: require('../../../assets/icons/dirty-icon.png'),
+    // Use the same asset as Change Status modal for iOS parity.
+    icon: require('../../../assets/icons/dirty-status.png'),
     label: 'Dirty',
+    // Slightly larger so glyph matches in-progress / cleaned / inspected on screen.
+    iconWidth: 40,
+    iconHeight: 41.5,
   },
   inProgress: {
     color: '#f0be1b',
@@ -92,8 +103,9 @@ export default function CategoryCard({ category, onPress, onStatusPress, onPrior
             icon={STATUS_CONFIG[statusKey].icon}
             count={category.status[statusKey]}
             label={STATUS_CONFIG[statusKey].label}
-            iconWidth={29.478}
-            iconHeight={30.769}
+            iconWidth={STATUS_CONFIG[statusKey].iconWidth ?? DEFAULT_STATUS_ICON_W}
+            iconHeight={STATUS_CONFIG[statusKey].iconHeight ?? DEFAULT_STATUS_ICON_H}
+            iconTintColor={STATUS_CONFIG[statusKey].iconTintColor}
             rightLabelIcon={STATUS_CONFIG[statusKey].rightLabelIcon}
             isPM={false}
             onPress={category.status[statusKey] >= 1 && onStatusPress ? () => onStatusPress(category, statusKey) : undefined}

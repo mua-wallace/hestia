@@ -15,6 +15,7 @@ interface StatusIndicatorProps {
   label: string;
   iconWidth?: number;
   iconHeight?: number;
+  iconTintColor?: string;
   rightLabelIcon?: any;
   isPM?: boolean;
   /** When count >= 1, tapping the badge navigates/filters. Optional. */
@@ -28,6 +29,7 @@ export default function StatusIndicator({
   label,
   iconWidth,
   iconHeight,
+  iconTintColor,
   rightLabelIcon,
   isPM = false,
   onPress,
@@ -44,7 +46,11 @@ export default function StatusIndicator({
     <View style={styles.contentWrapper}>
       <View style={styles.iconContainer}>
         <View style={[styles.circle, { backgroundColor: color }]}>
-          <Image source={icon} style={iconStyle} resizeMode="contain" />
+          <Image
+            source={icon}
+            style={[iconStyle, iconTintColor ? { tintColor: iconTintColor } : null]}
+            resizeMode="contain"
+          />
         </View>
         {count > 0 && (
           <View style={styles.badgeContainer}>
