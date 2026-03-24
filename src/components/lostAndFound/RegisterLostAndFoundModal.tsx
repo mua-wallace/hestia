@@ -78,6 +78,7 @@ function GradientText({
 interface RegisterLostAndFoundModalProps {
   visible: boolean;
   onClose: () => void;
+  preselectedRoomId?: string;
   onNext?: (data: {
     trackingNumber?: string;
     itemImage?: string;
@@ -102,6 +103,7 @@ interface RegisterLostAndFoundModalProps {
 export default function RegisterLostAndFoundModal({
   visible,
   onClose,
+  preselectedRoomId,
   onNext,
 }: RegisterLostAndFoundModalProps) {
   const toast = useToast();
@@ -181,6 +183,7 @@ export default function RegisterLostAndFoundModal({
   const [status, setStatus] = useState<StatusOption>('stored');
   const [storedLocation, setStoredLocation] = useState<StoredLocationOption>('hskOffice');
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   // Pictures state
   const [pictures, setPictures] = useState<string[]>([]);
@@ -195,6 +198,8 @@ export default function RegisterLostAndFoundModal({
   // Reset to step 1 when modal opens
   useEffect(() => {
     if (visible) {
+      const defaultStaffId =
+        staff.find((s) => s.id === currentUserId)?.id ?? staff[0]?.id ?? '';
       setCurrentStep(1);
       setSendEmailToGuest(true); // Reset email checkbox
       setPictures([]); // Reset pictures
@@ -203,10 +208,15 @@ export default function RegisterLostAndFoundModal({
       setRoomSearch('');
       setShowRoomDropdown(false);
       setSelectedPublicArea(null);
+      if (preselectedRoomId) {
+        setSelectedLocation('room');
+      }
       setTitle('');
       setNotes('');
+      setFoundedBy(defaultStaffId);
+      setRegisteredBy(defaultStaffId);
     }
-  }, [visible]);
+  }, [visible, staff, currentUserId, preselectedRoomId]);
 
   // Load staff from Supabase when available (used for Founded by / Registered by)
   useEffect(() => {
@@ -214,13 +224,14 @@ export default function RegisterLostAndFoundModal({
     const loadStaffWithCurrentUserDefault = async () => {
       const rows = await fetchStaffFromSupabase();
       const { data: sessionData } = await supabase.auth.getSession();
-      const currentUserId = sessionData?.session?.user?.id ?? null;
+      const loginUserId = sessionData?.session?.user?.id ?? null;
 
       if (cancelled) return;
+      setCurrentUserId(loginUserId);
       setStaff(rows);
       if (rows.length > 0) {
-        const defaultStaffId = rows.some((s) => s.id === currentUserId)
-          ? currentUserId
+        const defaultStaffId = rows.some((s) => s.id === loginUserId)
+          ? loginUserId
           : rows[0].id;
         setFoundedBy((prev) => prev || defaultStaffId || '');
         setRegisteredBy((prev) => prev || defaultStaffId || '');
@@ -236,6 +247,15 @@ export default function RegisterLostAndFoundModal({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!visible || !preselectedRoomId) return;
+    const matchedRoom = rooms.find((room) => room.id === preselectedRoomId);
+    if (!matchedRoom) return;
+    setSelectedLocation('room');
+    setSelectedPublicArea(null);
+    setSelectedRoom(matchedRoom);
+  }, [visible, preselectedRoomId, rooms]);
 
   // Load rooms from Supabase for Location dropdown when configured
   useEffect(() => {
@@ -280,13 +300,17 @@ export default function RegisterLostAndFoundModal({
         });
         if (mapped.length) {
           setRooms(mapped);
-          setSelectedRoom(mapped[0]);
+          const preselectedRoom =
+            preselectedRoomId != null
+              ? mapped.find((room) => room.id === preselectedRoomId)
+              : undefined;
+          setSelectedRoom(preselectedRoom ?? mapped[0]);
         }
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [preselectedRoomId]);
 
   // Handle adding pictures – align behavior with Tickets (direct gallery picker)
   const handleAddPicture = async () => {
@@ -1030,10 +1054,11 @@ export default function RegisterLostAndFoundModal({
                     <View
                       style={[
                         styles.step2InitialsCircle,
+                        styles.step2RegisteredInitialsCircle,
                         { backgroundColor: getInitialColor(getStaffName(registeredBy)) },
                       ]}
                     >
-                      <Text style={styles.step2InitialsText}>
+                      <Text style={[styles.step2InitialsText, styles.step2RegisteredInitialsText]}>
                         {getInitial(getStaffName(registeredBy))}
                       </Text>
                     </View>
@@ -1111,13 +1136,17 @@ export default function RegisterLostAndFoundModal({
               {pictures.length > 0 ? (
                 <View style={styles.step3PicturesContainer}>
                   {pictures.length === 1 ? (
-                    <View style={styles.step3PictureSingleContainer}>
+                    <TouchableOpacity
+                      style={styles.step3PictureSingleContainer}
+                      onPress={() => setCurrentStep(1)}
+                      activeOpacity={0.85}
+                    >
                       <Image
                         source={{ uri: pictures[0] }}
                         style={styles.step3PictureImage}
                         resizeMode="cover"
                       />
-                    </View>
+                    </TouchableOpacity>
                   ) : (
                     pictures.map((uri, index) => {
                       const row = Math.floor(index / 2);
@@ -1126,7 +1155,7 @@ export default function RegisterLostAndFoundModal({
                       const left = 27 * scaleX + col * (pictureWidth + 12 * scaleX);
                       const top = row * (REGISTER_FORM.pictures.image1.height * scaleX + 12 * scaleX);
                       return (
-                        <View
+                        <TouchableOpacity
                           key={index}
                           style={[
                             styles.step3PictureGridContainer,
@@ -1135,25 +1164,31 @@ export default function RegisterLostAndFoundModal({
                               top,
                             },
                           ]}
+                          onPress={() => setCurrentStep(1)}
+                          activeOpacity={0.85}
                         >
                           <Image
                             source={{ uri }}
                             style={styles.step3PictureImage}
                             resizeMode="cover"
                           />
-                        </View>
+                        </TouchableOpacity>
                       );
                     })
                   )}
                 </View>
               ) : (
-                <View style={styles.step3ItemImageContainer}>
+                <TouchableOpacity
+                  style={styles.step3ItemImageContainer}
+                  onPress={() => setCurrentStep(1)}
+                  activeOpacity={0.85}
+                >
                   <Image
                     source={require('../../../assets/images/wrist-watch.png')}
                     style={styles.step3ItemImage}
                     resizeMode="cover"
                   />
-                </View>
+                </TouchableOpacity>
               )}
 
               {/* Item Description */}
@@ -1383,10 +1418,11 @@ export default function RegisterLostAndFoundModal({
                     style={[
                       styles.step3Avatar,
                       styles.step3InitialsCircle,
+                      styles.step3RegisteredInitialsCircle,
                       { backgroundColor: getInitialColor(getStaffName(registeredBy)) },
                     ]}
                   >
-                    <Text style={styles.step3InitialsText}>
+                    <Text style={[styles.step3InitialsText, styles.step3RegisteredInitialsText]}>
                       {getInitial(getStaffName(registeredBy))}
                     </Text>
                   </View>
@@ -2327,11 +2363,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12 * scaleX,
   },
+  step2RegisteredInitialsCircle: {
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
   step2InitialsText: {
     fontSize: 16 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: 'bold' as any,
     color: '#ffffff',
+  },
+  step2RegisteredInitialsText: {
+    fontSize: 18 * scaleX,
+    fontWeight: '800' as any,
   },
   step2FieldText: {
     fontSize: REGISTER_FORM.step2.foundedBy.name.fontSize * scaleX,
@@ -2720,11 +2770,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  step3RegisteredInitialsCircle: {
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
   step3InitialsText: {
     fontSize: 16 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: 'bold' as any,
     color: '#ffffff',
+  },
+  step3RegisteredInitialsText: {
+    fontSize: 18 * scaleX,
+    fontWeight: '800' as any,
   },
   step3StaffDetails: {
     flex: 1,

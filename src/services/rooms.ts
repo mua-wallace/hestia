@@ -594,11 +594,15 @@ export interface AssignedStaffDetail {
 
 export interface LostAndFoundItemDetail {
   id: string;
+  tracking_number: string | null;
   item_name: string;
   description: string | null;
   status: string | null;
   found_at: string;
+  found_by_id: string;
+  registered_by_id: string | null;
   storage_location: string | null;
+  image_url: string | null;
 }
 
 export interface TicketDetail {
@@ -787,7 +791,7 @@ export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetai
       .in('room_id', roomIds),
     supabase
       .from('lost_and_found_items')
-      .select('id, room_id, item_name, description, status, found_at, storage_location')
+      .select('id, room_id, tracking_number, item_name, description, status, found_at, found_by_id, registered_by_id, storage_location, image_url')
       .in('room_id', roomIds)
       .order('found_at', { ascending: false }),
     supabase
@@ -878,18 +882,34 @@ export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetai
     assignmentsByRoom.set(rid, roomAssignments);
   }
 
-  const lfRows = (lfRes.data ?? []) as { id: string; room_id: string; item_name: string; description: string | null; status: string | null; found_at: string; storage_location: string | null }[];
+  const lfRows = (lfRes.data ?? []) as {
+    id: string;
+    room_id: string;
+    tracking_number: string | null;
+    item_name: string;
+    description: string | null;
+    status: string | null;
+    found_at: string;
+    found_by_id: string;
+    registered_by_id: string | null;
+    storage_location: string | null;
+    image_url: string | null;
+  }[];
   const lfByRoom = new Map<string, LostAndFoundItemDetail[]>();
   for (const rid of roomIds) {
     const items = lfRows
       .filter((i) => i.room_id === rid)
       .map((i) => ({
         id: i.id,
+        tracking_number: i.tracking_number,
         item_name: i.item_name,
         description: i.description,
         status: i.status,
         found_at: i.found_at,
+        found_by_id: i.found_by_id,
+        registered_by_id: i.registered_by_id,
         storage_location: i.storage_location,
+        image_url: i.image_url,
       }));
     lfByRoom.set(rid, items);
   }

@@ -35,6 +35,7 @@ import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
 import { getDefaultTaskText } from '../utils/defaultTasks';
 import { getRoomNotes, addRoomNote, getRoomDetailsById, fullRoomDetailsToRoomCardData, type FullRoomDetails } from '../services/rooms';
 import { fetchStaffFromSupabase } from '../services/staff';
+import { supabase } from '../lib/supabase';
 
 type RoomDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -53,6 +54,29 @@ function mapFrontOfficeToRoomType(frontOffice: string | null | undefined, reserv
     case 'No Task': return 'Stayover';
     default: return 'Stayover';
   }
+}
+
+function formatRegisteredTimestamp(iso?: string | null): string {
+  if (!iso) return '';
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) return '';
+  const hh = String(dt.getHours()).padStart(2, '0');
+  const mm = String(dt.getMinutes()).padStart(2, '0');
+  const monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  return `${hh}:${mm}, ${dt.getDate()} ${monthNames[dt.getMonth()]} ${dt.getFullYear()}`;
 }
 
 export default function RoomDetailScreen() {
@@ -96,7 +120,7 @@ export default function RoomDetailScreen() {
     let cancelled = false;
     setLoadingDetails(true);
     getRoomDetailsById(roomId)
-      .then((full: FullRoomDetails | null) => {
+      .then(async (full: FullRoomDetails | null) => {
         if (cancelled || !full) {
           setLoadingDetails(false);
           return;
@@ -128,17 +152,43 @@ export default function RoomDetailScreen() {
         } else {
           setFetchedAssignedStaff(undefined);
         }
+        const staffIds = Array.from(
+          new Set(
+            full.lostAndFoundItems
+              .map((item) => item.registered_by_id ?? item.found_by_id)
+              .filter((id): id is string => Boolean(id))
+          )
+        );
+        const userById = new Map<string, { full_name?: string | null; avatar_url?: string | null }>();
+        if (staffIds.length > 0) {
+          const { data: usersData } = await supabase
+            .from('users')
+            .select('id, full_name, avatar_url')
+            .in('id', staffIds);
+          (usersData ?? []).forEach((user: any) => {
+            userById.set(user.id, user);
+          });
+        }
+
         setFetchedLostAndFound(
-          full.lostAndFoundItems.map((item) => ({
-            id: item.id,
-            itemName: item.item_name,
-            itemId: item.id,
-            location: item.description ?? 'Room',
-            storedLocation: item.storage_location ?? '',
-            registeredBy: { name: 'Staff', timestamp: item.found_at },
-            status: (item.status as 'stored' | 'shipped' | 'returned' | 'discarded') ?? 'stored',
-            createdAt: item.found_at,
-          }))
+          full.lostAndFoundItems.map((item) => {
+            const user = userById.get(item.registered_by_id ?? item.found_by_id);
+            return {
+              id: item.id,
+              itemName: item.item_name,
+              itemId: item.tracking_number ?? item.id,
+              location: item.description ?? 'Room',
+              image: item.image_url ? { uri: item.image_url } : undefined,
+              storedLocation: item.storage_location ?? '',
+              registeredBy: {
+                name: user?.full_name ?? 'Staff',
+                avatar: user?.avatar_url ? { uri: user.avatar_url } : undefined,
+                timestamp: formatRegisteredTimestamp(item.found_at),
+              },
+              status: (item.status as 'stored' | 'shipped' | 'returned' | 'discarded') ?? 'stored',
+              createdAt: item.found_at,
+            };
+          })
         );
         setLoadingDetails(false);
       })
@@ -591,7 +641,7 @@ export default function RoomDetailScreen() {
   const handleAddPhotos = () => {
     navigation.navigate('Main' as any, {
       screen: 'LostAndFound',
-      params: { openRegisterModal: true },
+      params: { openRegisterModal: true, preselectedRoomId: room.id },
     } as any);
   };
 
@@ -752,7 +802,7 @@ export default function RoomDetailScreen() {
   // Lost & found: use fetched items when loaded by roomId, else mock when config says withItems
   const lostAndFoundItems =
     fetchedLostAndFound !== null
-      ? fetchedLostAndFound
+      ? fetchedLostAndFound.slice(0, 1)
       : config.lostAndFoundType === 'withItems'
         ? [
             {

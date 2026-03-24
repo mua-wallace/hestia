@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Animated } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useToast } from '../../contexts/ToastContext';
 import { typography } from '../../theme';
@@ -25,6 +25,8 @@ interface LostAndFoundItemCardProps {
 
 export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: LostAndFoundItemCardProps) {
   const toast = useToast();
+  const [isImageLoading, setIsImageLoading] = useState<boolean>(false);
+  const imagePulse = useRef(new Animated.Value(0.35)).current;
   const isPublicAreaItem =
     item.publicArea != null ||
     (typeof item.location === 'string' && !item.location.toLowerCase().startsWith('room'));
@@ -37,6 +39,31 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
 
   // Always show "Stored by" and the person who stored the item
   const registeredByLabel = 'Stored by';
+
+  useEffect(() => {
+    setIsImageLoading(false);
+    imagePulse.setValue(0.35);
+  }, [item.image, imagePulse]);
+
+  useEffect(() => {
+    if (!isImageLoading) return;
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(imagePulse, {
+          toValue: 0.8,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(imagePulse, {
+          toValue: 0.35,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [isImageLoading, imagePulse]);
 
   const handleCopyId = async () => {
     try {
@@ -142,11 +169,23 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
 
       {/* Item Image */}
       {item.image && (
-        <Image
-          source={item.image}
-          style={styles.itemImage}
-          resizeMode="cover"
-        />
+        <View style={styles.itemImageContainer}>
+          {isImageLoading && (
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.imageLoadingPlaceholder, { opacity: imagePulse }]}
+            />
+          )}
+          <Image
+            source={item.image}
+            style={[styles.itemImage, isImageLoading && styles.itemImageHidden]}
+            resizeMode="cover"
+            onLoadStart={() => setIsImageLoading(true)}
+            onLoad={() => setIsImageLoading(false)}
+            onLoadEnd={() => setIsImageLoading(false)}
+            onError={() => setIsImageLoading(false)}
+          />
+        </View>
       )}
 
       {/* Horizontal Divider */}
@@ -444,13 +483,27 @@ const styles = StyleSheet.create({
     color: LOST_AND_FOUND_TYPOGRAPHY.storedLocationName.color,
     maxWidth: 200 * scaleX,
   },
-  itemImage: {
+  itemImageContainer: {
     position: 'absolute',
     left: (LOST_AND_FOUND_IMAGE.left + 8) * scaleX,
     top: LOST_AND_FOUND_IMAGE.top * scaleX,
     width: (LOST_AND_FOUND_IMAGE.width - 8) * scaleX,
     height: LOST_AND_FOUND_IMAGE.height * scaleX,
     borderRadius: LOST_AND_FOUND_IMAGE.borderRadius * scaleX,
+    overflow: 'hidden',
+    backgroundColor: '#e5e7eb',
+  },
+  imageLoadingPlaceholder: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#cbd5e1',
+  },
+  itemImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: LOST_AND_FOUND_IMAGE.borderRadius * scaleX,
+  },
+  itemImageHidden: {
+    opacity: 0,
   },
   divider: {
     position: 'absolute',

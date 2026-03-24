@@ -40,12 +40,13 @@ export default function LostAndFoundScreen() {
   const navigation = useNavigation<LostAndFoundScreenNavigationProp>();
   const route = useRoute();
   const { open: openAIChatOverlay } = useAIChatOverlay();
-  const params = route.params as { openRegisterModal?: boolean } | undefined;
+  const params = route.params as { openRegisterModal?: boolean; preselectedRoomId?: string } | undefined;
   const [activeTab, setActiveTab] = useState('LostAndFound');
   const [selectedTab, setSelectedTab] = useState<LostAndFoundTab>('created');
   const [items, setItems] = useState<LostAndFoundItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [preselectedRoomIdForRegister, setPreselectedRoomIdForRegister] = useState<string | undefined>(undefined);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successData, setSuccessData] = useState<{
     trackingNumber: string;
@@ -105,12 +106,10 @@ export default function LostAndFoundScreen() {
           room_id,
           found_location,
           created_at,
+          found_by_id,
+          registered_by_id,
           tracking_number,
           image_url,
-          registered_by:users!lost_and_found_items_registered_by_id_fkey (
-            full_name,
-            avatar_url
-          ),
           rooms (
             room_number,
             reservations (
@@ -132,11 +131,36 @@ export default function LostAndFoundScreen() {
         setItems([]);
         return;
       }
-      const mapped: LostAndFoundItem[] = (data as any[]).map((row) => {
+      const rows = data as any[];
+
+      const staffIds = Array.from(
+        new Set(
+          rows
+            .map((row) => row.registered_by_id ?? row.found_by_id)
+            .filter((id): id is string => Boolean(id))
+        )
+      );
+
+      const userById = new Map<string, { full_name?: string | null; avatar_url?: string | null }>();
+      if (staffIds.length > 0) {
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('id, full_name, avatar_url')
+          .in('id', staffIds);
+        if (usersError) {
+          console.warn('[LostAndFoundScreen] Failed to load registered-by users', usersError);
+        } else if (usersData) {
+          (usersData as any[]).forEach((user) => {
+            userById.set(user.id, user);
+          });
+        }
+      }
+      const mapped: LostAndFoundItem[] = rows.map((row) => {
         const room = (row as any).rooms;
         const reservation = room?.reservations?.[0];
         const guest = reservation?.guests?.[0];
         const guestCount = (reservation?.adults || 0) + (reservation?.kids || 0);
+        const registeredByUser = userById.get(row.registered_by_id ?? row.found_by_id);
 
         // Normalize image URL: legacy rows may store only the storage path.
         let imageUri: string | undefined;
@@ -174,9 +198,9 @@ export default function LostAndFoundScreen() {
           guestImage: guest?.image_url ? { uri: guest.image_url } : undefined,
           storedLocation: row.storage_location ?? '',
           registeredBy: {
-            name: (row as any).registered_by?.full_name ?? 'Staff',
-            avatar: (row as any).registered_by?.avatar_url
-              ? { uri: (row as any).registered_by.avatar_url }
+            name: registeredByUser?.full_name ?? 'Staff',
+            avatar: registeredByUser?.avatar_url
+              ? { uri: registeredByUser.avatar_url }
               : undefined,
             timestamp: formatRegisteredTimestamp((row as any).created_at),
           },
@@ -200,9 +224,10 @@ export default function LostAndFoundScreen() {
   // Open register modal if param is set
   useEffect(() => {
     if (params?.openRegisterModal) {
+      setPreselectedRoomIdForRegister(params?.preselectedRoomId);
       setShowRegisterModal(true);
       // Clear the param to prevent reopening on subsequent renders
-      navigation.setParams({ openRegisterModal: false } as any);
+      navigation.setParams({ openRegisterModal: false, preselectedRoomId: undefined } as any);
     }
   }, [params?.openRegisterModal, navigation]);
 
@@ -264,6 +289,7 @@ export default function LostAndFoundScreen() {
 
   const handleCloseRegisterModal = () => {
     setShowRegisterModal(false);
+    setPreselectedRoomIdForRegister(undefined);
   };
 
   const handleRegisterNext = async (data: {
@@ -611,6 +637,7 @@ export default function LostAndFoundScreen() {
         visible={showRegisterModal}
         onClose={handleCloseRegisterModal}
         onNext={handleRegisterNext}
+        preselectedRoomId={preselectedRoomIdForRegister}
       />
 
       {/* Success Modal */}

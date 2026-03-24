@@ -165,6 +165,7 @@ export default function RoomDetailContent({
     : arrivalGuest; // Default to Arrival
   
   const secondGuest = roomType === 'ArrivalDeparture' ? departureGuest : undefined;
+  const hasLostAndFoundItems = (lostAndFoundItems?.length ?? 0) > 0;
 
   // Calculate dynamic styles based on positions
   const dynamicStyles = {
@@ -362,7 +363,7 @@ export default function RoomDetailContent({
 
             {/* Lost and Found Section */}
             <LostAndFoundSection 
-              displayType={config.lostAndFoundType}
+              displayType={hasLostAndFoundItems ? 'withItems' : 'empty'}
               items={lostAndFoundItems}
               onAddPhotosPress={onAddLostAndFoundItem}
               onTitlePress={() => {

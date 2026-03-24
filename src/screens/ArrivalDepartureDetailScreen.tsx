@@ -403,7 +403,7 @@ export default function ArrivalDepartureDetailScreen() {
     // Navigate to Lost and Found screen and open the register modal
     navigation.navigate('Main' as any, {
       screen: 'LostAndFound',
-      params: { openRegisterModal: true },
+      params: { openRegisterModal: true, preselectedRoomId: localRoom?.id },
     } as any);
   };
 
