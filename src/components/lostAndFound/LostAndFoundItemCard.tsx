@@ -25,6 +25,9 @@ interface LostAndFoundItemCardProps {
 
 export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: LostAndFoundItemCardProps) {
   const toast = useToast();
+  const isPublicAreaItem =
+    item.publicArea != null ||
+    (typeof item.location === 'string' && !item.location.toLowerCase().startsWith('room'));
   const statusConfig =
     item.status === 'shipped' || item.status === 'returned'
       ? LOST_AND_FOUND_STATUS.shipped
@@ -32,8 +35,8 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
         ? LOST_AND_FOUND_STATUS.discarded
         : LOST_AND_FOUND_STATUS.stored;
 
-  // Always show "Registered by" and the person who registered the item
-  const registeredByLabel = 'Registered by';
+  // Always show "Stored by" and the person who stored the item
+  const registeredByLabel = 'Stored by';
 
   const handleCopyId = async () => {
     try {
@@ -78,19 +81,18 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
       <Text style={styles.foundInLabel}>Found in</Text>
       <View style={styles.foundInCard}>
         <View style={styles.foundInCardContent}>
-          {/* Left: primary location text (Room / Public Area) */}
+          {/* Left: primary location text (Room / Public Area location name) */}
           <View style={styles.foundInLocationSection}>
             <Text style={styles.foundInLocationText} numberOfLines={1}>
               {item.location}
             </Text>
           </View>
 
-          {/* Right: guest info / room badge (for room-based items) */}
-          {item.guestName || item.roomNumber || item.guestImage ? (
+          {/* Right: room guest details (room items) or public-area chip */}
+          {!isPublicAreaItem && (item.guestName || item.guestDates || item.guestImage) ? (
             <>
-              <View style={styles.foundInDivider} />
               <View style={styles.foundInGuestSection}>
-                {/* Small guest image thumbnail on the right, as in Figma */}
+                {/* Guest thumbnail */}
                 {item.guestImage && (
                   <View style={styles.foundInImageThumbContainer}>
                     <Image source={item.guestImage} style={styles.foundInImageThumb} resizeMode="cover" />
@@ -103,36 +105,40 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
                       {item.guestName}
                     </Text>
                   )}
-                  {item.roomNumber != null && (
-                    <View style={styles.roomBadge}>
-                      <Text style={styles.roomBadgeText}>{item.roomNumber}</Text>
-                    </View>
-                  )}
                   {!!item.guestDates && (
                     <Text style={styles.foundInGuestDates} numberOfLines={1} ellipsizeMode="tail">
                       {item.guestDates}
-                      {typeof item.guestCount === 'number' ? `  ${item.guestCount}/2` : ''}
                     </Text>
                   )}
                 </View>
               </View>
             </>
+          ) : isPublicAreaItem ? (
+            <View style={styles.publicAreaTag}>
+              <Text style={styles.publicAreaTagText}>
+                {item.publicArea ?? 'Public Area'}
+              </Text>
+            </View>
           ) : null}
         </View>
       </View>
 
       {/* Stored Location Section */}
-      <View style={styles.storedLocationIconContainer}>
-        <Image
-          source={require('../../../assets/icons/location-pin-icon.png')}
-          style={styles.locationPinIcon}
-          resizeMode="contain"
-        />
+      <View style={styles.storedLocationContainer}>
+        <View style={styles.storedLocationIconContainer}>
+          <Image
+            source={require('../../../assets/icons/location-pin-icon.png')}
+            style={styles.locationPinIcon}
+            resizeMode="contain"
+          />
+        </View>
+        <View style={styles.storedLocationTextContainer}>
+          <Text style={styles.storedLocationLabel}>Stored Location</Text>
+          <Text style={styles.storedLocationName} numberOfLines={1}>
+            {item.storedLocation}
+          </Text>
+        </View>
       </View>
-      <Text style={styles.storedLocationLabel}>Stored Location</Text>
-      <Text style={styles.storedLocationName} numberOfLines={1}>
-        {item.storedLocation}
-      </Text>
 
       {/* Item Image */}
       {item.image && (
@@ -255,6 +261,7 @@ const styles = StyleSheet.create({
     marginHorizontal: LOST_AND_FOUND_CARD.marginHorizontal * scaleX,
     marginBottom: LOST_AND_FOUND_CARD.marginBottom * scaleX,
     position: 'relative',
+    overflow: 'hidden',
   },
   itemName: {
     position: 'absolute',
@@ -309,8 +316,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: LOST_AND_FOUND_CONTENT.guestName.left * scaleX,
     top: LOST_AND_FOUND_CONTENT.guestName.top * scaleX,
-    maxWidth: (LOST_AND_FOUND_IMAGE.left - LOST_AND_FOUND_CONTENT.guestName.left - 4) * scaleX,
-    maxHeight: (LOST_AND_FOUND_STORED_LOCATION.icon.top - LOST_AND_FOUND_CONTENT.guestName.top - 2) * scaleX,
+    width: (LOST_AND_FOUND_IMAGE.left - LOST_AND_FOUND_CONTENT.guestName.left - 10) * scaleX,
     borderRadius: 6 * scaleX,
     backgroundColor: 'rgba(100,131,176,0.07)',
     paddingHorizontal: 12 * scaleX,
@@ -320,9 +326,11 @@ const styles = StyleSheet.create({
   foundInCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 42 * scaleX,
   },
   foundInLocationSection: {
-    minWidth: 90 * scaleX,
+    minWidth: 82 * scaleX,
+    maxWidth: 96 * scaleX,
   },
   foundInLocationText: {
     fontSize: 14 * scaleX,
@@ -330,24 +338,23 @@ const styles = StyleSheet.create({
     fontWeight: '300' as any,
     color: LOST_AND_FOUND_COLORS.tabActive,
   },
-  foundInDivider: {
-    width: 1,
-    height: 36 * scaleX,
-    backgroundColor: '#e5e7eb',
-    marginHorizontal: 12 * scaleX,
-  },
   foundInGuestSection: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     minWidth: 0,
+    paddingRight: 0,
+    minHeight: 30 * scaleX,
+    marginLeft: 8 * scaleX,
   },
   foundInImageThumbContainer: {
-    width: 34 * scaleX,
-    height: 34 * scaleX,
-    borderRadius: 5 * scaleX,
+    width: 30 * scaleX,
+    height: 30 * scaleX,
+    borderRadius: 4 * scaleX,
     overflow: 'hidden',
-    marginRight: 10 * scaleX,
+    marginRight: 6 * scaleX,
+    backgroundColor: '#e5e7eb',
   },
   foundInImageThumb: {
     width: '100%',
@@ -358,43 +365,55 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'flex-start',
     minWidth: 0,
+    justifyContent: 'center',
+    paddingLeft: 0,
   },
   foundInGuestName: {
-    fontSize: LOST_AND_FOUND_CONTENT.guestName.fontSize * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    color: '#000000',
+    marginRight: 4 * scaleX,
+    marginBottom: 1 * scaleX,
+    flexShrink: 1,
+    minWidth: 0,
+    width: 90 * scaleX,
+    lineHeight: 14 * scaleX,
+    includeFontPadding: false,
+  },
+  foundInGuestDates: {
+    fontSize: 11 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: LOST_AND_FOUND_CONTENT.guestName.fontWeight as any,
-    color: LOST_AND_FOUND_CONTENT.guestName.color,
-    marginRight: 6 * scaleX,
-    marginBottom: 0,
+    fontWeight: '300' as any,
+    color: '#000000',
     flexShrink: 1,
     minWidth: 0,
   },
-  foundInGuestDates: {
+  publicAreaTag: {
+    marginLeft: 12 * scaleX,
+    backgroundColor: 'rgba(59,193,246,0.25)',
+    borderRadius: 7 * scaleX,
+    paddingHorizontal: 12 * scaleX,
+    paddingVertical: 8 * scaleX,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  publicAreaTagText: {
     fontSize: 12 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '300' as any,
-    color: LOST_AND_FOUND_CONTENT.guestName.color,
-    flexShrink: 1,
-    minWidth: 0,
+    color: '#000000',
   },
-  roomBadge: {
-    width: LOST_AND_FOUND_CONTENT.roomBadge.width * scaleX,
-    height: LOST_AND_FOUND_CONTENT.roomBadge.height * scaleX,
-    borderRadius: LOST_AND_FOUND_CONTENT.roomBadge.borderRadius * scaleX,
-    backgroundColor: LOST_AND_FOUND_CONTENT.roomBadge.backgroundColor,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  roomBadgeText: {
-    fontSize: LOST_AND_FOUND_CONTENT.roomBadgeText.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: LOST_AND_FOUND_CONTENT.roomBadgeText.fontWeight as any,
-    color: LOST_AND_FOUND_CONTENT.roomBadgeText.color,
-  },
-  storedLocationIconContainer: {
+  storedLocationContainer: {
     position: 'absolute',
     left: LOST_AND_FOUND_STORED_LOCATION.icon.left * scaleX,
-    top: LOST_AND_FOUND_STORED_LOCATION.icon.top * scaleX,
+    // Keep a safe lane below "Found in" content to prevent overlap.
+    top: (LOST_AND_FOUND_STORED_LOCATION.icon.top + 19) * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: 240 * scaleX,
+  },
+  storedLocationIconContainer: {
     width: LOST_AND_FOUND_STORED_LOCATION.icon.size * scaleX,
     height: LOST_AND_FOUND_STORED_LOCATION.icon.size * scaleX,
     borderRadius: (LOST_AND_FOUND_STORED_LOCATION.icon.size / 2) * scaleX,
@@ -407,24 +426,23 @@ const styles = StyleSheet.create({
     height: LOST_AND_FOUND_STORED_LOCATION.pinIcon.height * scaleX,
     tintColor: '#ffffff',
   },
+  storedLocationTextContainer: {
+    marginLeft: 8 * scaleX,
+    flex: 1,
+    minWidth: 0,
+  },
   storedLocationLabel: {
-    position: 'absolute',
-    left: LOST_AND_FOUND_STORED_LOCATION.label.left * scaleX,
-    top: LOST_AND_FOUND_STORED_LOCATION.label.top * scaleX,
     fontSize: LOST_AND_FOUND_TYPOGRAPHY.storedLocationLabel.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '300' as any,
     color: LOST_AND_FOUND_TYPOGRAPHY.storedLocationLabel.color,
   },
   storedLocationName: {
-    position: 'absolute',
-    left: LOST_AND_FOUND_STORED_LOCATION.name.left * scaleX,
-    top: LOST_AND_FOUND_STORED_LOCATION.name.top * scaleX,
     fontSize: LOST_AND_FOUND_TYPOGRAPHY.storedLocationName.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: LOST_AND_FOUND_TYPOGRAPHY.storedLocationName.fontWeight as any,
     color: LOST_AND_FOUND_TYPOGRAPHY.storedLocationName.color,
-    maxWidth: 220 * scaleX,
+    maxWidth: 200 * scaleX,
   },
   itemImage: {
     position: 'absolute',

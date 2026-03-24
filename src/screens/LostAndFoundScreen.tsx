@@ -64,6 +64,29 @@ export default function LostAndFoundScreen() {
     return `${fmt(a)}-${fmt(d)}`;
   };
 
+  const formatRegisteredTimestamp = (iso?: string | null): string => {
+    if (!iso) return '';
+    const dt = new Date(iso);
+    if (Number.isNaN(dt.getTime())) return '';
+    const hh = String(dt.getHours()).padStart(2, '0');
+    const mm = String(dt.getMinutes()).padStart(2, '0');
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return `${hh}:${mm}, ${dt.getDate()} ${monthNames[dt.getMonth()]} ${dt.getFullYear()}`;
+  };
+
   // Load items from Supabase lost_and_found_items table (with room + guest info)
   const loadItems = React.useCallback(async () => {
     if (!isSupabaseConfigured) {
@@ -81,8 +104,13 @@ export default function LostAndFoundScreen() {
           storage_location,
           room_id,
           found_location,
+          created_at,
           tracking_number,
           image_url,
+          registered_by:users!lost_and_found_items_registered_by_id_fkey (
+            full_name,
+            avatar_url
+          ),
           rooms (
             room_number,
             reservations (
@@ -146,9 +174,11 @@ export default function LostAndFoundScreen() {
           guestImage: guest?.image_url ? { uri: guest.image_url } : undefined,
           storedLocation: row.storage_location ?? '',
           registeredBy: {
-            name: 'Staff',
-            avatar: undefined,
-            timestamp: '',
+            name: (row as any).registered_by?.full_name ?? 'Staff',
+            avatar: (row as any).registered_by?.avatar_url
+              ? { uri: (row as any).registered_by.avatar_url }
+              : undefined,
+            timestamp: formatRegisteredTimestamp((row as any).created_at),
           },
           // Prefer normalized public URL for the item image
           image: imageUri ? { uri: imageUri } : undefined,
@@ -267,6 +297,7 @@ export default function LostAndFoundScreen() {
         const selectedDate: Date = itemData.selectedDate ?? new Date();
         const selectedHour: number = itemData.selectedHour ?? selectedDate.getHours();
         const selectedMinute: number = itemData.selectedMinute ?? selectedDate.getMinutes();
+        const registeredByIdFromForm: string | null = itemData.registeredBy ?? null;
 
         const { data: sessionData } = await supabase.auth.getSession();
         const userId = sessionData?.session?.user?.id ?? null;
@@ -339,21 +370,6 @@ export default function LostAndFoundScreen() {
               .toString(36)
               .slice(2)}.${normalizedExt}`;
 
-            const bodyByteLength =
-              body && typeof (body as any).byteLength === 'number'
-                ? (body as any).byteLength
-                : body && typeof (body as any).size === 'number'
-                  ? (body as any).size
-                  : undefined;
-
-            console.log('[LostAndFoundScreen] Uploading lost-and-found image', {
-              firstImageUri,
-              normalizedExt,
-              contentType,
-              fileName,
-              bodyByteLength,
-            });
-
             let uploadData: any = null;
             let uploadError: any = null;
 
@@ -364,13 +380,6 @@ export default function LostAndFoundScreen() {
                 .createSignedUploadUrl(fileName, { upsert: false });
 
               if (!signedUrlError && signedUpload?.token) {
-                console.log('[LostAndFoundScreen] Using signed upload', {
-                  fileName,
-                  tokenLength: String(signedUpload.token).length,
-                    signedUrl: signedUpload.signedUrl,
-                    bodyType: typeof body,
-                });
-
                 const { data: signedUploadData, error: signedUploadError } = await supabase.storage
                   .from('lost-and-found')
                   .uploadToSignedUrl(fileName, signedUpload.token, body, {
@@ -446,6 +455,7 @@ export default function LostAndFoundScreen() {
               storage_location: storedLocation,
               found_at: foundAt,
               found_by_id: userId,
+              registered_by_id: registeredByIdFromForm ?? userId,
               found_location: foundLocation,
               room_id:
                 selectedLocation === 'room' && selectedRoom

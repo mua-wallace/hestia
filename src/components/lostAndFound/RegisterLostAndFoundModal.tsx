@@ -211,15 +211,25 @@ export default function RegisterLostAndFoundModal({
   // Load staff from Supabase when available (used for Founded by / Registered by)
   useEffect(() => {
     let cancelled = false;
-    fetchStaffFromSupabase()
-      .then((rows) => {
+    const loadStaffWithCurrentUserDefault = async () => {
+      const rows = await fetchStaffFromSupabase();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const currentUserId = sessionData?.session?.user?.id ?? null;
+
+      if (cancelled) return;
+      setStaff(rows);
+      if (rows.length > 0) {
+        const defaultStaffId = rows.some((s) => s.id === currentUserId)
+          ? currentUserId
+          : rows[0].id;
+        setFoundedBy((prev) => prev || defaultStaffId || '');
+        setRegisteredBy((prev) => prev || defaultStaffId || '');
+      }
+    };
+
+    loadStaffWithCurrentUserDefault()
+      .then(() => {
         if (cancelled) return;
-        setStaff(rows);
-        if (rows.length > 0) {
-          // Default to current user if known; otherwise first staff
-          setFoundedBy((prev) => prev || rows[0].id);
-          setRegisteredBy((prev) => prev || rows[0].id);
-        }
       })
       .catch(() => {});
     return () => {
@@ -1176,7 +1186,7 @@ export default function RegisterLostAndFoundModal({
               </View>
 
               {/* Found In Section */}
-              <Text style={styles.step3FoundInLabel}>Found in</Text>
+              <Text style={styles.step3FoundInLabel}>Found In</Text>
               <View style={styles.step3FoundInContent}>
                 <View style={styles.step3FoundInOptionsRow}>
                   <View style={styles.step3CheckboxContainer}>
@@ -2428,9 +2438,9 @@ const styles = StyleSheet.create({
   },
   step3FoundInContent: {
     marginTop: (REGISTER_FORM.step3.foundIn.checkbox.top - REGISTER_FORM.step3.foundIn.label.top) * scaleX * 0.5,
-    marginLeft: REGISTER_FORM.step3.foundIn.checkbox.left * scaleX,
+    marginLeft: 0,
     width: '100%',
-    paddingRight: 20 * scaleX,
+    paddingRight: 0,
     marginBottom: 0,
   },
   step3FoundInOptionsRow: {
@@ -2445,6 +2455,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12 * scaleX,
     paddingVertical: 12 * scaleX,
     width: '100%',
+    alignSelf: 'stretch',
   },
   step3FoundInCardContent: {
     flexDirection: 'row',
@@ -2467,6 +2478,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    minWidth: 0,
   },
   step3FoundInGuestImageContainer: {
     position: 'relative',

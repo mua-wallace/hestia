@@ -265,6 +265,7 @@ export type Database = {
           item_name: string
           image_url: string | null
           notes: string | null
+          registered_by_id: string
           reservation_id: string | null
           return_info: string | null
           room_id: string | null
@@ -284,6 +285,7 @@ export type Database = {
           item_name: string
           image_url?: string | null
           notes?: string | null
+          registered_by_id?: string
           reservation_id?: string | null
           return_info?: string | null
           room_id?: string | null
@@ -303,6 +305,7 @@ export type Database = {
           item_name?: string
           image_url?: string | null
           notes?: string | null
+          registered_by_id?: string
           reservation_id?: string | null
           return_info?: string | null
           room_id?: string | null
@@ -316,6 +319,13 @@ export type Database = {
           {
             foreignKeyName: "lost_and_found_items_found_by_id_fkey"
             columns: ["found_by_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lost_and_found_items_registered_by_id_fkey"
+            columns: ["registered_by_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
