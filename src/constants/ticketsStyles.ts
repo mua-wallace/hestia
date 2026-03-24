@@ -121,7 +121,7 @@ export const TICKET_CONTENT = {
     maxWidth: 190, // From Figma: description width
   },
   dueDateBadge: {
-    backgroundColor: '#ffebeb', // Light pink/red
+    backgroundColor: '#FFEBEB', // Light pink/red
     borderRadius: 44,
     paddingHorizontal: 7,
     paddingVertical: 4,
@@ -291,7 +291,7 @@ export const TICKETS_COLORS = {
   textTertiary: '#a0a0a0',
   tabActive: '#5a759d',
   tabInactive: '#5a759d', // Same color but different weight
-  dueDateBadge: '#ffebeb',
+  dueDateBadge: '#FFEBEB',
   statusDone: '#41d541',
   statusUnsolved: '#f92424',
   statusUnsolvedBg: 'rgba(249, 36, 36, 0.06)',

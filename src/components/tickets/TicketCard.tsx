@@ -56,35 +56,12 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
     return undefined;
   }, [ticket.status, ticket.createdAt, nowMs]);
 
-  // Figma order request: Department above, Due below.
-  // When both are present, move due badge down to avoid overlap.
-  const dueBadgeTop = (() => {
-    const baseTop = TICKET_CONTENT.dueDateBadgeTopLeft.top;
-    if (dueTimeText && ticket.category && ticket.categoryIcon) {
-      return baseTop + 24;
-    }
-    return baseTop;
-  })();
-
   return (
     <TouchableOpacity
       style={styles.card}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      {/* Due Date Badge */}
-      {dueTimeText && (
-        <View style={[
-          styles.dueDateBadge,
-          styles.dueDateBadgeTopLeft,
-          { top: dueBadgeTop * scaleX },
-        ]}>
-          <Text style={styles.dueDateText} numberOfLines={1}>
-            Due in: {dueTimeText}
-          </Text>
-        </View>
-      )}
-
       {/* Title */}
       <Text style={styles.title} numberOfLines={1}>
         {ticket.title}
@@ -94,23 +71,6 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
       <Text style={styles.description} numberOfLines={2}>
         {ticket.description}
       </Text>
-
-      {/* Category */}
-      {ticket.category && ticket.categoryIcon && (
-        <>
-          <Image
-            source={ticket.categoryIcon}
-            style={[
-              styles.categoryIcon,
-              { tintColor: '#f92424' },
-            ]}
-            resizeMode="contain"
-          />
-          <Text style={styles.categoryText}>
-            {ticket.category}
-          </Text>
-        </>
-      )}
 
       {/* Location Icon */}
       <View style={styles.locationIconContainer}>
@@ -128,6 +88,35 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
       <Text style={styles.locationRoom} numberOfLines={1} ellipsizeMode="tail">
         {ticket.locationText ?? `Room ${ticket.roomNumber}`}
       </Text>
+
+      {/* Due + Department row (same row, centered vertically) */}
+      {(dueTimeText || (ticket.category && ticket.categoryIcon)) && (
+        <View style={styles.locationMetaRow}>
+          <View style={styles.metaLeft}>
+            {dueTimeText && (
+              <View style={[styles.dueDateBadge, styles.dueDateBadgeInline]}>
+                <Text style={styles.dueDateText} numberOfLines={1}>
+                  Due in: {dueTimeText}
+                </Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.metaRight}>
+            {ticket.category && ticket.categoryIcon && (
+              <View style={styles.departmentInline}>
+                <Image
+                  source={ticket.categoryIcon}
+                  style={[styles.departmentInlineIcon, { tintColor: '#f92424' }]}
+                  resizeMode="contain"
+                />
+                <Text style={styles.departmentInlineText}>
+                  {ticket.category}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* Creator Avatar */}
       {ticket.createdBy.avatar ? (
@@ -240,16 +229,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     alignSelf: 'flex-start',
   },
-  dueDateBadgeCentered: {
-    // First card: centered position from constants
-    left: TICKET_CONTENT.dueDateBadgeCentered.left * scaleX,
-    top: TICKET_CONTENT.dueDateBadgeCentered.top * scaleX,
-  },
-  dueDateBadgeTopLeft: {
-    // Second card: top-left position from constants
-    left: TICKET_CONTENT.dueDateBadgeTopLeft.left * scaleX,
-    top: TICKET_CONTENT.dueDateBadgeTopLeft.top * scaleX,
-  },
   dueDateText: {
     fontSize: TICKETS_TYPOGRAPHY.dueDate.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
@@ -281,22 +260,57 @@ const styles = StyleSheet.create({
     lineHeight: TICKETS_TYPOGRAPHY.ticketDescription.lineHeight * scaleX,
     maxWidth: TICKET_CONTENT.description.maxWidth * scaleX,
   },
-  categoryIcon: {
+  locationMetaRow: {
     position: 'absolute',
-    left: TICKET_CONTENT.category.iconLeft * scaleX,
-    top: TICKET_CONTENT.category.iconTop * scaleX,
-    width: TICKET_CONTENT.category.iconWidth * scaleX,
-    height: TICKET_CONTENT.category.iconHeight * scaleX,
-    tintColor: TICKETS_COLORS.textTertiary,
+    left: 18 * scaleX,
+    top: 84 * scaleX,
+    width: 373 * scaleX,
+    minHeight: 22 * scaleX,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
   },
-  categoryText: {
+  metaLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  metaRight: {
     position: 'absolute',
-    left: TICKET_CONTENT.category.textLeft * scaleX,
-    top: TICKET_CONTENT.category.textTop * scaleX,
-    fontSize: TICKETS_TYPOGRAPHY.category.fontSize * scaleX,
+    // Align department icon column with location icon column above.
+    left: (TICKET_LOCATION.icon.left + (TICKET_LOCATION.icon.size - 16) / 2 - 18) * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 0,
+    maxWidth: (391 - (TICKET_LOCATION.icon.left + (TICKET_LOCATION.icon.size - 16) / 2)) * scaleX,
+  },
+  departmentInline: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  departmentInlineIcon: {
+    width: 16 * scaleX,
+    height: 16 * scaleX,
+    marginRight: 6 * scaleX,
+  },
+  departmentInlineText: {
+    fontSize: 13 * scaleX,
+    lineHeight: 15 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: TICKETS_TYPOGRAPHY.category.fontWeight as any,
-    color: TICKETS_TYPOGRAPHY.category.color,
+    fontWeight: '400',
+    color: '#a0a0a0',
+    flexShrink: 1,
+    flexWrap: 'wrap',
+    maxWidth: 120 * scaleX,
+  },
+  dueDateBadgeInline: {
+    position: 'relative',
+    left: 0,
+    top: 0,
+    alignSelf: 'center',
   },
   locationIconContainer: {
     position: 'absolute',
