@@ -114,6 +114,7 @@ function mapUserRowToUser(row: UserRow, email = ''): User {
     name: row.full_name ?? 'User',
     email,
     role: row.roles?.name ?? row.departments?.name ?? 'Staff',
+    department: row.departments?.name ?? undefined,
     avatar: row.avatar_url ?? undefined,
   };
 }
