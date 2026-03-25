@@ -10,6 +10,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 export const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
+/** Same Figma asset as Tickets header (667:3068) / create-flow pill (1085:2628). ¾ design size = 114×55.5. */
+export const CREATE_TICKET_AI_IMAGE = {
+  source: require('../../assets/icons/CreateTicketAI.png') as number,
+  width: 114,
+  height: 55.5,
+} as const;
+
 // Header Styles
 export const CREATE_TICKET_HEADER = {
   height: 133,

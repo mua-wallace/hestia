@@ -19,6 +19,7 @@ import {
   DEPARTMENT_GRID_LAYOUT,
   DEPARTMENT_NAME_TO_ICON,
   CREATE_TICKET_AI_BUTTON,
+  CREATE_TICKET_AI_IMAGE,
   CREATE_TICKET_COLORS,
   CREATE_TICKET_TYPOGRAPHY,
   scaleX,
@@ -207,22 +208,11 @@ export default function CreateTicketScreen() {
               onPress={handleAICreatePress}
               activeOpacity={0.7}
             >
-              {/* Button */}
-              <View style={styles.aiButton}>
-                {/* Button Text */}
-                <Text style={styles.aiButtonText}>
-                  {CREATE_TICKET_AI_BUTTON.text.text}
-                </Text>
-
-                {/* AI Badge */}
-                <View style={styles.aiBadge}>
-                  {/* Note: For true gradient text, would need react-native-svg or mask approach */}
-                  {/* Using gradient start color as fallback for now */}
-                  <Text style={styles.aiBadgeText}>
-                    {CREATE_TICKET_AI_BUTTON.aiText.text}
-                  </Text>
-                </View>
-              </View>
+              <Image
+                source={CREATE_TICKET_AI_IMAGE.source}
+                style={styles.aiButtonImage}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
           </View>
 
@@ -358,50 +348,12 @@ const styles = StyleSheet.create({
     marginBottom: 8 * scaleX,
   },
   aiButtonContainer: {
-    width: CREATE_TICKET_AI_BUTTON.button.width * scaleX,
-    height: CREATE_TICKET_AI_BUTTON.button.height * scaleX,
-    position: 'relative',
+    width: CREATE_TICKET_AI_IMAGE.width * scaleX,
+    height: CREATE_TICKET_AI_IMAGE.height * scaleX,
   },
-  aiButton: {
-    width: CREATE_TICKET_AI_BUTTON.button.width * scaleX,
-    height: CREATE_TICKET_AI_BUTTON.button.height * scaleX,
-    borderRadius: CREATE_TICKET_AI_BUTTON.button.borderRadius * scaleX,
-    borderWidth: CREATE_TICKET_AI_BUTTON.button.borderWidth,
-    borderColor: CREATE_TICKET_AI_BUTTON.button.borderColor,
-    backgroundColor: CREATE_TICKET_AI_BUTTON.button.backgroundColor,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    position: 'relative',
-  },
-  aiButtonText: {
-    position: 'absolute',
-    left: CREATE_TICKET_AI_BUTTON.text.left * scaleX,
-    top: CREATE_TICKET_AI_BUTTON.text.top * scaleX,
-    fontSize: CREATE_TICKET_TYPOGRAPHY.aiButtonText.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary, // Helvetica
-    fontWeight: '700', // Helvetica Bold
-    color: CREATE_TICKET_TYPOGRAPHY.aiButtonText.color,
-    width: CREATE_TICKET_AI_BUTTON.text.width * scaleX,
-  },
-  aiBadge: {
-    position: 'absolute',
-    left: CREATE_TICKET_AI_BUTTON.aiBadge.left * scaleX,
-    top: CREATE_TICKET_AI_BUTTON.aiBadge.top * scaleX,
-    width: CREATE_TICKET_AI_BUTTON.aiBadge.width * scaleX,
-    height: CREATE_TICKET_AI_BUTTON.aiBadge.height * scaleX,
-    borderRadius: CREATE_TICKET_AI_BUTTON.aiBadge.borderRadius * scaleX,
-    backgroundColor: CREATE_TICKET_AI_BUTTON.aiBadge.backgroundColor,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  aiBadgeText: {
-    fontSize: CREATE_TICKET_AI_BUTTON.aiText.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary, // Helvetica
-    fontWeight: '700', // Helvetica Bold
-    color: CREATE_TICKET_AI_BUTTON.aiText.gradientStart, // Using gradient start color (full gradient requires react-native-svg)
-    textAlign: 'center',
-    width: CREATE_TICKET_AI_BUTTON.aiText.width * scaleX,
+  aiButtonImage: {
+    width: CREATE_TICKET_AI_IMAGE.width * scaleX,
+    height: CREATE_TICKET_AI_IMAGE.height * scaleX,
   },
   betaLabel: {
     fontSize: CREATE_TICKET_TYPOGRAPHY.betaLabel.fontSize * scaleX,

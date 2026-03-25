@@ -7,7 +7,6 @@ import {
   Image,
   StyleSheet,
   ScrollView,
-  Dimensions,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -17,10 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { typography } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+import { CREATE_TICKET_AI_IMAGE, scaleX } from '../constants/createTicketStyles';
 
 type SelectTicketLocationScreenRouteProp = RouteProp<RootStackParamList, 'SelectTicketLocation'>;
 type SelectTicketLocationScreenNavigationProp = NativeStackNavigationProp<
@@ -158,6 +154,11 @@ export default function SelectTicketLocationScreen() {
     return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
   };
 
+  const handleAICreatePress = () => {
+    // TODO: Implement AI ticket creation
+    console.log('AI Create Ticket pressed');
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -184,11 +185,16 @@ export default function SelectTicketLocationScreen() {
         >
           {/* AI Create Ticket Button */}
           <View style={styles.aiButtonSection}>
-            <TouchableOpacity style={styles.aiButton} activeOpacity={0.7}>
-              <Text style={styles.aiButtonText}>Create Ticket</Text>
-              <View style={styles.aiBadge}>
-                <Text style={styles.aiBadgeText}>AI</Text>
-              </View>
+            <TouchableOpacity
+              style={styles.aiButtonTouchable}
+              onPress={handleAICreatePress}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={CREATE_TICKET_AI_IMAGE.source}
+                style={styles.aiButtonImage}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
             <Text style={styles.betaLabel}>BETA</Text>
             <Text style={styles.aiDescription}>
@@ -483,41 +489,13 @@ const styles = StyleSheet.create({
     marginTop: 48 * scaleX,
     marginBottom: 48 * scaleX,
   },
-  aiButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 60 * scaleX,
-    paddingHorizontal: 24 * scaleX,
-    borderWidth: 1,
-    borderColor: '#ff4dd8',
-    borderRadius: 45 * scaleX,
-    position: 'relative',
+  aiButtonTouchable: {
+    width: CREATE_TICKET_AI_IMAGE.width * scaleX,
+    height: CREATE_TICKET_AI_IMAGE.height * scaleX,
   },
-  aiButtonText: {
-    fontSize: 16 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '700',
-    color: '#5a759d',
-  },
-  aiBadge: {
-    position: 'absolute',
-    right: -5 * scaleX,
-    bottom: -10 * scaleX,
-    width: 29 * scaleX,
-    height: 30 * scaleX,
-    borderRadius: 15 * scaleX,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  aiBadgeText: {
-    fontSize: 12 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '700',
-    color: '#ff46a3',
+  aiButtonImage: {
+    width: CREATE_TICKET_AI_IMAGE.width * scaleX,
+    height: CREATE_TICKET_AI_IMAGE.height * scaleX,
   },
   betaLabel: {
     fontSize: 9 * scaleX,

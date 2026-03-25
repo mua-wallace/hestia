@@ -29,16 +29,20 @@ export const TICKETS_HEADER = {
     fontWeight: 'bold' as const,
     color: '#607aa1',
   },
+  // Create Ticket AI pill (Figma 667:3068); scaled to 3/4 of design size.
+  // Vertical position is derived in TicketsHeader to align with backButton center.
   createButton: {
-    right: 44, // From Figma: x=315, screen width=440, so right = 440-315-81 = 44px
-    top: 69,
-    fontSize: 24, // "+" symbol
-    fontWeight: 'bold' as const,
-    createTextFontSize: 20, // "Create" text
-    createTextFontWeight: 'light' as const,
-    color: '#607aa1',
+    right: 27,
+    width: 114, // 152 × 3/4
+    height: 55.5, // 74 × 3/4
   },
 } as const;
+
+/** Same vertical center as back arrow for Tickets header controls */
+export function getTicketsCreateButtonTopPx(): number {
+  const { backButton, createButton } = TICKETS_HEADER;
+  return backButton.top + (backButton.height - createButton.height) / 2;
+}
 
 // Tab Navigation Styles
 export const TICKETS_TABS = {
@@ -303,13 +307,6 @@ export const TICKETS_TYPOGRAPHY = {
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold' as const,
-    color: '#607aa1',
-  },
-  createButton: {
-    plusFontSize: 24,
-    plusFontWeight: 'bold' as const,
-    textFontSize: 20,
-    textFontWeight: 'light' as const,
     color: '#607aa1',
   },
   tab: {

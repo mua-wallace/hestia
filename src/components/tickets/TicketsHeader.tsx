@@ -6,6 +6,7 @@ import {
   TICKETS_COLORS,
   TICKETS_TYPOGRAPHY,
   scaleX,
+  getTicketsCreateButtonTopPx,
 } from '../../constants/ticketsStyles';
 
 interface TicketsHeaderProps {
@@ -22,7 +23,7 @@ export default function TicketsHeader({
       {/* Blue background */}
       <View style={styles.headerBackground} />
 
-      {/* Top section with back button, title, and create button */}
+      {/* Top section with back button, title, and Create Ticket AI */}
       <View style={styles.topSection}>
         {/* Back arrow */}
         <TouchableOpacity
@@ -41,16 +42,18 @@ export default function TicketsHeader({
         {/* Title */}
         <Text style={styles.title}>Tickets</Text>
 
-        {/* Create Button */}
         <TouchableOpacity
           style={styles.createButton}
           onPress={onCreatePress || (() => {})}
-          activeOpacity={0.7}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Create ticket with AI"
         >
-          <Text style={styles.createButtonText}>
-            <Text style={styles.plusSymbol}>+ </Text>
-            <Text style={styles.createText}>Create</Text>
-          </Text>
+          <Image
+            source={require('../../../assets/icons/CreateTicketAI.png')}
+            style={styles.createTicketAiImage}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
       </View>
     </View>
@@ -106,21 +109,14 @@ const styles = StyleSheet.create({
   createButton: {
     position: 'absolute',
     right: TICKETS_HEADER.createButton.right * scaleX,
-    top: TICKETS_HEADER.createButton.top * scaleX,
+    top: getTicketsCreateButtonTopPx() * scaleX,
+    width: TICKETS_HEADER.createButton.width * scaleX,
+    height: TICKETS_HEADER.createButton.height * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  createButtonText: {
-    fontSize: TICKETS_TYPOGRAPHY.createButton.plusFontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: TICKETS_TYPOGRAPHY.createButton.plusFontWeight as any,
-    color: TICKETS_TYPOGRAPHY.createButton.color,
-  },
-  plusSymbol: {
-    fontSize: TICKETS_TYPOGRAPHY.createButton.plusFontSize * scaleX,
-    fontWeight: TICKETS_TYPOGRAPHY.createButton.plusFontWeight as any,
-  },
-  createText: {
-    fontSize: TICKETS_TYPOGRAPHY.createButton.textFontSize * scaleX,
-    fontWeight: TICKETS_TYPOGRAPHY.createButton.textFontWeight as any,
+  createTicketAiImage: {
+    width: TICKETS_HEADER.createButton.width * scaleX,
+    height: TICKETS_HEADER.createButton.height * scaleX,
   },
 });
-
