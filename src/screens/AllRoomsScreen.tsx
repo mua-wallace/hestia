@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { View, ScrollView, StyleSheet, Dimensions, RefreshControl, useWindowDimensions, Text, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, useWindowDimensions, Text, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -42,15 +42,7 @@ export type CategoryFilterParam = {
   roomState: 'dirty' | 'inProgress' | 'cleaned' | 'inspected' | 'priority';
 };
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
-
-// Modal dimensions for positioning calculations
-const MODAL_HEIGHT_ESTIMATE = 200 * scaleX; // Approximate modal height
-const MODAL_SPACING = 20 * scaleX; // Spacing between button and modal (increased for better visibility)
-const BOTTOM_NAV_HEIGHT = 152 * scaleX; // Bottom navigation height
-const HEADER_HEIGHT = 217 * scaleX; // Header height
 
 type MainTabsParamList = {
   Home: undefined;
@@ -99,8 +91,11 @@ export default function AllRoomsScreen() {
   const cardRefs = useRef<{ [key: string]: any }>({});
   const statusButtonRefs = useRef<{ [key: string]: any }>({});
   const scrollViewRef = useRef<ScrollView>(null);
-  const { height: SCREEN_HEIGHT } = useWindowDimensions();
-  
+  const { width: windowWidth, height: SCREEN_HEIGHT } = useWindowDimensions();
+  const scaleX = windowWidth / DESIGN_WIDTH;
+  const BOTTOM_NAV_HEIGHT = 152 * scaleX;
+  const styles = useMemo(() => buildAllRoomsStyles(scaleX), [scaleX]);
+
   // Check if we came from a stack navigation (show back button) or tab navigation (don't show)
   const showBackButton = (route.params as any)?.showBackButton ?? false;
   const routeFilters = (route.params as any)?.filters as FilterState | undefined;
@@ -928,7 +923,8 @@ export default function AllRoomsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function buildAllRoomsStyles(scaleX: number) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
@@ -1042,4 +1038,5 @@ const styles = StyleSheet.create({
     color: colors.text.white,
   },
 });
+}
 

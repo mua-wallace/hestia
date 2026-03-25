@@ -44,6 +44,11 @@ export default function LostAndFoundScreen() {
   const [activeTab, setActiveTab] = useState('LostAndFound');
   const [selectedTab, setSelectedTab] = useState<LostAndFoundTab>('created');
   const [items, setItems] = useState<LostAndFoundItem[]>([]);
+  /** First open / blank list — full-screen spinner. */
+  const [listLoading, setListLoading] = useState(true);
+  /** Refocus reload after we already have data — header indicator only (non-blocking). */
+  const [refetchLoading, setRefetchLoading] = useState(false);
+  const hasLoadedOnceRef = React.useRef(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [preselectedRoomIdForRegister, setPreselectedRoomIdForRegister] = useState<string | undefined>(undefined);
@@ -89,11 +94,23 @@ export default function LostAndFoundScreen() {
   };
 
   // Load items from Supabase lost_and_found_items table (with room + guest info)
-  const loadItems = React.useCallback(async () => {
+  const loadItems = React.useCallback(async (source: 'mount' | 'focus' | 'pull' = 'mount') => {
     if (!isSupabaseConfigured) {
       setItems([]);
+      setListLoading(false);
+      setRefetchLoading(false);
+      hasLoadedOnceRef.current = true;
       return;
     }
+
+    if (source === 'pull') {
+      /* refreshing toggled by onRefresh */
+    } else if (source === 'focus' && hasLoadedOnceRef.current) {
+      setRefetchLoading(true);
+    } else {
+      setListLoading(true);
+    }
+
     try {
       const { data, error } = await supabase
         .from('lost_and_found_items')
@@ -214,11 +231,17 @@ export default function LostAndFoundScreen() {
     } catch (e) {
       console.warn('[LostAndFoundScreen] Unexpected error loading items', e);
       setItems([]);
+    } finally {
+      if (source !== 'pull') {
+        setListLoading(false);
+      }
+      setRefetchLoading(false);
+      hasLoadedOnceRef.current = true;
     }
   }, []);
 
   useEffect(() => {
-    loadItems();
+    loadItems('mount');
   }, [loadItems]);
 
   // Open register modal if param is set
@@ -238,8 +261,8 @@ export default function LostAndFoundScreen() {
       if (routeName === 'Home' || routeName === 'Rooms' || routeName === 'Chat' || routeName === 'Tickets') {
         setActiveTab(routeName);
       }
-      // Reload Lost & Found items when screen gains focus
-      loadItems();
+      // Reload when returning to this tab; after first load this is non-blocking (header spinner only)
+      loadItems('focus');
     }, [route.name, loadItems])
   );
 
@@ -494,7 +517,7 @@ export default function LostAndFoundScreen() {
           if (!error && inserted?.tracking_number) {
             trackingNumberFromDb = inserted.tracking_number;
           }
-          await loadItems();
+          await loadItems('focus');
           // Ensure the newly created item shows image and (for rooms) guest name on the Created tab
           if (inserted?.id) {
             // Only use a remote URL that we successfully wrote to the DB/upload.
@@ -562,7 +585,7 @@ export default function LostAndFoundScreen() {
         console.warn('[LostAndFoundScreen] Failed to update status', error);
         return;
       }
-      await loadItems();
+      await loadItems('focus');
     } catch (e) {
       console.warn('[LostAndFoundScreen] Error updating status', e);
     }
@@ -570,7 +593,7 @@ export default function LostAndFoundScreen() {
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    loadItems().finally(() => setRefreshing(false));
+    loadItems('pull').finally(() => setRefreshing(false));
   }, [loadItems]);
 
   // Filter items based on selected tab
@@ -591,7 +614,8 @@ export default function LostAndFoundScreen() {
 
   return (
     <View style={styles.container}>
-      {refreshing && <LoadingOverlay fullScreen message="Refreshing…" />}
+      {listLoading && <LoadingOverlay fullScreen message="Loading items…" />}
+      {refreshing && !listLoading && <LoadingOverlay fullScreen message="Refreshing…" />}
       <View style={styles.scrollContainer}>
         <ScrollView
           style={styles.scrollView}
@@ -620,6 +644,7 @@ export default function LostAndFoundScreen() {
       <LostAndFoundHeader
         onBackPress={handleBackPress}
         onRegisterPress={handleRegisterPress}
+        syncing={refetchLoading}
       />
 
       {/* Tabs - Fixed below header */}

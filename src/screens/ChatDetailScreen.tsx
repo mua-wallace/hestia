@@ -13,6 +13,7 @@ import {
   Modal,
   FlatList,
   useWindowDimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -96,11 +97,22 @@ export default function ChatDetailScreen() {
   const [groupParticipants, setGroupParticipants] = useState<GroupParticipant[]>([]);
   const [replyToMessage, setReplyToMessage] = useState<ChatMessage | null>(null);
   const [tagParticipantsList, setTagParticipantsList] = useState<GroupParticipant[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
   useEffect(() => {
-    if (!isSupabaseChat) return;
+    if (!isSupabaseChat) {
+      setMessagesLoading(false);
+      return;
+    }
+    let cancelled = false;
     getCurrentUserId().then(setCurrentUserId);
-    loadMessages(chatId);
+    setMessagesLoading(true);
+    loadMessages(chatId).finally(() => {
+      if (!cancelled) setMessagesLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [chatId, isSupabaseChat, loadMessages]);
 
   useEffect(() => {
@@ -560,6 +572,7 @@ export default function ChatDetailScreen() {
         />
 
         {/* Messages List */}
+        <View style={styles.messagesWrapper}>
         <ScrollView
           ref={scrollViewRef}
           style={[styles.messagesContainer, { marginTop: 0 }]}
@@ -600,6 +613,12 @@ export default function ChatDetailScreen() {
           );
         })}
         </ScrollView>
+        {messagesLoading && (
+          <View style={styles.messagesLoadingOverlay} pointerEvents="none">
+            <ActivityIndicator size="large" color={colors.primary.main} />
+          </View>
+        )}
+        </View>
 
         {/* Input Area - minimal padding, flush above keyboard when open */}
         <View style={[
@@ -839,6 +858,16 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingHorizontal: 8 * scaleX,
     paddingBottom: 0,
+  },
+  messagesWrapper: {
+    flex: 1,
+    position: 'relative',
+  },
+  messagesLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.55)',
   },
   messagesContainer: {
     flex: 1,

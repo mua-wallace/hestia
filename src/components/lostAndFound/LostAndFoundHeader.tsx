@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { typography } from '../../theme';
 import {
   LOST_AND_FOUND_HEADER,
@@ -11,11 +11,14 @@ import {
 interface LostAndFoundHeaderProps {
   onBackPress?: () => void;
   onRegisterPress?: () => void;
+  /** Non-blocking sync (e.g. refetch when returning to tab) — small spinner beside title */
+  syncing?: boolean;
 }
 
 export default function LostAndFoundHeader({
   onBackPress,
   onRegisterPress,
+  syncing = false,
 }: LostAndFoundHeaderProps) {
   return (
     <View style={styles.container}>
@@ -94,14 +97,22 @@ const styles = StyleSheet.create({
     width: LOST_AND_FOUND_HEADER.backButton.width * scaleX,
     height: LOST_AND_FOUND_HEADER.backButton.height * scaleX,
   },
+  titleRow: {
+    position: 'absolute',
+    left: LOST_AND_FOUND_HEADER.title.left * scaleX,
+    top: LOST_AND_FOUND_HEADER.title.top * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: '62%',
+  },
   title: {
     fontSize: LOST_AND_FOUND_TYPOGRAPHY.headerTitle.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: LOST_AND_FOUND_TYPOGRAPHY.headerTitle.fontWeight as any,
     color: LOST_AND_FOUND_TYPOGRAPHY.headerTitle.color,
-    position: 'absolute',
-    left: LOST_AND_FOUND_HEADER.title.left * scaleX,
-    top: LOST_AND_FOUND_HEADER.title.top * scaleX,
+  },
+  titleSpinner: {
+    marginLeft: 8 * scaleX,
   },
   registerButton: {
     position: 'absolute',

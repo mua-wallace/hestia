@@ -1,17 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { useDesignScale } from '../hooks/useDesignScale';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
-import { Dimensions } from 'react-native';
 import { colors } from '../theme';
 import SearchInput from '../components/SearchInput';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 import type { ShiftType } from '../types/home.types';
 import { mockHomeData } from '../data/mockHomeData';
 import { useAuth } from '../contexts/AuthContext';
@@ -42,6 +39,8 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 >;
 
 export default function HomeScreen() {
+  const { scaleX } = useDesignScale();
+  const styles = useMemo(() => buildHomeScreenStyles(scaleX), [scaleX]);
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute();
   const { open: openAIChatOverlay } = useAIChatOverlay();
@@ -542,7 +541,8 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function buildHomeScreenStyles(scaleX: number) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
@@ -660,4 +660,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(200, 200, 200, 0.6)',
   },
 });
+}
 

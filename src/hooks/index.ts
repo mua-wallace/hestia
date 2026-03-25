@@ -7,3 +7,5 @@ export type { UseUserResult } from './useUser';
 export { useFetch } from './useFetch';
 export type { UseFetchResult } from './useFetch';
 export { useHomeFilters } from './useHomeFilters';
+export { useDesignScale } from './useDesignScale';
+export { useScale } from './useScale';

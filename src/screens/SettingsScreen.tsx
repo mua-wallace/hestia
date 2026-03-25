@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
@@ -11,10 +11,7 @@ import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
 import { useMessageModal } from '../contexts/MessageModalContext';
 import type { ReturnToTab } from '../navigation/types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+import { useDesignScale } from '../hooks/useDesignScale';
 
 type MainTabsParamList = {
   Home: undefined;
@@ -29,6 +26,8 @@ type MainTabsParamList = {
 type SettingsScreenNavigationProp = NativeStackNavigationProp<MainTabsParamList, 'Settings'>;
 
 export default function SettingsScreen() {
+  const { scaleX } = useDesignScale();
+  const styles = useMemo(() => buildSettingsStyles(scaleX), [scaleX]);
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const route = useRoute();
   const { open: openAIChatOverlay } = useAIChatOverlay();
@@ -116,7 +115,8 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function buildSettingsStyles(scaleX: number) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
@@ -170,4 +170,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+}
 

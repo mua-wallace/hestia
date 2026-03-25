@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   FlatList,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
@@ -129,6 +130,7 @@ export default function TicketForm({
   const [departmentStaff, setDepartmentStaff] = useState<User[]>([]);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const descriptionInputRef = useRef<TextInput>(null);
 
   // Load department staff
   useEffect(() => {
@@ -527,25 +529,46 @@ export default function TicketForm({
           )}
         </View>
 
-        {/* Description */}
+        {/* Description — Figma card + inner field + edit control */}
         <View style={styles.section}>
-          <View style={styles.descriptionHeader}>
-            <Text style={styles.sectionTitle}>Description</Text>
-            <View style={styles.descriptionAIBadge}>
-              <Text style={styles.descriptionAIText}>AI</Text>
+          <View style={styles.descriptionCard}>
+            <View style={styles.descriptionHeaderRow}>
+              <Text style={styles.descriptionLabel}>Description</Text>
+              <View style={styles.descriptionAIBadgeCircle}>
+                <GradientText
+                  text="AI"
+                  textStyle={{
+                    fontSize: 12 * scaleX,
+                    fontFamily: typography.fontFamily.primary,
+                    fontWeight: '700',
+                  }}
+                />
+              </View>
             </View>
-          </View>
-          <View style={styles.descriptionContainer}>
-            <TextInput
-              style={styles.descriptionInput}
-              placeholder="Room 201 – Broken shower head reported. Guest unable to use shower normally."
-              placeholderTextColor="#999"
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+            <View style={styles.descriptionInnerField}>
+              <TextInput
+                ref={descriptionInputRef}
+                style={styles.descriptionInput}
+                placeholder="Room 201 – Broken shower head reported. Guest unable to use shower normally."
+                placeholderTextColor="#999999"
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                numberOfLines={5}
+                textAlignVertical="top"
+                underlineColorAndroid="transparent"
+              />
+              <TouchableOpacity
+                style={styles.descriptionEditButton}
+                onPress={() => descriptionInputRef.current?.focus()}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="Edit description"
+                activeOpacity={0.7}
+              >
+                <Ionicons name="pencil-outline" size={16 * scaleX} color="#5a759d" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -941,39 +964,61 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#ff46a3',
   },
-  descriptionHeader: {
+  descriptionCard: {
+    backgroundColor: '#f5f6f8',
+    borderWidth: 1,
+    borderColor: '#e8eaee',
+    borderRadius: 14 * scaleX,
+    padding: 16 * scaleX,
+    width: '100%',
+  },
+  descriptionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8 * scaleX,
+    justifyContent: 'space-between',
+    marginBottom: 12 * scaleX,
   },
-  descriptionAIBadge: {
-    marginLeft: 8 * scaleX,
-    paddingHorizontal: 8 * scaleX,
-    paddingVertical: 2 * scaleX,
-    backgroundColor: '#5a759d',
-    borderRadius: 4 * scaleX,
-  },
-  descriptionAIText: {
-    fontSize: 12 * scaleX,
+  descriptionLabel: {
+    fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#1e1e1e',
   },
-  descriptionContainer: {
-    borderWidth: 1,
-    borderColor: '#e3e3e3',
-    borderRadius: 8 * scaleX,
+  descriptionAIBadgeCircle: {
+    width: 30 * scaleX,
+    height: 30 * scaleX,
+    borderRadius: 15 * scaleX,
     backgroundColor: '#ffffff',
-    width: '100%',
+    borderWidth: 1,
+    borderColor: '#f0d0e4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  descriptionInnerField: {
+    position: 'relative',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8 * scaleX,
+    minHeight: 132 * scaleX,
   },
   descriptionInput: {
     fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '300',
-    color: '#000000',
-    paddingHorizontal: 16 * scaleX,
+    color: '#44474e',
+    lineHeight: 20 * scaleX,
+    paddingHorizontal: 14 * scaleX,
     paddingVertical: 12 * scaleX,
-    minHeight: 100 * scaleX,
+    paddingRight: 44 * scaleX,
+    paddingBottom: 14 * scaleX,
+    minHeight: 120 * scaleX,
+  },
+  descriptionEditButton: {
+    position: 'absolute',
+    right: 12 * scaleX,
+    bottom: 12 * scaleX,
   },
   submitButton: {
     backgroundColor: '#5a759d',

@@ -3,7 +3,7 @@
  * Shows logged-in user details, allows avatar update and logout
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
-  Dimensions,
   ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -25,10 +24,7 @@ import { useMessageModal } from '../contexts/MessageModalContext';
 import { useUserStore } from '../store/useUserStore';
 import { isSupabaseConfigured } from '../lib/supabase';
 import type { UserProfile } from '../types/home.types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+import { useDesignScale } from '../hooks/useDesignScale';
 
 type UserProfileRouteParams = {
   UserProfile: { user: UserProfile };
@@ -37,6 +33,8 @@ type UserProfileRouteParams = {
 const DEFAULT_USER: UserProfile = { name: 'User', role: 'Staff', department: undefined, hasFlag: false };
 
 export default function UserProfileScreen() {
+  const { scaleX } = useDesignScale();
+  const styles = useMemo(() => buildUserProfileStyles(scaleX), [scaleX]);
   const navigation = useNavigation();
   const route = useRoute<RouteProp<UserProfileRouteParams, 'UserProfile'>>();
   const { signOut, session } = useAuth();
@@ -182,7 +180,8 @@ export default function UserProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function buildUserProfileStyles(scaleX: number) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.secondary,
@@ -353,3 +352,5 @@ const styles = StyleSheet.create({
     color: '#c53030',
   },
 });
+}
+
