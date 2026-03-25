@@ -338,7 +338,9 @@ export default function CreateTicketFormScreen() {
                     resizeMode="contain"
                   />
                 </View>
-                <Text style={[styles.departmentLabel, isSelected && styles.departmentLabelSelected]}>
+                <Text
+                  style={[styles.departmentLabel, isSelected && styles.departmentLabelSelected]}
+                >
                   {dept.name}
                 </Text>
               </TouchableOpacity>
@@ -738,6 +740,7 @@ const styles = StyleSheet.create({
   departmentItem: {
     alignItems: 'center',
     marginRight: 24 * scaleX,
+    width: 90 * scaleX, // fixed label width so wrapped lines stay centered under icon
   },
   departmentIconContainer: {
     width: 55.482 * scaleX,
@@ -761,7 +764,9 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     color: '#000000',
     textAlign: 'center',
-    maxWidth: 80 * scaleX,
+    width: '100%',
+    maxWidth: 90 * scaleX,
+    alignSelf: 'center',
   },
   departmentLabelSelected: {
     fontWeight: '600',

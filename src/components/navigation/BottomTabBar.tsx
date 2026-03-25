@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, StyleSheet, ScrollView, LayoutChangeEvent, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import TabBarItem from './TabBarItem';
@@ -34,6 +34,7 @@ const MAIN_TABS = [
     label: 'Chat',
     iconWidth: 56,
     iconHeight: 56,
+    iconOffsetX: -2,
   },
   {
     id: 'Tickets',
@@ -41,6 +42,7 @@ const MAIN_TABS = [
     label: 'Tickets',
     iconWidth: 49,
     iconHeight: 54,
+    iconOffsetX: -3,
   },
   {
     id: 'AIHome',
@@ -56,29 +58,89 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatB
   const { scaleX } = useDesignScale();
   const styles = useMemo(() => buildBottomTabBarStyles(scaleX), [scaleX]);
 
-  const allTabs = [
-    ...MAIN_TABS,
-    ...MORE_MENU_OPTIONS.map((option) => ({
-      id: option.navigationTarget,
-      icon: option.icon,
-      label: option.label,
-      iconWidth: option.iconWidth,
-      iconHeight: option.iconHeight,
-    })),
-  ];
+  const tabs = useMemo(
+    () => [
+      ...MAIN_TABS,
+      ...MORE_MENU_OPTIONS.map((option) => ({
+        id: option.navigationTarget,
+        icon: option.icon,
+        label: option.label,
+        iconWidth: option.iconWidth,
+        iconHeight: option.iconHeight,
+      })),
+    ],
+    []
+  );
+
+  const scrollRef = useRef<ScrollView | null>(null);
+  const [viewportWidth, setViewportWidth] = useState(0);
+  const tabLayouts = useRef<Record<string, { x: number; width: number }>>({});
+  const scrollXRef = useRef(0);
+  const lastScrollTargetRef = useRef<number | null>(null);
+
+  const handleTabLayout = (tabId: string) => (e: LayoutChangeEvent) => {
+    const { x, width } = e.nativeEvent.layout;
+    tabLayouts.current[tabId] = { x, width };
+  };
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollXRef.current = e.nativeEvent.contentOffset.x;
+  };
+
+  useEffect(() => {
+    const layout = tabLayouts.current[activeTab];
+    if (!layout || viewportWidth <= 0) return;
+
+    // Ensure active tab is visible inside the viewport.
+    const leftPadding = 16 * scaleX;
+    const rightPadding = 16 * scaleX;
+    const visibleStart = scrollXRef.current;
+    const visibleEnd = scrollXRef.current + viewportWidth;
+
+    const tabStart = layout.x;
+    const tabEnd = layout.x + layout.width;
+
+    let targetX: number | null = null;
+    if (tabStart < visibleStart + leftPadding) {
+      targetX = Math.max(0, tabStart - leftPadding);
+    } else if (tabEnd > visibleEnd - rightPadding) {
+      targetX = Math.max(0, tabEnd - viewportWidth + rightPadding);
+    }
+
+    if (targetX != null) {
+      // Avoid re-trigger loops (layout + effect) that can feel jittery.
+      const last = lastScrollTargetRef.current;
+      if (last == null || Math.abs(last - targetX) > 2) {
+        lastScrollTargetRef.current = targetX;
+        requestAnimationFrame(() => {
+          scrollRef.current?.scrollTo({ x: targetX!, animated: true });
+        });
+      }
+    }
+  }, [activeTab, viewportWidth, scaleX]);
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <ScrollView
+        ref={(r) => {
+          scrollRef.current = r;
+        }}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         style={styles.scrollView}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
+        onScroll={handleScroll}
+        onLayout={(e) => setViewportWidth(e.nativeEvent.layout.width)}
+        decelerationRate="fast"
       >
-        {allTabs.map((tab) => (
-          <View key={tab.id} style={styles.tabItemContainer}>
+        {tabs.map((tab) => (
+          <View
+            key={tab.id}
+            style={styles.tabItemContainer}
+            onLayout={handleTabLayout(tab.id)}
+          >
             <TabBarItem
               icon={tab.icon}
               label={tab.label}
@@ -87,6 +149,7 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatB
               onPress={() => onTabPress(tab.id)}
               iconWidth={tab.iconWidth}
               iconHeight={tab.iconHeight}
+              iconOffsetX={'iconOffsetX' in tab ? (tab as any).iconOffsetX : 0}
             />
           </View>
         ))}
@@ -125,8 +188,9 @@ function buildBottomTabBarStyles(scaleX: number) {
     tabItemContainer: {
       alignItems: 'center',
       justifyContent: 'center',
-      paddingHorizontal: 12 * scaleX,
-      minWidth: 80 * scaleX,
+      // Fixed slot width prevents “some tabs not centered” due to varying padding/label lengths.
+      width: 96 * scaleX,
+      marginHorizontal: 6 * scaleX,
     },
   });
 }

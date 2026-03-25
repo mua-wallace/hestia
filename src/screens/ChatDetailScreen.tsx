@@ -552,11 +552,12 @@ export default function ChatDetailScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={keyboardBehavior}
-        keyboardVerticalOffset={0}
+        // Keep header fixed; move messages + input above keyboard.
+        keyboardVerticalOffset={Platform.OS === 'ios' ? CHAT_HEADER_BAR_HEIGHT : 0}
       >
         {/* Header - WhatsApp style */}
         <ChatHeader
@@ -875,7 +876,8 @@ const styles = StyleSheet.create({
   },
   messagesContent: {
     flexGrow: 1,
-    justifyContent: 'flex-end',
+    // Start messages at top (no empty space above first message).
+    justifyContent: 'flex-start',
   },
   inputRow: {
     flexDirection: 'row',

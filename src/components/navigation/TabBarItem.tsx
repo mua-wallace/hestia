@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, Platform } from 'react-native';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { colors, typography } from '../../theme';
 import { useDesignScale } from '../../hooks/useDesignScale';
@@ -13,6 +13,8 @@ interface TabBarItemProps {
   iconWidth?: number;
   iconHeight?: number;
   iconOpacity?: number;
+  /** Some PNGs are not visually centered; allow a small horizontal nudge. */
+  iconOffsetX?: number;
 }
 
 export default function TabBarItem({
@@ -24,19 +26,29 @@ export default function TabBarItem({
   iconWidth,
   iconHeight,
   iconOpacity,
+  iconOffsetX = 0,
 }: TabBarItemProps) {
   const { normalizedScaleX: ns } = useDesignScale();
   const styles = useMemo(() => buildTabBarItemStyles(ns), [ns]);
 
   const finalOpacity = iconOpacity !== undefined ? iconOpacity : 1;
-  const iconStyle =
-    iconWidth && iconHeight
-      ? {
+  const activeColor = '#FF46A3';
+  const iconStyle = iconWidth && iconHeight
+    ? ([
+        {
           width: Math.round(iconWidth * ns),
           height: Math.round(iconHeight * ns),
           opacity: finalOpacity,
-        }
-      : { ...styles.icon, opacity: finalOpacity };
+          ...(iconOffsetX ? { transform: [{ translateX: iconOffsetX * ns }] } : null),
+        },
+        active ? { tintColor: activeColor } : null,
+      ].filter(Boolean) as any)
+    : ([
+        styles.icon,
+        { opacity: finalOpacity },
+        iconOffsetX ? { transform: [{ translateX: iconOffsetX * ns }] } : null,
+        active ? { tintColor: activeColor } : null,
+      ].filter(Boolean) as any);
 
   return (
     <TouchableOpacity
@@ -59,7 +71,13 @@ export default function TabBarItem({
             ) : null}
           </View>
         </View>
-        {label ? <Text style={[styles.label, active && styles.labelActive]}>{label}</Text> : null}
+        {label ? (
+          <View style={styles.labelContainer}>
+            <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
+              {label}
+            </Text>
+          </View>
+        ) : null}
       </View>
     </TouchableOpacity>
   );
@@ -84,6 +102,13 @@ function buildTabBarItemStyles(normalizedScaleX: number) {
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 0,
+    },
+    labelContainer: {
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: Math.round(20 * ns),
+      marginTop: Math.round(2 * ns),
     },
     iconContainer: {
       position: 'relative',
@@ -123,15 +148,17 @@ function buildTabBarItemStyles(normalizedScaleX: number) {
     },
     label: {
       fontSize: Math.round(15 * ns),
-      fontFamily: typography.fontFamily.primary,
+      lineHeight: Math.round(15 * ns),
+      fontFamily: Platform.OS === 'ios' ? 'Helvetica' : typography.fontFamily.primary,
       fontWeight: typography.fontWeights.regular as any,
       color: colors.primary.main,
       includeFontPadding: false,
       textAlign: 'center',
     },
     labelActive: {
+      fontFamily: Platform.OS === 'ios' ? 'Helvetica' : typography.fontFamily.primary,
       fontWeight: '700' as any,
-      color: colors.primary.light,
+      color: '#FF46A3',
       includeFontPadding: false,
     },
   });

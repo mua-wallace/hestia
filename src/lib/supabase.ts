@@ -25,10 +25,31 @@ if (!isSupabaseConfigured) {
   );
 }
 
+function createTimeoutFetch(timeoutMs: number) {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(input, { ...init, signal: controller.signal });
+    } catch (err) {
+      // iOS often reports generic "Network request failed"; log the URL for debugging.
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : 'request';
+      console.error('[SupabaseFetch] failed', { url, message: err instanceof Error ? err.message : String(err) });
+      throw err;
+    } finally {
+      clearTimeout(id);
+    }
+  };
+}
+
 export const supabase = createClient<Database>(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabasePublishableKey || 'placeholder-key',
   {
+    global: {
+      // Helps iOS devices on slow networks avoid hanging requests.
+      fetch: createTimeoutFetch(20000),
+    },
     auth: {
       storage: AsyncStorage,
       autoRefreshToken: true,

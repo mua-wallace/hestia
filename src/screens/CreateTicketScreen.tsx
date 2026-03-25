@@ -44,7 +44,6 @@ interface DepartmentDisplayItem {
   noTint: boolean;
   left: number;
   top: number;
-  labelLeft: number;
   labelTop: number;
 }
 
@@ -165,7 +164,7 @@ function buildCreateTicketStyles(windowWidth: number) {
       fontFamily: typography.fontFamily.secondary,
       fontWeight: '300',
       color: CREATE_TICKET_TYPOGRAPHY.departmentLabel.color,
-      textAlign: 'left',
+      textAlign: 'center',
     },
     aiButtonSection: {
       width: '100%',
@@ -239,8 +238,6 @@ export default function CreateTicketScreen() {
         const left = layout.colLeft[col];
         const top = layout.rowTopStart + row * layout.rowGap;
         const labelTop = top + layout.labelOffset;
-        const labelWidth = Math.min(layout.maxLabelWidth, dept.name.length * 8);
-        const labelLeft = left + layout.iconSize / 2 - labelWidth / 2;
         const iconInfo = DEPARTMENT_NAME_TO_ICON[dept.name] ?? {
           icon: require('../../assets/icons/reception.png'),
           noTint: false,
@@ -252,7 +249,6 @@ export default function CreateTicketScreen() {
           noTint: !!iconInfo.noTint,
           left,
           top,
-          labelLeft,
           labelTop,
         };
       });
@@ -346,7 +342,7 @@ export default function CreateTicketScreen() {
                 style={[
                   styles.departmentLabel,
                   {
-                    left: department.labelLeft * scaleX,
+                    left: (department.left + DEPARTMENT_GRID_LAYOUT.iconSize / 2 - DEPARTMENT_GRID_LAYOUT.maxLabelWidth / 2) * scaleX,
                     top: department.labelTop * scaleX,
                     width: DEPARTMENT_GRID_LAYOUT.maxLabelWidth * scaleX,
                   },
