@@ -63,11 +63,14 @@ export default function AllRoomsScreen() {
   const route = useRoute();
   const routeShift = (route.params as any)?.selectedShift as ShiftType | undefined;
   const initialShift = routeShift || getShiftFromTime();
+  // PM should behave like AM during AM hours.
+  const effectiveInitialShift: ShiftType =
+    initialShift === 'PM' && getShiftFromTime() === 'AM' ? 'AM' : initialShift;
   const { data: allRoomsData, loading, refreshing, fetchRooms, updateRoom, setSelectedShift, setRoomAttendant } = useRoomsStore();
 
   React.useEffect(() => {
-    fetchRooms(initialShift);
-  }, [initialShift]);
+    fetchRooms(effectiveInitialShift);
+  }, [effectiveInitialShift]);
 
   const loadRoomsData = React.useCallback((shift: ShiftType) => { fetchRooms(shift); }, [fetchRooms]);
 
@@ -132,6 +135,10 @@ export default function AllRoomsScreen() {
   );
 
   const displayData = allRoomsData ?? { ...mockAllRoomsData, selectedShift: initialShift };
+  const effectiveShift: ShiftType =
+    displayData.selectedShift === 'PM' && getShiftFromTime() === 'AM'
+      ? 'AM'
+      : (displayData.selectedShift ?? 'AM');
 
   // Sync local filters with route params when navigating (e.g. from Home with categoryFilter)
   React.useEffect(() => {
@@ -209,9 +216,9 @@ export default function AllRoomsScreen() {
   // Calculate filter counts from current shift's room list (AM: rooms, PM: roomsPM)
   const filterCounts: FilterCounts = useMemo(() => {
     const roomsPM = displayData.roomsPM ?? [];
-    const usePMRooms = displayData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const usePMRooms = effectiveShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     let sourceRooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
-    if (displayData.selectedShift === 'PM') {
+    if (effectiveShift === 'PM') {
       sourceRooms = sourceRooms.filter(isPmTurndownOccupiedRoom);
     }
 
@@ -298,7 +305,7 @@ export default function AllRoomsScreen() {
     };
 
     return { roomStates, guests, reservations, floors, totalRooms };
-  }, [displayData.rooms, displayData.roomsPM, displayData.selectedShift]);
+  }, [displayData.rooms, displayData.roomsPM, effectiveShift]);
 
   const handleApplyFilters = (appliedFilters: FilterState) => {
     setLocalFilters(appliedFilters);
@@ -586,12 +593,14 @@ export default function AllRoomsScreen() {
   };
 
   const onRefresh = React.useCallback(() => {
-    fetchRooms(allRoomsData?.selectedShift ?? getShiftFromTime());
+    const desired = allRoomsData?.selectedShift ?? getShiftFromTime();
+    const effective: ShiftType = desired === 'PM' && getShiftFromTime() === 'AM' ? 'AM' : desired;
+    fetchRooms(effective);
   }, [fetchRooms, allRoomsData?.selectedShift]);
 
   const filteredRooms = useMemo(() => {
     const roomsPM = displayData.roomsPM ?? [];
-    const usePMRooms = displayData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const usePMRooms = effectiveShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     let rooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
 
     // When user tapped a status badge or priority badge on Home
@@ -704,15 +713,15 @@ export default function AllRoomsScreen() {
       );
     }
 
-    if (displayData.selectedShift === 'PM') {
+    if (effectiveShift === 'PM') {
       rooms = rooms.filter(isPmTurndownOccupiedRoom);
     }
-    if (displayData.selectedShift === 'AM') {
+    if (effectiveShift === 'AM') {
       rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');
     }
 
     return rooms;
-  }, [displayData.rooms, displayData.roomsPM, displayData.selectedShift, activeFilters, searchQuery, routeCategoryFilter]);
+  }, [displayData.rooms, displayData.roomsPM, effectiveShift, activeFilters, searchQuery, routeCategoryFilter]);
 
   return (
     <View style={[

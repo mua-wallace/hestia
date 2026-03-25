@@ -65,6 +65,13 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
 
+  // PM should behave like AM during AM hours; only show Turndown in PM hours.
+  const currentShiftFromClock = useMemo(() => getShiftFromTime(), []);
+  const effectiveShift: ShiftType =
+    homeData.selectedShift === 'PM' && currentShiftFromClock === 'AM'
+      ? 'AM'
+      : homeData.selectedShift;
+
   const { profile, loading: userLoading, fetchProfile } = useUserStore();
   const sessionFallback = useMemo(
     () =>
@@ -158,7 +165,7 @@ export default function HomeScreen() {
     navigation.navigate('AllRooms', { 
       showBackButton: true, 
       filters: activeFilters,
-      selectedShift: homeData.selectedShift,
+      selectedShift: effectiveShift,
     } as any);
   };
 
@@ -168,7 +175,7 @@ export default function HomeScreen() {
       showBackButton: true,
       filters: activeFilters,
       categoryFilter: { category: category.name, roomState },
-      selectedShift: homeData.selectedShift,
+      selectedShift: effectiveShift,
     } as any);
   };
 
@@ -178,7 +185,7 @@ export default function HomeScreen() {
       showBackButton: true,
       filters: activeFilters,
       categoryFilter: { category: category.name, roomState: 'priority' },
-      selectedShift: homeData.selectedShift,
+      selectedShift: effectiveShift,
     } as any);
   };
 
@@ -236,7 +243,7 @@ export default function HomeScreen() {
 
   const derivedCategories = useMemo(() => {
     const roomsPM = roomsForHome.roomsPM ?? [];
-    const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const usePMRooms = effectiveShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
     
     // Apply filters to the correct shift's data
@@ -254,7 +261,7 @@ export default function HomeScreen() {
 
     const categories: CategorySection[] = [];
 
-    if (homeData.selectedShift === 'PM') {
+    if (effectiveShift === 'PM') {
       // PM shift: show only Turndown, No Task, Vacant cards
       // If using roomsPM, they're already filtered; otherwise filter from AM rooms
       if (!usePMRooms) {
@@ -283,7 +290,7 @@ export default function HomeScreen() {
     }
 
     return categories;
-  }, [activeFilters, homeData.selectedShift, searchQuery, roomsForHome]);
+  }, [activeFilters, effectiveShift, searchQuery, roomsForHome]);
 
   // Sync route filters -> local state
   useEffect(() => {
@@ -297,20 +304,20 @@ export default function HomeScreen() {
   }, [derivedCategories]);
 
   React.useEffect(() => {
-    fetchRooms(homeData.selectedShift);
-  }, [homeData.selectedShift, fetchRooms]);
+    fetchRooms(effectiveShift);
+  }, [effectiveShift, fetchRooms]);
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchRooms(homeData.selectedShift);
-    }, [homeData.selectedShift, fetchRooms])
+      fetchRooms(effectiveShift);
+    }, [effectiveShift, fetchRooms])
   );
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    await fetchRooms(homeData.selectedShift);
+    await fetchRooms(effectiveShift);
     setRefreshing(false);
-  }, [fetchRooms, homeData.selectedShift]);
+  }, [fetchRooms, effectiveShift]);
 
   // Calculate filter counts from homeData (use derivedCategories when categories not yet synced for current shift)
   const filterCounts: FilterCounts = useMemo(() => {
@@ -355,7 +362,7 @@ export default function HomeScreen() {
     });
 
     const roomsPM = roomsForHome.roomsPM ?? [];
-    const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const usePMRooms = effectiveShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
 
     // Reservations (Vacant) - from categories when PM, or from room data
@@ -363,7 +370,7 @@ export default function HomeScreen() {
       occupied: 0,
       vacant: 0,
     };
-    if (homeData.selectedShift === 'PM') {
+    if (effectiveShift === 'PM') {
       categoriesForCounts.forEach((category) => {
         if (category.name === 'Vacant') {
           reservations.vacant += category.total;
@@ -397,7 +404,7 @@ export default function HomeScreen() {
     };
 
     return { roomStates, guests, floors, totalRooms, reservations };
-  }, [homeData.categories, derivedCategories, homeData.selectedShift, roomsForHome]);
+  }, [homeData.categories, derivedCategories, effectiveShift, roomsForHome]);
 
   const handleGoToResults = (filters: FilterState) => {
     // Apply filters to Home stats/cards in both AM and PM modes

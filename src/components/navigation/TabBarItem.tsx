@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, Image, StyleSheet, Platform } from 'react-native';
-import { TouchableOpacity } from 'react-native-gesture-handler';
+import { View, Text, Image, StyleSheet, Platform, Pressable } from 'react-native';
 import { colors, typography } from '../../theme';
 import { useDesignScale } from '../../hooks/useDesignScale';
 
@@ -51,10 +50,9 @@ export default function TabBarItem({
       ].filter(Boolean) as any);
 
   return (
-    <TouchableOpacity
+    <Pressable
       style={styles.container}
       onPress={onPress}
-      activeOpacity={0.6}
       hitSlop={{ top: 24, bottom: 24, left: 20, right: 20 }}
       accessibilityRole="button"
     >
@@ -79,7 +77,7 @@ export default function TabBarItem({
           </View>
         ) : null}
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
