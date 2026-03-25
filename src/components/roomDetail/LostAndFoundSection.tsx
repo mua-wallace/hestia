@@ -77,13 +77,14 @@ export default function LostAndFoundSection({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    marginTop: 26 * scaleX, // Space between card (ends at 880.09px) and title (906px) = 26px
+    marginTop: 0,
     paddingBottom: 12 * scaleX,
     overflow: 'visible',
+    paddingHorizontal: 0,
   },
   title: {
-    left: LOST_AND_FOUND.title.left * scaleX,
-    marginBottom: (LOST_AND_FOUND.box.top - LOST_AND_FOUND.title.top) * scaleX, // Keep Figma spacing from title to content
+    paddingHorizontal: 20 * scaleX,
+    marginBottom: 12 * scaleX,
     fontSize: LOST_AND_FOUND.title.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,

@@ -869,9 +869,11 @@ export default function RoomDetailScreen() {
         customStatusText={
           showReturnLaterModal
             ? 'Return Later'
-            : showPromiseTimeModal ? 'Promise Time' :
-            showRefuseServiceModal ? 'Refuse Service' :
-            selectedStatusText
+            : showPromiseTimeModal
+              ? 'Promise Time'
+              : showRefuseServiceModal || refuseServiceReason
+                ? 'Refuse Service'
+                : selectedStatusText
         }
         pausedAt={pausedAt}
         returnLaterAtTimestamp={returnLaterAtTimestamp}

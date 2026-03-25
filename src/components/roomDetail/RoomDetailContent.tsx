@@ -1,32 +1,42 @@
 /**
  * Reusable Room Detail Content Component
  *
- * This is the single source for room detail layout. Any host (e.g. RoomDetailScreen)
- * should fetch data and pass RoomDetailScreenProps; this component does not fetch.
- * Layout and spacing follow Figma: Room Detail - Overview (node 1772-104).
- *
- * Sections (Overview tab): Guest Info → Special Instructions (in guest card) →
- * Assigned to + Task card → Lost & Found → Notes.
- * Handles: Arrival/Departure, Arrival, Departure, Stayover, Turndown.
+ * Single source for room detail layout. Overview uses flex flow (Figma: Arrival/Departure
+ * 2333:132; Arrival + Refused Service header 2333:835) — guest blocks, dividers, special
+ * instructions, and the Assigned/Task card (Reassign row + divider when task exists + Task)
+ * for every room type — vertically stacked, no screen-absolute positioning.
  */
 
 import React, { useState, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, LayoutChangeEvent } from 'react-native';
 import { colors } from '../../theme';
-import { scaleX, CONTENT_AREA, GUEST_INFO, ASSIGNED_TO, ASSIGNED_TASK_CARD } from '../../constants/roomDetailStyles';
+import { scaleX, CONTENT_AREA, ASSIGNED_TASK_CARD } from '../../constants/roomDetailStyles';
 import { getRoomTypeConfig } from '../../constants/roomTypeConfigs';
-import { calculatePositions } from '../../utils/roomDetailPositions';
 import RoomDetailHeader from './RoomDetailHeader';
 import DetailTabNavigation from './DetailTabNavigation';
-import GuestInfoCard from './GuestInfoCard';
+import GuestInfoCard, { type GuestInfoCardCategory } from './GuestInfoCard';
 import NotesSection from './NotesSection';
 import LostAndFoundSection from './LostAndFoundSection';
 import AssignedToSection from './AssignedToSection';
 import ChecklistSection from './ChecklistSection';
 import RoomTicketsSection from './RoomTicketsSection';
 import HistorySection from './HistorySection';
-import type { RoomDetailScreenProps, DetailTab, HistoryEvent } from '../../types/roomDetail.types';
+import type { RoomDetailScreenProps, DetailTab } from '../../types/roomDetail.types';
 import type { RoomStatus } from '../../types/allRooms.types';
+
+const GUEST_INFO_TITLE_TOP_SCREEN = 303;
+const OVERVIEW_CONTENT_TOP_PADDING = (GUEST_INFO_TITLE_TOP_SCREEN - CONTENT_AREA.top) * scaleX;
+const SECTION_DIVIDER = {
+  height: 1,
+  backgroundColor: '#c6c5c5',
+  marginVertical: 12 * scaleX,
+};
+const ASSIGNED_TO_GAP = 30 * scaleX;
+const CARD_TO_LOST_FOUND_GAP = 38 * scaleX;
+
+function guestCategoryFromType(t: 'Arrival' | 'Departure' | 'Stayover' | 'Turndown'): GuestInfoCardCategory {
+  return t;
+}
 
 export default function RoomDetailContent({
   roomId,
@@ -63,27 +73,17 @@ export default function RoomDetailContent({
   initialTab,
   departmentName,
 }: RoomDetailScreenProps) {
-  // Get room type configuration and calculate positions
   const config = useMemo(() => getRoomTypeConfig(roomType), [roomType]);
-  // Calculate positions based on actual presence of special instructions
-  const hasSpecialInstructionsData = !!specialInstructions;
-  // Get first guest name to check if it wraps (for Arrival/Departure rooms)
-  const firstGuestName = guests.find(g => g.type === 'Arrival')?.guest?.name || guests[0]?.guest?.name;
-  const positions = useMemo(
-    () => calculatePositions(config, hasSpecialInstructionsData, firstGuestName, specialInstructions ?? undefined),
-    [config, hasSpecialInstructionsData, firstGuestName, specialInstructions]
-  );
+  const cardMinHeight = config.cardHeight * scaleX;
 
   const [activeTab, setActiveTab] = useState<DetailTab>(initialTab || 'Overview');
   const statusButtonRef = useRef<React.ComponentRef<typeof TouchableOpacity>>(null);
-  
-  // Track current status - sync with parent when status changes (e.g. from StatusChangeModal)
+
   const [currentStatus, setCurrentStatus] = useState<RoomStatus>(status);
   React.useEffect(() => {
     setCurrentStatus(status);
   }, [status]);
 
-  // Handle status change
   const handleStatusChange = (newStatus: RoomStatus) => {
     setCurrentStatus(newStatus);
     onStatusChange?.(newStatus);
@@ -92,30 +92,28 @@ export default function RoomDetailContent({
   const handleStatusPress: () => void = onStatusPress ?? (() => {});
   const handleBackPressSafe: () => void = onBackPress ?? (() => {});
 
-  // "See More" functionality for task description
   const MAX_LINES = 2;
   const LINE_HEIGHT = 18;
   const [showSeeMore, setShowSeeMore] = useState(false);
   const [textHeight, setTextHeight] = useState<number>(0);
-  const fullTextRef = useRef<Text>(null);
-  
+
   const charsPerLine = 50;
   const maxChars = MAX_LINES * charsPerLine;
   const estimatedNeedsTruncation = taskDescription ? taskDescription.length > maxChars : false;
-  
+
   const handleFullTextLayout = (event: LayoutChangeEvent) => {
     const { height } = event.nativeEvent.layout;
     setTextHeight(height);
     const maxHeight = MAX_LINES * LINE_HEIGHT * scaleX;
     setShowSeeMore(height > maxHeight);
   };
-  
+
   React.useEffect(() => {
     if (textHeight === 0 && taskDescription) {
       setShowSeeMore(estimatedNeedsTruncation);
     }
   }, [taskDescription, textHeight, estimatedNeedsTruncation]);
-  
+
   const getDisplayText = () => {
     if (!taskDescription) return '';
     if (!showSeeMore) {
@@ -145,54 +143,33 @@ export default function RoomDetailContent({
     }
   };
 
-  // Determine guests based on room type
-  // For Arrival/Departure: first guest is Arrival, second is Departure
-  // For other types: single guest
   const arrivalGuest = guests.find(g => g.type === 'Arrival');
   const departureGuest = guests.find(g => g.type === 'Departure');
   const stayoverGuest = guests.find(g => g.type === 'Stayover');
   const turndownGuest = guests.find(g => g.type === 'Turndown');
-  
-  // Determine which guest to show first based on room type
-  const firstGuest = roomType === 'ArrivalDeparture' 
-    ? arrivalGuest 
-    : roomType === 'Departure'
-    ? departureGuest
-    : roomType === 'Stayover'
-    ? stayoverGuest
-    : roomType === 'Turndown'
-    ? turndownGuest
-    : arrivalGuest; // Default to Arrival
-  
+
+  const firstGuest =
+    roomType === 'ArrivalDeparture'
+      ? arrivalGuest
+      : roomType === 'Departure'
+        ? departureGuest
+        : roomType === 'Stayover'
+          ? stayoverGuest
+          : roomType === 'Turndown'
+            ? turndownGuest
+            : arrivalGuest;
+
   const secondGuest = roomType === 'ArrivalDeparture' ? departureGuest : undefined;
   const hasLostAndFoundItems = (lostAndFoundItems?.length ?? 0) > 0;
 
-  // Calculate dynamic styles based on positions
-  const dynamicStyles = {
-    guestInfoSection: {
-      paddingTop: (positions.guestInfoTitle - CONTENT_AREA.top) * scaleX,
-      minHeight: (positions.divider2 - positions.guestInfoTitle + 2) * scaleX, // +2 so divider line is never clipped
-    },
-    guestInfoTitle: {
-      top: (positions.guestInfoTitle - CONTENT_AREA.top) * scaleX,
-    },
-    divider1: {
-      top: (positions.divider1 - CONTENT_AREA.top) * scaleX,
-    },
-    divider2: {
-      top: (positions.divider2 - CONTENT_AREA.top) * scaleX,
-    },
-    cardSpacer: {
-      height: ((positions.lostAndFoundTitle - positions.divider2)) * scaleX,
-    },
-    assignedToSectionContainer: {
-      top: (positions.assignedToTitle - CONTENT_AREA.top) * scaleX,
-    },
-    assignedTaskCard: {
-      top: (positions.cardTop - CONTENT_AREA.top) * scaleX,
-      height: positions.cardHeight * scaleX,
-    },
-  };
+  const showSpecialOnFirstGuest =
+    (roomType === 'ArrivalDeparture' && firstGuest?.type === 'Arrival') || roomType !== 'ArrivalDeparture';
+
+  const specialForFirst =
+    showSpecialOnFirstGuest && config.hasSpecialInstructions ? specialInstructions ?? undefined : undefined;
+
+  const showAssignedTaskCard = !!(assignedTo || taskDescription);
+  const showAssignedToHeading = showAssignedTaskCard;
 
   const handleTabPress = (tab: DetailTab) => {
     setActiveTab(tab);
@@ -200,10 +177,8 @@ export default function RoomDetailContent({
 
   return (
     <View style={styles.container}>
-      {/* Gray Background */}
       <View style={styles.backgroundTop} />
 
-      {/* Header */}
       <RoomDetailHeader
         roomNumber={roomNumber}
         roomCode={roomCode}
@@ -222,13 +197,8 @@ export default function RoomDetailContent({
         showWithLinenBadge={showWithLinenBadge}
       />
 
-      {/* Tab Navigation */}
-      <DetailTabNavigation
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-      />
+      <DetailTabNavigation activeTab={activeTab} onTabPress={handleTabPress} />
 
-      {/* Content Area */}
       {activeTab === 'Checklist' ? (
         <ChecklistSection
           roomNumber={roomNumber}
@@ -254,134 +224,95 @@ export default function RoomDetailContent({
           showsVerticalScrollIndicator={false}
         >
           {activeTab === 'Overview' && (
-          <>
-            {/* Guest Info Section */}
-            {(firstGuest || secondGuest) && (
-              <View style={[styles.guestInfoSection, dynamicStyles.guestInfoSection]}>
-                <Text style={[styles.guestInfoTitle, dynamicStyles.guestInfoTitle]}>Guest Info</Text>
+            <>
+              <View style={styles.overviewTop}>
+                {(firstGuest || secondGuest) && (
+                  <>
+                    <Text style={styles.guestInfoTitle}>Guest Info</Text>
 
-                {/* First Guest */}
-                {firstGuest && (
-                  <GuestInfoCard
-                    guest={firstGuest.guest}
-                    isArrival={firstGuest.type === 'Arrival' || firstGuest.type === 'Stayover' || firstGuest.type === 'Turndown'}
-                    numberBadge={firstGuest.guest?.vipCode?.toString()}
-                    specialInstructions={
-                      // Show special instructions after Arrival guest for Arrival/Departure
-                      // Or after first guest for other types if present
-                      (roomType === 'ArrivalDeparture' && firstGuest.type === 'Arrival') ||
-                      (roomType !== 'ArrivalDeparture')
-                        ? (specialInstructions ?? undefined)
-                        : undefined
-                    }
-                    absoluteTop={positions.firstGuestTop}
-                    contentAreaTop={CONTENT_AREA.top}
-                    specialInstructionsTitleTop={positions.specialInstructionsTitle}
-                    specialInstructionsTextTop={positions.specialInstructionsText}
-                    roomCategory={firstGuest.type}
-                  />
-                )}
-
-                {/* Divider between guests (only for Arrival/Departure) */}
-                {firstGuest && secondGuest && roomType === 'ArrivalDeparture' && (
-                  <View style={[styles.divider1, dynamicStyles.divider1]} />
-                )}
-
-                {/* Second Guest (Departure for Arrival/Departure) */}
-                {secondGuest && roomType === 'ArrivalDeparture' && (
-                  <GuestInfoCard
-                    guest={secondGuest.guest}
-                    isArrival={false}
-                    numberBadge={secondGuest.guest?.vipCode?.toString() || firstGuest?.guest?.vipCode?.toString()}
-                    specialInstructions={undefined} // No special instructions for departure guest
-                    isSecondGuest={!!firstGuest}
-                    absoluteTop={positions.secondGuestTop!}
-                    contentAreaTop={CONTENT_AREA.top}
-                    roomCategory="Departure"
-                  />
-                )}
-
-                {/* Divider after guest info */}
-                {(firstGuest || secondGuest) && <View style={[styles.divider2, dynamicStyles.divider2]} />}
-              </View>
-            )}
-
-            {/* Spacer for card */}
-            <View style={[styles.cardSpacer, dynamicStyles.cardSpacer]} />
-
-            {/* Assigned to Section */}
-            {assignedTo && (
-              <View style={[styles.assignedToSectionContainer, dynamicStyles.assignedToSectionContainer]}>
-                <Text style={styles.assignedToTitle}>Assigned to</Text>
-              </View>
-            )}
-
-            {/* Card Container */}
-            <View style={[styles.assignedTaskCard, dynamicStyles.assignedTaskCard]}>
-              {assignedTo && (
-                <AssignedToSection
-                  staff={assignedTo}
-                  onReassignPress={onReassign}
-                />
-              )}
-
-              <View style={styles.cardDivider} />
-
-              {/* Task Section - Always show (with default if no taskDescription) */}
-              {taskDescription && (
-                <View style={styles.taskSection}>
-                  <Text style={styles.taskTitle}>Task</Text>
-                  {/* Hidden text to measure full height */}
-                  <Text
-                    ref={fullTextRef}
-                    style={[styles.taskText, styles.hiddenText]}
-                    onLayout={handleFullTextLayout}
-                  >
-                    {taskDescription}
-                  </Text>
-                  {/* Text with inline "see more" button */}
-                  <Text
-                    style={styles.taskText}
-                    numberOfLines={!showSeeMore ? MAX_LINES : undefined}
-                  >
-                    {getDisplayText()}
-                    {showSeeMore && (
-                      <>
-                        {' '}
-                        <Text
-                          style={styles.seeMoreText}
-                          onPress={handleSeeMorePress}
-                        >
-                          see more
-                        </Text>
-                      </>
+                    {firstGuest && (
+                      <GuestInfoCard
+                        guest={firstGuest.guest}
+                        category={guestCategoryFromType(firstGuest.type)}
+                        numberBadge={firstGuest.guest?.vipCode?.toString()}
+                        specialInstructions={specialForFirst}
+                      />
                     )}
-                  </Text>
-                </View>
-              )}
-            </View>
 
-            {/* Lost and Found Section */}
-            <LostAndFoundSection 
-              displayType={hasLostAndFoundItems ? 'withItems' : 'empty'}
-              items={lostAndFoundItems}
-              onAddPhotosPress={onAddLostAndFoundItem}
-              onTitlePress={() => {
-                // Navigate to Lost & Found screen if needed
-                console.log('Lost & Found title pressed');
-              }}
-              onItemPress={(item) => {
-                console.log('Lost & Found item pressed:', item.itemName);
-              }}
-            />
+                    {firstGuest && secondGuest && roomType === 'ArrivalDeparture' && (
+                      <View style={styles.fullBleedDivider} />
+                    )}
 
-            {/* Notes Section */}
-            <NotesSection
-              notes={notes}
-              onAddPress={onAddNote}
-            />
-          </>
-        )}
+                    {secondGuest && roomType === 'ArrivalDeparture' && (
+                      <GuestInfoCard
+                        guest={secondGuest.guest}
+                        category={guestCategoryFromType(secondGuest.type)}
+                        numberBadge={
+                          secondGuest.guest?.vipCode?.toString() || firstGuest?.guest?.vipCode?.toString()
+                        }
+                      />
+                    )}
+
+                    <View style={styles.fullBleedDivider} />
+                  </>
+                )}
+
+                {showAssignedToHeading ? (
+                  <>
+                    <Text style={styles.assignedToHeading}>Assigned to</Text>
+                    <View style={{ height: ASSIGNED_TO_GAP }} />
+                  </>
+                ) : null}
+
+                {showAssignedTaskCard ? (
+                  <View style={[styles.assignedCard, { minHeight: cardMinHeight }]}>
+                    <AssignedToSection staff={assignedTo ?? null} onReassignPress={onReassign} />
+
+                    {taskDescription ? <View style={styles.cardDivider} /> : null}
+
+                    {taskDescription ? (
+                      <View style={styles.taskSection}>
+                        <Text style={styles.taskTitle}>Task</Text>
+                        <Text
+                          style={[styles.taskText, styles.hiddenMeasureText]}
+                          onLayout={handleFullTextLayout}
+                        >
+                          {taskDescription}
+                        </Text>
+                        <Text style={styles.taskText} numberOfLines={!showSeeMore ? MAX_LINES : undefined}>
+                          {getDisplayText()}
+                          {showSeeMore && (
+                            <>
+                              {' '}
+                              <Text style={styles.seeMoreText} onPress={handleSeeMorePress}>
+                                see more
+                              </Text>
+                            </>
+                          )}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={{ marginTop: CARD_TO_LOST_FOUND_GAP }}>
+                <LostAndFoundSection
+                  displayType={hasLostAndFoundItems ? 'withItems' : 'empty'}
+                  items={lostAndFoundItems}
+                  onAddPhotosPress={onAddLostAndFoundItem}
+                  onTitlePress={() => {
+                    console.log('Lost & Found title pressed');
+                  }}
+                  onItemPress={(item) => {
+                    console.log('Lost & Found item pressed:', item.itemName);
+                  }}
+                />
+              </View>
+
+              <NotesSection notes={notes} onAddPress={onAddNote} />
+            </>
+          )}
 
           {activeTab === 'History' && (
             <HistorySection
@@ -394,9 +325,7 @@ export default function RoomDetailContent({
           )}
           {activeTab !== 'Overview' && activeTab !== 'History' && (
             <View style={styles.placeholderContent}>
-              <Text style={styles.placeholderText}>
-                {activeTab} content coming soon
-              </Text>
+              <Text style={styles.placeholderText}>{activeTab} content coming soon</Text>
             </View>
           )}
         </ScrollView>
@@ -427,33 +356,79 @@ const styles = StyleSheet.create({
     backgroundColor: CONTENT_AREA.backgroundTop,
     zIndex: 0,
   },
-  guestInfoSection: {
-    position: 'relative',
-    width: '100%',
+  overviewTop: {
+    paddingTop: OVERVIEW_CONTENT_TOP_PADDING,
   },
   guestInfoTitle: {
-    position: 'absolute',
-    left: GUEST_INFO.title.left * scaleX,
-    fontSize: GUEST_INFO.title.fontSize * scaleX,
+    fontSize: 15 * scaleX,
     fontFamily: 'Helvetica',
-    fontWeight: 'bold' as any,
-    color: GUEST_INFO.title.color,
+    fontWeight: 'bold',
+    color: '#000000',
+    marginBottom: 8 * scaleX,
+    paddingHorizontal: 20 * scaleX,
   },
-  divider1: {
-    position: 'absolute',
-    left: GUEST_INFO.divider.left,
-    width: GUEST_INFO.divider.width * scaleX,
-    height: GUEST_INFO.divider.height,
-    backgroundColor: GUEST_INFO.divider.color,
-    zIndex: 0,
+  fullBleedDivider: {
+    height: SECTION_DIVIDER.height,
+    backgroundColor: SECTION_DIVIDER.backgroundColor,
+    width: '100%',
+    marginVertical: SECTION_DIVIDER.marginVertical,
   },
-  divider2: {
+  assignedToHeading: {
+    fontSize: 15 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: 'bold',
+    color: '#000000',
+    paddingHorizontal: 20 * scaleX,
+    marginTop: 4 * scaleX,
+  },
+  assignedCard: {
+    alignSelf: 'center',
+    width: ASSIGNED_TASK_CARD.width * scaleX,
+    borderRadius: ASSIGNED_TASK_CARD.borderRadius * scaleX,
+    backgroundColor: ASSIGNED_TASK_CARD.backgroundColor,
+    borderWidth: ASSIGNED_TASK_CARD.borderWidth,
+    borderColor: ASSIGNED_TASK_CARD.borderColor,
+    paddingHorizontal: ASSIGNED_TASK_CARD.paddingHorizontal * scaleX,
+    paddingVertical: ASSIGNED_TASK_CARD.paddingVertical * scaleX,
+    overflow: 'hidden',
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: ASSIGNED_TASK_CARD.divider.backgroundColor,
+    width: '100%',
+    marginTop: 12 * scaleX,
+    marginBottom: 12 * scaleX,
+  },
+  taskSection: {
+    width: '100%',
+  },
+  taskTitle: {
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: 'bold',
+    color: '#000000',
+    marginBottom: 8 * scaleX,
+  },
+  taskText: {
+    fontSize: 13 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '300',
+    color: '#000000',
+    lineHeight: 18 * scaleX,
+  },
+  hiddenMeasureText: {
     position: 'absolute',
-    left: GUEST_INFO.divider2.left,
-    width: GUEST_INFO.divider2.width * scaleX,
-    height: GUEST_INFO.divider2.height,
-    backgroundColor: GUEST_INFO.divider2.color,
-    zIndex: 0,
+    opacity: 0,
+    zIndex: -1,
+    width: ASSIGNED_TASK_CARD.width * scaleX - ASSIGNED_TASK_CARD.paddingHorizontal * 2 * scaleX,
+    left: 0,
+    top: 0,
+  },
+  seeMoreText: {
+    fontSize: 13 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '500',
+    color: '#5a759d',
   },
   placeholderContent: {
     padding: 40 * scaleX,
@@ -464,80 +439,5 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 16 * scaleX,
     color: '#999',
-  },
-  cardSpacer: {
-    width: '100%',
-  },
-  assignedToSectionContainer: {
-    position: 'absolute',
-    left: 0,
-    width: '100%',
-    height: 20 * scaleX,
-    zIndex: 2,
-  },
-  assignedToTitle: {
-    position: 'absolute',
-    left: ASSIGNED_TO.title.left * scaleX,
-    top: 0,
-    fontSize: ASSIGNED_TO.title.fontSize * scaleX,
-    fontFamily: 'Helvetica',
-    fontWeight: 'bold' as any,
-    color: ASSIGNED_TO.title.color,
-  },
-  assignedTaskCard: {
-    position: 'absolute',
-    left: ASSIGNED_TASK_CARD.left * scaleX,
-    width: ASSIGNED_TASK_CARD.width * scaleX,
-    borderRadius: ASSIGNED_TASK_CARD.borderRadius * scaleX,
-    backgroundColor: ASSIGNED_TASK_CARD.backgroundColor,
-    borderWidth: ASSIGNED_TASK_CARD.borderWidth,
-    borderColor: ASSIGNED_TASK_CARD.borderColor,
-    paddingHorizontal: ASSIGNED_TASK_CARD.paddingHorizontal * scaleX,
-    paddingVertical: ASSIGNED_TASK_CARD.paddingVertical * scaleX,
-    zIndex: 1,
-    overflow: 'hidden',
-  },
-  cardDivider: {
-    position: 'absolute',
-    left: ASSIGNED_TASK_CARD.paddingHorizontal * scaleX,
-    top: ASSIGNED_TASK_CARD.divider.top * scaleX,
-    width: ASSIGNED_TASK_CARD.divider.width * scaleX,
-    height: ASSIGNED_TASK_CARD.divider.height,
-    backgroundColor: ASSIGNED_TASK_CARD.divider.backgroundColor,
-    zIndex: 2,
-  },
-  taskSection: {
-    position: 'absolute',
-    left: 16 * scaleX, // Card padding
-    right: 16 * scaleX, // Card padding
-    top: (ASSIGNED_TASK_CARD.divider.top + ASSIGNED_TASK_CARD.divider.height + 6) * scaleX, // Below divider with 6px spacing
-    paddingHorizontal: 0,
-    width: ASSIGNED_TASK_CARD.width * scaleX - (ASSIGNED_TASK_CARD.paddingHorizontal * 2 * scaleX), // Full width minus padding
-  },
-  taskTitle: {
-    fontSize: 14 * scaleX, // From Figma: 14px
-    fontFamily: 'Helvetica',
-    fontWeight: 'bold' as any,
-    color: '#000000', // From Figma: black
-    marginBottom: 8 * scaleX, // Spacing between title and text
-  },
-  taskText: {
-    fontSize: 13 * scaleX, // From Figma: 13px
-    fontFamily: 'Helvetica',
-    fontWeight: '300' as any, // Light weight
-    color: '#000000', // From Figma: black
-    lineHeight: 18 * scaleX, // Proper line height for readability
-  },
-  hiddenText: {
-    position: 'absolute',
-    opacity: 0,
-    zIndex: -1,
-    width: '100%',
-  },
-  seeMoreText: {
-    fontSize: 13 * scaleX,
-    fontFamily: 'Helvetica',
-    fontWeight: '500',
-    color: '#5a759d',
   },
 });
