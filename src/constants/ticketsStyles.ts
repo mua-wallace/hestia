@@ -9,6 +9,11 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 export const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
+/** Use with `useWindowDimensions().width` for rotation / split-screen. */
+export function ticketsScaleX(windowWidth: number): number {
+  return windowWidth / DESIGN_WIDTH;
+}
+
 // Header Styles
 export const TICKETS_HEADER = {
   height: 133,
@@ -29,12 +34,12 @@ export const TICKETS_HEADER = {
     fontWeight: 'bold' as const,
     color: '#607aa1',
   },
-  // Create Ticket AI pill (Figma 667:3068); scaled to 3/4 of design size.
+  // Create Ticket AI (Figma frame 152×74, node 3005:59 under 667:3068).
   // Vertical position is derived in TicketsHeader to align with backButton center.
   createButton: {
     right: 27,
-    width: 114, // 152 × 3/4
-    height: 55.5, // 74 × 3/4
+    width: 152,
+    height: 74,
   },
 } as const;
 
