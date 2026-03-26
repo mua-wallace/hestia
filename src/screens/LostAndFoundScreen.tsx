@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, RefreshControl, Modal, TouchableOpacity, 
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import LostAndFoundHeader from '../components/lostAndFound/LostAndFoundHeader';
 import LostAndFoundTabs from '../components/lostAndFound/LostAndFoundTabs';
@@ -38,6 +39,7 @@ type LostAndFoundScreenNavigationProp = BottomTabNavigationProp<MainTabsParamLis
 
 export default function LostAndFoundScreen() {
   const navigation = useNavigation<LostAndFoundScreenNavigationProp>();
+  const insets = useSafeAreaInsets();
   const route = useRoute();
   const { open: openAIChatOverlay } = useAIChatOverlay();
   const params = route.params as { openRegisterModal?: boolean; preselectedRoomId?: string } | undefined;
@@ -619,7 +621,10 @@ export default function LostAndFoundScreen() {
       <View style={styles.scrollContainer}>
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: LOST_AND_FOUND_SPACING.contentPaddingTop * scaleX + insets.top },
+          ]}
           showsVerticalScrollIndicator={false}
           scrollEnabled={true}
           refreshControl={

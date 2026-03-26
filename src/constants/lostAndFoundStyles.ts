@@ -299,7 +299,10 @@ export const LOST_AND_FOUND_DIVIDER = {
 
 // Spacing
 export const LOST_AND_FOUND_SPACING = {
-  contentPaddingTop: 197, // Header (133) + tabs (39) + spacing (25) = 197px
+  // Figma (node 2702:6676): first card starts at y=213.
+  // Header (133) + tabs row (39) + gap to first card (41) = 213px.
+  // Divider sits at y=197, so first card begins below it.
+  contentPaddingTop: 213,
   contentPaddingBottom: 152, // Bottom nav height
   cardSpacing: 16, // Space between cards
 } as const;
