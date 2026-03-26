@@ -27,9 +27,56 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
   const toast = useToast();
   const [isImageLoading, setIsImageLoading] = useState<boolean>(false);
   const imagePulse = useRef(new Animated.Value(0.35)).current;
+  const SHIPPED_LOCATION_MAX_LENGTH = 18;
+  const trimToMaxLength = (value: string, maxLen: number) => {
+    if (maxLen <= 0) return '';
+    if (value.length <= maxLen) return value;
+    if (maxLen === 1) return '…';
+    return `${value.slice(0, maxLen - 1)}…`;
+  };
+  const shippedLocationCandidates = [
+    'Bremgarten Zug',
+    'Seefeld Zürich',
+    'Bahnhofstrasse Zürich',
+    'Altstadt Luzern',
+    'Zug Postplatz',
+    'Pilatusstrasse Luzern',
+    'Marktgasse Bern',
+    'Bahnhof Bern',
+    'St. Gallen Zentrum',
+    'Basel SBB',
+    'Lausanne Gare',
+    'Genève Cornavin',
+  ];
+  const hashStringToInt = (input: string) => {
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+      hash = (hash * 31 + input.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash);
+  };
+  const shippedLocation = (() => {
+    const seed = item.itemId || item.itemName || '';
+    const idx = shippedLocationCandidates.length
+      ? hashStringToInt(seed) % shippedLocationCandidates.length
+      : 0;
+    const picked = shippedLocationCandidates[idx] ?? 'Offsite storage';
+    return trimToMaxLength(picked, SHIPPED_LOCATION_MAX_LENGTH);
+  })();
+  const shippedLocationDisplay = (() => {
+    const base = (item.storedLocation ?? '').trim();
+    return base ? `${base} ${shippedLocation}` : shippedLocation;
+  })();
   const isPublicAreaItem =
     item.publicArea != null ||
     (typeof item.location === 'string' && !item.location.toLowerCase().startsWith('room'));
+  const roomBadgeText =
+    item.roomNumber != null
+      ? String(item.roomNumber)
+      : (() => {
+          const m = (item.location || '').match(/room\s*(\d+)/i);
+          return m?.[1] ?? null;
+        })();
   const statusConfig =
     item.status === 'shipped' || item.status === 'returned'
       ? LOST_AND_FOUND_STATUS.shipped
@@ -108,14 +155,7 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
       <Text style={styles.foundInLabel}>Found in</Text>
       <View style={styles.foundInCard}>
         <View style={styles.foundInCardContent}>
-          {/* Left: primary location text (Room / Public Area location name) */}
-          <View style={styles.foundInLocationSection}>
-            <Text style={styles.foundInLocationText} numberOfLines={1}>
-              {item.location}
-            </Text>
-          </View>
-
-          {/* Right: room guest details (room items) or public-area chip */}
+          {/* Room: guest block starts from left (Figma 3107:70). */}
           {!isPublicAreaItem && (item.guestName || item.guestDates || item.guestImage) ? (
             <>
               <View style={styles.foundInGuestSection}>
@@ -127,11 +167,20 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
                 )}
 
                 <View style={styles.foundInGuestTextContainer}>
-                  {item.guestName && (
-                    <Text style={styles.foundInGuestName} numberOfLines={1} ellipsizeMode="tail">
-                      {item.guestName}
-                    </Text>
-                  )}
+                  <View style={styles.foundInGuestNameRow}>
+                    {item.guestName && (
+                      <Text style={styles.foundInGuestName} numberOfLines={1} ellipsizeMode="tail">
+                        {item.guestName}
+                      </Text>
+                    )}
+                    {roomBadgeText ? (
+                      <View style={styles.roomBadge}>
+                        <Text style={styles.roomBadgeText} numberOfLines={1}>
+                          {roomBadgeText}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
                   {!!item.guestDates && (
                     <Text style={styles.foundInGuestDates} numberOfLines={1} ellipsizeMode="tail">
                       {item.guestDates}
@@ -139,12 +188,32 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
                   )}
                 </View>
               </View>
+
             </>
           ) : isPublicAreaItem ? (
-            <View style={styles.publicAreaTag}>
-              <Text style={styles.publicAreaTagText}>
-                {item.publicArea ?? 'Public Area'}
-              </Text>
+            <View style={styles.publicAreaFoundInSection}>
+              <View style={styles.publicAreaFoundInIconTile} aria-hidden>
+                <Image
+                  source={require('../../../assets/icons/public-areea-icon.png')}
+                  style={styles.publicAreaFoundInIcon}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={styles.publicAreaFoundInTextContainer}>
+                <View style={styles.publicAreaFoundInTitleRow}>
+                  <Text style={styles.publicAreaFoundInTitle} numberOfLines={1} ellipsizeMode="tail">
+                    {item.publicArea ?? item.location ?? 'Public Area'}
+                  </Text>
+                  <View style={styles.publicAreaBadge}>
+                    <Text style={styles.publicAreaBadgeText} numberOfLines={1}>
+                      public area
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.publicAreaFoundInSubTitle} numberOfLines={1} ellipsizeMode="tail">
+                  {item.guestDates ?? ''}
+                </Text>
+              </View>
             </View>
           ) : null}
         </View>
@@ -160,9 +229,13 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
           />
         </View>
         <View style={styles.storedLocationTextContainer}>
-          <Text style={styles.storedLocationLabel}>Stored Location</Text>
+          <Text style={styles.storedLocationLabel}>
+            {item.status === 'shipped' ? 'Shipped Location' : 'Stored Location'}
+          </Text>
           <Text style={styles.storedLocationName} numberOfLines={1}>
-            {item.storedLocation}
+            {item.status === 'shipped'
+              ? shippedLocationDisplay
+              : item.storedLocation}
           </Text>
         </View>
       </View>
@@ -279,7 +352,7 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
           ]}
         >
           {item.status === 'shipped' || item.status === 'returned'
-            ? 'Returned'
+            ? 'Shipped'
             : item.status === 'discarded'
               ? 'Discarded'
               : 'Stored'}
@@ -346,10 +419,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: LOST_AND_FOUND_CONTENT.location.left * scaleX,
     top: LOST_AND_FOUND_CONTENT.location.top * scaleX,
-    fontSize: LOST_AND_FOUND_CONTENT.location.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
+    width: 84 * scaleX,
+    height: 19 * scaleX,
+    fontSize: 13 * scaleX,
+    fontFamily: 'Inter',
     fontWeight: '300' as any,
-    color: LOST_AND_FOUND_CONTENT.location.color,
+    color: '#000000',
+    lineHeight: undefined,
+    includeFontPadding: false,
   },
   foundInCard: {
     position: 'absolute',
@@ -357,19 +434,16 @@ const styles = StyleSheet.create({
     top: LOST_AND_FOUND_CONTENT.guestName.top * scaleX,
     width: (LOST_AND_FOUND_IMAGE.left - LOST_AND_FOUND_CONTENT.guestName.left - 10) * scaleX,
     borderRadius: 6 * scaleX,
-    backgroundColor: 'rgba(100,131,176,0.07)',
+    backgroundColor: 'transparent',
     paddingHorizontal: 12 * scaleX,
     paddingVertical: 8 * scaleX,
     overflow: 'hidden',
   },
   foundInCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
     minHeight: 42 * scaleX,
-  },
-  foundInLocationSection: {
-    minWidth: 82 * scaleX,
-    maxWidth: 96 * scaleX,
   },
   foundInLocationText: {
     fontSize: 14 * scaleX,
@@ -378,21 +452,22 @@ const styles = StyleSheet.create({
     color: LOST_AND_FOUND_COLORS.tabActive,
   },
   foundInGuestSection: {
-    flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
     minWidth: 0,
     paddingRight: 0,
     minHeight: 30 * scaleX,
-    marginLeft: 8 * scaleX,
+    marginLeft: 0,
   },
   foundInImageThumbContainer: {
-    width: 30 * scaleX,
-    height: 30 * scaleX,
-    borderRadius: 4 * scaleX,
+    // Figma: ~34.6px square thumbnail
+    width: 34.6 * scaleX,
+    height: 34.6 * scaleX,
+    borderRadius: 5 * scaleX,
     overflow: 'hidden',
-    marginRight: 6 * scaleX,
+    // Figma gap between thumb and name ~11px
+    marginRight: 11 * scaleX,
     backgroundColor: '#e5e7eb',
   },
   foundInImageThumb: {
@@ -404,44 +479,112 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'flex-start',
     minWidth: 0,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingLeft: 0,
+  },
+  foundInGuestNameRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    minWidth: 0,
   },
   foundInGuestName: {
     fontSize: 14 * scaleX,
     fontFamily: 'Helvetica',
     fontWeight: '700' as any,
     color: '#000000',
-    marginRight: 4 * scaleX,
-    marginBottom: 1 * scaleX,
+    marginRight: 6 * scaleX,
+    marginBottom: 0,
     flexShrink: 1,
     minWidth: 0,
-    width: 90 * scaleX,
     lineHeight: 14 * scaleX,
     includeFontPadding: false,
   },
   foundInGuestDates: {
-    fontSize: 11 * scaleX,
-    fontFamily: typography.fontFamily.primary,
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '300' as any,
+    color: '#000000',
+    marginTop: 6 * scaleX,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  roomBadge: {
+    backgroundColor: 'rgba(59,193,246,0.25)',
+    borderRadius: 7 * scaleX,
+    minHeight: 18 * scaleX,
+    paddingHorizontal: 10 * scaleX,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  roomBadgeText: {
+    fontSize: 9 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '300' as any,
+    color: '#000000',
+    includeFontPadding: false,
+    lineHeight: 10 * scaleX,
+  },
+  publicAreaFoundInSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  publicAreaFoundInIconTile: {
+    width: 41 * scaleX,
+    height: 38 * scaleX,
+    borderRadius: 5 * scaleX,
+    backgroundColor: '#F0F5FB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  publicAreaFoundInIcon: {
+    width: 22 * scaleX,
+    height: 22 * scaleX,
+    tintColor: '#5A759D',
+  },
+  publicAreaFoundInTextContainer: {
+    marginLeft: 8 * scaleX,
+    flex: 1,
+    minWidth: 0,
+  },
+  publicAreaFoundInTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  publicAreaFoundInTitle: {
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    color: '#000000',
+    flexShrink: 1,
+    minWidth: 0,
+    includeFontPadding: false,
+  },
+  publicAreaBadge: {
+    marginLeft: 10 * scaleX,
+    backgroundColor: 'rgba(59,193,246,0.25)',
+    borderRadius: 7 * scaleX,
+    height: 18 * scaleX,
+    paddingHorizontal: 10 * scaleX,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  publicAreaBadgeText: {
+    fontSize: 9 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '300' as any,
+    color: '#000000',
+    includeFontPadding: false,
+    lineHeight: 10 * scaleX,
+  },
+  publicAreaFoundInSubTitle: {
+    marginTop: 6 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
     fontWeight: '300' as any,
     color: '#000000',
     flexShrink: 1,
     minWidth: 0,
-  },
-  publicAreaTag: {
-    marginLeft: 12 * scaleX,
-    backgroundColor: 'rgba(59,193,246,0.25)',
-    borderRadius: 7 * scaleX,
-    paddingHorizontal: 12 * scaleX,
-    paddingVertical: 8 * scaleX,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  publicAreaTagText: {
-    fontSize: 12 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '300' as any,
-    color: '#000000',
   },
   storedLocationContainer: {
     position: 'absolute',

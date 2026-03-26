@@ -23,7 +23,7 @@ export default function LostAndFoundTabs({ selectedTab, onTabPress, onSearchPres
   const tabs = [
     { id: 'created' as LostAndFoundTab, label: 'All' },
     { id: 'stored' as LostAndFoundTab, label: 'Stored' },
-    { id: 'returned' as LostAndFoundTab, label: 'Returned' },
+    { id: 'returned' as LostAndFoundTab, label: 'Shipped' },
     { id: 'discarded' as LostAndFoundTab, label: 'Discarded' },
   ];
 

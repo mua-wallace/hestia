@@ -25,15 +25,20 @@ if (!isSupabaseConfigured) {
   );
 }
 
-function createTimeoutFetch(timeoutMs: number) {
+function createTimeoutFetch(defaultTimeoutMs: number) {
   return async (input: RequestInfo | URL, init?: RequestInit) => {
+    // iOS/RN can legitimately take >20s for Storage uploads on slow networks.
+    // Use a longer timeout for Storage upload endpoints to avoid aborting mid-upload.
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : 'request';
+    const isStorageUpload =
+      url.includes('/storage/v1/object/upload') || url.includes('/storage/v1/object/upload/sign');
+    const timeoutMs = isStorageUpload ? 120000 : defaultTimeoutMs;
+
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);
     try {
       return await fetch(input, { ...init, signal: controller.signal });
     } catch (err) {
-      // iOS often reports generic "Network request failed"; log the URL for debugging.
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : 'request';
       console.error('[SupabaseFetch] failed', { url, message: err instanceof Error ? err.message : String(err) });
       throw err;
     } finally {

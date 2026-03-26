@@ -810,7 +810,7 @@ export default function RoomDetailScreen() {
               itemName: 'Wrist Watch',
               itemId: 'FH31390',
               location: 'Guest bathroom while cleaning',
-              storedLocation: 'HSK Office',
+              storedLocation: 'Office',
               registeredBy: {
                 name: 'Stella Kitou',
                 avatar: require('../../assets/icons/profile-avatar.png'),

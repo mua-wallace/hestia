@@ -606,7 +606,7 @@ export default function LostAndFoundScreen() {
       case 'stored':
         return item.status === 'stored';
       case 'returned':
-        return item.status === 'shipped'; // Returned tab shows items with "shipped" status
+        return item.status === 'shipped'; // Shipped tab shows items with "shipped" status
       case 'discarded':
         return item.status === 'discarded';
       default:
@@ -702,7 +702,7 @@ export default function LostAndFoundScreen() {
               style={[styles.statusOption, (statusModalItem?.status === 'shipped' || statusModalItem?.status === 'returned') && styles.statusOptionActive]}
               onPress={() => handleStatusSelect('shipped')}
             >
-              <Text style={styles.statusOptionText}>Returned</Text>
+              <Text style={styles.statusOptionText}>Shipped</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.statusOption, statusModalItem?.status === 'discarded' && styles.statusOptionActive]}

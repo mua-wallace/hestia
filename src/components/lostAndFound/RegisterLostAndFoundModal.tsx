@@ -545,12 +545,12 @@ export default function RegisterLostAndFoundModal({
   // Get stored location label
   const getLocationLabel = (location: StoredLocationOption): string => {
     const labels: { [key: string]: string } = {
-      hskOffice: 'HSK Office',
+      hskOffice: 'Office',
       frontDesk: 'Front Desk',
       securityOffice: 'Security Office',
       lostAndFoundRoom: 'Lost & Found Room',
     };
-    return labels[location] || 'HSK Office';
+    return labels[location] || 'Office';
   };
 
   return (

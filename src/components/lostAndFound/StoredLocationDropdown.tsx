@@ -21,7 +21,7 @@ interface StoredLocationDropdownProps {
 }
 
 const locationOptions: { value: StoredLocationOption; label: string }[] = [
-  { value: 'hskOffice', label: 'HSK Office' },
+  { value: 'hskOffice', label: 'Office' },
   { value: 'frontDesk', label: 'Front Desk' },
   { value: 'securityOffice', label: 'Security Office' },
   { value: 'lostAndFoundRoom', label: 'Lost & Found Room' },
