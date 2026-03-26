@@ -27,6 +27,17 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
   const toast = useToast();
   const [isImageLoading, setIsImageLoading] = useState<boolean>(false);
   const imagePulse = useRef(new Animated.Value(0.35)).current;
+  const formatPublicAreaTimestamp = (iso?: string) => {
+    if (!iso) return '';
+    const dt = new Date(iso);
+    if (Number.isNaN(dt.getTime())) return '';
+    const hh = String(dt.getHours()).padStart(2, '0');
+    const mm = String(dt.getMinutes()).padStart(2, '0');
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const mo = String(dt.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(dt.getFullYear());
+    return `${hh}:${mm} ${dd}/${mo}/${yyyy}`;
+  };
   const SHIPPED_LOCATION_MAX_LENGTH = 18;
   const trimToMaxLength = (value: string, maxLen: number) => {
     if (maxLen <= 0) return '';
@@ -211,7 +222,9 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
                   </View>
                 </View>
                 <Text style={styles.publicAreaFoundInSubTitle} numberOfLines={1} ellipsizeMode="tail">
-                  {item.guestDates ?? ''}
+                  {formatPublicAreaTimestamp(item.storedAt ?? item.createdAt) ||
+                    item.guestDates ||
+                    ''}
                 </Text>
               </View>
             </View>
@@ -298,24 +311,31 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
           styles.statusButton,
           {
             backgroundColor: statusConfig.backgroundColor,
-            width: statusConfig.width * scaleX,
-            left: statusConfig.left * scaleX,
+            right: (statusConfig as any).right != null ? (statusConfig as any).right * scaleX : undefined,
+            minWidth: statusConfig.width * scaleX,
             top: statusConfig.top * scaleX,
           },
         ]}
         onPress={onStatusPress}
         activeOpacity={0.7}
       >
-        {/* Status Icon */}
-        {(item.status === 'shipped' || item.status === 'returned') ? (
+        <View style={styles.statusButtonContent} pointerEvents="none">
+          <Text style={[styles.statusText, { color: statusConfig.textColor }]} numberOfLines={1}>
+            {item.status === 'shipped' || item.status === 'returned'
+              ? 'Shipped'
+              : item.status === 'discarded'
+                ? 'Discarded'
+                : 'Stored'}
+          </Text>
           <Image
-            source={require('../../../assets/icons/tick.png')}
+            source={
+              item.status === 'shipped' || item.status === 'returned'
+                ? require('../../../assets/icons/tick.png')
+                : require('../../../assets/icons/down-arrow.png')
+            }
             style={[
               styles.statusIcon,
               {
-                position: 'absolute',
-                left: (statusConfig.iconLeft - statusConfig.left) * scaleX,
-                top: (statusConfig.iconTop - statusConfig.top) * scaleX,
                 width: statusConfig.iconWidth * scaleX,
                 height: statusConfig.iconHeight * scaleX,
                 tintColor: '#ffffff',
@@ -323,40 +343,7 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
             ]}
             resizeMode="contain"
           />
-        ) : (
-          <Image
-            source={require('../../../assets/icons/down-arrow.png')}
-            style={[
-              styles.statusIcon,
-              {
-                position: 'absolute',
-                left: (statusConfig.iconLeft - statusConfig.left) * scaleX,
-                top: (statusConfig.iconTop - statusConfig.top) * scaleX,
-                width: statusConfig.iconWidth * scaleX,
-                height: statusConfig.iconHeight * scaleX,
-                tintColor: '#ffffff',
-              },
-            ]}
-            resizeMode="contain"
-          />
-        )}
-        <Text
-          style={[
-            styles.statusText,
-            {
-              color: statusConfig.textColor,
-              position: 'absolute',
-              left: (statusConfig.textLeft - statusConfig.left) * scaleX,
-              top: (statusConfig.textTop - statusConfig.top) * scaleX,
-            },
-          ]}
-        >
-          {item.status === 'shipped' || item.status === 'returned'
-            ? 'Shipped'
-            : item.status === 'discarded'
-              ? 'Discarded'
-              : 'Stored'}
-        </Text>
+        </View>
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -713,9 +700,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     height: LOST_AND_FOUND_STATUS.button.height * scaleX,
     borderRadius: LOST_AND_FOUND_STATUS.button.borderRadius * scaleX,
+    justifyContent: 'center',
+  },
+  statusButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14 * scaleX,
   },
   statusIcon: {
     // Icon styles are set inline
+    marginLeft: 8 * scaleX,
   },
   statusText: {
     fontSize: LOST_AND_FOUND_STATUS.text.fontSize * scaleX,

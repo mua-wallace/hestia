@@ -226,7 +226,8 @@ export default function LostAndFoundScreen() {
           // Prefer normalized public URL for the item image
           image: imageUri ? { uri: imageUri } : undefined,
           status: (row.status as LostAndFoundItem['status']) ?? 'stored',
-          createdAt: '',
+          storedAt: (row as any).found_at ?? (row as any).created_at ?? undefined,
+          createdAt: (row as any).created_at ?? '',
         };
       });
       setItems(mapped);
