@@ -17,6 +17,7 @@ import {
   Animated,
   Platform,
   PanResponder,
+  ScrollView,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,10 +55,12 @@ export default function InspectedStatusSlideModal({
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const thumbPosition = useRef(new Animated.Value(0)).current;
+  const isCompletingRef = useRef(false);
   const insets = useSafeAreaInsets();
 
   const modalWidth = CARD_DIMENSIONS.width * scaleX;
-  const modalHeight = 420 * scaleX;
+  const maxModalHeight = SCREEN_HEIGHT - (headerHeight * scaleX) - insets.bottom - 24 * scaleX;
+  const modalHeight = Math.min(420 * scaleX, Math.max(320 * scaleX, maxModalHeight));
   const SLIDE_TRACK_WIDTH = modalWidth - 48 * scaleX - 50; // modal padding (24*2) minus thumb (44) and track padding (6)
   const COMPLETE_THRESHOLD = 0.85;
 
@@ -84,11 +87,13 @@ export default function InspectedStatusSlideModal({
           const maxX = SLIDE_TRACK_WIDTH;
           const x = Math.max(0, Math.min(gestureState.dx, maxX));
           if (x >= maxX * COMPLETE_THRESHOLD) {
+            if (isCompletingRef.current) return;
+            isCompletingRef.current = true;
             Animated.timing(thumbPosition, {
               toValue: maxX,
               duration: 150,
               useNativeDriver: true,
-            }).start(() => onComplete());
+            }).start(() => closeModal(onComplete));
           } else {
             Animated.spring(thumbPosition, {
               toValue: 0,
@@ -147,6 +152,7 @@ export default function InspectedStatusSlideModal({
 
   useEffect(() => {
     if (visible) {
+      isCompletingRef.current = false;
       setCheckedItems({});
       thumbPosition.setValue(0);
       Animated.parallel([
@@ -159,12 +165,16 @@ export default function InspectedStatusSlideModal({
     }
   }, [visible, slideAnim, opacityAnim]);
 
-  const handleClose = () => {
+  const closeModal = (afterClose?: () => void) => {
     Animated.parallel([
       Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-    ]).start(() => onClose());
+    ]).start(() => {
+      onClose();
+      afterClose?.();
+    });
   };
+  const handleClose = () => closeModal();
 
   const translateY = slideAnim.interpolate({
     inputRange: [0, 1],
@@ -204,7 +214,7 @@ export default function InspectedStatusSlideModal({
                 pointerEvents="none"
               />
             )}
-            <View style={styles.modalContainer}>
+            <View style={[styles.modalContainer, { maxHeight: modalHeight }]}>
               <View style={styles.titleRow}>
                 <Text style={styles.checklistTitle}>Inspection Checklist</Text>
                 <TouchableOpacity
@@ -218,6 +228,11 @@ export default function InspectedStatusSlideModal({
                 </TouchableOpacity>
               </View>
               <View style={styles.dividerAfterTitle} />
+              <ScrollView
+                style={styles.scrollArea}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+              >
                 {INSPECTION_CHECKLIST_ITEMS.map((item) => (
                   <TouchableOpacity
                     key={item.id}
@@ -238,8 +253,8 @@ export default function InspectedStatusSlideModal({
                     </View>
                   </TouchableOpacity>
                 ))}
-              <View style={styles.dividerBeforeOptional} />
-              <Text style={styles.optionalTitle}>Optional</Text>
+                <View style={styles.dividerBeforeOptional} />
+                <Text style={styles.optionalTitle}>Optional</Text>
                 <TouchableOpacity style={styles.optionalItem} activeOpacity={0.7}>
                   <View style={styles.iconCircle}>
                     <Ionicons name="image-outline" size={24 * scaleX} color="#334866" />
@@ -252,6 +267,7 @@ export default function InspectedStatusSlideModal({
                   </View>
                   <Text style={styles.optionalLabel}>Add Notes</Text>
                 </TouchableOpacity>
+              </ScrollView>
                 <View style={styles.slideSection}>
                   <View
                     style={[styles.slideTrack, !allChecked && styles.slideTrackDisabled]}
@@ -331,6 +347,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 35 * scaleX,
     elevation: 10,
+  },
+  scrollArea: {
+    flexGrow: 0,
+  },
+  scrollContent: {
+    paddingBottom: 12 * scaleX,
   },
   dividerAfterTitle: {
     height: 1,

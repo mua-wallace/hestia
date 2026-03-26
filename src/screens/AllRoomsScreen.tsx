@@ -19,6 +19,7 @@ import RoomCard from '../components/allRooms/RoomCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
+import CleanChecklistModal from '../components/allRooms/CleanChecklistModal';
 import type { RootStackParamList } from '../navigation/types';
 import { BlurView } from 'expo-blur';
 import { FilterState, FilterCounts } from '../types/filter.types';
@@ -80,6 +81,9 @@ export default function AllRoomsScreen() {
   const [showInspectedModal, setShowInspectedModal] = useState(false);
   const [roomForInspection, setRoomForInspection] = useState<RoomCardData | null>(null);
   const [buttonPositionForInspection, setButtonPositionForInspection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [showCleanChecklistModal, setShowCleanChecklistModal] = useState(false);
+  const [roomForCleaning, setRoomForCleaning] = useState<RoomCardData | null>(null);
+  const [buttonPositionForCleaning, setButtonPositionForCleaning] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedRoomForStatusChange, setSelectedRoomForStatusChange] = useState<RoomCardData | null>(null);
   const [roomToAssign, setRoomToAssign] = useState<RoomCardData | null>(null);
@@ -866,6 +870,13 @@ export default function AllRoomsScreen() {
             setShowInspectedModal(true);
           }
         }}
+        onCleanedSelect={() => {
+          if (selectedRoomForStatusChange) {
+            setRoomForCleaning(selectedRoomForStatusChange);
+            setButtonPositionForCleaning(statusButtonPosition);
+            setShowCleanChecklistModal(true);
+          }
+        }}
         currentStatus={selectedRoomForStatusChange?.houseKeepingStatus || 'InProgress'}
         room={selectedRoomForStatusChange || undefined}
         buttonPosition={statusButtonPosition}
@@ -899,6 +910,29 @@ export default function AllRoomsScreen() {
         }}
         onComplete={() => handleStatusSelect('Inspected', roomForInspection)}
         buttonPosition={buttonPositionForInspection}
+        headerHeight={217}
+        showTriangle={true}
+      />
+
+      {/* Clean Checklist Modal - shown when changing to Cleaned */}
+      <CleanChecklistModal
+        visible={showCleanChecklistModal}
+        onClose={() => {
+          setShowCleanChecklistModal(false);
+          setRoomForCleaning(null);
+          setButtonPositionForCleaning(null);
+          if (originalScrollY > 0 && scrollViewRef.current) {
+            setTimeout(() => {
+              scrollViewRef.current?.scrollTo({
+                y: originalScrollY,
+                animated: true,
+              });
+              setOriginalScrollY(0);
+            }, 100);
+          }
+        }}
+        onComplete={() => handleStatusSelect('Cleaned', roomForCleaning)}
+        buttonPosition={buttonPositionForCleaning}
         headerHeight={217}
         showTriangle={true}
       />
