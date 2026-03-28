@@ -234,13 +234,6 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
 
       {/* Stored Location Section */}
       <View style={styles.storedLocationContainer}>
-        <View style={styles.storedLocationIconContainer}>
-          <Image
-            source={require('../../../assets/icons/location-pin-icon.png')}
-            style={styles.locationPinIcon}
-            resizeMode="contain"
-          />
-        </View>
         <View style={styles.storedLocationTextContainer}>
           <Text style={styles.storedLocationLabel}>
             {item.status === 'shipped' ? 'Shipped Location' : 'Stored Location'}
@@ -511,27 +504,32 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     lineHeight: 10 * scaleX,
   },
+  // Match foundInGuestSection: same thumb size + gap so text aligns with room “Found in” rows
   publicAreaFoundInSection: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    minWidth: 0,
+    minHeight: 30 * scaleX,
   },
   publicAreaFoundInIconTile: {
-    width: 41 * scaleX,
-    height: 38 * scaleX,
+    width: 34.6 * scaleX,
+    height: 34.6 * scaleX,
     borderRadius: 5 * scaleX,
     backgroundColor: '#F0F5FB',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 11 * scaleX,
   },
   publicAreaFoundInIcon: {
-    width: 22 * scaleX,
-    height: 22 * scaleX,
+    width: 20 * scaleX,
+    height: 20 * scaleX,
     tintColor: '#5A759D',
   },
   publicAreaFoundInTextContainer: {
-    marginLeft: 8 * scaleX,
     flex: 1,
     minWidth: 0,
+    paddingLeft: 0,
   },
   publicAreaFoundInTitleRow: {
     flexDirection: 'row',
@@ -573,30 +571,18 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minWidth: 0,
   },
+  // Align with Found In card inner content: guestName.left + foundInCard paddingHorizontal
   storedLocationContainer: {
     position: 'absolute',
-    left: LOST_AND_FOUND_STORED_LOCATION.icon.left * scaleX,
+    left: (LOST_AND_FOUND_CONTENT.guestName.left + 12) * scaleX,
     // Keep a safe lane below "Found in" content to prevent overlap.
     top: (LOST_AND_FOUND_STORED_LOCATION.icon.top + 19) * scaleX,
     flexDirection: 'row',
     alignItems: 'center',
-    maxWidth: 240 * scaleX,
-  },
-  storedLocationIconContainer: {
-    width: LOST_AND_FOUND_STORED_LOCATION.icon.size * scaleX,
-    height: LOST_AND_FOUND_STORED_LOCATION.icon.size * scaleX,
-    borderRadius: (LOST_AND_FOUND_STORED_LOCATION.icon.size / 2) * scaleX,
-    backgroundColor: LOST_AND_FOUND_STORED_LOCATION.icon.backgroundColor,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  locationPinIcon: {
-    width: LOST_AND_FOUND_STORED_LOCATION.pinIcon.width * scaleX,
-    height: LOST_AND_FOUND_STORED_LOCATION.pinIcon.height * scaleX,
-    tintColor: '#ffffff',
+    maxWidth:
+      (LOST_AND_FOUND_IMAGE.left + 8 - LOST_AND_FOUND_CONTENT.guestName.left - 12 - 12) * scaleX,
   },
   storedLocationTextContainer: {
-    marginLeft: 8 * scaleX,
     flex: 1,
     minWidth: 0,
   },
@@ -611,7 +597,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.primary,
     fontWeight: LOST_AND_FOUND_TYPOGRAPHY.storedLocationName.fontWeight as any,
     color: LOST_AND_FOUND_TYPOGRAPHY.storedLocationName.color,
-    maxWidth: 200 * scaleX,
   },
   itemImageContainer: {
     position: 'absolute',
