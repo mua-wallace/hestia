@@ -27,12 +27,14 @@ if (!isSupabaseConfigured) {
 
 function createTimeoutFetch(defaultTimeoutMs: number) {
   return async (input: RequestInfo | URL, init?: RequestInit) => {
-    // iOS/RN can legitimately take >20s for Storage uploads on slow networks.
-    // Use a longer timeout for Storage upload endpoints to avoid aborting mid-upload.
+    // iOS/RN: default 20s is too short for Storage uploads and heavy PostgREST nested selects.
     const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : 'request';
-    const isStorageUpload =
-      url.includes('/storage/v1/object/upload') || url.includes('/storage/v1/object/upload/sign');
-    const timeoutMs = isStorageUpload ? 120000 : defaultTimeoutMs;
+    // Storage: POST /storage/v1/object/{bucket}/{path}
+    const isStorageObjectRequest = url.includes('/storage/v1/object/');
+    // PostgREST: nested selects (e.g. rooms → reservations → guests) can exceed 20s on slow networks.
+    const isRestQuery = url.includes('/rest/v1/');
+    const timeoutMs =
+      isStorageObjectRequest || isRestQuery ? 120000 : defaultTimeoutMs;
 
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeoutMs);

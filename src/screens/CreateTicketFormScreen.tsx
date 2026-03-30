@@ -217,6 +217,14 @@ export default function CreateTicketFormScreen() {
     setPictures((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleOpenStaffModal = () => {
+    if (!selectedDepartment) {
+      toast.show('Please select a department first.', { type: 'error' });
+      return;
+    }
+    setShowStaffModal(true);
+  };
+
   const handleSubmit = async () => {
     // Validation
     if (!ticketName.trim()) {
@@ -245,6 +253,7 @@ export default function CreateTicketFormScreen() {
         roomId: paramIsPublicArea ? null : (paramRoomId ?? null),
         locationType,
         publicAreaName: paramIsPublicArea ? (paramPublicAreaName ?? null) : null,
+        pictures,
       });
 
       toast.show('Ticket created successfully', { type: 'success', title: 'Success' });
@@ -431,7 +440,7 @@ export default function CreateTicketFormScreen() {
               ) : null}
               <TouchableOpacity
                 style={[styles.addStaffButton, assignedStaff.length === 0 && { marginLeft: 0 }]}
-                onPress={() => setShowStaffModal(true)}
+                onPress={handleOpenStaffModal}
                 activeOpacity={0.7}
               >
                 <Text style={styles.addStaffText}>+</Text>

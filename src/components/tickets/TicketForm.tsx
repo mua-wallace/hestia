@@ -195,6 +195,14 @@ export default function TicketForm({
     setPictures((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleOpenStaffModal = () => {
+    if (!selectedDepartment) {
+      toast.show('Please select a department first.', { type: 'error' });
+      return;
+    }
+    setShowStaffModal(true);
+  };
+
   const handleSubmit = async () => {
     // Validation
     if (!ticketName.trim()) {
@@ -221,6 +229,7 @@ export default function TicketForm({
         assignedToId,
         roomId: roomId ?? null,
         locationType: 'room',
+        pictures,
       });
 
       toast.show('Ticket created successfully', { type: 'success', title: 'Success' });
@@ -383,7 +392,7 @@ export default function TicketForm({
                     styles.addStaffButton,
                     { marginLeft: assignedStaff.length > 0 ? 16 * scaleX : 0 },
                   ]}
-                  onPress={() => setShowStaffModal(true)}
+                  onPress={handleOpenStaffModal}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.addStaffText}>+</Text>

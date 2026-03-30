@@ -205,10 +205,6 @@ export default function TicketsScreen() {
                   onPress={() => handleTicketPress(ticket)}
                   onStatusPress={() => handleStatusPress(ticket)}
                 />
-                {/* Divider */}
-                {index < filteredTickets.length - 1 && (
-                  <View style={styles.divider} />
-                )}
               </React.Fragment>
             ))
           )}
