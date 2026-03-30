@@ -5,6 +5,7 @@ import {
   scaleX,
 } from '../../constants/ticketsStyles';
 import { TicketData } from '../../types/tickets.types';
+import { formatDueAtCalendarLabel } from '../../utils/ticketDue';
 
 export type TicketStatusAnchorLayout = { x: number; y: number; width: number; height: number };
 
@@ -21,6 +22,11 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
   };
+
+  const dueAtLine = useMemo(() => {
+    if (!ticket.dueAt) return undefined;
+    return formatDueAtCalendarLabel(ticket.dueAt);
+  }, [ticket.dueAt]);
 
   const createdAtText = useMemo(() => {
     if (!ticket.createdAt) return undefined;
@@ -45,6 +51,9 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
     });
   };
 
+  const isDone = ticket.status === 'done';
+  const isOfo = ticket.status === 'ofo';
+
   return (
     <TouchableOpacity
       style={styles.card}
@@ -54,17 +63,26 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
       <View style={styles.topRow}>
         <View style={styles.topRowLeft}>
           <View style={styles.titleRow}>
-            <Text style={styles.title} numberOfLines={1}>
+            <Text
+              style={[styles.title, isDone ? styles.titleDone : isOfo ? styles.titleOfo : styles.titleOpen]}
+              numberOfLines={1}
+            >
               {ticket.title}
             </Text>
             {!!ticket.roomNumber && (
-              <View style={styles.roomPill}>
+              <View style={[styles.roomPill, isDone ? styles.roomPillDone : isOfo ? styles.roomPillOfo : styles.roomPillOpen]}>
                 <Text style={styles.roomPillText} numberOfLines={1}>
                   {ticket.roomNumber}
                 </Text>
               </View>
             )}
           </View>
+
+          {!!dueAtLine && (
+            <Text style={styles.dueAtLine} numberOfLines={1}>
+              {dueAtLine}
+            </Text>
+          )}
 
           {!!ticket.guest?.name && (
             <View style={styles.guestRow}>
@@ -92,29 +110,42 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
         <TouchableOpacity
           ref={statusPillRef}
           collapsable={false}
-          style={styles.statusPill}
+          style={[styles.statusPill, isDone ? styles.statusPillDone : isOfo ? styles.statusPillOfo : styles.statusPillOpen]}
           onPress={handleStatusPress}
           activeOpacity={0.8}
           accessibilityRole="button"
           accessibilityLabel="Change ticket status"
         >
-          <Image
-            source={
-              ticket.status === 'done'
-                ? require('../../../assets/icons/done.png')
-                : require('../../../assets/icons/unsolved.png')
-            }
-            style={[
-              styles.statusIcon,
-              ticket.status === 'done' ? styles.statusIconDone : styles.statusIconUnsolved,
-            ]}
-            resizeMode="contain"
-          />
-          <Image
-            source={require('../../../assets/icons/dropdown-arrow.png')}
-            style={styles.statusChevron}
-            resizeMode="contain"
-          />
+          {isOfo ? (
+            <>
+              <Text style={styles.ofoPillLabel}>OFT</Text>
+              <Image
+                source={require('../../../assets/icons/dropdown-arrow.png')}
+                style={[styles.statusChevron, styles.statusChevronOfo]}
+                resizeMode="contain"
+              />
+            </>
+          ) : (
+            <>
+              <Image
+                source={
+                  ticket.status === 'done'
+                    ? require('../../../assets/icons/done.png')
+                    : require('../../../assets/icons/unsolved.png')
+                }
+                style={[
+                  styles.statusIcon,
+                  ticket.status === 'done' ? styles.statusIconDone : styles.statusIconUnsolved,
+                ]}
+                resizeMode="contain"
+              />
+              <Image
+                source={require('../../../assets/icons/dropdown-arrow.png')}
+                style={[styles.statusChevron, isDone ? styles.statusChevronDone : styles.statusChevronOpen]}
+                resizeMode="contain"
+              />
+            </>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -229,15 +260,42 @@ const styles = StyleSheet.create({
     fontSize: 27 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700',
-    color: '#f92424',
     includeFontPadding: false,
   },
+  titleOpen: {
+    color: '#f92424',
+  },
+  /** Figma 3129:1362 — solved ticket title */
+  titleDone: {
+    color: '#7ae07c',
+  },
+  /** Figma 3147:114 — OFO / OFT ticket title */
+  titleOfo: {
+    color: '#c6c5c5',
+  },
   roomPill: {
-    backgroundColor: '#f92424',
     borderRadius: 7 * scaleX,
     paddingHorizontal: 14 * scaleX,
     paddingVertical: 8 * scaleX,
     flexShrink: 0,
+  },
+  roomPillOpen: {
+    backgroundColor: '#f92424',
+  },
+  roomPillDone: {
+    backgroundColor: '#41d541',
+  },
+  /** Figma 3147:127 — room badge when OFO */
+  roomPillOfo: {
+    backgroundColor: '#c6c5c5',
+  },
+  dueAtLine: {
+    marginTop: 4 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '400',
+    color: '#334866',
+    includeFontPadding: false,
   },
   roomPillText: {
     fontSize: 24 * scaleX,
@@ -292,12 +350,33 @@ const styles = StyleSheet.create({
     width: 67 * scaleX,
     height: 44 * scaleX,
     borderRadius: 75 * scaleX,
-    backgroundColor: '#f9edef',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 6 * scaleX,
     paddingHorizontal: 12 * scaleX,
+  },
+  statusPillOpen: {
+    backgroundColor: '#f9edef',
+  },
+  /** Figma 3147:79 — solved status control */
+  statusPillDone: {
+    backgroundColor: '#41d541',
+  },
+  /** Figma 3147:147 — OFT pill (grey) */
+  statusPillOfo: {
+    backgroundColor: '#c6c5c5',
+    gap: 4 * scaleX,
+    paddingHorizontal: 10 * scaleX,
+  },
+  /** Figma 3147:230 — OFT in pill (white on grey for contrast) */
+  ofoPillLabel: {
+    fontSize: 9 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: 0.2,
+    includeFontPadding: false,
   },
   statusIcon: {
     width: 17 * scaleX,
@@ -308,12 +387,20 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '180deg' }],
   },
   statusIconDone: {
-    tintColor: '#41d541',
+    tintColor: '#ffffff',
   },
   statusChevron: {
     width: 10 * scaleX,
     height: 10 * scaleX,
+  },
+  statusChevronOpen: {
     tintColor: '#f92424',
+  },
+  statusChevronDone: {
+    tintColor: '#ffffff',
+  },
+  statusChevronOfo: {
+    tintColor: '#ffffff',
   },
   footerRow: {
     flexDirection: 'row',

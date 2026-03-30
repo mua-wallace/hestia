@@ -1,5 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, Modal, TouchableOpacity, Pressable, Text, Image, Switch, useWindowDimensions } from 'react-native';
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  RefreshControl,
+  Modal,
+  TouchableOpacity,
+  Pressable,
+  Text,
+  Image,
+  Switch,
+  TextInput,
+  useWindowDimensions,
+} from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,13 +37,19 @@ import {
   scaleX,
 } from '../constants/ticketsStyles';
 import { dashboardService } from '../services/dashboard';
-import { updateTicketStatus } from '../services/tickets';
+import { updateTicketStatus, updateTicketDueAt } from '../services/tickets';
 import { useAuth } from '../contexts/AuthContext';
 import { typography } from '../theme';
 
-/** Change Status popover — height estimate for vertical clamping; width/left from `TICKET_STATUS_POPOVER` (Figma). */
-const STATUS_POPOVER_HEIGHT_EST = 268 * scaleX;
+/** Change Status popover — height for vertical clamping (expanded when Due time fields visible). Figma ~295 / ~472. */
+const STATUS_POPOVER_HEIGHT_COLLAPSED = 268 * scaleX;
+const STATUS_POPOVER_HEIGHT_EXPANDED = 455 * scaleX;
 const STATUS_POPOVER_NOTCH_SIZE = 12 * scaleX;
+
+/** Figma 3129:2033–2034 — Time / Date field boxes. */
+const DUE_TIME_BOX_W = 134 * scaleX;
+const DUE_DATE_BOX_W = 175 * scaleX;
+const DUE_FIELDS_GAP = 37 * scaleX;
 
 type MainTabsParamList = MainTabsParamListFromApp & {
   Tickets: { initialTab?: TicketTab } | undefined;
@@ -54,7 +73,37 @@ export default function TicketsScreen() {
   const [statusMenuTicket, setStatusMenuTicket] = useState<TicketData | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [dueTimeEnabled, setDueTimeEnabled] = useState(false);
+  const [dueHour, setDueHour] = useState('');
+  const [dueMinute, setDueMinute] = useState('');
+  const [dueDay, setDueDay] = useState('');
+  const [dueMonth, setDueMonth] = useState('');
   const [statusAnchor, setStatusAnchor] = useState<TicketStatusAnchorLayout | null>(null);
+
+  const dueYearDisplay = React.useMemo(() => new Date().getFullYear(), []);
+
+  const applyDueFieldsFromDate = React.useCallback((d: Date) => {
+    setDueHour(String(d.getHours()).padStart(2, '0'));
+    setDueMinute(String(d.getMinutes()).padStart(2, '0'));
+    setDueDay(String(d.getDate()).padStart(2, '0'));
+    setDueMonth(String(d.getMonth() + 1).padStart(2, '0'));
+  }, []);
+
+  React.useEffect(() => {
+    if (!statusMenuTicket) return;
+    const iso = statusMenuTicket.dueAt;
+    setDueTimeEnabled(!!iso);
+    if (iso) {
+      const d = new Date(iso);
+      if (Number.isFinite(d.getTime())) {
+        applyDueFieldsFromDate(d);
+        return;
+      }
+    }
+    setDueHour('');
+    setDueMinute('');
+    setDueDay('');
+    setDueMonth('');
+  }, [statusMenuTicket, applyDueFieldsFromDate]);
 
   const loadTickets = useCallback(async (overrideInitialTab?: TicketTab) => {
     try {
@@ -152,9 +201,71 @@ export default function TicketsScreen() {
 
   const handleStatusPress = (ticket: TicketData, anchor?: TicketStatusAnchorLayout) => {
     setStatusMenuTicket(ticket);
-    setDueTimeEnabled(false);
     setStatusAnchor(anchor ?? null);
   };
+
+  const buildDueAtIsoFromFields = React.useCallback((): string | null => {
+    const h = parseInt(dueHour, 10);
+    const mi = parseInt(dueMinute, 10);
+    const d = parseInt(dueDay, 10);
+    const mo = parseInt(dueMonth, 10);
+    const y = dueYearDisplay;
+    if (![h, mi, d, mo].every((n) => Number.isFinite(n))) return null;
+    if (h < 0 || h > 23 || mi < 0 || mi > 59 || d < 1 || d > 31 || mo < 1 || mo > 12) return null;
+    const dt = new Date(y, mo - 1, d, h, mi, 0, 0);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+    return dt.toISOString();
+  }, [dueHour, dueMinute, dueDay, dueMonth, dueYearDisplay]);
+
+  const persistDueAt = React.useCallback(async () => {
+    if (!statusMenuTicket || !dueTimeEnabled) return;
+    const iso = buildDueAtIsoFromFields();
+    if (!iso) return;
+    const ticketId = statusMenuTicket.id;
+    try {
+      await updateTicketDueAt(ticketId, iso);
+      setStatusMenuTicket((t) => (t?.id === ticketId ? { ...t, dueAt: iso } : t));
+      await loadTickets(selectedTab);
+    } catch (e) {
+      console.warn('[TicketsScreen] Failed to save due time', e);
+    }
+  }, [statusMenuTicket, dueTimeEnabled, buildDueAtIsoFromFields, loadTickets, selectedTab]);
+
+  const handleDueTimeToggle = React.useCallback(
+    async (value: boolean) => {
+      if (value && statusMenuTicket) {
+        const ticketId = statusMenuTicket.id;
+        const now = new Date();
+        applyDueFieldsFromDate(now);
+        setDueTimeEnabled(true);
+        try {
+          const iso = now.toISOString();
+          await updateTicketDueAt(ticketId, iso);
+          setStatusMenuTicket((t) => (t?.id === ticketId ? { ...t, dueAt: iso } : t));
+          await loadTickets(selectedTab);
+        } catch (e) {
+          console.warn('[TicketsScreen] Failed to save default due time', e);
+        }
+        return;
+      }
+      setDueTimeEnabled(false);
+      if (!value && statusMenuTicket) {
+        const ticketId = statusMenuTicket.id;
+        try {
+          await updateTicketDueAt(ticketId, null);
+          setDueHour('');
+          setDueMinute('');
+          setDueDay('');
+          setDueMonth('');
+          setStatusMenuTicket((t) => (t?.id === ticketId ? { ...t, dueAt: null } : t));
+          await loadTickets(selectedTab);
+        } catch (e) {
+          console.warn('[TicketsScreen] Failed to clear due time', e);
+        }
+      }
+    },
+    [statusMenuTicket, loadTickets, selectedTab, applyDueFieldsFromDate]
+  );
 
   const handleStatusSelect = async (nextStatus: TicketStatus) => {
     if (!statusMenuTicket) return;
@@ -185,7 +296,7 @@ export default function TicketsScreen() {
       if (!currentUserId) return false;
       return ticket.assignedToId === currentUserId;
     } else if (selectedTab === 'open') {
-      return ticket.status === 'unsolved';
+      return ticket.status === 'unsolved' || ticket.status === 'ofo';
     } else if (selectedTab === 'closed') {
       return ticket.status === 'done';
     }
@@ -196,7 +307,7 @@ export default function TicketsScreen() {
     if (!statusAnchor) return null;
     const left = TICKET_STATUS_POPOVER.left * scaleX;
     const popoverW = TICKET_STATUS_POPOVER.width * scaleX;
-    const popoverH = STATUS_POPOVER_HEIGHT_EST;
+    const popoverH = dueTimeEnabled ? STATUS_POPOVER_HEIGHT_EXPANDED : STATUS_POPOVER_HEIGHT_COLLAPSED;
 
     const desiredTop = statusAnchor.y + statusAnchor.height + 8 * scaleX;
     const top = Math.max(left, Math.min(windowHeight - popoverH - left, desiredTop));
@@ -207,7 +318,7 @@ export default function TicketsScreen() {
     const notchLeft = Math.max(14 * scaleX, Math.min(popoverW - 14 * scaleX - notchSize, notchCenterX - notchSize / 2));
 
     return { left, top, notchLeft, width: popoverW };
-  }, [statusAnchor, windowWidth, windowHeight]);
+  }, [statusAnchor, windowWidth, windowHeight, dueTimeEnabled]);
 
   return (
     <View style={styles.container}>
@@ -335,9 +446,7 @@ export default function TicketsScreen() {
                 style={styles.statusGridItem}
                 activeOpacity={0.8}
                 disabled={statusUpdating}
-                onPress={() => {
-                  // OFO not represented in tickets table yet.
-                }}
+                onPress={() => handleStatusSelect('ofo')}
               >
                 <View style={styles.statusCircleOfoOuter}>
                   <View style={styles.statusCircleOfoInner} />
@@ -352,13 +461,78 @@ export default function TicketsScreen() {
               <Text style={styles.statusSectionTitle}>Due time</Text>
               <Switch
                 value={dueTimeEnabled}
-                onValueChange={setDueTimeEnabled}
+                onValueChange={handleDueTimeToggle}
                 disabled={statusUpdating}
-                trackColor={{ false: '#eef2f7', true: '#eef2f7' }}
+                trackColor={{ false: '#eef2f7', true: '#5b769e' }}
                 thumbColor="#ffffff"
                 style={styles.dueTimeSwitch}
               />
             </View>
+
+            {dueTimeEnabled && (
+              <View style={styles.dueTimeFields}>
+                <View style={styles.dueTimeColumns}>
+                  <View style={{ width: DUE_TIME_BOX_W }}>
+                    <Text style={styles.dueTimeColLabel}>Time</Text>
+                    <View style={[styles.dueTimeBox, { width: DUE_TIME_BOX_W }]}>
+                      <TextInput
+                        style={styles.dueTimeInput}
+                        value={dueHour}
+                        onChangeText={(t) => setDueHour(t.replace(/\D/g, '').slice(0, 2))}
+                        onBlur={persistDueAt}
+                        placeholder="H"
+                        placeholderTextColor="rgba(0,0,0,0.35)"
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        editable={!statusUpdating}
+                      />
+                      <View style={styles.dueTimeInnerDivider} />
+                      <TextInput
+                        style={styles.dueTimeInput}
+                        value={dueMinute}
+                        onChangeText={(t) => setDueMinute(t.replace(/\D/g, '').slice(0, 2))}
+                        onBlur={persistDueAt}
+                        placeholder="M"
+                        placeholderTextColor="rgba(0,0,0,0.35)"
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        editable={!statusUpdating}
+                      />
+                    </View>
+                  </View>
+                  <View style={{ width: DUE_DATE_BOX_W }}>
+                    <Text style={styles.dueTimeColLabel}>Date</Text>
+                    <View style={[styles.dueTimeBox, { width: DUE_DATE_BOX_W }]}>
+                      <TextInput
+                        style={styles.dueTimeInput}
+                        value={dueDay}
+                        onChangeText={(t) => setDueDay(t.replace(/\D/g, '').slice(0, 2))}
+                        onBlur={persistDueAt}
+                        placeholder="DD"
+                        placeholderTextColor="rgba(0,0,0,0.35)"
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        editable={!statusUpdating}
+                      />
+                      <View style={styles.dueTimeInnerDivider} />
+                      <TextInput
+                        style={styles.dueTimeInput}
+                        value={dueMonth}
+                        onChangeText={(t) => setDueMonth(t.replace(/\D/g, '').slice(0, 2))}
+                        onBlur={persistDueAt}
+                        placeholder="MM"
+                        placeholderTextColor="rgba(0,0,0,0.35)"
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        editable={!statusUpdating}
+                      />
+                      <View style={styles.dueTimeInnerDivider} />
+                      <Text style={styles.dueYearStatic}>{dueYearDisplay}</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -538,6 +712,53 @@ const styles = StyleSheet.create({
   },
   dueTimeSwitch: {
     transform: [{ scaleX: 0.88 }, { scaleY: 0.88 }],
+  },
+  dueTimeFields: {
+    marginTop: 12 * scaleX,
+  },
+  dueTimeColumns: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: DUE_FIELDS_GAP,
+  },
+  dueTimeColLabel: {
+    marginBottom: 8 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000000',
+  },
+  dueTimeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 58 * scaleX,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 0,
+    overflow: 'hidden',
+  },
+  dueTimeInput: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 8 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000000',
+    textAlign: 'center',
+  },
+  dueTimeInnerDivider: {
+    width: 1,
+    height: 28 * scaleX,
+    backgroundColor: '#e5e5e5',
+  },
+  dueYearStatic: {
+    flexShrink: 0,
+    paddingHorizontal: 10 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: 'rgba(0,0,0,0.18)',
   },
 });
 

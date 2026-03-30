@@ -1,6 +1,7 @@
 export type TicketTab = 'myTickets' | 'all' | 'open' | 'closed';
 
-export type TicketStatus = 'done' | 'unsolved';
+/** `ofo` = out-of-order / OFT pill (Figma 3147:87). */
+export type TicketStatus = 'done' | 'unsolved' | 'ofo';
 
 export interface TicketData {
   id: string;
@@ -19,7 +20,9 @@ export interface TicketData {
   category?: string;
   categoryIcon?: any;
   locationText?: string; // e.g. "Room 201" or "Brasserie"
-  dueTime?: string; // e.g., "10 mins"
+  dueTime?: string; // e.g., "10 mins" (relative display)
+  /** ISO 8601 from `tickets.due_at` when set in Change Status → Due time. */
+  dueAt?: string | null;
   createdAt?: string; // ISO string from Supabase (used for "Due in" timer)
   createdBy: {
     name: string;

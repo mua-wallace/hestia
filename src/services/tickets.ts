@@ -16,6 +16,7 @@ type TicketsRow = {
   assigned_to_id: string | null;
   created_by_id: string;
   created_at: string;
+  due_at?: string | null;
   rooms?: {
     room_number: string;
   } | null;
@@ -130,6 +131,13 @@ function mapRowToTicketData(
   const createdAtMs = new Date(row.created_at).getTime();
   const guest = row.room_id ? guestByRoomId.get(row.room_id) : undefined;
   const images = imagesByTicketId.get(row.id);
+  const dueAtIso = row.due_at ?? null;
+
+  /** Relative “mins” line is superseded by calendar due line on the card when `due_at` is set. */
+  const dueTimeDisplay =
+    (status === 'unsolved' || status === 'ofo') && !dueAtIso && Number.isFinite(createdAtMs)
+      ? formatElapsed((nowMs - createdAtMs) / 60000)
+      : undefined;
 
   return {
     id: row.id,
@@ -142,11 +150,9 @@ function mapRowToTicketData(
     categoryIcon: iconConfig?.icon,
     status,
     createdAt: row.created_at,
+    dueAt: dueAtIso,
     locationText: row.room_id ? `Room ${row.rooms?.room_number ?? '—'}` : (row.type ?? 'Public Area'),
-    dueTime:
-      status === 'unsolved' && Number.isFinite(createdAtMs)
-        ? formatElapsed((nowMs - createdAtMs) / 60000)
-        : undefined,
+    dueTime: dueTimeDisplay,
     createdBy: {
       name: row.created_by?.full_name ?? 'Staff',
       avatar: row.created_by?.avatar_url ?? undefined,
@@ -170,6 +176,9 @@ function mapStatus(raw: string | null | undefined): TicketStatus {
   if (value === 'done' || value === 'closed' || value === 'resolved') {
     return 'done';
   }
+  if (value === 'ofo' || value === 'out_of_order' || value === 'oof' || value === 'oft') {
+    return 'ofo';
+  }
   return 'unsolved';
 }
 
@@ -192,6 +201,7 @@ export async function getTicketsData(): Promise<TicketsScreenData> {
         'assigned_to_id',
         'created_by_id',
         'created_at',
+        'due_at',
         'departments(name)',
         'rooms (room_number)',
         'created_by:users!tickets_created_by_id_fkey (full_name, avatar_url, departments(name))',
@@ -314,6 +324,7 @@ export async function getLatestTicketForRoom(roomId: string): Promise<TicketData
         'assigned_to_id',
         'created_by_id',
         'created_at',
+        'due_at',
         'departments(name)',
         'rooms (room_number)',
         'created_by:users!tickets_created_by_id_fkey (full_name, avatar_url, departments(name))',
@@ -451,5 +462,12 @@ export async function updateTicketStatus(ticketId: string, status: TicketStatus)
   if (error) {
     throw error;
   }
+}
+
+/** Persist due time from Change Status modal (nullable clears). */
+export async function updateTicketDueAt(ticketId: string, dueAtIso: string | null): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const { error } = await supabase.from('tickets').update({ due_at: dueAtIso }).eq('id', ticketId);
+  if (error) throw error;
 }
 
