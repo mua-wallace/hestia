@@ -111,6 +111,15 @@ export const TICKET_CARD = {
   paddingBottom: 19, // From Figma: button at y=602, card ends at y=629, so 629-602-8=19px
 } as const;
 
+/**
+ * Change Status popover (Figma node 3129:1647 Union, Tickets frame 3129:1500).
+ * W=396, left=21 on 440-wide artboard — narrower than the 409-wide card, not edge-aligned to card.
+ */
+export const TICKET_STATUS_POPOVER = {
+  width: 396,
+  left: 21,
+} as const;
+
 // Ticket Content Styles
 export const TICKET_CONTENT = {
   title: {

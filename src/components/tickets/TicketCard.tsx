@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
 import {
@@ -6,10 +6,12 @@ import {
 } from '../../constants/ticketsStyles';
 import { TicketData } from '../../types/tickets.types';
 
+export type TicketStatusAnchorLayout = { x: number; y: number; width: number; height: number };
+
 interface TicketCardProps {
   ticket: TicketData;
   onPress?: () => void;
-  onStatusPress?: () => void;
+  onStatusPress?: (anchor?: TicketStatusAnchorLayout) => void;
 }
 
 export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCardProps) {
@@ -33,6 +35,15 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
     const yyyy = dt.getFullYear();
     return `${hh}:${mm}, ${dd}/${mo}/${yyyy}`;
   }, [ticket.createdAt]);
+
+  const statusPillRef = useRef<View>(null);
+
+  const handleStatusPress = () => {
+    if (!onStatusPress) return;
+    statusPillRef.current?.measureInWindow?.((x, y, width, height) => {
+      onStatusPress({ x, y, width, height });
+    });
+  };
 
   return (
     <TouchableOpacity
@@ -79,8 +90,10 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
         </View>
 
         <TouchableOpacity
+          ref={statusPillRef}
+          collapsable={false}
           style={styles.statusPill}
-          onPress={onStatusPress}
+          onPress={handleStatusPress}
           activeOpacity={0.8}
           accessibilityRole="button"
           accessibilityLabel="Change ticket status"

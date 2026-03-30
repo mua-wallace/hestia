@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, Modal, TouchableOpacity, TouchableWithoutFeedback, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, Modal, TouchableOpacity, Pressable, Text, Image, Switch, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,6 +10,7 @@ import TicketsHeader from '../components/tickets/TicketsHeader';
 import TicketsTabs from '../components/tickets/TicketsTabs';
 import TicketCard from '../components/tickets/TicketCard';
 import EmptyTicketsState from '../components/tickets/EmptyTicketsState';
+import type { TicketStatusAnchorLayout } from '../components/tickets/TicketCard';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
 import { TicketTab, TicketData, TicketsScreenData, TicketStatus } from '../types/tickets.types';
@@ -19,12 +20,17 @@ import {
   TICKETS_SPACING,
   TICKETS_COLORS,
   TICKET_DIVIDER,
+  TICKET_STATUS_POPOVER,
   scaleX,
 } from '../constants/ticketsStyles';
 import { dashboardService } from '../services/dashboard';
 import { updateTicketStatus } from '../services/tickets';
 import { useAuth } from '../contexts/AuthContext';
 import { typography } from '../theme';
+
+/** Change Status popover — height estimate for vertical clamping; width/left from `TICKET_STATUS_POPOVER` (Figma). */
+const STATUS_POPOVER_HEIGHT_EST = 268 * scaleX;
+const STATUS_POPOVER_NOTCH_SIZE = 12 * scaleX;
 
 type MainTabsParamList = MainTabsParamListFromApp & {
   Tickets: { initialTab?: TicketTab } | undefined;
@@ -39,6 +45,7 @@ export default function TicketsScreen() {
   const route = useRoute();
   const { open: openAIChatOverlay } = useAIChatOverlay();
   const { session } = useAuth();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState('Tickets');
   const [selectedTab, setSelectedTab] = useState<TicketTab>('myTickets');
   const [ticketsData, setTicketsData] = useState<TicketsScreenData | null>(null);
@@ -46,6 +53,8 @@ export default function TicketsScreen() {
   const [loading, setLoading] = useState(true);
   const [statusMenuTicket, setStatusMenuTicket] = useState<TicketData | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [dueTimeEnabled, setDueTimeEnabled] = useState(false);
+  const [statusAnchor, setStatusAnchor] = useState<TicketStatusAnchorLayout | null>(null);
 
   const loadTickets = useCallback(async (overrideInitialTab?: TicketTab) => {
     try {
@@ -141,8 +150,10 @@ export default function TicketsScreen() {
     // navigation.navigate('TicketDetail', { ticketId: ticket.id });
   };
 
-  const handleStatusPress = (ticket: TicketData) => {
+  const handleStatusPress = (ticket: TicketData, anchor?: TicketStatusAnchorLayout) => {
     setStatusMenuTicket(ticket);
+    setDueTimeEnabled(false);
+    setStatusAnchor(anchor ?? null);
   };
 
   const handleStatusSelect = async (nextStatus: TicketStatus) => {
@@ -181,6 +192,23 @@ export default function TicketsScreen() {
     return true; // 'all' shows all tickets
   });
 
+  const statusPopoverPosition = React.useMemo(() => {
+    if (!statusAnchor) return null;
+    const left = TICKET_STATUS_POPOVER.left * scaleX;
+    const popoverW = TICKET_STATUS_POPOVER.width * scaleX;
+    const popoverH = STATUS_POPOVER_HEIGHT_EST;
+
+    const desiredTop = statusAnchor.y + statusAnchor.height + 8 * scaleX;
+    const top = Math.max(left, Math.min(windowHeight - popoverH - left, desiredTop));
+
+    const notchSize = STATUS_POPOVER_NOTCH_SIZE;
+    const anchorCenterX = statusAnchor.x + statusAnchor.width / 2;
+    const notchCenterX = anchorCenterX - left;
+    const notchLeft = Math.max(14 * scaleX, Math.min(popoverW - 14 * scaleX - notchSize, notchCenterX - notchSize / 2));
+
+    return { left, top, notchLeft, width: popoverW };
+  }, [statusAnchor, windowWidth, windowHeight]);
+
   return (
     <View style={styles.container}>
       {(loading || refreshing) && <LoadingOverlay fullScreen message={loading ? 'Loading tickets…' : 'Refreshing…'} />}
@@ -203,7 +231,7 @@ export default function TicketsScreen() {
                 <TicketCard
                   ticket={ticket}
                   onPress={() => handleTicketPress(ticket)}
-                  onStatusPress={() => handleStatusPress(ticket)}
+                  onStatusPress={(anchor) => handleStatusPress(ticket, anchor)}
                 />
               </React.Fragment>
             ))
@@ -220,26 +248,119 @@ export default function TicketsScreen() {
         animationType="fade"
         onRequestClose={() => setStatusMenuTicket(null)}
       >
-        <TouchableWithoutFeedback onPress={() => (statusUpdating ? null : setStatusMenuTicket(null))}>
-          <View style={styles.statusModalOverlay}>
-            <View style={styles.statusDropdown}>
+        <View style={styles.statusModalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              if (!statusUpdating) setStatusMenuTicket(null);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss status menu"
+          />
+          <View
+            style={[
+              styles.statusPopover,
+              statusPopoverPosition
+                ? {
+                    position: 'absolute',
+                    left: statusPopoverPosition.left,
+                    top: statusPopoverPosition.top,
+                    width: statusPopoverPosition.width,
+                  }
+                : null,
+            ]}
+          >
+            <View
+              style={[
+                styles.statusPopoverNotch,
+                statusPopoverPosition ? { left: statusPopoverPosition.notchLeft } : null,
+              ]}
+            />
+
+            <Text style={styles.statusSectionTitle}>Change Status</Text>
+
+            <View style={styles.statusGrid}>
               <TouchableOpacity
-                style={styles.statusOption}
-                onPress={() => handleStatusSelect('done')}
+                style={styles.statusGridItem}
+                activeOpacity={0.8}
                 disabled={statusUpdating}
+                onPress={() => {
+                  // Ticket priority is not yet wired from this UI in backend.
+                  // Keep UI parity with Figma without mutating server state.
+                }}
               >
-                <Text style={[styles.statusOptionText, styles.statusOptionDone]}>Done</Text>
+                <View style={[styles.statusCircle, styles.statusCirclePriority]}>
+                  <Image
+                    source={require('../../assets/icons/priority-status.png')}
+                    style={styles.statusCircleIconRush}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={styles.statusGridLabel}>Priority</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
-                style={styles.statusOption}
-                onPress={() => handleStatusSelect('unsolved')}
+                style={styles.statusGridItem}
+                activeOpacity={0.8}
                 disabled={statusUpdating}
+                onPress={() => handleStatusSelect('unsolved')}
               >
-                <Text style={[styles.statusOptionText, styles.statusOptionUnsolved]}>Unsolved</Text>
+                <View style={[styles.statusCircle, styles.statusCircleUnsolved]}>
+                  <Image
+                    source={require('../../assets/icons/thumbs-down-icon.png')}
+                    style={styles.statusCircleIconOnDark}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={styles.statusGridLabel}>Unsolved</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.statusGridItem}
+                activeOpacity={0.8}
+                disabled={statusUpdating}
+                onPress={() => handleStatusSelect('done')}
+              >
+                <View style={[styles.statusCircle, styles.statusCircleSolved]}>
+                  <Image
+                    source={require('../../assets/icons/done.png')}
+                    style={styles.statusCircleIconSolved}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={styles.statusGridLabel}>Solved</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.statusGridItem}
+                activeOpacity={0.8}
+                disabled={statusUpdating}
+                onPress={() => {
+                  // OFO not represented in tickets table yet.
+                }}
+              >
+                <View style={styles.statusCircleOfoOuter}>
+                  <View style={styles.statusCircleOfoInner} />
+                </View>
+                <Text style={styles.statusGridLabel}>OFO</Text>
               </TouchableOpacity>
             </View>
+
+            <View style={styles.statusDivider} />
+
+            <View style={styles.dueTimeRow}>
+              <Text style={styles.statusSectionTitle}>Due time</Text>
+              <Switch
+                value={dueTimeEnabled}
+                onValueChange={setDueTimeEnabled}
+                disabled={statusUpdating}
+                trackColor={{ false: '#eef2f7', true: '#eef2f7' }}
+                thumbColor="#ffffff"
+                style={styles.dueTimeSwitch}
+              />
+            </View>
           </View>
-        </TouchableWithoutFeedback>
+        </View>
       </Modal>
 
       {/* Header - Fixed at top */}
@@ -299,32 +420,124 @@ const styles = StyleSheet.create({
   statusModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
   },
-  statusDropdown: {
-    width: 220 * scaleX,
+  statusPopover: {
+    zIndex: 1,
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e3e3e3',
     borderRadius: 10 * scaleX,
-    paddingVertical: 8 * scaleX,
-  },
-  statusOption: {
-    paddingVertical: 12 * scaleX,
     paddingHorizontal: 16 * scaleX,
+    paddingTop: 16 * scaleX,
+    paddingBottom: 14 * scaleX,
+    shadowColor: '#6483B0',
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
-  statusOptionText: {
+  statusPopoverNotch: {
+    position: 'absolute',
+    top: -6 * scaleX,
+    width: STATUS_POPOVER_NOTCH_SIZE,
+    height: STATUS_POPOVER_NOTCH_SIZE,
+    backgroundColor: '#ffffff',
+    borderLeftWidth: 1,
+    borderTopWidth: 1,
+    borderColor: '#e3e3e3',
+    transform: [{ rotate: '45deg' }],
+  },
+  statusSectionTitle: {
     fontSize: 16 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700',
+    color: '#5b769e',
+  },
+  statusGrid: {
+    marginTop: 14 * scaleX,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  statusGridItem: {
+    width: 64 * scaleX,
+    alignItems: 'center',
+  },
+  statusCircle: {
+    width: 44 * scaleX,
+    height: 44 * scaleX,
+    borderRadius: 22 * scaleX,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusCirclePriority: {
+    backgroundColor: '#ffebeb',
+  },
+  statusCircleUnsolved: {
+    backgroundColor: '#f92424',
+  },
+  statusCircleSolved: {
+    backgroundColor: '#41d541',
+  },
+  /** Thick grey ring + white center (Figma OFO), not a thin outline. */
+  statusCircleOfoOuter: {
+    width: 44 * scaleX,
+    height: 44 * scaleX,
+    borderRadius: 22 * scaleX,
+    backgroundColor: '#c6c5c5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusCircleOfoInner: {
+    width: 20 * scaleX,
+    height: 20 * scaleX,
+    borderRadius: 10 * scaleX,
+    backgroundColor: '#ffffff',
+  },
+  statusCircleIcon: {
+    width: 24 * scaleX,
+    height: 24 * scaleX,
+    tintColor: '#f92424',
+  },
+  /** Priority / rush — full-color asset from Figma; do not tint. */
+  statusCircleIconRush: {
+    width: 26 * scaleX,
+    height: 26 * scaleX,
+  },
+  statusCircleIconOnDark: {
+    width: 24 * scaleX,
+    height: 24 * scaleX,
+    tintColor: '#ffffff',
+  },
+  /** Same glyph as ticket “done” state, white on green circle. */
+  statusCircleIconSolved: {
+    width: 24 * scaleX,
+    height: 24 * scaleX,
+    tintColor: '#ffffff',
+  },
+  statusGridLabel: {
+    marginTop: 8 * scaleX,
+    fontSize: 13 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000000',
     textAlign: 'center',
   },
-  statusOptionDone: {
-    color: '#41d541',
+  statusDivider: {
+    height: 1,
+    backgroundColor: '#e3e3e3',
+    marginTop: 14 * scaleX,
+    marginBottom: 10 * scaleX,
   },
-  statusOptionUnsolved: {
-    color: '#f92424',
+  dueTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dueTimeSwitch: {
+    transform: [{ scaleX: 0.88 }, { scaleY: 0.88 }],
   },
 });
 
