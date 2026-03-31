@@ -17,10 +17,12 @@ import {
 } from '../../constants/lostAndFoundStyles';
 import { LostAndFoundItem } from '../../types/lostAndFound.types';
 
+export type LostAndFoundStatusAnchorLayout = { x: number; y: number; width: number; height: number };
+
 interface LostAndFoundItemCardProps {
   item: LostAndFoundItem;
   onPress?: () => void;
-  onStatusPress?: () => void;
+  onStatusPress?: (anchor?: LostAndFoundStatusAnchorLayout) => void;
 }
 
 export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: LostAndFoundItemCardProps) {
@@ -38,45 +40,9 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
     const yyyy = String(dt.getFullYear());
     return `${hh}:${mm} ${dd}/${mo}/${yyyy}`;
   };
-  const SHIPPED_LOCATION_MAX_LENGTH = 18;
-  const trimToMaxLength = (value: string, maxLen: number) => {
-    if (maxLen <= 0) return '';
-    if (value.length <= maxLen) return value;
-    if (maxLen === 1) return '…';
-    return `${value.slice(0, maxLen - 1)}…`;
-  };
-  const shippedLocationCandidates = [
-    'Bremgarten Zug',
-    'Seefeld Zürich',
-    'Bahnhofstrasse Zürich',
-    'Altstadt Luzern',
-    'Zug Postplatz',
-    'Pilatusstrasse Luzern',
-    'Marktgasse Bern',
-    'Bahnhof Bern',
-    'St. Gallen Zentrum',
-    'Basel SBB',
-    'Lausanne Gare',
-    'Genève Cornavin',
-  ];
-  const hashStringToInt = (input: string) => {
-    let hash = 0;
-    for (let i = 0; i < input.length; i++) {
-      hash = (hash * 31 + input.charCodeAt(i)) | 0;
-    }
-    return Math.abs(hash);
-  };
-  const shippedLocation = (() => {
-    const seed = item.itemId || item.itemName || '';
-    const idx = shippedLocationCandidates.length
-      ? hashStringToInt(seed) % shippedLocationCandidates.length
-      : 0;
-    const picked = shippedLocationCandidates[idx] ?? 'Offsite storage';
-    return trimToMaxLength(picked, SHIPPED_LOCATION_MAX_LENGTH);
-  })();
   const shippedLocationDisplay = (() => {
-    const base = (item.storedLocation ?? '').trim();
-    return base ? `${base} ${shippedLocation}` : shippedLocation;
+    const v = (item.shippedLocation ?? '').trim();
+    return v || '—';
   })();
   const isPublicAreaItem =
     item.publicArea != null ||
@@ -97,6 +63,14 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
 
   // Always show "Stored by" and the person who stored the item
   const registeredByLabel = 'Stored by';
+
+  const statusButtonRef = useRef<View>(null);
+  const handleStatusPress = () => {
+    if (!onStatusPress) return;
+    statusButtonRef.current?.measureInWindow?.((x, y, width, height) => {
+      onStatusPress({ x, y, width, height });
+    });
+  };
 
   useEffect(() => {
     setIsImageLoading(false);
@@ -309,7 +283,9 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
             top: statusConfig.top * scaleX,
           },
         ]}
-        onPress={onStatusPress}
+        ref={statusButtonRef}
+        collapsable={false}
+        onPress={handleStatusPress}
         activeOpacity={0.7}
       >
         <View style={styles.statusButtonContent} pointerEvents="none">
