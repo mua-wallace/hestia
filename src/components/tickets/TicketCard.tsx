@@ -118,7 +118,9 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
         >
           {isOfo ? (
             <>
-              <Text style={styles.ofoPillLabel}>OFT</Text>
+              <View style={styles.ofoPillBadge}>
+                <Text style={styles.ofoPillLabel}>OFT</Text>
+              </View>
               <Image
                 source={require('../../../assets/icons/dropdown-arrow.png')}
                 style={[styles.statusChevron, styles.statusChevronOfo]}
@@ -179,7 +181,7 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
               {ticket.createdBy.name}
             </Text>
             <Text style={styles.footerSub} numberOfLines={1}>
-              {ticket.createdBy.departmentName ?? '—'}
+              {createdAtText ?? '—'}
             </Text>
           </View>
         </View>
@@ -369,13 +371,21 @@ const styles = StyleSheet.create({
     gap: 4 * scaleX,
     paddingHorizontal: 10 * scaleX,
   },
-  /** Figma 3147:230 — OFT in pill (white on grey for contrast) */
+  /** Figma 3147:229 — white 26×26 circle holding "OFT" */
+  ofoPillBadge: {
+    width: 26 * scaleX,
+    height: 26 * scaleX,
+    borderRadius: 13 * scaleX,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /** Figma 3147:230 — "OFT" inside the white circle */
   ofoPillLabel: {
     fontSize: 9 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: 0.2,
+    color: '#c6c5c5',
     includeFontPadding: false,
   },
   statusIcon: {
