@@ -9,6 +9,7 @@ import {
   StyleSheet,
   TextInput,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { typography } from '../../theme';
 import type { User } from '../../types';
@@ -84,7 +85,7 @@ export default function TicketStaffSelectorModal({
         onPress={onClose}
       >
         <View style={styles.modalWrapper}>
-          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()} style={styles.modal}>
+          <Pressable style={styles.modal} onPress={() => {}} onStartShouldSetResponder={() => true}>
             <View style={styles.header}>
               <Text style={styles.title}>Tag staff from {departmentName}</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton} hitSlop={12}>
@@ -139,7 +140,7 @@ export default function TicketStaffSelectorModal({
                 </TouchableOpacity>
               </>
             )}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </TouchableOpacity>
     </Modal>

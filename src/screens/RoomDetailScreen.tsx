@@ -253,7 +253,12 @@ export default function RoomDetailScreen() {
   // Track selected status option text to display in header
   const [selectedStatusText, setSelectedStatusText] = useState<string | undefined>(undefined);
   // Track Return Later: timestamp for time-only display + remaining countdown (e.g. "2:30 PM · 30 mins 2s")
-  const [returnLaterAtTimestamp, setReturnLaterAtTimestamp] = useState<number | undefined>(undefined);
+  const [returnLaterAtTimestamp, setReturnLaterAtTimestamp] = useState<number | undefined>(() => {
+    const raw = (room as any)?.returnLaterAt ?? null;
+    if (!raw) return undefined;
+    const ms = new Date(raw).getTime();
+    return Number.isFinite(ms) ? ms : undefined;
+  });
   // Track Promise Time: timestamp for time + countdown in header
   const [promiseTimeAtTimestamp, setPromiseTimeAtTimestamp] = useState<number | undefined>(undefined);
   // Track Refuse Service: selected reason or custom reason to show in header
@@ -554,6 +559,11 @@ export default function RoomDetailScreen() {
     }
     if (returnAtTimestamp != null) {
       setReturnLaterAtTimestamp(returnAtTimestamp);
+      // Persist to DB so Return Later survives reloads.
+      updateRoom(room.id, {
+        house_keeping_status: 'InProgress',
+        return_later_at: new Date(returnAtTimestamp).toISOString(),
+      }).catch((e) => console.warn('Failed to persist return later in Supabase', e));
     }
     setShowReturnLaterModal(false);
   };

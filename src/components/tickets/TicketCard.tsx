@@ -107,15 +107,18 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
           )}
         </View>
 
-        <TouchableOpacity
+        <View
           ref={statusPillRef}
           collapsable={false}
           style={[styles.statusPill, isDone ? styles.statusPillDone : isOfo ? styles.statusPillOfo : styles.statusPillOpen]}
-          onPress={handleStatusPress}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Change ticket status"
         >
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={handleStatusPress}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Change ticket status"
+          />
           {isOfo ? (
             <>
               <View style={styles.ofoPillBadge}>
@@ -148,7 +151,7 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
               />
             </>
           )}
-        </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.divider} />
@@ -394,7 +397,6 @@ const styles = StyleSheet.create({
   },
   statusIconUnsolved: {
     tintColor: '#f92424',
-    transform: [{ rotate: '180deg' }],
   },
   statusIconDone: {
     tintColor: '#ffffff',

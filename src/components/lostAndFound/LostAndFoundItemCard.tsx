@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Animated, ActivityIndicator } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useToast } from '../../contexts/ToastContext';
 import { typography } from '../../theme';
@@ -23,9 +23,10 @@ interface LostAndFoundItemCardProps {
   item: LostAndFoundItem;
   onPress?: () => void;
   onStatusPress?: (anchor?: LostAndFoundStatusAnchorLayout) => void;
+  statusUpdating?: boolean;
 }
 
-export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: LostAndFoundItemCardProps) {
+export default function LostAndFoundItemCard({ item, onPress, onStatusPress, statusUpdating = false }: LostAndFoundItemCardProps) {
   const toast = useToast();
   const [isImageLoading, setIsImageLoading] = useState<boolean>(false);
   const imagePulse = useRef(new Animated.Value(0.35)).current;
@@ -65,11 +66,43 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
   const registeredByLabel = 'Stored by';
 
   const statusButtonRef = useRef<View>(null);
+  const handleStatusPressIn = (e: any) => {
+    if (!onStatusPress) return;
+    const ne = e?.nativeEvent;
+    const pageX = typeof ne?.pageX === 'number' ? ne.pageX : undefined;
+    const pageY = typeof ne?.pageY === 'number' ? ne.pageY : undefined;
+    if (pageX == null || pageY == null) return;
+    // Use an estimated button rect as an immediate anchor so the popover opens below
+    // even before `measureInWindow()` resolves.
+    const approxButtonH = LOST_AND_FOUND_STATUS.button.height * scaleX;
+    onStatusPress({
+      x: pageX,
+      y: pageY - approxButtonH / 2,
+      width: 0,
+      height: approxButtonH,
+    });
+  };
   const handleStatusPress = () => {
     if (!onStatusPress) return;
-    statusButtonRef.current?.measureInWindow?.((x, y, width, height) => {
-      onStatusPress({ x, y, width, height });
-    });
+    // Always open the status popover; on iOS, `measureInWindow` may be unavailable
+    // or fail to invoke its callback for certain refs, which would otherwise prevent
+    // the modal from opening entirely.
+    onStatusPress(undefined);
+
+    const measure = (statusButtonRef.current as any)?.measureInWindow as
+      | ((cb: (x: number, y: number, width: number, height: number) => void) => void)
+      | undefined;
+    if (typeof measure !== 'function') return;
+
+    try {
+      measure((x, y, width, height) => {
+        // Update anchor position if measurement succeeds.
+        onStatusPress({ x, y, width, height });
+      });
+    } catch {
+      // Swallow iOS measurement crashes (e.g. __internalInstanceHandle undefined).
+      // The popover is already open; it will just use the fallback positioning.
+    }
   };
 
   useEffect(() => {
@@ -273,7 +306,9 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
       </Text>
 
       {/* Status Button */}
-      <TouchableOpacity
+      <View
+        ref={statusButtonRef}
+        collapsable={false}
         style={[
           styles.statusButton,
           {
@@ -283,37 +318,48 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
             top: statusConfig.top * scaleX,
           },
         ]}
-        ref={statusButtonRef}
-        collapsable={false}
-        onPress={handleStatusPress}
-        activeOpacity={0.7}
       >
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          onPressIn={handleStatusPressIn}
+          onPress={handleStatusPress}
+          activeOpacity={0.7}
+          disabled={statusUpdating}
+          accessibilityRole="button"
+          accessibilityLabel="Change lost and found status"
+        />
         <View style={styles.statusButtonContent} pointerEvents="none">
-          <Text style={[styles.statusText, { color: statusConfig.textColor }]} numberOfLines={1}>
-            {item.status === 'shipped' || item.status === 'returned'
-              ? 'Shipped'
-              : item.status === 'discarded'
-                ? 'Discarded'
-                : 'Stored'}
-          </Text>
-          <Image
-            source={
-              item.status === 'shipped' || item.status === 'returned'
-                ? require('../../../assets/icons/tick.png')
-                : require('../../../assets/icons/down-arrow.png')
-            }
-            style={[
-              styles.statusIcon,
-              {
-                width: statusConfig.iconWidth * scaleX,
-                height: statusConfig.iconHeight * scaleX,
-                tintColor: '#ffffff',
-              },
-            ]}
-            resizeMode="contain"
-          />
+          {statusUpdating ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <>
+              <Text style={[styles.statusText, { color: statusConfig.textColor }]} numberOfLines={1}>
+                {item.status === 'shipped' || item.status === 'returned'
+                  ? 'Shipped'
+                  : item.status === 'discarded'
+                    ? 'Discarded'
+                    : 'Stored'}
+              </Text>
+              <Image
+                source={
+                  item.status === 'shipped' || item.status === 'returned'
+                    ? require('../../../assets/icons/tick.png')
+                    : require('../../../assets/icons/down-arrow.png')
+                }
+                style={[
+                  styles.statusIcon,
+                  {
+                    width: statusConfig.iconWidth * scaleX,
+                    height: statusConfig.iconHeight * scaleX,
+                    tintColor: '#ffffff',
+                  },
+                ]}
+                resizeMode="contain"
+              />
+            </>
+          )}
         </View>
-      </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   );
 }

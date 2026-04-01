@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
+  Pressable,
 } from 'react-native';
 import { typography } from '../../theme';
 import { REGISTER_FORM, scaleX } from '../../constants/lostAndFoundStyles';
@@ -151,10 +152,10 @@ export default function StatusDropdown({
           {/* Triangle Pointer - positioned at top pointing up to input field */}
           <View style={dynamicStyles.trianglePointer} />
           
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
+          <Pressable
             style={dynamicStyles.modalContainer}
+            onPress={() => {}}
+            onStartShouldSetResponder={() => true}
           >
             {statusOptions.map((option) => (
               <TouchableOpacity
@@ -182,7 +183,7 @@ export default function StatusDropdown({
               )}
             </TouchableOpacity>
           ))}
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </TouchableOpacity>
     </Modal>

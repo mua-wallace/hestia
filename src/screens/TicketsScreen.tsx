@@ -418,7 +418,7 @@ export default function TicketsScreen() {
               >
                 <View style={[styles.statusCircle, styles.statusCircleUnsolved]}>
                   <Image
-                    source={require('../../assets/icons/thumbs-down-icon.png')}
+                    source={require('../../assets/icons/unsolved.png')}
                     style={styles.statusCircleIconOnDark}
                     resizeMode="contain"
                   />

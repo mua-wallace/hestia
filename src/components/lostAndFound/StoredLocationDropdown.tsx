@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Pressable,
 } from 'react-native';
 import { typography } from '../../theme';
 import { REGISTER_FORM, scaleX } from '../../constants/lostAndFoundStyles';
@@ -151,10 +152,10 @@ export default function StoredLocationDropdown({
         onPress={onClose}
       >
         <View style={dynamicStyles.modalWrapper}>
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
+          <Pressable
             style={dynamicStyles.modalContainer}
+            onPress={() => {}}
+            onStartShouldSetResponder={() => true}
           >
             {locationOptions.map((option) => (
             <TouchableOpacity
@@ -169,7 +170,7 @@ export default function StoredLocationDropdown({
               )}
             </TouchableOpacity>
             ))}
-          </TouchableOpacity>
+          </Pressable>
           {/* Triangle Pointer - positioned at bottom pointing down to input field */}
           <View style={dynamicStyles.trianglePointer} />
         </View>

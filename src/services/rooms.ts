@@ -26,6 +26,7 @@ type RoomRow = {
   flagged: boolean | null;
   special_instructions: string | null;
   house_keeping_status: string | null;
+  return_later_at?: string | null;
 };
 
 /** Aggregated note info per room (from room_notes table) */
@@ -233,6 +234,7 @@ function mapRoomToCard(
     houseKeepingStatus: normalizeHouseKeepingStatus(room.house_keeping_status),
     reservationStatus: reservationStatus as ReservationStatus,
     promisedTime: (promisedTime === '12:00' || promisedTime === '13:00' ? promisedTime : null) as PromisedTime,
+    returnLaterAt: (room.return_later_at ?? null) as string | null,
     guests: guestsForCard,
     roomAttendantAssigned: attendant,
     isPriority: room.priority === 'high',
@@ -286,10 +288,21 @@ const fetchRoomNotesAggregate = async (roomIds: string[]): Promise<Map<string, R
  * Fetch all rooms with reservations and guests (Supabase).
  */
 export async function fetchAllRooms(shift: 'AM' | 'PM'): Promise<AllRoomsScreenData> {
-  const { data, error } = await supabase
+  let data: unknown[] | null = null;
+  let error: any = null;
+
+  // `return_later_at` is added by a later migration; gracefully fallback when DB is behind.
+  ({ data, error } = await supabase
     .from('rooms')
-    .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status')
-    .order('room_number', { ascending: true });
+    .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status, return_later_at')
+    .order('room_number', { ascending: true }));
+
+  if (error && error.code === '42703') {
+    ({ data, error } = await supabase
+      .from('rooms')
+      .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status')
+      .order('room_number', { ascending: true }));
+  }
 
   if (error) throw error;
   const rooms = (data ?? []) as RoomRow[];
@@ -362,6 +375,8 @@ export type RoomStateUpdate = {
   priority?: 'high' | 'normal';
   flagged?: boolean;
   special_instructions?: string | null;
+  /** ISO timestamp (timestamptz) or null to clear. */
+  return_later_at?: string | null;
 };
 
 function isValidUUID(id: string): boolean {
@@ -466,9 +481,18 @@ export async function updateRoom(roomId: string, updates: RoomStateUpdate): Prom
   if (updates.priority != null) payload.priority = updates.priority;
   if (updates.flagged != null) payload.flagged = updates.flagged;
   if (updates.special_instructions !== undefined) payload.special_instructions = updates.special_instructions;
+  if (updates.return_later_at !== undefined) payload.return_later_at = updates.return_later_at;
   if (Object.keys(payload).length === 0) return;
-  const { error } = await supabase.from('rooms').update(payload).eq('id', roomId);
-  if (error) throw error;
+  let result = await supabase.from('rooms').update(payload).eq('id', roomId);
+  if (result.error && (result.error.code === '42703' || result.error.code === 'PGRST204')) {
+    // Schema behind PostgREST cache / migration not applied yet: retry without return_later_at.
+    if ('return_later_at' in payload) {
+      delete payload.return_later_at;
+      if (Object.keys(payload).length === 0) return;
+      result = await supabase.from('rooms').update(payload).eq('id', roomId);
+    }
+  }
+  if (result.error) throw result.error;
 }
 
 /**
@@ -625,6 +649,7 @@ export interface FullRoomDetails {
     flagged: boolean | null;
     special_instructions: string | null;
     house_keeping_status: string | null;
+    return_later_at?: string | null;
   };
   reservations: ReservationDetail[];
   notes: RoomNoteDetail[];
@@ -758,13 +783,30 @@ export async function fetchAllRoomsFromFullDetails(shift: 'AM' | 'PM'): Promise<
  * @param roomId - Optional. If provided, returns details for that room only; otherwise all rooms.
  */
 export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetails[]> {
-  const roomsQuery = supabase
+  const roomsQueryWithReturnLater = supabase
+    .from('rooms')
+    .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status, return_later_at')
+    .order('room_number', { ascending: true });
+  const roomsQueryBase = supabase
     .from('rooms')
     .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status')
     .order('room_number', { ascending: true });
-  const { data: roomsData, error: roomsError } = roomId
-    ? await roomsQuery.eq('id', roomId)
-    : await roomsQuery;
+
+  let roomsData: any[] | null = null;
+  let roomsError: any = null;
+
+  if (roomId) {
+    ({ data: roomsData, error: roomsError } = await roomsQueryWithReturnLater.eq('id', roomId));
+    if (roomsError && roomsError.code === '42703') {
+      ({ data: roomsData, error: roomsError } = await roomsQueryBase.eq('id', roomId));
+    }
+  } else {
+    ({ data: roomsData, error: roomsError } = await roomsQueryWithReturnLater);
+    if (roomsError && roomsError.code === '42703') {
+      ({ data: roomsData, error: roomsError } = await roomsQueryBase);
+    }
+  }
+
   if (roomsError) throw roomsError;
   const rooms = (roomsData ?? []) as RoomRow[];
   if (rooms.length === 0) {
@@ -941,6 +983,7 @@ export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetai
       flagged: room.flagged,
       special_instructions: room.special_instructions,
       house_keeping_status: room.house_keeping_status,
+      return_later_at: (room as any).return_later_at ?? null,
     },
     reservations: resWithGuestsByRoom.get(room.id) ?? [],
     notes: notesByRoom.get(room.id) ?? [],
@@ -949,7 +992,8 @@ export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetai
     tickets: ticketsByRoom.get(room.id) ?? [],
   }));
 
-  console.log('[getFullRoomDetails] Room details:', JSON.stringify(result, null, 2));
+  // Avoid logging full payloads here: JSON.stringify on large room graphs can block the JS thread
+  // and make the app appear frozen on device.
   return result;
 }
 

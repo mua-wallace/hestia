@@ -63,21 +63,19 @@ export default function RoomDetailHeader({
       const now = Date.now();
       const diff = returnLaterAtTimestamp - now;
       if (diff <= 0) {
-        setReturnLaterRemaining('0h 0 min 0s');
+        setReturnLaterRemaining('0 mins');
         return;
       }
-      const totalMins = Math.floor(diff / 60000);
-      const secs = Math.floor((diff % 60000) / 1000);
-      if (totalMins >= 60) {
-        const hours = Math.floor(diff / 3600000);
-        const mins = Math.floor((diff % 3600000) / 60000);
-        setReturnLaterRemaining(`${hours}h ${mins} min ${secs}s`);
-      } else {
-        setReturnLaterRemaining(`${totalMins} mins ${secs}s`);
-      }
+      const totalMins = Math.max(0, Math.ceil(diff / 60000));
+      const next = totalMins >= 60
+        ? `${Math.floor(totalMins / 60)}h ${totalMins % 60} min`
+        : `${totalMins} mins`;
+      // Avoid pointless state churn (keeps the UI smooth on slower devices).
+      setReturnLaterRemaining((prev) => (prev === next ? prev : next));
     };
     tick();
-    const id = setInterval(tick, 1000);
+    // Update at most once per 10s; the label is minute-based.
+    const id = setInterval(tick, 10_000);
     return () => clearInterval(id);
   }, [hasReturnLaterTime, returnLaterAtTimestamp]);
 

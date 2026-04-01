@@ -65,6 +65,7 @@ export default function LostAndFoundScreen() {
   const [statusModalItem, setStatusModalItem] = useState<LostAndFoundItem | null>(null);
   const [statusAnchor, setStatusAnchor] = useState<LostAndFoundStatusAnchorLayout | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [statusUpdatingItemId, setStatusUpdatingItemId] = useState<string | null>(null);
   const [shippingMode, setShippingMode] = useState(false);
   const [shippingLocation, setShippingLocation] = useState('');
   const [shippingLocationCache, setShippingLocationCache] = useState<string[]>([]);
@@ -657,6 +658,7 @@ export default function LostAndFoundScreen() {
       return;
     }
     setStatusUpdating(true);
+    setStatusUpdatingItemId(item?.id ?? null);
     if (!item || !isSupabaseConfigured) return;
     try {
       const { error } = await supabase
@@ -674,6 +676,7 @@ export default function LostAndFoundScreen() {
       console.warn('[LostAndFoundScreen] Error updating status', e);
     } finally {
       setStatusUpdating(false);
+      setStatusUpdatingItemId(null);
     }
   };
 
@@ -730,6 +733,7 @@ export default function LostAndFoundScreen() {
       const trimmed = value.trim();
       if (!item || !isSupabaseConfigured || !trimmed) return;
       setStatusUpdating(true);
+      setStatusUpdatingItemId(item.id);
       try {
         // Always cache locally (we may be in schema-cache lag).
         setShippingLocationByItemId((prev) => {
@@ -783,6 +787,7 @@ export default function LostAndFoundScreen() {
         console.warn('[LostAndFoundScreen] Error updating shipped location', e);
       } finally {
         setStatusUpdating(false);
+        setStatusUpdatingItemId(null);
       }
     },
     [statusModalItem, loadItems]
@@ -793,12 +798,14 @@ export default function LostAndFoundScreen() {
     const margin = 16 * scaleX;
     const popoverW = 340 * scaleX;
     const popoverH = 230 * scaleX; // approximate, clamped
-    const left = Math.max(margin, Math.min(windowWidth - popoverW - margin, statusAnchor.x + statusAnchor.width - popoverW));
-    const desiredTop = statusAnchor.y + statusAnchor.height + 8 * scaleX;
+    // Center the popover under the anchor (more robust than aligning by right edge,
+    // and works even when we only have a tap point with width/height = 0).
+    const anchorCenterX = statusAnchor.x + (statusAnchor.width || 0) / 2;
+    const left = Math.max(margin, Math.min(windowWidth - popoverW - margin, anchorCenterX - popoverW / 2));
+    const desiredTop = statusAnchor.y + statusAnchor.height + 14 * scaleX;
     const top = Math.max(margin, Math.min(windowHeight - popoverH - margin, desiredTop));
 
     const notchSize = 12 * scaleX;
-    const anchorCenterX = statusAnchor.x + statusAnchor.width / 2;
     const notchCenterX = anchorCenterX - left;
     const notchLeft = Math.max(14 * scaleX, Math.min(popoverW - 14 * scaleX - notchSize, notchCenterX - notchSize / 2));
     return { left, top, notchLeft, width: popoverW };
@@ -849,6 +856,7 @@ export default function LostAndFoundScreen() {
               item={item}
               onPress={() => handleItemPress(item)}
               onStatusPress={(anchor) => handleStatusPress(item, anchor)}
+              statusUpdating={statusUpdating && statusUpdatingItemId === item.id}
             />
           ))}
         </ScrollView>
