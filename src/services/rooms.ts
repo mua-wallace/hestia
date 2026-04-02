@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { notifyServer } from './notifications';
 import type {
   AllRoomsScreenData,
   RoomCardData,
@@ -571,6 +572,9 @@ export async function assignRoomToStaff(
       throw error;
     }
   }
+
+  // Fire-and-forget push notification to assigned staff member.
+  notifyServer({ type: 'room_assignment', roomId, shiftId, assignedUserId: userId }).catch(() => {});
 
   return staffInfo;
 }

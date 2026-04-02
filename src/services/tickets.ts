@@ -4,6 +4,7 @@ import { DEPARTMENT_NAME_TO_ICON } from '../constants/createTicketStyles';
 import { getDepartmentIdByName } from './user';
 import * as FileSystem from 'expo-file-system/legacy';
 import { base64ToArrayBuffer } from '../utils/encoding';
+import { notifyServer } from './notifications';
 
 type TicketsRow = {
   id: string;
@@ -350,6 +351,8 @@ export type CreateTicketInput = {
   departmentName?: string | null;
   priority?: string | null;
   assignedToId?: string | null;
+  /** Users tagged on this ticket (multi-select). */
+  taggedStaffIds?: string[];
   pictures?: string[]; // local file:// URIs
 };
 
@@ -429,6 +432,25 @@ export async function createTicket(input: CreateTicketInput): Promise<void> {
 
   const ticketId = (inserted as any)?.id as string | undefined;
   const roomId = (inserted as any)?.room_id as string | null | undefined;
+
+  // Persist ticket tags (multi-tag staff) and notify tagged staff.
+  const taggedIds = Array.from(new Set((input.taggedStaffIds ?? []).filter(Boolean)));
+  const taggedOtherUsers = taggedIds.filter((id) => id !== userId);
+  if (ticketId && taggedIds.length > 0) {
+    const { error: tagErr } = await supabase.from('ticket_tags').insert(
+      taggedIds.map((tagged_user_id) => ({
+        ticket_id: ticketId,
+        tagged_user_id,
+        tagged_by_id: userId,
+      }))
+    );
+    if (tagErr) {
+      // Non-blocking: ticket is created; tags can fail if migration not applied yet.
+      console.warn('[tickets.createTicket] Failed to save ticket tags', tagErr.message, tagErr.code);
+    } else if (taggedOtherUsers.length > 0) {
+      notifyServer({ type: 'ticket_tag', ticketId, taggedUserIds: taggedOtherUsers }).catch(() => {});
+    }
+  }
 
   const pictures = (input.pictures ?? []).filter(Boolean);
   if (ticketId && roomId && pictures.length > 0) {

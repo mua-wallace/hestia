@@ -133,6 +133,11 @@ export default function CreateTicketFormScreen() {
   const [activeTab, setActiveTab] = useState<'Overview' | 'Tickets' | 'Checklist' | 'History'>('Tickets');
   const descriptionInputRef = useRef<TextInput>(null);
 
+  // If the department changes, previously tagged staff may no longer be valid.
+  useEffect(() => {
+    setAssignedStaff([]);
+  }, [selectedDepartment]);
+
   // Load rooms
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -250,6 +255,7 @@ export default function CreateTicketFormScreen() {
         priority: priority === 'high' ? 'urgent' : priority === 'medium' ? 'medium' : 'notUrgent',
         departmentName: selectedDepartment,
         assignedToId,
+        taggedStaffIds: assignedStaff,
         roomId: paramIsPublicArea ? null : (paramRoomId ?? null),
         locationType,
         publicAreaName: paramIsPublicArea ? (paramPublicAreaName ?? null) : null,
@@ -622,7 +628,7 @@ export default function CreateTicketFormScreen() {
         onSelect={(staffIds) => {
           setAssignedStaff(staffIds);
         }}
-        departmentName={paramDepartmentName || 'Department'}
+        departmentName={selectedDepartment || paramDepartmentName || 'Department'}
         loading={loadingStaff}
       />
     </View>

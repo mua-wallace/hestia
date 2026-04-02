@@ -132,6 +132,11 @@ export default function TicketForm({
   const [submitting, setSubmitting] = useState(false);
   const descriptionInputRef = useRef<TextInput>(null);
 
+  // If the department changes, previously tagged staff may no longer be valid.
+  useEffect(() => {
+    setAssignedStaff([]);
+  }, [selectedDepartment]);
+
   // Load department staff
   useEffect(() => {
     if (!selectedDepartment) return;
@@ -227,6 +232,7 @@ export default function TicketForm({
         priority: priority === 'high' ? 'urgent' : priority === 'medium' ? 'medium' : 'notUrgent',
         departmentName: selectedDepartment,
         assignedToId,
+        taggedStaffIds: assignedStaff,
         roomId: roomId ?? null,
         locationType: 'room',
         pictures,
@@ -604,7 +610,7 @@ export default function TicketForm({
         onSelect={(staffIds) => {
           setAssignedStaff(staffIds);
         }}
-        departmentName={departmentName || 'Department'}
+        departmentName={selectedDepartment || departmentName || 'Department'}
         loading={loadingStaff}
       />
     </View>
