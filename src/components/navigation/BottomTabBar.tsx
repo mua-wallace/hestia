@@ -5,12 +5,12 @@ import { colors } from '../../theme';
 import TabBarItem from './TabBarItem';
 import { MORE_MENU_OPTIONS } from '../../types/more.types';
 import { useDesignScale } from '../../hooks/useDesignScale';
+import { useBottomTabBadges } from '../../hooks/useBottomTabBadges';
 
 interface BottomTabBarProps {
   activeTab: string;
   onTabPress: (tab: string) => void;
   onMorePress?: () => void;
-  chatBadgeCount?: number;
 }
 
 const MAIN_TABS = [
@@ -53,10 +53,11 @@ const MAIN_TABS = [
   },
 ];
 
-export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatBadgeCount = 0 }: BottomTabBarProps) {
+export default function BottomTabBar({ activeTab, onTabPress, onMorePress }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { scaleX } = useDesignScale();
   const styles = useMemo(() => buildBottomTabBarStyles(scaleX), [scaleX]);
+  const { chatBadgeCount, ticketsBadgeCount } = useBottomTabBadges();
 
   const tabs = useMemo(
     () => [
@@ -145,7 +146,13 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress, chatB
               icon={tab.icon}
               label={tab.label}
               active={activeTab === tab.id}
-              badge={tab.id === 'Chat' && chatBadgeCount > 0 ? chatBadgeCount : undefined}
+              badge={
+                tab.id === 'Chat' && chatBadgeCount > 0
+                  ? chatBadgeCount
+                  : tab.id === 'Tickets' && ticketsBadgeCount > 0
+                    ? ticketsBadgeCount
+                    : undefined
+              }
               onPress={() => onTabPress(tab.id)}
               iconWidth={tab.iconWidth}
               iconHeight={tab.iconHeight}

@@ -12,7 +12,6 @@ import { dashboardService } from '../services/dashboard';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import { mockHomeData } from '../data/mockHomeData';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
-import { useChatStore } from '../store/useChatStore';
 import { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import AllRoomsHeader from '../components/allRooms/AllRoomsHeader';
 import RoomCard from '../components/allRooms/RoomCard';
@@ -564,13 +563,6 @@ export default function AllRoomsScreen() {
     }, [route.name])
   );
 
-  // Calculate total unread chat messages for badge
-  const { chats } = useChatStore();
-  const chatBadgeCount = React.useMemo(
-    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
-    [chats]
-  );
-
   const handleTabPress = (tab: string) => {
     if (tab === 'AIHome') {
       openAIChatOverlay();
@@ -837,11 +829,7 @@ export default function AllRoomsScreen() {
       </KeyboardAvoidingView>
 
       {/* Bottom Navigation - Outside KeyboardAvoidingView to prevent movement */}
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        chatBadgeCount={chatBadgeCount}
-      />
+      <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
 
       {/* Status Change Modal */}
       <StatusChangeModal

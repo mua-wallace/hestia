@@ -11,7 +11,6 @@ import LostAndFoundItemCard, { type LostAndFoundStatusAnchorLayout } from '../co
 import RegisterLostAndFoundModal from '../components/lostAndFound/RegisterLostAndFoundModal';
 import ItemRegisteredSuccessModal from '../components/lostAndFound/ItemRegisteredSuccessModal';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
-import { useChatStore } from '../store/useChatStore';
 import { LostAndFoundTab, LostAndFoundItem, LostAndFoundStatus } from '../types/lostAndFound.types';
 import {
   LOST_AND_FOUND_SPACING,
@@ -339,13 +338,6 @@ export default function LostAndFoundScreen() {
       // Reload when returning to this tab; after first load this is non-blocking (header spinner only)
       loadItems('focus');
     }, [route.name, loadItems])
-  );
-
-  // Calculate total unread chat messages for badge
-  const { chats } = useChatStore();
-  const chatBadgeCount = React.useMemo(
-    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
-    [chats]
   );
 
   const handleTabPress = (tab: string) => {
@@ -875,11 +867,7 @@ export default function LostAndFoundScreen() {
       <LostAndFoundTabs selectedTab={selectedTab} onTabPress={handleTabChange} />
 
       {/* Bottom Navigation */}
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        chatBadgeCount={chatBadgeCount}
-      />
+      <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
 
       {/* Register Modal */}
       <RegisterLostAndFoundModal

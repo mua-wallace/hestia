@@ -14,6 +14,10 @@ import NewChatMenu, { NewChatMenuOption } from '../components/chat/NewChatMenu';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
 import {
+  markAllChatMessageNotificationsRead,
+  invalidateNotificationBadges,
+} from '../services/inAppNotifications';
+import {
   CHAT_SPACING,
   CHAT_COLORS,
   CHAT_ITEM_POSITIONS,
@@ -59,6 +63,7 @@ export default function ChatScreen() {
   useFocusEffect(
     useCallback(() => {
       loadChats();
+      void markAllChatMessageNotificationsRead().then(() => invalidateNotificationBadges());
     }, [loadChats])
   );
 
@@ -126,11 +131,6 @@ export default function ChatScreen() {
 
   const isLoading = loading && chats.length === 0;
 
-  // Calculate total unread chat messages for badge
-  const chatBadgeCount = React.useMemo(() => {
-    return chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
-  }, [chats]);
-
   // Filter chats based on search query
   const filteredChats = searchQuery
     ? chats.filter(
@@ -190,11 +190,7 @@ export default function ChatScreen() {
       />
 
       {/* Bottom Navigation - Outside KeyboardAvoidingView to prevent movement */}
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        chatBadgeCount={chatBadgeCount}
-      />
+      <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
 
       {/* New Chat Menu */}
       <NewChatMenu

@@ -63,7 +63,9 @@ export default function TabBarItem({
             {badge !== undefined && badge > 0 ? (
               <View style={styles.badgeContainer}>
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{String(badge)}</Text>
+                  <Text style={styles.badgeText}>
+                    {badge > 99 ? '99+' : String(badge)}
+                  </Text>
                 </View>
               </View>
             ) : null}

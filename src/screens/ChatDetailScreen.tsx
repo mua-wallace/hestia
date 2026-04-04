@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import { useRoute, useNavigation, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -48,6 +48,10 @@ import {
 } from '../services/chat';
 import * as DocumentPicker from 'expo-document-picker';
 import { useChatStore } from '../store/useChatStore';
+import {
+  markChatMessageNotificationsReadForChat,
+  invalidateNotificationBadges,
+} from '../services/inAppNotifications';
 import { useToast } from '../contexts/ToastContext';
 import { useMessageModal } from '../contexts/MessageModalContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -114,6 +118,13 @@ export default function ChatDetailScreen() {
       cancelled = true;
     };
   }, [chatId, isSupabaseChat, loadMessages]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isSupabaseChat) return;
+      void markChatMessageNotificationsReadForChat(chatId).then(() => invalidateNotificationBadges());
+    }, [chatId, isSupabaseChat])
+  );
 
   useEffect(() => {
     if (!isSupabaseChat) return;

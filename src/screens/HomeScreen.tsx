@@ -15,7 +15,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useUserStore } from '../store/useUserStore';
 import { userProfileFromSession } from '../services/user';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
-import { useChatStore } from '../store/useChatStore';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
 import { useRoomsStore } from '../store/useRoomsStore';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
@@ -103,12 +102,6 @@ export default function HomeScreen() {
         setActiveTab(routeName);
       }
     }, [route.name])
-  );
-
-  const { chats } = useChatStore();
-  const chatBadgeCount = useMemo(
-    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
-    [chats]
   );
 
   const handleShiftToggle = (shift: ShiftType) => {
@@ -528,11 +521,7 @@ export default function HomeScreen() {
       </KeyboardAvoidingView>
 
       {/* Bottom Navigation - Outside KeyboardAvoidingView to prevent movement */}
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        chatBadgeCount={chatBadgeCount}
-      />
+      <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
 
       {/* Filter Modal */}
       <HomeFilterModal

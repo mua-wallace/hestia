@@ -25,7 +25,6 @@ import TicketCard from '../components/tickets/TicketCard';
 import EmptyTicketsState from '../components/tickets/EmptyTicketsState';
 import type { TicketStatusAnchorLayout } from '../components/tickets/TicketCard';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
-import { useChatStore } from '../store/useChatStore';
 import { TicketTab, TicketData, TicketsScreenData, TicketStatus } from '../types/tickets.types';
 import {
   TICKETS_HEADER,
@@ -40,6 +39,10 @@ import { dashboardService } from '../services/dashboard';
 import { updateTicketStatus, updateTicketDueAt } from '../services/tickets';
 import { useAuth } from '../contexts/AuthContext';
 import { typography } from '../theme';
+import {
+  markAllTicketTagNotificationsRead,
+  invalidateNotificationBadges,
+} from '../services/inAppNotifications';
 
 /** Change Status popover — height for vertical clamping (expanded when Due time fields visible). Figma ~295 / ~472. */
 const STATUS_POPOVER_HEIGHT_COLLAPSED = 268 * scaleX;
@@ -146,14 +149,8 @@ export default function TicketsScreen() {
 
       // Refresh tickets whenever Tickets screen gains focus
       loadTickets(overrideInitialTab);
+      void markAllTicketTagNotificationsRead().then(() => invalidateNotificationBadges());
     }, [route, loadTickets])
-  );
-
-  // Calculate total unread chat messages for badge
-  const { chats } = useChatStore();
-  const chatBadgeCount = React.useMemo(
-    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
-    [chats]
   );
 
   const handleTabPress = (tab: string) => {
@@ -547,11 +544,7 @@ export default function TicketsScreen() {
       <TicketsTabs selectedTab={selectedTab} onTabPress={handleTabChange} />
 
       {/* Bottom Navigation */}
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        chatBadgeCount={chatBadgeCount}
-      />
+      <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
     </View>
   );
 }

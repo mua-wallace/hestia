@@ -15,7 +15,6 @@ import { colors, typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import { mockHomeData } from '../data/mockHomeData';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
-import { useChatStore } from '../store/useChatStore';
 import StaffHeader from '../components/staff/StaffHeader';
 import StaffTabs from '../components/staff/StaffTabs';
 import StaffCard from '../components/staff/StaffCard';
@@ -126,13 +125,6 @@ export default function StaffScreen() {
         setActiveTab(routeName);
       }
     }, [route.name])
-  );
-
-  // Calculate total unread chat messages for badge
-  const { chats } = useChatStore();
-  const chatBadgeCount = React.useMemo(
-    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
-    [chats]
   );
 
   const handleTabPress = (tab: string) => {
@@ -344,11 +336,7 @@ export default function StaffScreen() {
         topOffset={insets.top + (STAFF_TABS.container.top + STAFF_TABS.container.height + 1) * scaleX}
       />
 
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        chatBadgeCount={chatBadgeCount}
-      />
+      <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
     </View>
   );
 }
