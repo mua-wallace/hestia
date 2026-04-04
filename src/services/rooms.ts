@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { invalidateNotificationBadges } from './inAppNotifications';
 import { notifyServer } from './notifications';
 import type {
   AllRoomsScreenData,
@@ -497,6 +498,44 @@ export async function updateRoom(roomId: string, updates: RoomStateUpdate): Prom
 }
 
 /**
+ * Count rooms the user is assigned to for the given shift (`room_assignments`, one row per room per shift).
+ */
+export async function countRoomAssignmentsForUser(userId: string, shift: 'AM' | 'PM'): Promise<number> {
+  if (!isValidUUID(userId)) return 0;
+  const shiftId = await getShiftIdByName(shift);
+  if (!shiftId) return 0;
+  const { count, error } = await supabase
+    .from('room_assignments')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('shift_id', shiftId);
+  if (error) {
+    console.warn('[rooms] countRoomAssignmentsForUser', error.message);
+    return 0;
+  }
+  return count ?? 0;
+}
+
+/**
+ * Distinct rooms assigned to this user across **all** shifts (tab badge).
+ * Single-shift counts often read 0 when UI shift and stored `shift_id` don’t line up.
+ */
+export async function countDistinctRoomsAssignedToUser(userId: string): Promise<number> {
+  if (!isValidUUID(userId)) return 0;
+  const { data, error } = await supabase.from('room_assignments').select('room_id').eq('user_id', userId);
+  if (error) {
+    console.warn('[rooms] countDistinctRoomsAssignedToUser', error.message);
+    return 0;
+  }
+  const ids = new Set<string>();
+  for (const row of data ?? []) {
+    const rid = (row as { room_id?: string }).room_id;
+    if (rid) ids.add(rid);
+  }
+  return ids.size;
+}
+
+/**
  * Assign a room to a staff member for the given shift.
  * Uses room_assignments table: upserts by (room_id, shift_id) so one assignee per room per shift.
  * Always returns StaffInfo for the user when both IDs are valid UUIDs (so the room card can update);
@@ -575,6 +614,9 @@ export async function assignRoomToStaff(
 
   // Fire-and-forget push notification to assigned staff member.
   notifyServer({ type: 'room_assignment', roomId, shiftId, assignedUserId: userId }).catch(() => {});
+
+  // Defer so tab bar listeners run after Supabase write is visible to the next read.
+  queueMicrotask(() => invalidateNotificationBadges());
 
   return staffInfo;
 }

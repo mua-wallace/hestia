@@ -13,17 +13,8 @@ import ChatItem, { ChatItemData } from '../components/chat/ChatItem';
 import NewChatMenu, { NewChatMenuOption } from '../components/chat/NewChatMenu';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
-import {
-  markAllChatMessageNotificationsRead,
-  invalidateNotificationBadges,
-} from '../services/inAppNotifications';
-import {
-  CHAT_SPACING,
-  CHAT_COLORS,
-  CHAT_ITEM_POSITIONS,
-  CHAT_ITEM,
-  scaleX,
-} from '../constants/chatStyles';
+import { invalidateNotificationBadges } from '../services/inAppNotifications';
+import { CHAT_SPACING, CHAT_COLORS, CHAT_ITEM, scaleX } from '../constants/chatStyles';
 
 type MainTabsParamList = {
   Home: undefined;
@@ -62,8 +53,8 @@ export default function ChatScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadChats();
-      void markAllChatMessageNotificationsRead().then(() => invalidateNotificationBadges());
+      void loadChats();
+      invalidateNotificationBadges();
     }, [loadChats])
   );
 

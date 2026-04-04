@@ -43,6 +43,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       backgroundColor: "#FFFFFF",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        NSUserNotificationsUsageDescription:
+          "Hestia sends notifications for room assignments, team chat, and ticket updates so you do not miss important work.",
       },
     },
     android: {

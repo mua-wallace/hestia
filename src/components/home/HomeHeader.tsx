@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { UserProfile, ShiftType } from '../../types/home.types';
+import { HOME_HEADER_HEIGHT_DESIGN_PX } from '../../constants/homeLayout';
 import { colors, typography } from '../../theme';
 import { getInitialsFromFullName } from '../../utils/formatting';
 import AMPMToggle from './AMPMToggle';
@@ -8,6 +9,11 @@ import AMPMToggle from './AMPMToggle';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+/** Space for AM/PM toggle (right inset + toggle width) + gap so role/name can wrap without overlapping. */
+const HEADER_TOGGLE_RESERVE = (59.5 + 121 + 8) * scaleX;
+/** Left offset: container inset + avatar + margin before name/role. */
+const HEADER_PROFILE_LEFT = (22 + 51 + 12) * scaleX;
+const PROFILE_INFO_MAX_WIDTH = Math.max(0, SCREEN_WIDTH - HEADER_PROFILE_LEFT - HEADER_TOGGLE_RESERVE);
 
 interface HomeHeaderProps {
   user: UserProfile;
@@ -65,17 +71,19 @@ export default function HomeHeader({
             </View>
           ) : null}
         </View>
-        <View style={styles.profileInfo}>
+        <View style={[styles.profileInfo, { maxWidth: PROFILE_INFO_MAX_WIDTH }]}>
           <Text style={[
             styles.userName,
             selectedShift === 'PM' ? styles.userNamePM : null
           ]}>
             {typeof user.name === 'string' ? user.name : ''}
           </Text>
-          <Text style={[
-            styles.userRole,
-            selectedShift === 'PM' ? styles.userRolePM : null
-          ]}>
+          <Text
+            style={[
+              styles.userRole,
+              selectedShift === 'PM' ? styles.userRolePM : null,
+            ]}
+          >
             {typeof user.role === 'string' ? user.role : ''}
           </Text>
         </View>
@@ -96,7 +104,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#FFF',
-    height: 153 * scaleX,
+    height: HOME_HEADER_HEIGHT_DESIGN_PX * scaleX,
     shadowColor: 'rgba(100,131,176,0.4)',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
@@ -160,6 +168,7 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     marginLeft: 12 * scaleX,
+    flexShrink: 1,
   },
   userName: {
     color: '#000',
@@ -172,11 +181,10 @@ const styles = StyleSheet.create({
   },
   userRole: {
     color: '#000',
-    fontFamily: 'Helvetica',
-    fontSize: 14 * scaleX,
+    fontFamily: 'Inter',
+    fontSize: 11 * scaleX,
     fontStyle: 'normal',
-    fontWeight: '700',
-    lineHeight: 17 * scaleX,
+    fontWeight: '300',
   },
   toggleContainer: {
     position: 'absolute',

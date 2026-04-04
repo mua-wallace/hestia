@@ -122,10 +122,11 @@ function buildTabBarItemStyles(normalizedScaleX: number) {
       width: '100%',
       height: '100%',
     },
+    // Inset from icon corner so the pill doesn’t sit flush on the artwork (Chat + Tickets).
     badgeContainer: {
       position: 'absolute',
-      top: Math.round(8 * ns),
-      right: Math.round(8 * ns),
+      top: Math.round(10 * ns),
+      right: Math.round(18 * ns),
       zIndex: 10,
     },
     badge: {

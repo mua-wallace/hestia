@@ -48,40 +48,43 @@ export default function ChatItem({ chat, onPress }: ChatItemProps) {
         )}
       </View>
 
-      {/* Content */}
-      <View style={styles.contentContainer}>
-        {/* Name */}
-        <Text style={styles.name}>{typeof chat.name === 'string' ? chat.name : 'Chat'}</Text>
+      <View style={styles.mainRow}>
+        {/* Content */}
+        <View style={styles.contentContainer}>
+          <Text style={[styles.name, hasUnread ? styles.nameUnread : null]}>
+            {typeof chat.name === 'string' ? chat.name : 'Chat'}
+          </Text>
 
-        {/* Last Message */}
-        <Text
-          style={[
-            styles.message,
-            sender ? styles.messageLight : null,
-          ]}
-          numberOfLines={1}
-        >
-          {messageText}
-        </Text>
+          <Text
+            style={[
+              styles.message,
+              sender ? styles.messageLight : null,
+              hasUnread ? styles.messageUnread : null,
+            ]}
+            numberOfLines={1}
+          >
+            {messageText}
+          </Text>
 
-        {/* Group Label */}
-        {chat.isGroup ? (
-          <View style={styles.groupLabel}>
-            <Text style={styles.groupLabelText}>Group</Text>
+          {chat.isGroup ? (
+            <View style={styles.groupLabel}>
+              <Text style={styles.groupLabelText}>Group</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {/* WhatsApp-style: unread count bottom-right, aligned with preview line */}
+        {hasUnread ? (
+          <View style={styles.rightMeta}>
+            <View style={styles.rightMetaSpacer} />
+            <View style={styles.badge}>
+              <Text style={styles.badgeText} numberOfLines={1}>
+                {typeof chat.unreadCount === 'number' && chat.unreadCount > 99 ? '99+' : String(chat.unreadCount ?? 0)}
+              </Text>
+            </View>
           </View>
         ) : null}
       </View>
-
-      {/* Unread Badge */}
-      {hasUnread ? (
-        <View style={styles.badgeContainer}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {typeof chat.unreadCount === 'number' && chat.unreadCount > 99 ? '99+' : String(chat.unreadCount ?? 0)}
-            </Text>
-          </View>
-        </View>
-      ) : null}
     </TouchableOpacity>
   );
 }
@@ -117,9 +120,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold' as any,
     color: CHAT_COLORS.textSecondary,
   },
+  mainRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    minWidth: 0,
+  },
   contentContainer: {
     flex: 1,
-    marginRight: 60 * scaleX, // Leave space for badge
+    minWidth: 0,
   },
   name: {
     fontSize: CHAT_TYPOGRAPHY.chatName.fontSize * scaleX,
@@ -127,6 +136,9 @@ const styles = StyleSheet.create({
     fontWeight: CHAT_TYPOGRAPHY.chatName.fontWeight as any,
     color: CHAT_TYPOGRAPHY.chatName.color,
     marginBottom: 2 * scaleX,
+  },
+  nameUnread: {
+    fontWeight: '700' as any,
   },
   message: {
     fontSize: CHAT_TYPOGRAPHY.message.fontSize * scaleX,
@@ -137,6 +149,10 @@ const styles = StyleSheet.create({
   },
   messageLight: {
     fontWeight: CHAT_TYPOGRAPHY.messageLight.fontWeight as any,
+  },
+  messageUnread: {
+    fontWeight: '600' as any,
+    color: CHAT_TYPOGRAPHY.message.color,
   },
   groupLabel: {
     alignSelf: 'flex-start',
@@ -152,23 +168,25 @@ const styles = StyleSheet.create({
     fontWeight: CHAT_TYPOGRAPHY.groupLabel.fontWeight as any,
     color: CHAT_TYPOGRAPHY.groupLabel.color,
   },
-  badgeContainer: {
-    position: 'absolute',
-    right: CHAT_ITEM.badge.right * scaleX,
-    top: 12 * scaleX,
-    width: CHAT_ITEM.badge.size * scaleX,
-    height: CHAT_ITEM.badge.size * scaleX,
-    justifyContent: 'center',
-    alignItems: 'center',
+  rightMeta: {
+    alignSelf: 'stretch',
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+    paddingLeft: 8 * scaleX,
+    paddingBottom: 2 * scaleX,
+  },
+  rightMetaSpacer: {
+    flex: 1,
+    minHeight: 18 * scaleX,
   },
   badge: {
-    width: CHAT_ITEM.badge.size * scaleX,
-    height: CHAT_ITEM.badge.size * scaleX,
+    minHeight: CHAT_ITEM.badge.minHeight * scaleX,
+    minWidth: CHAT_ITEM.badge.minWidth * scaleX,
+    paddingHorizontal: CHAT_ITEM.badge.paddingHorizontal * scaleX,
     borderRadius: CHAT_ITEM.badge.borderRadius * scaleX,
     backgroundColor: CHAT_ITEM.badge.backgroundColor,
     justifyContent: 'center',
     alignItems: 'center',
-    minWidth: CHAT_ITEM.badge.size * scaleX,
   },
   badgeText: {
     fontSize: CHAT_TYPOGRAPHY.badge.fontSize * scaleX,

@@ -288,10 +288,11 @@ serve(async (req) => {
       ).catch((e) => {
         throw stepError("room_assignment.fetch_shift", e);
       });
-      const shiftName = shiftRows?.[0]?.name ?? "Shift";
-
-      const title = "New room assigned";
-      const bodyText = `Room ${roomNumber} (${shiftName})`;
+      const shiftLabel = shiftRows?.[0]?.name?.trim();
+      const title = "Room assignment";
+      const bodyText = shiftLabel
+        ? `You have been assigned to Room ${roomNumber} as ${shiftLabel} shift attendant.`
+        : `You have been assigned to Room ${roomNumber}.`;
 
       await sbOrThrow(
         `notifications`,

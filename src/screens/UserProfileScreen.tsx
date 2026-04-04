@@ -158,8 +158,10 @@ export default function UserProfileScreen() {
         </View>
 
         {/* Name & Role */}
-        <Text style={styles.userName}>{user.name}</Text>
-        <Text style={styles.userRole}>{user.role}</Text>
+        <View style={styles.nameRoleBlock}>
+          <Text style={styles.userName}>{user.name}</Text>
+          <Text style={styles.userRole}>{user.role}</Text>
+        </View>
 
         {/* Info card: Department */}
         {user.department != null && user.department !== '' && (
@@ -281,20 +283,24 @@ function buildUserProfileStyles(scaleX: number) {
     fontWeight: typography.fontWeights.semibold as any,
     color: colors.primary.main,
   },
+  nameRoleBlock: {
+    width: '100%',
+    marginBottom: 20 * scaleX,
+  },
   userName: {
     fontSize: 24 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: colors.text.primary,
-    marginBottom: 6 * scaleX,
+    marginBottom: 4 * scaleX,
     textAlign: 'center',
   },
   userRole: {
-    fontSize: 16 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.semibold as any,
-    color: colors.text.secondary,
-    marginBottom: 24 * scaleX,
+    fontSize: 11 * scaleX,
+    fontFamily: typography.fontFamily.secondary,
+    fontStyle: 'normal',
+    fontWeight: typography.fontWeights.light as any,
+    color: '#000',
     textAlign: 'center',
   },
   infoCard: {

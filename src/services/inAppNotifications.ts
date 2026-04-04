@@ -2,6 +2,11 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const badgeInvalidateListeners = new Set<() => void>();
 
+/** Dev / HMR: drop all badge listeners so stale callbacks cannot run after refactors. */
+export function clearNotificationBadgeInvalidateListeners(): void {
+  badgeInvalidateListeners.clear();
+}
+
 /** Subscribe to run when notification rows are marked read (refetch tab badges). */
 export function subscribeNotificationBadgeInvalidate(listener: () => void): () => void {
   badgeInvalidateListeners.add(listener);
@@ -12,7 +17,11 @@ export function subscribeNotificationBadgeInvalidate(listener: () => void): () =
 
 export function invalidateNotificationBadges(): void {
   badgeInvalidateListeners.forEach((fn) => {
-    fn();
+    try {
+      fn();
+    } catch (e) {
+      console.warn('[inAppNotifications] badge listener failed', e);
+    }
   });
 }
 

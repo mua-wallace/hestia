@@ -57,7 +57,7 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress }: Bot
   const insets = useSafeAreaInsets();
   const { scaleX } = useDesignScale();
   const styles = useMemo(() => buildBottomTabBarStyles(scaleX), [scaleX]);
-  const { chatBadgeCount, ticketsBadgeCount } = useBottomTabBadges();
+  const { chatBadgeCount, ticketsBadgeCount, roomsAssignmentCount } = useBottomTabBadges();
 
   const tabs = useMemo(
     () => [
@@ -151,7 +151,9 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress }: Bot
                   ? chatBadgeCount
                   : tab.id === 'Tickets' && ticketsBadgeCount > 0
                     ? ticketsBadgeCount
-                    : undefined
+                    : tab.id === 'Rooms' && roomsAssignmentCount > 0
+                      ? roomsAssignmentCount
+                      : undefined
               }
               onPress={() => onTabPress(tab.id)}
               iconWidth={tab.iconWidth}

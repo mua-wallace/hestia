@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useDesignScale } from '../hooks/useDesignScale';
+import { HOME_HEADER_HEIGHT_DESIGN_PX } from '../constants/homeLayout';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -561,7 +562,7 @@ function buildHomeScreenStyles(scaleX: number) {
   },
   contentBlurOverlay: {
     position: 'absolute',
-    top: (153 + 14 + 59) * scaleX, // Start below header + search bar
+    top: (HOME_HEADER_HEIGHT_DESIGN_PX + 14 + 59) * scaleX, // Start below header + search bar
     left: 0,
     right: 0,
     bottom: 152 * scaleX, // Stop above bottom nav
@@ -570,7 +571,7 @@ function buildHomeScreenStyles(scaleX: number) {
   searchSection: {
     position: 'absolute',
     left: 15 * scaleX,
-    top: (153 + 14) * scaleX, // Header height (153) + margin (14)
+    top: (HOME_HEADER_HEIGHT_DESIGN_PX + 14) * scaleX, // Header + margin
     flexDirection: 'row',
     alignItems: 'center',
     zIndex: 99,
