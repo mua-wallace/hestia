@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useChatStore } from '../store/useChatStore';
@@ -7,7 +6,6 @@ import {
   clearNotificationBadgeInvalidateListeners,
   subscribeNotificationBadgeInvalidate,
 } from '../services/inAppNotifications';
-import { countDistinctRoomsAssignedToUser } from '../services/rooms';
 
 if (__DEV__) {
   // Fast Refresh can leave old `fetchNotificationCounts` closures in the listener set
@@ -19,11 +17,11 @@ if (__DEV__) {
  * Tab bar badges: Chat uses the higher of unread thread counts vs unread in-app
  * `chat_message` notifications (avoids double-counting when both match). Tickets
  * uses unread `ticket_tag` notifications for the logged-in user (RLS).
- * Rooms shows distinct rooms assigned to the user in `room_assignments` (any shift).
+ * Rooms uses unread `room_assignment` notifications; cleared when user opens Rooms from the badge.
  */
 export function useBottomTabBadges() {
   const { session } = useAuth();
-  const { chats } = useChatStore();
+  const chats = useChatStore((s) => s.chats) ?? [];
   const chatUnreadSum = useMemo(
     () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
     [chats]
@@ -41,7 +39,7 @@ export function useBottomTabBadges() {
       return;
     }
 
-    const [chatRes, ticketRes, roomCount] = await Promise.all([
+    const [chatRes, ticketRes, roomAssignRes] = await Promise.all([
       supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
@@ -52,7 +50,11 @@ export function useBottomTabBadges() {
         .select('*', { count: 'exact', head: true })
         .is('read_at', null)
         .eq('type', 'ticket_tag'),
-      countDistinctRoomsAssignedToUser(session.user.id),
+      supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .is('read_at', null)
+        .eq('type', 'room_assignment'),
     ]);
 
     if (chatRes.error) {
@@ -61,10 +63,13 @@ export function useBottomTabBadges() {
     if (ticketRes.error) {
       console.warn('[useBottomTabBadges] ticket_tag count', ticketRes.error.message);
     }
+    if (roomAssignRes.error) {
+      console.warn('[useBottomTabBadges] room_assignment count', roomAssignRes.error.message);
+    }
 
     setChatMessageUnread(chatRes.count ?? 0);
     setTicketTagUnread(ticketRes.count ?? 0);
-    setRoomsAssignmentCount(roomCount);
+    setRoomsAssignmentCount(roomAssignRes.count ?? 0);
   }, [session?.user?.id]);
 
   useEffect(() => {
@@ -74,12 +79,6 @@ export function useBottomTabBadges() {
   useEffect(() => {
     return subscribeNotificationBadgeInvalidate(fetchNotificationCounts);
   }, [fetchNotificationCounts]);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchNotificationCounts();
-    }, [fetchNotificationCounts])
-  );
 
   const chatBadgeCount = Math.max(chatUnreadSum, chatMessageUnread);
   const ticketsBadgeCount = ticketTagUnread;

@@ -45,7 +45,8 @@ export type ReturnToTab = 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound'
 
 export type MainTabsParamList = {
   Home: undefined;
-  Rooms: undefined;
+  /** When true (tab opened via Rooms badge), list shows only this user’s assigned rooms, newest assignment first. */
+  Rooms: { prioritizeMyAssignedRooms?: boolean } | undefined;
   Chat: undefined;
   Tickets: undefined;
   LostAndFound: {

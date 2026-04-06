@@ -9,14 +9,21 @@ export type PushData =
   | { type: 'ticket_tag'; ticketId: string; roomId?: string | null }
   | { type: 'room_assignment'; roomId: string; shiftId?: string };
 
+/**
+ * Foreground / presentation behavior for remote notifications.
+ * - Android: shouldPlaySound: false suppresses the heads-up banner entirely (Expo maps sound to alert visibility).
+ * - iOS: maps to UNNotificationPresentationOptions (banner, list, sound). Prefer banner over legacy alert.
+ */
 export function configureForegroundNotifications() {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true,
       shouldShowBanner: true,
       shouldShowList: true,
-      shouldPlaySound: false,
+      shouldPlaySound: true,
       shouldSetBadge: false,
+      ...(Platform.OS === 'android'
+        ? { priority: Notifications.AndroidNotificationPriority.HIGH }
+        : {}),
     }),
   });
 }
@@ -24,9 +31,23 @@ export function configureForegroundNotifications() {
 async function ensureAndroidChannel() {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync('default', {
-    name: 'Default',
-    importance: Notifications.AndroidImportance.DEFAULT,
+    name: 'Hestia',
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 120, 250],
+    enableVibrate: true,
+    sound: 'default',
+    showBadge: true,
   });
+}
+
+/** Call once at app startup so presentation is correct even before push registration runs. */
+export async function setupNotificationPresentation(): Promise<void> {
+  try {
+    configureForegroundNotifications();
+    await ensureAndroidChannel();
+  } catch (e) {
+    console.warn('[notifications] setupNotificationPresentation failed', e);
+  }
 }
 
 /**
@@ -35,21 +56,32 @@ async function ensureAndroidChannel() {
  */
 export async function registerAndSyncPushToken(): Promise<{ token: string | null }> {
   if (!isSupabaseConfigured) return { token: null };
-  configureForegroundNotifications();
-  await ensureAndroidChannel();
+  await setupNotificationPresentation();
 
   if (!Device.isDevice) {
     // Expo push tokens aren't available on iOS simulators; devs should test on device.
     return { token: null };
   }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  const finalStatus =
-    existingStatus === 'granted'
-      ? 'granted'
-      : (await Notifications.requestPermissionsAsync()).status;
+  const allowsPush = (status: Awaited<ReturnType<typeof Notifications.getPermissionsAsync>>) =>
+    status.granted ||
+    (Platform.OS === 'ios' &&
+      status.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL);
 
-  if (finalStatus !== 'granted') return { token: null };
+  let perm = await Notifications.getPermissionsAsync();
+  if (!allowsPush(perm)) {
+    perm = await Notifications.requestPermissionsAsync({
+      ios: {
+        allowAlert: true,
+        allowBadge: true,
+        allowSound: true,
+      },
+      // Required when passing a custom request: Android uses this branch (POST_NOTIFICATIONS on 13+).
+      android: {},
+    });
+  }
+
+  if (!allowsPush(perm)) return { token: null };
 
   const projectId =
     // EAS project id for Expo push tokens (SDK 49+).
@@ -64,12 +96,31 @@ export async function registerAndSyncPushToken(): Promise<{ token: string | null
   const userId = sessionData?.session?.user?.id ?? null;
   if (!userId) return { token: null };
 
-  // Upsert by token uniqueness (unique(expo_push_token)), and keep user_id updated.
   const device_os = Platform.OS;
   const device_name = Device.deviceName ?? null;
 
-  // IMPORTANT: `.update(...).eq(...)` does NOT error when 0 rows match, so
-  // "update then insert on error" will silently skip inserts.
+  // Prefer SECURITY DEFINER RPC so the same Expo token can move between accounts without RLS blocking the merge.
+  const rpcResult = await supabase.rpc('register_expo_push_token', {
+    p_expo_push_token: token,
+    p_device_os: device_os,
+    p_device_name: device_name,
+  });
+
+  if (!rpcResult.error) {
+    return { token };
+  }
+
+  const rpcMsg = rpcResult.error.message ?? '';
+  const rpcMissing =
+    rpcResult.error.code === 'PGRST202' ||
+    /Could not find the function|does not exist|schema cache/i.test(rpcMsg);
+
+  if (!rpcMissing) {
+    console.warn('[push] register_expo_push_token', rpcResult.error.message, rpcResult.error.code);
+    return { token };
+  }
+
+  // Fallback when migration `20260406140000_register_expo_push_token_rpc.sql` is not applied yet.
   const upsert = await supabase.from('user_push_tokens').upsert(
     {
       user_id: userId,
@@ -80,7 +131,6 @@ export async function registerAndSyncPushToken(): Promise<{ token: string | null
     { onConflict: 'expo_push_token' },
   );
   if (upsert.error) {
-    // Don't crash the app if token sync fails.
     console.warn('[push] Failed to persist push token', upsert.error.message, upsert.error.code);
   }
 

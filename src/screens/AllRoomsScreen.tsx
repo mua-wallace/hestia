@@ -19,7 +19,13 @@ import BottomTabBar from '../components/navigation/BottomTabBar';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
 import CleanChecklistModal from '../components/allRooms/CleanChecklistModal';
-import type { RootStackParamList } from '../navigation/types';
+import type { RootStackParamList, MainTabsParamList } from '../navigation/types';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  invalidateNotificationBadges,
+  markAllRoomAssignmentNotificationsRead,
+} from '../services/inAppNotifications';
+import { getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt } from '../services/rooms';
 import { BlurView } from 'expo-blur';
 import { FilterState, FilterCounts } from '../types/filter.types';
 import type { CategoryName } from '../types/home.types';
@@ -44,21 +50,12 @@ export type CategoryFilterParam = {
 
 const DESIGN_WIDTH = 440;
 
-type MainTabsParamList = {
-  Home: undefined;
-  Rooms: undefined;
-  Chat: undefined;
-  Tickets: undefined;
-  LostAndFound: undefined;
-  Staff: undefined;
-  Settings: undefined;
-};
-
-type AllRoomsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, 'Rooms'> & 
+type AllRoomsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, 'Rooms'> &
   NativeStackNavigationProp<RootStackParamList>;
 
 export default function AllRoomsScreen() {
   const navigation = useNavigation<AllRoomsScreenNavigationProp>();
+  const { session } = useAuth();
   const { open: openAIChatOverlay } = useAIChatOverlay();
   const route = useRoute();
   const routeShift = (route.params as any)?.selectedShift as ShiftType | undefined;
@@ -106,6 +103,47 @@ export default function AllRoomsScreen() {
   const showBackButton = (route.params as any)?.showBackButton ?? false;
   const routeFilters = (route.params as any)?.filters as FilterState | undefined;
   const routeCategoryFilter = (route.params as any)?.categoryFilter as CategoryFilterParam | undefined;
+  const prioritizeMyAssignedRooms =
+    (route.params as { prioritizeMyAssignedRooms?: boolean } | undefined)?.prioritizeMyAssignedRooms === true;
+  /** Filter/sort list while param is true (decoupled from badge count so list stays after notifications are marked read). */
+  const shouldPrioritizeAssignedOnly = prioritizeMyAssignedRooms;
+
+  const [assignedRoomIdsOrdered, setAssignedRoomIdsOrdered] = useState<string[]>([]);
+  const [assignedRoomOrderLoading, setAssignedRoomOrderLoading] = useState(false);
+  const markedRoomAssignmentNotificationsReadRef = useRef(false);
+
+  React.useEffect(() => {
+    if (!shouldPrioritizeAssignedOnly || !session?.user?.id) {
+      setAssignedRoomIdsOrdered([]);
+      setAssignedRoomOrderLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setAssignedRoomOrderLoading(true);
+    void getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt(session.user.id).then((ids) => {
+      if (!cancelled) {
+        setAssignedRoomIdsOrdered(ids);
+        setAssignedRoomOrderLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldPrioritizeAssignedOnly, session?.user?.id]);
+
+  // Opening Rooms from the assignment badge: mark inbox rows read once so the tab badge clears (like Tickets).
+  useFocusEffect(
+    React.useCallback(() => {
+      if (route.name !== 'Rooms') return;
+      if (!prioritizeMyAssignedRooms) {
+        markedRoomAssignmentNotificationsReadRef.current = false;
+        return;
+      }
+      if (markedRoomAssignmentNotificationsReadRef.current) return;
+      markedRoomAssignmentNotificationsReadRef.current = true;
+      void markAllRoomAssignmentNotificationsRead().then(() => invalidateNotificationBadges());
+    }, [route.name, prioritizeMyAssignedRooms])
+  );
 
   // Initialize local filters: merge route filters with categoryFilter.roomState when coming from Home badge tap
   const [localFilters, setLocalFilters] = useState<FilterState | undefined>(() => {
@@ -563,7 +601,7 @@ export default function AllRoomsScreen() {
     }, [route.name])
   );
 
-  const handleTabPress = (tab: string) => {
+  const handleTabPress = (tab: string, options?: { fromRoomsAssignmentBadge?: boolean }) => {
     if (tab === 'AIHome') {
       openAIChatOverlay();
       return;
@@ -574,7 +612,9 @@ export default function AllRoomsScreen() {
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
-      navigation.navigate('Rooms' as any);
+      navigation.navigate('Rooms' as any, {
+        prioritizeMyAssignedRooms: !!options?.fromRoomsAssignmentBadge,
+      });
     } else if (tab === 'Chat') {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
@@ -716,8 +756,33 @@ export default function AllRoomsScreen() {
       rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');
     }
 
+    // Tab badge: show only rooms assigned to this user, newest assignment first (room_assignments.created_at).
+    if (shouldPrioritizeAssignedOnly && !assignedRoomOrderLoading) {
+      if (assignedRoomIdsOrdered.length === 0) {
+        rooms = [];
+      } else {
+        const orderIndex = new Map(assignedRoomIdsOrdered.map((id, i) => [id, i]));
+        rooms = rooms.filter((r) => orderIndex.has(r.id));
+        rooms.sort((a, b) => (orderIndex.get(a.id)! - orderIndex.get(b.id)!));
+      }
+    }
+
     return rooms;
-  }, [displayData.rooms, displayData.roomsPM, effectiveShift, activeFilters, searchQuery, routeCategoryFilter]);
+  }, [
+    displayData.rooms,
+    displayData.roomsPM,
+    effectiveShift,
+    activeFilters,
+    searchQuery,
+    routeCategoryFilter,
+    shouldPrioritizeAssignedOnly,
+    assignedRoomOrderLoading,
+    assignedRoomIdsOrdered,
+  ]);
+
+  const showNoMatchingRoomsEmptyState =
+    filteredRooms.length === 0 &&
+    (hasActiveFilters || (shouldPrioritizeAssignedOnly && !assignedRoomOrderLoading));
 
   return (
     <View style={[
@@ -725,6 +790,9 @@ export default function AllRoomsScreen() {
       displayData?.selectedShift === 'PM' && styles.containerPM
     ]}>
       {loading && !allRoomsData && <LoadingOverlay fullScreen message="Loading rooms…" />}
+      {shouldPrioritizeAssignedOnly && assignedRoomOrderLoading && allRoomsData && (
+        <LoadingOverlay fullScreen message="Loading your assigned rooms…" />
+      )}
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -749,7 +817,7 @@ export default function AllRoomsScreen() {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
           >
-          {hasActiveFilters && filteredRooms.length === 0 ? (
+          {showNoMatchingRoomsEmptyState ? (
             // Empty state card when filters don't match any rooms
             <View style={[
               styles.emptyStateCard,
@@ -772,7 +840,9 @@ export default function AllRoomsScreen() {
               <Text style={[
                 styles.emptyStateMessage,
               ]}>
-                The chosen filter options do not match any rooms.{'\n'}Try adjusting your filters or search query.
+                {shouldPrioritizeAssignedOnly
+                  ? 'No assigned rooms match this shift or filters.\nTry another shift or clear filters.'
+                  : `The chosen filter options do not match any rooms.${'\n'}Try adjusting your filters or search query.`}
               </Text>
             </View>
           ) : (

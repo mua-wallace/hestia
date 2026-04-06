@@ -108,9 +108,10 @@ export default function TicketsScreen() {
     setDueMonth('');
   }, [statusMenuTicket, applyDueFieldsFromDate]);
 
-  const loadTickets = useCallback(async (overrideInitialTab?: TicketTab) => {
+  const loadTickets = useCallback(async (overrideInitialTab?: TicketTab, opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await dashboardService.getTicketsData();
       setTicketsData(data);
       // If we came here with an explicit initial tab (e.g. after creating a ticket),
@@ -126,7 +127,7 @@ export default function TicketsScreen() {
       setTicketsData({ selectedTab: fallbackTab, tickets: [] });
       setSelectedTab(fallbackTab);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -147,13 +148,13 @@ export default function TicketsScreen() {
       const params = (route as any).params as { initialTab?: TicketTab } | undefined;
       const overrideInitialTab = params?.initialTab;
 
-      // Refresh tickets whenever Tickets screen gains focus
-      loadTickets(overrideInitialTab);
+      // Refresh when returning to the tab (no full-screen loader).
+      loadTickets(overrideInitialTab, { silent: true });
       void markAllTicketTagNotificationsRead().then(() => invalidateNotificationBadges());
     }, [route, loadTickets])
   );
 
-  const handleTabPress = (tab: string) => {
+  const handleTabPress = (tab: string, options?: { fromRoomsAssignmentBadge?: boolean }) => {
     if (tab === 'AIHome') {
       openAIChatOverlay();
       return;
@@ -163,7 +164,9 @@ export default function TicketsScreen() {
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
-      navigation.navigate('Rooms' as any);
+      navigation.navigate('Rooms' as any, {
+        prioritizeMyAssignedRooms: !!options?.fromRoomsAssignmentBadge,
+      });
     } else if (tab === 'Chat') {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
@@ -291,7 +294,11 @@ export default function TicketsScreen() {
   const filteredTickets = tickets.filter((ticket) => {
     if (selectedTab === 'myTickets') {
       if (!currentUserId) return false;
-      return ticket.assignedToId === currentUserId;
+      return (
+        ticket.assignedToId === currentUserId ||
+        ticket.createdById === currentUserId ||
+        ticket.viewerIsTagged === true
+      );
     } else if (selectedTab === 'open') {
       return ticket.status === 'unsolved' || ticket.status === 'ofo';
     } else if (selectedTab === 'closed') {

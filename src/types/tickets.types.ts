@@ -45,6 +45,8 @@ export interface TicketData {
    * Currently not used for filtering but kept for future extensions.
    */
   createdById?: string;
+  /** Current session user appears in ticket_tags for this ticket. */
+  viewerIsTagged?: boolean;
   status: TicketStatus;
   locationIcon?: any; // Map pin icon
 }

@@ -5,16 +5,18 @@
 
 import { mockHomeData } from '../data/mockHomeData';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
+import { mockTicketsData } from '../data/mockTicketsData';
 import type { HomeScreenData } from '../types/home.types';
 import type { AllRoomsScreenData } from '../types/allRooms.types';
 import type { TicketsScreenData } from '../types/tickets.types';
 import type { ChatItemData } from '../components/chat/ChatItem';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { fetchAllRooms, updateRoom, assignRoomToStaff as roomsAssignRoomToStaff, type RoomStateUpdate } from './rooms';
+import { getTicketsData as getTicketsDataFromSupabase } from './tickets';
 import type { StaffInfo } from '../types/allRooms.types';
+import { mockStaffData } from '../data/mockStaffData';
 import { getShiftFromTime } from '../utils/shiftUtils';
 import { getToast } from '../utils/toast';
-import { getTicketsData as fetchTicketsData } from './tickets';
 
 export type { RoomStateUpdate } from './rooms';
 
@@ -48,6 +50,16 @@ const dashboard = {
    */
   async assignRoomToStaff(roomId: string, userId: string, shift: 'AM' | 'PM'): Promise<StaffInfo | null> {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const staffMember = mockStaffData.find((s) => s.id === userId);
+    const mockStaffInfo: StaffInfo | null = staffMember
+      ? {
+          name: staffMember.name,
+          initials: staffMember.initials ?? staffMember.name.charAt(0).toUpperCase(),
+          avatar: staffMember.avatar,
+          statusText: 'Not Started',
+          statusColor: '#1e1e1e',
+        }
+      : null;
 
     // Build StaffInfo from Supabase user when staff was selected from Supabase list (UUID)
     const buildStaffInfoFromSupabase = async (): Promise<StaffInfo | null> => {
@@ -74,7 +86,7 @@ const dashboard = {
         const message = e instanceof Error ? e.message : 'Assignment could not be saved';
         console.warn('Assign room failed:', message, e);
         getToast()?.show(message, { type: 'error', duration: 4000 });
-        return await buildStaffInfoFromSupabase();
+        return (await buildStaffInfoFromSupabase()) ?? mockStaffInfo;
       }
     }
 
@@ -84,7 +96,7 @@ const dashboard = {
       if (fromSupabase) return fromSupabase;
     }
 
-    return null;
+    return mockStaffInfo;
   },
 
   async getChatData(): Promise<ChatItemData[]> {
@@ -92,7 +104,15 @@ const dashboard = {
   },
 
   async getTicketsData(): Promise<TicketsScreenData> {
-    return fetchTicketsData();
+    if (isSupabaseConfigured) {
+      try {
+        return await getTicketsDataFromSupabase();
+      } catch (e) {
+        console.warn('[dashboard] Supabase tickets failed, using mock:', e);
+        return Promise.resolve(mockTicketsData);
+      }
+    }
+    return Promise.resolve(mockTicketsData);
   },
 };
 

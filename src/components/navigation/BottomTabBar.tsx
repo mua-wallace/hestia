@@ -7,9 +7,11 @@ import { MORE_MENU_OPTIONS } from '../../types/more.types';
 import { useDesignScale } from '../../hooks/useDesignScale';
 import { useBottomTabBadges } from '../../hooks/useBottomTabBadges';
 
+export type TabPressOptions = { fromRoomsAssignmentBadge?: boolean };
+
 interface BottomTabBarProps {
   activeTab: string;
-  onTabPress: (tab: string) => void;
+  onTabPress: (tab: string, options?: TabPressOptions) => void;
   onMorePress?: () => void;
 }
 
@@ -155,7 +157,12 @@ export default function BottomTabBar({ activeTab, onTabPress, onMorePress }: Bot
                       ? roomsAssignmentCount
                       : undefined
               }
-              onPress={() => onTabPress(tab.id)}
+              onPress={() =>
+                onTabPress(
+                  tab.id,
+                  tab.id === 'Rooms' && roomsAssignmentCount > 0 ? { fromRoomsAssignmentBadge: true } : undefined
+                )
+              }
               iconWidth={tab.iconWidth}
               iconHeight={tab.iconHeight}
               iconOffsetX={'iconOffsetX' in tab ? (tab as any).iconOffsetX : 0}

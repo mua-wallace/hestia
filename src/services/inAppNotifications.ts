@@ -69,3 +69,17 @@ export async function markAllTicketTagNotificationsRead(): Promise<void> {
     console.warn('[inAppNotifications] markAllTicketTagNotificationsRead', error.message);
   }
 }
+
+/** User opened Rooms from the assignment badge — clear unread room_assignment inbox rows. */
+export async function markAllRoomAssignmentNotificationsRead(): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  const readAt = new Date().toISOString();
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read_at: readAt })
+    .eq('type', 'room_assignment')
+    .is('read_at', null);
+  if (error) {
+    console.warn('[inAppNotifications] markAllRoomAssignmentNotificationsRead', error.message);
+  }
+}

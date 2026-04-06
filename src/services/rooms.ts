@@ -536,6 +536,32 @@ export async function countDistinctRoomsAssignedToUser(userId: string): Promise<
 }
 
 /**
+ * Distinct rooms assigned to the user (any shift), ordered by latest `room_assignments.created_at` first.
+ * Used when opening Rooms from the tab badge so assigned rooms appear at the top in recency order.
+ */
+export async function getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt(userId: string): Promise<string[]> {
+  if (!isValidUUID(userId)) return [];
+  const { data, error } = await supabase
+    .from('room_assignments')
+    .select('room_id, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.warn('[rooms] getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt', error.message);
+    return [];
+  }
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const row of data ?? []) {
+    const rid = (row as { room_id?: string }).room_id;
+    if (!rid || seen.has(rid)) continue;
+    seen.add(rid);
+    ordered.push(rid);
+  }
+  return ordered;
+}
+
+/**
  * Assign a room to a staff member for the given shift.
  * Uses room_assignments table: upserts by (room_id, shift_id) so one assignee per room per shift.
  * Always returns StaffInfo for the user when both IDs are valid UUIDs (so the room card can update);

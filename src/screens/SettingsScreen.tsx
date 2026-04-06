@@ -63,14 +63,19 @@ export default function SettingsScreen() {
     }, [route.name])
   );
 
-  const handleTabPress = (tab: string) => {
+  const handleTabPress = (tab: string, options?: { fromRoomsAssignmentBadge?: boolean }) => {
     if (tab === 'AIHome') {
       openAIChatOverlay();
       return;
     }
     setActiveTab(tab); // Update immediately
-    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
-    if (tab === 'Home' || tab === 'Rooms' || tab === 'Chat' || tab === 'Tickets' || tab === 'LostAndFound' || tab === 'Staff' || tab === 'Settings') {
+    if (tab === 'Rooms') {
+      navigation.navigate('Rooms', {
+        prioritizeMyAssignedRooms: !!options?.fromRoomsAssignmentBadge,
+      });
+      return;
+    }
+    if (tab === 'Home' || tab === 'Chat' || tab === 'Tickets' || tab === 'LostAndFound' || tab === 'Staff' || tab === 'Settings') {
       navigation.navigate(tab as keyof MainTabsParamList);
     }
   };

@@ -115,7 +115,8 @@ function mapRowToTicketData(
   row: TicketsRow,
   guestByRoomId: Map<string, { name: string; stayRange?: string; imageUrl?: string }>,
   imagesByTicketId: Map<string, string[]>,
-  nowMs = Date.now()
+  nowMs = Date.now(),
+  taggedTicketIds: Set<string> = new Set()
 ): TicketData {
   const formatElapsed = (elapsedMinutes: number) => {
     if (!Number.isFinite(elapsedMinutes)) return undefined;
@@ -169,6 +170,7 @@ function mapRowToTicketData(
         : undefined,
     assignedToId: row.assigned_to_id,
     createdById: row.created_by_id,
+    viewerIsTagged: taggedTicketIds.has(row.id),
   };
 }
 
@@ -219,6 +221,21 @@ export async function getTicketsData(): Promise<TicketsScreenData> {
 
   const rows = data as unknown as TicketsRow[];
   const nowMs = Date.now();
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const viewerId = sessionData?.session?.user?.id ?? null;
+  const taggedTicketIds = new Set<string>();
+  if (viewerId) {
+    const { data: tagRows, error: tagErr } = await supabase
+      .from('ticket_tags')
+      .select('ticket_id')
+      .eq('tagged_user_id', viewerId);
+    if (!tagErr && tagRows) {
+      for (const tr of tagRows as { ticket_id?: string }[]) {
+        if (tr.ticket_id) taggedTicketIds.add(tr.ticket_id);
+      }
+    }
+  }
 
   // Ticket attachments (images) stored in room_history.attachments for ticket events (when present).
   const ticketIds = rows.map((r) => r.id).filter(Boolean);
@@ -300,7 +317,9 @@ export async function getTicketsData(): Promise<TicketsScreenData> {
     }
   }
 
-  const tickets: TicketData[] = rows.map((row) => mapRowToTicketData(row, guestByRoomId, imagesByTicketId, nowMs));
+  const tickets: TicketData[] = rows.map((row) =>
+    mapRowToTicketData(row, guestByRoomId, imagesByTicketId, nowMs, taggedTicketIds)
+  );
 
   return {
     selectedTab: 'myTickets',
@@ -339,7 +358,7 @@ export async function getLatestTicketForRoom(roomId: string): Promise<TicketData
 
   if (error || !data) return null;
   // For the single-room call, we can skip guest hydration for now.
-  return mapRowToTicketData(data as TicketsRow, new Map(), new Map(), Date.now());
+  return mapRowToTicketData(data as TicketsRow, new Map(), new Map(), Date.now(), new Set());
 }
 
 export type CreateTicketInput = {
