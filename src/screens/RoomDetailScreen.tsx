@@ -263,7 +263,17 @@ export default function RoomDetailScreen() {
   // Track Promise Time: timestamp for time + countdown in header
   const [promiseTimeAtTimestamp, setPromiseTimeAtTimestamp] = useState<number | undefined>(undefined);
   // Track Refuse Service: selected reason or custom reason to show in header
-  const [refuseServiceReason, setRefuseServiceReason] = useState<string | undefined>(undefined);
+  const [refuseServiceReason, setRefuseServiceReason] = useState<string | undefined>(() => {
+    const raw = (room as any)?.refuseServiceReason ?? null;
+    return raw ? String(raw) : undefined;
+  });
+  // Track Refuse Service time: timestamp for time-only display in header
+  const [refuseServiceAtTimestamp, setRefuseServiceAtTimestamp] = useState<number | undefined>(() => {
+    const raw = (room as any)?.refuseServiceAt ?? null;
+    if (!raw) return undefined;
+    const ms = new Date(String(raw)).getTime();
+    return Number.isFinite(ms) ? ms : undefined;
+  });
 
   // Track notes in state. For Supabase rooms we load via getRoomNotes; for mock we use room.roomNotes.
   const [notes, setNotes] = useState<Note[]>(() => {
@@ -443,8 +453,16 @@ export default function RoomDetailScreen() {
     }
   };
   
-  // Track paused time
-  const [pausedAt, setPausedAt] = useState<string | undefined>(undefined);
+  // Track paused time (HH:mm) for header "Paused at ..."
+  const [pausedAt, setPausedAt] = useState<string | undefined>(() => {
+    const raw = (room as any)?.pausedAt ?? null;
+    if (!raw) return undefined;
+    const d = new Date(String(raw));
+    if (Number.isNaN(d.getTime())) return undefined;
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  });
 
   const handleBackPress = () => {
     if (navigation.canGoBack()) {
@@ -550,14 +568,26 @@ export default function RoomDetailScreen() {
       const minutes = now.getMinutes().toString().padStart(2, '0');
       setPausedAt(`${hours}:${minutes}`);
       setSelectedStatusText(undefined);
+      // Persist so Pause survives reloads.
+      updateRoom(room.id, {
+        house_keeping_status: newStatus,
+        paused_at: now.toISOString(),
+        return_later_at: null,
+        refuse_service_at: null,
+        refuse_service_reason: null,
+      }).catch((e) => console.warn('Failed to persist pause in Supabase', e));
     } else {
       setSelectedStatusText(statusLabel);
       setPausedAt(undefined);
+      // Clear any prior pause / return later / refuse service state when a normal status is chosen.
+      updateRoom(room.id, {
+        house_keeping_status: newStatus,
+        paused_at: null,
+        return_later_at: null,
+        refuse_service_at: null,
+        refuse_service_reason: null,
+      }).catch((e) => console.warn('Failed to update room status in Supabase', e));
     }
-
-    updateRoom(room.id, {
-      house_keeping_status: newStatus,
-    }).catch((e) => console.warn('Failed to update room status in Supabase', e));
 
     setShowStatusModal(false);
     setStatusButtonPosition(null);
@@ -582,6 +612,9 @@ export default function RoomDetailScreen() {
       updateRoom(room.id, {
         house_keeping_status: 'InProgress',
         return_later_at: new Date(returnAtTimestamp).toISOString(),
+        paused_at: null,
+        refuse_service_at: null,
+        refuse_service_reason: null,
       }).catch((e) => console.warn('Failed to persist return later in Supabase', e));
     }
     setShowReturnLaterModal(false);
@@ -605,6 +638,15 @@ export default function RoomDetailScreen() {
 
   const handleRefuseServiceConfirm = (reason: string) => {
     setRefuseServiceReason(reason);
+    setRefuseServiceAtTimestamp(Date.now());
+    // Persist to DB so Refuse Service survives reloads.
+    updateRoom(room.id, {
+      house_keeping_status: 'InProgress',
+      refuse_service_at: new Date().toISOString(),
+      refuse_service_reason: reason,
+      paused_at: null,
+      return_later_at: null,
+    }).catch((e) => console.warn('Failed to persist refuse service in Supabase', e));
     void logRoomHistoryEvent({
       roomId: room.id,
       type: 'refuse_service',
@@ -920,6 +962,7 @@ export default function RoomDetailScreen() {
         pausedAt={pausedAt}
         returnLaterAtTimestamp={returnLaterAtTimestamp}
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
+        refuseServiceAtTimestamp={refuseServiceAtTimestamp}
         refuseServiceReason={refuseServiceReason}
         showWithLinenBadge={room.frontOfficeStatus === 'Stayover' && showStayoverWithLinenBadge(room)}
       />
@@ -1003,6 +1046,7 @@ export default function RoomDetailScreen() {
           setShowRefuseServiceModal(false);
           setSelectedStatusText(undefined);
           setRefuseServiceReason(undefined);
+          setRefuseServiceAtTimestamp(undefined);
         }}
         onConfirm={handleRefuseServiceConfirm}
         roomNumber={room.roomNumber}

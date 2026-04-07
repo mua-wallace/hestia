@@ -17,6 +17,7 @@ interface RoomDetailHeaderProps {
   returnLaterAt?: string; // Deprecated: use returnLaterAtTimestamp for time + remaining
   returnLaterAtTimestamp?: number; // Epoch ms when user will return; header shows time only + countdown
   promiseTimeAtTimestamp?: number; // Epoch ms when room will be ready; header shows time + countdown
+  refuseServiceAtTimestamp?: number; // Epoch ms when service was refused; header shows time
   refuseServiceReason?: string; // Selected reason or custom reason when Refuse Service is confirmed
   isPriority?: boolean; // Reserved for future priority UI
   flagged?: boolean; // When true, show red flag in circular white badge after room number (flag room)
@@ -36,6 +37,7 @@ export default function RoomDetailHeader({
   returnLaterAt,
   returnLaterAtTimestamp,
   promiseTimeAtTimestamp,
+  refuseServiceAtTimestamp,
   refuseServiceReason,
   isPriority = false,
   flagged = false,
@@ -51,6 +53,7 @@ export default function RoomDetailHeader({
   const RS = ROOM_DETAIL_HEADER.refuseServiceLight;
   const hasReturnLaterTime = isReturnLater && (returnLaterAtTimestamp != null || returnLaterAt);
   const hasPromiseTimeTime = isPromiseTime && promiseTimeAtTimestamp != null;
+  const hasRefuseServiceTime = showRefuseServiceHeader && refuseServiceAtTimestamp != null;
 
   // Remaining countdown "X mins Y s" for Return Later, updates every second
   const [returnLaterRemaining, setReturnLaterRemaining] = useState<string>('');
@@ -132,6 +135,9 @@ export default function RoomDetailHeader({
     : '';
   const promiseTimeOnly = promiseTimeAtTimestamp != null
     ? new Date(promiseTimeAtTimestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    : '';
+  const refuseTimeOnly = refuseServiceAtTimestamp != null
+    ? new Date(refuseServiceAtTimestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
     : '';
 
   // Determine which icon to use based on customStatusText, pausedAt, or status
@@ -347,6 +353,11 @@ export default function RoomDetailHeader({
       )}
 
       {/* Refused Service: reason line below status (Figma 2333-835) */}
+      {hasRefuseServiceTime ? (
+        <Text style={[styles.returnLaterAt, { color: RS.subtitleColor }]}>
+          Refused at {refuseTimeOnly}
+        </Text>
+      ) : null}
       {refuseServiceReason ? (
         <Text style={[styles.returnLaterAt, { color: RS.subtitleColor }]}>
           {refuseServiceReason}

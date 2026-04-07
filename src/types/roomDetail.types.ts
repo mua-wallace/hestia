@@ -141,6 +141,8 @@ export interface RoomDetailScreenProps {
   pausedAt?: string;
   returnLaterAtTimestamp?: number;
   promiseTimeAtTimestamp?: number;
+  /** Epoch ms when Refuse Service was confirmed (persisted). */
+  refuseServiceAtTimestamp?: number;
   refuseServiceReason?: string;
   
   // Optional: Show stayover with linen badge

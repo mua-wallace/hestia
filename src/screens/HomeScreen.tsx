@@ -25,6 +25,8 @@ import HomeHeader from '../components/home/HomeHeader';
 import CategoryCard from '../components/home/CategoryCard';
 import EngineeringTicketsOverviewCard from '../components/home/EngineeringTicketsOverviewCard';
 import EngineeringRecentActivityItem from '../components/home/EngineeringRecentActivityItem';
+import HskPortierTasksOverviewCard from '../components/home/HskPortierTasksOverviewCard';
+import HskPortierCategoryListCard from '../components/home/HskPortierCategoryListCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import HomeFilterModal from '../components/home/HomeFilterModal';
 import { FilterState, FilterCounts } from '../types/filter.types';
@@ -101,6 +103,7 @@ export default function HomeScreen() {
   }, [session, profile, sessionFallback]);
 
   const isEngineeringUser = (homeData.user?.department ?? '').toLowerCase() === 'engineering';
+  const isHskPortierUser = (homeData.user?.department ?? '').toLowerCase() === 'hsk portier';
 
   const [engineeringCounts, setEngineeringCounts] = useState<{
     total: number;
@@ -186,6 +189,140 @@ export default function HomeScreen() {
   useEffect(() => {
     void refreshEngineeringHome();
   }, [refreshEngineeringHome]);
+
+  const [portierOverview, setPortierOverview] = useState<{
+    total: number;
+    dirty: number;
+    inProgress: number;
+    cleaned: number;
+    inspected: number;
+    priority: number;
+    progressText: string;
+    pausedRoomLabel?: string;
+    pausedStartedAtIso?: string;
+  }>({ total: 0, dirty: 0, inProgress: 0, cleaned: 0, inspected: 0, priority: 0, progressText: '0/0' });
+
+  const [portierRows, setPortierRows] = useState<
+    Array<{
+      label: string;
+      count: number;
+      icon: any;
+      circleBg: string;
+      iconTint?: string;
+      flipIconHorizontal?: boolean;
+    }>
+  >([]);
+
+  const refreshPortierHome = React.useCallback(async () => {
+    if (!isHskPortierUser) return;
+
+    const roomsPM = roomsForHome.roomsPM ?? [];
+    const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
+
+    const dirty = sourceRooms.filter((r) => r.houseKeepingStatus === 'Dirty').length;
+    const inProgress = sourceRooms.filter((r) => r.houseKeepingStatus === 'InProgress').length;
+    const cleaned = sourceRooms.filter((r) => r.houseKeepingStatus === 'Cleaned').length;
+    const inspected = sourceRooms.filter((r) => r.houseKeepingStatus === 'Inspected').length;
+    const total = dirty + inProgress + cleaned + inspected;
+    const priority = sourceRooms.filter((r) => !!r.isPriority).length;
+
+    // Figma shows "2/8" as progress text (completed-ish). We treat Cleaned+Inspected as "done".
+    const done = cleaned + inspected;
+    const progressText = `${done}/${total || 0}`;
+
+    // Optional: show a paused row if we find one for current user.
+    let pausedRoomLabel: string | undefined;
+    let pausedStartedAtIso: string | undefined;
+    try {
+      const uid = session?.user?.id;
+      if (uid) {
+        const { data: shiftRow } = await supabase
+          .from('shifts')
+          .select('id')
+          .ilike('name', homeData.selectedShift)
+          .limit(1)
+          .maybeSingle();
+        const shiftId = (shiftRow as any)?.id as string | undefined;
+        if (shiftId) {
+          const { data: paused } = await supabase
+            .from('room_assignments')
+            .select('room_id, updated_at')
+            .eq('user_id', uid)
+            .eq('shift_id', shiftId)
+            .eq('work_status', 'paused')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const rid = (paused as any)?.room_id as string | undefined;
+          const updatedAt = (paused as any)?.updated_at as string | undefined;
+          if (rid) {
+            const room = sourceRooms.find((r) => r.id === rid);
+            if (room?.roomNumber) pausedRoomLabel = `Room ${room.roomNumber}`;
+            // Prefer the persisted pause start time on the room record when available; fallback to assignment updated_at.
+            const roomPausedAt = (room as any)?.pausedAt as string | null | undefined;
+            pausedStartedAtIso = roomPausedAt ?? updatedAt ?? undefined;
+          }
+        }
+      }
+    } catch (e) {
+      // Non-blocking; UI can render without paused row.
+    }
+
+    setPortierOverview({
+      total,
+      dirty,
+      inProgress,
+      cleaned,
+      inspected,
+      priority,
+      progressText,
+      pausedRoomLabel,
+      pausedStartedAtIso,
+    });
+
+    const flagged = sourceRooms.filter((r) => !!r.flagged).length;
+    const stayover = sourceRooms.filter((r) => r.frontOfficeStatus === 'Stayover').length;
+    const turndown = sourceRooms.filter((r) => r.frontOfficeStatus === 'Turndown').length;
+    const departures = sourceRooms.filter((r) => r.frontOfficeStatus === 'Departure' || r.frontOfficeStatus === 'Arrival/Departure').length;
+    const arrivals = sourceRooms.filter((r) => r.frontOfficeStatus === 'Arrival' || r.frontOfficeStatus === 'Arrival/Departure').length;
+
+    setPortierRows([
+      { label: 'Flagged', count: flagged, icon: require('../../assets/icons/flag.png'), circleBg: '#ffebeb', iconTint: '#f92424' },
+      {
+        label: 'Stayover',
+        count: stayover,
+        icon: require('../../assets/icons/rooms-icon.png'),
+        circleBg: '#4a91fc',
+        iconTint: '#ffffff',
+      },
+      {
+        label: 'Turndowns',
+        count: turndown,
+        icon: require('../../assets/icons/moon.png'),
+        circleBg: '#7c3aed',
+      },
+      {
+        label: 'Departures',
+        count: departures,
+        icon: require('../../assets/icons/spear-arrow.png'),
+        circleBg: '#ffebeb',
+        iconTint: '#f92424',
+      },
+      {
+        label: 'Arrivals',
+        count: arrivals,
+        icon: require('../../assets/icons/spear-arrow.png'),
+        circleBg: '#daf4e8',
+        iconTint: '#41d541',
+        flipIconHorizontal: true,
+      },
+    ]);
+  }, [isHskPortierUser, roomsForHome, homeData.selectedShift, session?.user?.id]);
+
+  useEffect(() => {
+    void refreshPortierHome();
+  }, [refreshPortierHome]);
 
   // Sync activeTab with current route
   useFocusEffect(
@@ -400,8 +537,9 @@ export default function HomeScreen() {
     setRefreshing(true);
     await fetchRooms(effectiveShift);
     await refreshEngineeringHome();
+    await refreshPortierHome();
     setRefreshing(false);
-  }, [fetchRooms, effectiveShift, refreshEngineeringHome]);
+  }, [fetchRooms, effectiveShift, refreshEngineeringHome, refreshPortierHome]);
 
   // Calculate filter counts from homeData (use derivedCategories when categories not yet synced for current shift)
   const filterCounts: FilterCounts = useMemo(() => {
@@ -414,6 +552,9 @@ export default function HomeScreen() {
       cleaned: 0,
       inspected: 0,
       priority: 0,
+      paused: 0,
+      refused: 0,
+      returnLater: 0,
     };
 
     const guests = {
@@ -448,6 +589,13 @@ export default function HomeScreen() {
     const roomsPM = roomsForHome.roomsPM ?? [];
     const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
+
+    // Persisted room state badges (Pause / Refuse Service / Return Later) live on the room record.
+    sourceRooms.forEach((r) => {
+      if ((r as any)?.pausedAt) roomStates.paused += 1;
+      if ((r as any)?.returnLaterAt) roomStates.returnLater += 1;
+      if ((r as any)?.refuseServiceReason || (r as any)?.refuseServiceAt) roomStates.refused += 1;
+    });
 
     const reservations = {
       occupied: 0,
@@ -548,6 +696,22 @@ export default function HomeScreen() {
                   )}
                 </View>
               </>
+            ) : isHskPortierUser ? (
+              <View style={{ paddingTop: 220 * scaleX, paddingBottom: 24 * scaleX }}>
+                <Text style={styles.portierTitle}>Tasks Overview</Text>
+                <HskPortierTasksOverviewCard
+                  total={portierOverview.total}
+                  dirty={portierOverview.dirty}
+                  inProgress={portierOverview.inProgress}
+                  cleaned={portierOverview.cleaned}
+                  inspected={portierOverview.inspected}
+                  priority={portierOverview.priority}
+                  progressText={portierOverview.progressText}
+                  pausedRoomLabel={portierOverview.pausedRoomLabel}
+                  pausedStartedAtIso={portierOverview.pausedStartedAtIso}
+                />
+                <HskPortierCategoryListCard rows={portierRows} />
+              </View>
             ) : (
               derivedCategories.map((category) => (
                 <CategoryCard
@@ -693,6 +857,15 @@ function buildHomeScreenStyles(scaleX: number) {
     marginTop: 16 * scaleX,
     marginBottom: 12 * scaleX,
     marginLeft: 20 * scaleX,
+  },
+  portierTitle: {
+    fontSize: 20 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    color: '#1e1e1e',
+    marginLeft: 20 * scaleX,
+    marginBottom: 16 * scaleX,
+    marginTop: 8 * scaleX,
   },
   contentBlurOverlay: {
     position: 'absolute',

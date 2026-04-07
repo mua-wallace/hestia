@@ -90,6 +90,8 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
   const isTurndown = room.frontOfficeStatus === 'Turndown';
   const isVacant = room.guests?.[0]?.isVacant === true;
   const isVacantTurndown = isTurndown && isVacant;
+  /** `room_assignments.work_status === 'paused'` — Figma 2333-132 cream card + pause control */
+  const isAssignmentPaused = room.roomAttendantAssigned?.assignmentWorkStatus === 'paused';
   const hasNotes = !!room.notes;
   // Only show notes/rush container when there is at least one note, or rushed, or priority (per Figma)
   const showNotesSection =
@@ -134,12 +136,21 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
     return baseHeight + wrappedNameExtraHeight;
   };
 
-  // Card background and border: do not change for priority; priority only adds/removes rush icon
-  const getCardStyles = () => ({
-    backgroundColor: CARD_COLORS.background,
-    borderColor: CARD_COLORS.border,
-    borderWidth: 1,
-  });
+  // Card background: priority tint, else paused cream (Figma), else default
+  const getCardStyles = () => {
+    if (isAssignmentPaused && !room.isPriority) {
+      return {
+        backgroundColor: CARD_COLORS.pausedBackground,
+        borderColor: CARD_COLORS.border,
+        borderWidth: 1,
+      };
+    }
+    return {
+      backgroundColor: CARD_COLORS.background,
+      borderColor: CARD_COLORS.border,
+      borderWidth: 1,
+    };
+  };
 
   // Guest block height and vertical positioning for single-guest cards
   // For cards without notes/priority, keep the guest block closer to the card bottom so layout feels grounded
@@ -215,7 +226,12 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           styles.roomInfo,
           !room.isPriority && styles.roomInfoStandard
         ]}>
-          <Text style={styles.roomNumber}>
+          <Text
+            style={[
+              styles.roomNumber,
+              isAssignmentPaused && !room.isPriority && styles.roomHeaderPausedNumber,
+            ]}
+          >
             {room.roomNumber}
           </Text>
         </View>
@@ -225,7 +241,12 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           styles.roomTypeRow,
           !room.isPriority && styles.roomTypeRowStandard,
         ]}>
-          <Text style={styles.roomTypeText}>
+          <Text
+            style={[
+              styles.roomTypeText,
+              isAssignmentPaused && !room.isPriority && styles.roomHeaderPausedSecondary,
+            ]}
+          >
             {`${room.roomCategory} - ${room.credit}`}
           </Text>
           {room.flagged && (
@@ -243,7 +264,12 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           styles.categoryLabelRow,
           !room.isPriority && styles.categoryLabelRowStandard
         ]}>
-          <Text style={styles.categoryLabel}>
+          <Text
+            style={[
+              styles.categoryLabel,
+              isAssignmentPaused && !room.isPriority && styles.roomHeaderPausedCategory,
+            ]}
+          >
             {getStayoverDisplayLabel(room)}
           </Text>
           {isStayover && showStayoverWithLinenBadge(room) && (
@@ -296,17 +322,25 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
               Vacant
             </Text>
           </View>
-          {STATUS_CONFIGS[room.houseKeepingStatus]?.icon && (
+          {(isAssignmentPaused || STATUS_CONFIGS[room.houseKeepingStatus]?.icon) && (
             <TouchableOpacity
               onPress={handleStatusPress}
               activeOpacity={0.8}
               style={styles.vacantStatusButton}
             >
-              <Image
-                source={STATUS_CONFIGS[room.houseKeepingStatus].icon}
-                style={styles.vacantStatusIcon}
-                resizeMode="contain"
-              />
+              {isAssignmentPaused ? (
+                <Image
+                  source={require('../../../assets/icons/pause.png')}
+                  style={styles.vacantStatusIconPaused}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Image
+                  source={STATUS_CONFIGS[room.houseKeepingStatus].icon}
+                  style={styles.vacantStatusIcon}
+                  resizeMode="contain"
+                />
+              )}
             </TouchableOpacity>
           )}
         </View>
@@ -364,6 +398,7 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
           cardHeight={cardHeight}
           buttonTopOverridePx={singleGuestStatusTopPx}
           isLoading={isChangingStatus}
+          assignmentPaused={isAssignmentPaused}
         />
       )}
 
@@ -458,6 +493,9 @@ const styles = StyleSheet.create({
     color: ROOM_HEADER.roomNumber.color,
     lineHeight: ROOM_HEADER.roomNumber.lineHeight * scaleX,
   },
+  roomHeaderPausedNumber: {
+    color: '#334866',
+  },
   roomTypeRow: {
     position: 'absolute',
     flexDirection: 'row',
@@ -475,6 +513,9 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.light as any,
     color: ROOM_HEADER.roomType.color,
     lineHeight: ROOM_HEADER.roomType.lineHeight * scaleX,
+  },
+  roomHeaderPausedSecondary: {
+    color: '#6C7D99',
   },
   roomTypeFlagIcon: {
     width: 14 * scaleX,
@@ -505,6 +546,9 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.bold as any,
     color: ROOM_HEADER.category.color,
     lineHeight: ROOM_HEADER.category.lineHeight * scaleX,
+  },
+  roomHeaderPausedCategory: {
+    color: '#334866',
   },
   withLinenBadge: {
     paddingHorizontal: 8 * scaleX,
@@ -615,6 +659,11 @@ const styles = StyleSheet.create({
   vacantStatusIcon: {
     width: STATUS_BUTTON.iconInProgress.width * scaleX,
     height: STATUS_BUTTON.iconInProgress.height * scaleX,
+  },
+  vacantStatusIconPaused: {
+    width: STATUS_BUTTON.iconInProgress.width * scaleX,
+    height: STATUS_BUTTON.iconInProgress.height * scaleX,
+    tintColor: '#000000',
   },
 });
 

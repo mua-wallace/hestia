@@ -292,6 +292,9 @@ export default function AllRoomsScreen() {
       if (room.houseKeepingStatus === 'Cleaned') roomStates.cleaned++;
       if (room.houseKeepingStatus === 'Inspected') roomStates.inspected++;
       if (room.isPriority) roomStates.priority++;
+      if (room.roomAttendantAssigned?.assignmentWorkStatus === 'paused') roomStates.paused++;
+      if ((room as any)?.returnLaterAt) roomStates.returnLater++;
+      if ((room as any)?.refuseServiceReason || (room as any)?.refuseServiceAt) roomStates.refused++;
 
       // Guest counts based on category
       if (room.frontOfficeStatus === 'Arrival' || room.frontOfficeStatus === 'Arrival/Departure') {
@@ -689,7 +692,10 @@ export default function AllRoomsScreen() {
               (activeFilters.roomStates.inProgress && room.houseKeepingStatus === 'InProgress') ||
               (activeFilters.roomStates.cleaned && room.houseKeepingStatus === 'Cleaned') ||
               (activeFilters.roomStates.inspected && room.houseKeepingStatus === 'Inspected') ||
-              (activeFilters.roomStates.priority && room.isPriority);
+              (activeFilters.roomStates.priority && room.isPriority) ||
+              (activeFilters.roomStates.paused && room.roomAttendantAssigned?.assignmentWorkStatus === 'paused') ||
+              (activeFilters.roomStates.returnLater && !!(room as any)?.returnLaterAt) ||
+              (activeFilters.roomStates.refused && (!!(room as any)?.refuseServiceReason || !!(room as any)?.refuseServiceAt));
 
             if (!matchesRoomState) {
               return false;

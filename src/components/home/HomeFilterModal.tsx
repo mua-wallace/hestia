@@ -188,7 +188,7 @@ export default function HomeFilterModal({
   const roomStateOptions: FilterOption[] = useMemo(
     () => {
       if (!filters || !filters.roomStates || !safeFilterCounts || !safeFilterCounts.roomStates) return [];
-      return [
+      const base: FilterOption[] = [
         {
           id: 'dirty',
           label: 'Dirty',
@@ -236,6 +236,44 @@ export default function HomeFilterModal({
           type: 'priority',
         },
       ];
+
+      // Only display these persisted states when there is at least 1 (Figma: hide when null/0).
+      const extras: FilterOption[] = [];
+      if ((safeFilterCounts.roomStates.paused ?? 0) > 0) {
+        extras.push({
+          id: 'paused',
+          label: 'Paused',
+          icon: require('../../../assets/icons/paused-filter-icon.png'),
+          iconColor: '#f0be1b',
+          count: safeFilterCounts.roomStates.paused || 0,
+          selected: !!filters.roomStates.paused,
+          type: 'paused',
+        });
+      }
+      if ((safeFilterCounts.roomStates.returnLater ?? 0) > 0) {
+        extras.push({
+          id: 'returnLater',
+          label: 'Return Later',
+          icon: require('../../../assets/icons/return-later.png'),
+          iconColor: '#5a759d',
+          count: safeFilterCounts.roomStates.returnLater || 0,
+          selected: !!filters.roomStates.returnLater,
+          type: 'returnLater',
+        });
+      }
+      if ((safeFilterCounts.roomStates.refused ?? 0) > 0) {
+        extras.push({
+          id: 'refused',
+          label: 'Refuse Service',
+          icon: require('../../../assets/icons/refuse-service.png'),
+          iconColor: '#5a759d',
+          count: safeFilterCounts.roomStates.refused || 0,
+          selected: !!filters.roomStates.refused,
+          type: 'refused',
+        });
+      }
+
+      return [...base, ...extras];
     },
     [filters?.roomStates, safeFilterCounts?.roomStates]
   );
@@ -275,7 +313,7 @@ export default function HomeFilterModal({
         {
           id: 'stayOver',
           label: 'StayOver',
-          icon: require('../../../assets/icons/stayover-icon.png'),
+          icon: require('../../../assets/icons/rooms-icon.png'),
           iconColor: '#1e1e1e',
           count: safeFilterCounts.guests.stayOver || 0,
           selected: filters.guests.stayOver || false,

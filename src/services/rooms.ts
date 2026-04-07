@@ -29,6 +29,9 @@ type RoomRow = {
   special_instructions: string | null;
   house_keeping_status: string | null;
   return_later_at?: string | null;
+  paused_at?: string | null;
+  refuse_service_at?: string | null;
+  refuse_service_reason?: string | null;
 };
 
 /** Aggregated note info per room (from room_notes table) */
@@ -64,13 +67,6 @@ type ReservationGuestRow = {
   guests?: GuestRow | null;
 };
 
-const DEFAULT_STAFF: StaffInfo = {
-  initials: 'N/A',
-  name: 'Not Assigned',
-  statusText: 'Not Started',
-  statusColor: '#1e1e1e',
-};
-
 /** Shift row from Supabase */
 type ShiftRow = { id: string; name: string; start_time: string; end_time: string };
 /** Room assignment row with user info */
@@ -81,6 +77,68 @@ type RoomAssignmentRow = {
   work_status: string | null;
   users: { full_name: string; avatar_url: string | null } | null;
 };
+
+const DEFAULT_STAFF: StaffInfo = {
+  initials: 'N/A',
+  name: 'Not Assigned',
+  statusText: 'Not Started',
+  statusColor: '#1e1e1e',
+};
+
+/** Map `room_assignments.work_status` + user row to `StaffInfo` (incl. paused). */
+function staffInfoFromAssignment(row: {
+  work_status: string | null;
+  users: { full_name: string; avatar_url: string | null } | null;
+}): StaffInfo {
+  const name = row.users?.full_name ?? 'Staff';
+  const initials =
+    name
+      .split(/\s+/)
+      .map((s) => s[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || '?';
+  const avatar = row.users?.avatar_url ?? undefined;
+  const ws = (row.work_status ?? '').toLowerCase();
+  if (ws === 'in_progress') {
+    return {
+      name,
+      initials,
+      avatar,
+      statusText: 'In Progress',
+      statusColor: '#F0BE1B',
+      assignmentWorkStatus: 'in_progress',
+    };
+  }
+  if (ws === 'completed') {
+    return {
+      name,
+      initials,
+      avatar,
+      statusText: 'Finished',
+      statusColor: '#41d541',
+      assignmentWorkStatus: 'completed',
+    };
+  }
+  if (ws === 'paused') {
+    return {
+      name,
+      initials,
+      avatar,
+      statusText: 'Paused',
+      statusColor: '#F0BE1B',
+      assignmentWorkStatus: 'paused',
+    };
+  }
+  return {
+    name,
+    initials,
+    avatar,
+    statusText: 'Not Started',
+    statusColor: '#1e1e1e',
+    assignmentWorkStatus: null,
+  };
+}
 
 /**
  * Fetch shift id by name (e.g. 'AM', 'PM'). Returns first matching shift, or first shift in table as fallback, or null.
@@ -116,17 +174,7 @@ async function fetchRoomAssignmentsForShift(shift: 'AM' | 'PM'): Promise<Map<str
 
   const rows = (data ?? []) as RoomAssignmentRow[];
   for (const row of rows) {
-    const name = row.users?.full_name ?? 'Staff';
-    const initials = name.split(/\s+/).map((s) => s[0]).join('').slice(0, 2).toUpperCase() || '?';
-    const statusText = row.work_status === 'in_progress' ? 'In Progress' : row.work_status === 'completed' ? 'Finished' : 'Not Started';
-    const statusColor = row.work_status === 'completed' ? '#41d541' : row.work_status === 'in_progress' ? '#F0BE1B' : '#1e1e1e';
-    map.set(row.room_id, {
-      name,
-      initials,
-      avatar: row.users?.avatar_url ?? undefined,
-      statusText,
-      statusColor,
-    });
+    map.set(row.room_id, staffInfoFromAssignment(row));
   }
   return map;
 }
@@ -237,6 +285,9 @@ function mapRoomToCard(
     reservationStatus: reservationStatus as ReservationStatus,
     promisedTime: (promisedTime === '12:00' || promisedTime === '13:00' ? promisedTime : null) as PromisedTime,
     returnLaterAt: (room.return_later_at ?? null) as string | null,
+    pausedAt: (room.paused_at ?? null) as string | null,
+    refuseServiceAt: (room.refuse_service_at ?? null) as string | null,
+    refuseServiceReason: (room.refuse_service_reason ?? null) as string | null,
     guests: guestsForCard,
     roomAttendantAssigned: attendant,
     isPriority: room.priority === 'high',
@@ -296,7 +347,9 @@ export async function fetchAllRooms(shift: 'AM' | 'PM'): Promise<AllRoomsScreenD
   // `return_later_at` is added by a later migration; gracefully fallback when DB is behind.
   ({ data, error } = await supabase
     .from('rooms')
-    .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status, return_later_at')
+    .select(
+      'id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status, return_later_at, paused_at, refuse_service_at, refuse_service_reason'
+    )
     .order('room_number', { ascending: true }));
 
   if (error && error.code === '42703') {
@@ -379,6 +432,12 @@ export type RoomStateUpdate = {
   special_instructions?: string | null;
   /** ISO timestamp (timestamptz) or null to clear. */
   return_later_at?: string | null;
+  /** ISO timestamp (timestamptz) or null to clear. */
+  paused_at?: string | null;
+  /** ISO timestamp (timestamptz) or null to clear. */
+  refuse_service_at?: string | null;
+  /** Reason string or null to clear. */
+  refuse_service_reason?: string | null;
 };
 
 function isValidUUID(id: string): boolean {
@@ -484,12 +543,22 @@ export async function updateRoom(roomId: string, updates: RoomStateUpdate): Prom
   if (updates.flagged != null) payload.flagged = updates.flagged;
   if (updates.special_instructions !== undefined) payload.special_instructions = updates.special_instructions;
   if (updates.return_later_at !== undefined) payload.return_later_at = updates.return_later_at;
+  if (updates.paused_at !== undefined) payload.paused_at = updates.paused_at;
+  if (updates.refuse_service_at !== undefined) payload.refuse_service_at = updates.refuse_service_at;
+  if (updates.refuse_service_reason !== undefined) payload.refuse_service_reason = updates.refuse_service_reason;
   if (Object.keys(payload).length === 0) return;
   let result = await supabase.from('rooms').update(payload).eq('id', roomId);
   if (result.error && (result.error.code === '42703' || result.error.code === 'PGRST204')) {
-    // Schema behind PostgREST cache / migration not applied yet: retry without return_later_at.
-    if ('return_later_at' in payload) {
-      delete payload.return_later_at;
+    // Schema behind PostgREST cache / migration not applied yet: retry without any newer columns.
+    const maybeNewCols = ['return_later_at', 'paused_at', 'refuse_service_at', 'refuse_service_reason'] as const;
+    let changed = false;
+    for (const key of maybeNewCols) {
+      if (key in payload) {
+        delete (payload as any)[key];
+        changed = true;
+      }
+    }
+    if (changed) {
       if (Object.keys(payload).length === 0) return;
       result = await supabase.from('rooms').update(payload).eq('id', roomId);
     }
@@ -722,6 +791,9 @@ export interface FullRoomDetails {
     special_instructions: string | null;
     house_keeping_status: string | null;
     return_later_at?: string | null;
+    paused_at?: string | null;
+    refuse_service_at?: string | null;
+    refuse_service_reason?: string | null;
   };
   reservations: ReservationDetail[];
   notes: RoomNoteDetail[];
@@ -799,13 +871,13 @@ export function fullRoomDetailsToRoomCardData(
 
   const assignment = full.assignedStaff.find((a) => a.shift_name === shift);
   const attendant: StaffInfo | null = assignment
-    ? {
-        name: assignment.staff.full_name,
-        initials: assignment.staff.full_name.split(/\s+/).map((s) => s[0]).join('').slice(0, 2).toUpperCase() || '?',
-        avatar: assignment.staff.avatar_url ?? undefined,
-        statusText: assignment.work_status === 'in_progress' ? 'In Progress' : assignment.work_status === 'completed' ? 'Finished' : 'Not Started',
-        statusColor: assignment.work_status === 'completed' ? '#41d541' : assignment.work_status === 'in_progress' ? '#F0BE1B' : '#1e1e1e',
-      }
+    ? staffInfoFromAssignment({
+        work_status: assignment.work_status,
+        users: {
+          full_name: assignment.staff.full_name,
+          avatar_url: assignment.staff.avatar_url,
+        },
+      })
     : null;
 
   const noteCount = full.notes.length;
@@ -824,6 +896,10 @@ export function fullRoomDetailsToRoomCardData(
     houseKeepingStatus: normalizeHouseKeepingStatus(room.house_keeping_status),
     reservationStatus: reservationStatus as ReservationStatus,
     promisedTime: (promisedTime === '12:00' || promisedTime === '13:00' ? promisedTime : null) as PromisedTime,
+    returnLaterAt: (room.return_later_at ?? null) as string | null,
+    pausedAt: ((room as any).paused_at ?? null) as string | null,
+    refuseServiceAt: ((room as any).refuse_service_at ?? null) as string | null,
+    refuseServiceReason: ((room as any).refuse_service_reason ?? null) as string | null,
     guests: guestsForCard,
     roomAttendantAssigned: attendant,
     isPriority: room.priority === 'high',
@@ -857,7 +933,9 @@ export async function fetchAllRoomsFromFullDetails(shift: 'AM' | 'PM'): Promise<
 export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetails[]> {
   const roomsQueryWithReturnLater = supabase
     .from('rooms')
-    .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status, return_later_at')
+    .select(
+      'id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status, return_later_at, paused_at, refuse_service_at, refuse_service_reason'
+    )
     .order('room_number', { ascending: true });
   const roomsQueryBase = supabase
     .from('rooms')
@@ -1056,6 +1134,9 @@ export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetai
       special_instructions: room.special_instructions,
       house_keeping_status: room.house_keeping_status,
       return_later_at: (room as any).return_later_at ?? null,
+      paused_at: (room as any).paused_at ?? null,
+      refuse_service_at: (room as any).refuse_service_at ?? null,
+      refuse_service_reason: (room as any).refuse_service_reason ?? null,
     },
     reservations: resWithGuestsByRoom.get(room.id) ?? [],
     notes: notesByRoom.get(room.id) ?? [],

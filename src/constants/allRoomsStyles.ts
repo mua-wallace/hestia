@@ -33,6 +33,8 @@ export const CARD_COLORS = {
   border: '#e3e3e3',
   priorityBackground: 'rgba(249, 36, 36, 0.08)', // Light pink/reddish for priority cards (exact from Figma)
   priorityBorder: '#f92424', // Red border for priority cards
+  /** Paused assignment — matches room detail paused header (Figma 2333-132) */
+  pausedBackground: '#FCF1CF',
 } as const;
 
 // Room Header Styles - Exact values from Figma

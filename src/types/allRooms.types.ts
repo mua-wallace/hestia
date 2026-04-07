@@ -56,6 +56,8 @@ export interface StaffInfo {
   statusColor: string; // Color for the status text
   promiseTime?: string; // Optional, for departure rooms: "Promise time: 18:00"
   avatarColor?: string; // Optional, for initial circle when no avatar
+  /** From `room_assignments.work_status` when staff is assigned (list + cards use for paused UI). */
+  assignmentWorkStatus?: 'in_progress' | 'completed' | 'paused' | null;
 }
 
 export interface NotesInfo {
@@ -83,6 +85,12 @@ export interface RoomCardData {
   promisedTime?: PromisedTime; // 12:00, 13:00, or null
   /** When set (ISO timestamp), room is in "Return Later" state until that time. */
   returnLaterAt?: string | null;
+  /** When set (ISO timestamp), room is in "Paused" state (for header + list styling). */
+  pausedAt?: string | null;
+  /** When set, room is in "Refused Service" state (for header + list styling). */
+  refuseServiceReason?: string | null;
+  /** When set (ISO timestamp), room is in "Refused Service" state (for display). */
+  refuseServiceAt?: string | null;
   guests: GuestInfo[]; // Array to support Arrival/Departure rooms with 2 guests
   /** When null, room card shows "Assign Staff" button; when set, shows staff info. */
   roomAttendantAssigned: StaffInfo | null;

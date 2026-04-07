@@ -68,6 +68,7 @@ export default function RoomDetailContent({
   pausedAt,
   returnLaterAtTimestamp,
   promiseTimeAtTimestamp,
+  refuseServiceAtTimestamp,
   refuseServiceReason,
   showWithLinenBadge = false,
   initialTab,
@@ -190,6 +191,7 @@ export default function RoomDetailContent({
         pausedAt={pausedAt}
         returnLaterAtTimestamp={returnLaterAtTimestamp}
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
+        refuseServiceAtTimestamp={refuseServiceAtTimestamp}
         refuseServiceReason={refuseServiceReason}
         isPriority={isPriority}
         flagged={flagged}

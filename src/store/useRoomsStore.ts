@@ -93,6 +93,9 @@ export const useRoomsStore = create<RoomsState>((set, get) => ({
           ...(updates.flagged != null && { flagged: updates.flagged }),
           ...(updates.special_instructions !== undefined && { specialInstructions: updates.special_instructions }),
           ...(updates.return_later_at !== undefined && { returnLaterAt: updates.return_later_at }),
+          ...(updates.paused_at !== undefined && { pausedAt: updates.paused_at }),
+          ...(updates.refuse_service_at !== undefined && { refuseServiceAt: updates.refuse_service_at }),
+          ...(updates.refuse_service_reason !== undefined && { refuseServiceReason: updates.refuse_service_reason }),
         };
       };
       set({
