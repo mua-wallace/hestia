@@ -68,3 +68,40 @@ export async function getActivityLogsForRecord(input: {
   return data as any;
 }
 
+export async function getRecentActivityLogs(input: {
+  tableName: ActivityLogTableName;
+  /** Optional filter: only actions matching this pattern (case-insensitive). */
+  actionIlike?: string;
+  limit?: number;
+}): Promise<
+  Array<{
+    id: string;
+    action: string;
+    created_at: string | null;
+    user_id: string | null;
+    record_id: string | null;
+    users: { full_name: string | null; avatar_url: string | null } | null;
+  }>
+> {
+  if (!isSupabaseConfigured) return [];
+
+  let q = supabase
+    .from('activity_logs')
+    .select('id, action, created_at, user_id, record_id, users(full_name, avatar_url)')
+    .eq('table_name', input.tableName)
+    .order('created_at', { ascending: false })
+    .limit(input.limit ?? 50);
+
+  if (input.actionIlike?.trim()) {
+    q = q.ilike('action', input.actionIlike.trim());
+  }
+
+  const { data, error } = await q;
+  if (error || !data) {
+    console.warn('[activityLogs] Failed to fetch recent activity_logs:', error?.message, error?.code);
+    return [];
+  }
+
+  return data as any;
+}
+

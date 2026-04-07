@@ -77,6 +77,30 @@ export default function App() {
   const lastNotificationResponse = Notifications.useLastNotificationResponse();
   const handledPushOpenId = useRef<string | null>(null);
 
+  useEffect(() => {
+    // Surface full JS error stacks in Metro logs (helps when RedBox doesn't print stack).
+    const anyGlobal: any = global as any;
+    const ErrorUtils = anyGlobal?.ErrorUtils;
+    if (!ErrorUtils?.getGlobalHandler || !ErrorUtils?.setGlobalHandler) return;
+    const prev = ErrorUtils.getGlobalHandler();
+    ErrorUtils.setGlobalHandler((err: any, isFatal: boolean) => {
+      try {
+        const msg = err?.message ?? String(err);
+        const stack = err?.stack ?? '';
+        // Log as plain strings; Metro sometimes truncates/omits nested objects.
+        console.error('[GlobalErrorHandler] isFatal=', String(isFatal));
+        console.error('[GlobalErrorHandler] message=', msg);
+        if (stack) console.error('[GlobalErrorHandler] stack=\n' + String(stack));
+      } catch (_) {}
+      prev(err, isFatal);
+    });
+    return () => {
+      try {
+        ErrorUtils.setGlobalHandler(prev);
+      } catch (_) {}
+    };
+  }, []);
+
   const openAppFromNotificationResponse = useCallback((response: Notifications.NotificationResponse) => {
     const id = response.notification.request.identifier;
     if (handledPushOpenId.current === id) return;

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image, KeyboardAvoidingView, Platform, Text } from 'react-native';
 import { useDesignScale } from '../hooks/useDesignScale';
 import { HOME_HEADER_HEIGHT_DESIGN_PX } from '../constants/homeLayout';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -23,6 +23,8 @@ import type { MoreMenuItemId } from '../types/more.types';
 import type { RootStackParamList } from '../navigation/types';
 import HomeHeader from '../components/home/HomeHeader';
 import CategoryCard from '../components/home/CategoryCard';
+import EngineeringTicketsOverviewCard from '../components/home/EngineeringTicketsOverviewCard';
+import EngineeringRecentActivityItem from '../components/home/EngineeringRecentActivityItem';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import HomeFilterModal from '../components/home/HomeFilterModal';
 import { FilterState, FilterCounts } from '../types/filter.types';
@@ -30,6 +32,9 @@ import type { CategorySection } from '../types/home.types';
 import type { RoomCardData } from '../types/allRooms.types';
 import { getShiftFromTime } from '../utils/shiftUtils';
 import { getFloorFromRoomNumber } from '../utils/formatting';
+import { getRecentActivityLogs } from '../services/activityLogs';
+import { dashboardService } from '../services/dashboard';
+import { supabase } from '../lib/supabase';
 
 import type { MainTabsParamList } from '../navigation/types';
 
@@ -94,6 +99,93 @@ export default function HomeScreen() {
       user: session ? (profile ?? sessionFallback) : mockHomeData.user,
     }));
   }, [session, profile, sessionFallback]);
+
+  const isEngineeringUser = (homeData.user?.department ?? '').toLowerCase() === 'engineering';
+
+  const [engineeringCounts, setEngineeringCounts] = useState<{
+    total: number;
+    priority: number;
+    unsolved: number;
+    solved: number;
+    outOfOrder: number;
+  }>({ total: 0, priority: 0, unsolved: 0, solved: 0, outOfOrder: 0 });
+
+  const [engineeringRecent, setEngineeringRecent] = useState<
+    Array<{
+      id: string;
+      roomLabel: string;
+      message: string;
+      timeLabel: string;
+      state: 'solved' | 'unsolved' | 'neutral';
+    }>
+  >([]);
+
+  const refreshEngineeringHome = React.useCallback(async () => {
+    if (!isEngineeringUser) return;
+
+    try {
+      const ticketsData = await dashboardService.getTicketsData();
+      const engineeringTickets = (ticketsData?.tickets ?? []).filter((t: any) => (t?.category ?? '').toLowerCase() === 'engineering');
+
+      const total = engineeringTickets.length;
+      const priority = engineeringTickets.reduce((sum: number, t: any) => sum + ((t?.priority ?? '').toLowerCase() === 'high' ? 1 : 0), 0);
+      const unsolved = engineeringTickets.reduce((sum: number, t: any) => sum + (t?.status === 'unsolved' ? 1 : 0), 0);
+      const solved = engineeringTickets.reduce((sum: number, t: any) => sum + (t?.status === 'done' ? 1 : 0), 0);
+      const outOfOrder = engineeringTickets.reduce((sum: number, t: any) => sum + (t?.status === 'ofo' ? 1 : 0), 0);
+      setEngineeringCounts({ total, priority, unsolved, solved, outOfOrder });
+    } catch (e) {
+      console.warn('[HomeScreen] Failed to load engineering ticket counts', e);
+    }
+
+    try {
+      const logs = await getRecentActivityLogs({ tableName: 'rooms', actionIlike: '%ticket%', limit: 10 });
+      const roomIds = Array.from(new Set((logs ?? []).map((l: any) => l.record_id).filter(Boolean)));
+      const roomNumberById = new Map<string, string>();
+      if (roomIds.length > 0) {
+        const { data } = await supabase.from('rooms').select('id, room_number').in('id', roomIds);
+        (data ?? []).forEach((r: any) => roomNumberById.set(r.id, String(r.room_number)));
+      }
+
+      const items = (logs ?? [])
+        .map((l: any) => {
+          const roomNum = l.record_id ? roomNumberById.get(l.record_id) : undefined;
+          const staffName = l.users?.full_name ?? 'Staff';
+          const action = String(l.action ?? '').trim();
+
+          const createdAt = l.created_at ? new Date(l.created_at) : null;
+          const nowMs = Date.now();
+          const ageMs = createdAt && Number.isFinite(createdAt.getTime()) ? nowMs - createdAt.getTime() : NaN;
+          const timeLabel =
+            Number.isFinite(ageMs) && ageMs < 60_000 ? 'now' :
+            createdAt && Number.isFinite(createdAt.getTime())
+              ? `${String(createdAt.getHours()).padStart(2, '0')}:${String(createdAt.getMinutes()).padStart(2, '0')}`
+              : '';
+
+          const state =
+            /status to\s+solved|status to\s+done/i.test(action) ? 'solved' :
+            /out of order|status to\s+ofo/i.test(action) ? 'unsolved' :
+            'neutral';
+
+          return {
+            id: l.id,
+            roomLabel: roomNum ? `Room ${roomNum}` : 'Room',
+            message: `${staffName} ${action.charAt(0).toLowerCase()}${action.slice(1)}`,
+            timeLabel,
+            state,
+          };
+        })
+        .filter((x: any) => x.roomLabel && x.message)
+        .slice(0, 2);
+
+      setEngineeringRecent(items);
+    } catch (e) {
+      console.warn('[HomeScreen] Failed to load engineering recent activity', e);
+    }
+  }, [isEngineeringUser]);
+
+  useEffect(() => {
+    void refreshEngineeringHome();
+  }, [refreshEngineeringHome]);
 
   // Sync activeTab with current route
   useFocusEffect(
@@ -307,8 +399,9 @@ export default function HomeScreen() {
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     await fetchRooms(effectiveShift);
+    await refreshEngineeringHome();
     setRefreshing(false);
-  }, [fetchRooms, effectiveShift]);
+  }, [fetchRooms, effectiveShift, refreshEngineeringHome]);
 
   // Calculate filter counts from homeData (use derivedCategories when categories not yet synced for current shift)
   const filterCounts: FilterCounts = useMemo(() => {
@@ -422,16 +515,51 @@ export default function HomeScreen() {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
           >
-            {derivedCategories.map((category) => (
-              <CategoryCard
-                key={category.id}
-                category={category}
-                onPress={handleCategoryPress}
-                onStatusPress={handleStatusPress}
-                onPriorityPress={handlePriorityPress}
-                selectedShift={homeData.selectedShift}
-              />
-            ))}
+            {isEngineeringUser ? (
+              <>
+                <View style={{ paddingTop: 232 * scaleX, paddingBottom: 24 * scaleX }}>
+                  <Text style={[styles.engineeringTitle]}>Tickets Overview</Text>
+                  <EngineeringTicketsOverviewCard
+                    total={engineeringCounts.total}
+                    priority={engineeringCounts.priority}
+                    unsolved={engineeringCounts.unsolved}
+                    solved={engineeringCounts.solved}
+                    outOfOrder={engineeringCounts.outOfOrder}
+                  />
+
+                  <Text style={styles.engineeringRecentTitle}>Recent Activity</Text>
+                  {engineeringRecent.length === 0 ? (
+                    <EngineeringRecentActivityItem
+                      roomLabel="—"
+                      message="No recent ticket activity"
+                      timeLabel=""
+                      state="neutral"
+                    />
+                  ) : (
+                    engineeringRecent.map((it) => (
+                      <EngineeringRecentActivityItem
+                        key={it.id}
+                        roomLabel={it.roomLabel}
+                        message={it.message}
+                        timeLabel={it.timeLabel}
+                        state={it.state}
+                      />
+                    ))
+                  )}
+                </View>
+              </>
+            ) : (
+              derivedCategories.map((category) => (
+                <CategoryCard
+                  key={category.id}
+                  category={category}
+                  onPress={handleCategoryPress}
+                  onStatusPress={handleStatusPress}
+                  onPriorityPress={handlePriorityPress}
+                  selectedShift={homeData.selectedShift}
+                />
+              ))
+            )}
           </ScrollView>
           
         </View>
@@ -547,6 +675,24 @@ function buildHomeScreenStyles(scaleX: number) {
   scrollContent: {
     paddingTop: (153 + 14 + 59) * scaleX, // Header height (153) + margin (14) + search bar height (59)
     paddingBottom: 152 * scaleX + 20 * scaleX, // Bottom nav height + extra padding
+  },
+  engineeringTitle: {
+    fontSize: 20 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    color: '#1e1e1e',
+    marginLeft: 20 * scaleX,
+    marginTop: 12 * scaleX,
+    marginBottom: 16 * scaleX,
+  },
+  engineeringRecentTitle: {
+    fontSize: 14 * scaleX,
+    fontFamily: 'Inter',
+    fontWeight: '400' as any,
+    color: '#000000',
+    marginTop: 16 * scaleX,
+    marginBottom: 12 * scaleX,
+    marginLeft: 20 * scaleX,
   },
   contentBlurOverlay: {
     position: 'absolute',
