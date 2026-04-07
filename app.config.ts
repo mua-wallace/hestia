@@ -15,11 +15,16 @@ const SCHEME = "hestia";
 export default ({ config }: ConfigContext): ExpoConfig => {
   console.log("⚙️ Building app for environment:", process.env.APP_ENV);
 
+  const appEnv =
+    (process.env.APP_ENV as "development" | "preview" | "production") ||
+    "development";
+
   const { name, bundleIdentifier, icon, adaptiveIcon, packageName, scheme } =
-    getDynamicAppConfig(
-      (process.env.APP_ENV as "development" | "preview" | "production") ||
-        "development"
-    );
+    getDynamicAppConfig(appEnv);
+
+  // iOS push entitlement: development → sandbox APNs; preview/production → production APNs (TestFlight / App Store).
+  const iosPushMode: "development" | "production" =
+    appEnv === "development" ? "development" : "production";
 
   return {
     ...config,
@@ -43,6 +48,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       backgroundColor: "#FFFFFF",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        NSUserNotificationsUsageDescription:
+          "Hestia sends notifications for room assignments, team chat, and ticket updates so you do not miss important work.",
       },
     },
     android: {
@@ -74,7 +81,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     runtimeVersion: {
       policy: "appVersion",
     },
-    plugins: ["expo-font"],
+    plugins: [
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          mode: iosPushMode,
+          // Must match `setNotificationChannelAsync('default', …)` so FCM/Expo push use HIGH importance + sound.
+          defaultChannel: "default",
+        },
+      ],
+    ],
   };
 };
 

@@ -239,8 +239,9 @@ export const LOST_AND_FOUND_STATUS = {
     position: 'absolute',
   },
   stored: {
-    left: 278, // From Figma: x=294, card x=16, so 294-16=278px
+    left: 278, // legacy (prefer right)
     top: 199, // From Figma: y=412, card y=213, so 412-213=199px
+    right: 13, // From Figma: card width 409, 409 - (278 + 118) = 13px
     backgroundColor: '#f0be1b', // Yellow
     width: 118,
     textColor: '#ffffff',
@@ -254,8 +255,9 @@ export const LOST_AND_FOUND_STATUS = {
     iconHeight: 8, // From Figma: icon height=8px
   },
   shipped: {
-    left: 278, // From Figma: button x=294, card x=16, so 294-16=278px
+    left: 278, // legacy (prefer right)
     top: 199, // From Figma: button y=708, second card y=509, so 708-509=199px
+    right: 13,
     backgroundColor: '#41d541', // Green
     width: 118,
     textColor: '#ffffff',
@@ -268,11 +270,14 @@ export const LOST_AND_FOUND_STATUS = {
     iconHeight: 10,
   },
   discarded: {
-    left: 278,
+    // Wider label ("Discarded") but keep same right padding as other status pills (118w @ left 278)
+    left: 258,
     top: 199,
+    right: 13,
     backgroundColor: '#9ca3af', // Gray
-    width: 118,
+    width: 138,
     textColor: '#ffffff',
+    // Keep text/icon gap consistent with "Shipped"
     textLeft: 295,
     textTop: 217,
     textHeight: 18,
@@ -299,7 +304,10 @@ export const LOST_AND_FOUND_DIVIDER = {
 
 // Spacing
 export const LOST_AND_FOUND_SPACING = {
-  contentPaddingTop: 197, // Header (133) + tabs (39) + spacing (25) = 197px
+  // Figma (node 2702:6676): first card starts at y=213.
+  // Header (133) + tabs row (39) + gap to first card (41) = 213px.
+  // Divider sits at y=197, so first card begins below it.
+  contentPaddingTop: 213,
   contentPaddingBottom: 152, // Bottom nav height
   cardSpacing: 16, // Space between cards
 } as const;

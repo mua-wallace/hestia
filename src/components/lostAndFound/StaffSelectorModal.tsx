@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
+  Pressable,
 } from 'react-native';
 import { typography } from '../../theme';
 import { REGISTER_FORM, scaleX } from '../../constants/lostAndFoundStyles';
@@ -330,10 +331,10 @@ export default function StaffSelectorModal({
           {/* Triangle Pointer - positioned at top pointing up to input field */}
           <View style={dynamicStyles.trianglePointer} />
           
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
+          <Pressable
             style={dynamicStyles.modalContainer}
+            onPress={() => {}}
+            onStartShouldSetResponder={() => true}
           >
             {/* Header */}
             <View style={dynamicStyles.header}>
@@ -460,7 +461,7 @@ export default function StaffSelectorModal({
           >
             <Text style={dynamicStyles.seeAll}>see all</Text>
           </TouchableOpacity>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </TouchableOpacity>
     </Modal>

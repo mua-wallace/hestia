@@ -1,5 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, Modal, TouchableOpacity, TouchableWithoutFeedback, Text } from 'react-native';
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  RefreshControl,
+  Modal,
+  TouchableOpacity,
+  Pressable,
+  Text,
+  Image,
+  Switch,
+  TextInput,
+  useWindowDimensions,
+} from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,8 +23,8 @@ import TicketsHeader from '../components/tickets/TicketsHeader';
 import TicketsTabs from '../components/tickets/TicketsTabs';
 import TicketCard from '../components/tickets/TicketCard';
 import EmptyTicketsState from '../components/tickets/EmptyTicketsState';
+import type { TicketStatusAnchorLayout } from '../components/tickets/TicketCard';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
-import { useChatStore } from '../store/useChatStore';
 import { TicketTab, TicketData, TicketsScreenData, TicketStatus } from '../types/tickets.types';
 import {
   TICKETS_HEADER,
@@ -19,12 +32,27 @@ import {
   TICKETS_SPACING,
   TICKETS_COLORS,
   TICKET_DIVIDER,
+  TICKET_STATUS_POPOVER,
   scaleX,
 } from '../constants/ticketsStyles';
 import { dashboardService } from '../services/dashboard';
-import { updateTicketStatus } from '../services/tickets';
+import { updateTicketStatus, updateTicketDueAt } from '../services/tickets';
 import { useAuth } from '../contexts/AuthContext';
 import { typography } from '../theme';
+import {
+  markAllTicketTagNotificationsRead,
+  invalidateNotificationBadges,
+} from '../services/inAppNotifications';
+
+/** Change Status popover — height for vertical clamping (expanded when Due time fields visible). Figma ~295 / ~472. */
+const STATUS_POPOVER_HEIGHT_COLLAPSED = 268 * scaleX;
+const STATUS_POPOVER_HEIGHT_EXPANDED = 455 * scaleX;
+const STATUS_POPOVER_NOTCH_SIZE = 12 * scaleX;
+
+/** Figma 3129:2033–2034 — Time / Date field boxes. */
+const DUE_TIME_BOX_W = 134 * scaleX;
+const DUE_DATE_BOX_W = 175 * scaleX;
+const DUE_FIELDS_GAP = 37 * scaleX;
 
 type MainTabsParamList = MainTabsParamListFromApp & {
   Tickets: { initialTab?: TicketTab } | undefined;
@@ -39,6 +67,7 @@ export default function TicketsScreen() {
   const route = useRoute();
   const { open: openAIChatOverlay } = useAIChatOverlay();
   const { session } = useAuth();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState('Tickets');
   const [selectedTab, setSelectedTab] = useState<TicketTab>('myTickets');
   const [ticketsData, setTicketsData] = useState<TicketsScreenData | null>(null);
@@ -46,10 +75,43 @@ export default function TicketsScreen() {
   const [loading, setLoading] = useState(true);
   const [statusMenuTicket, setStatusMenuTicket] = useState<TicketData | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [dueTimeEnabled, setDueTimeEnabled] = useState(false);
+  const [dueHour, setDueHour] = useState('');
+  const [dueMinute, setDueMinute] = useState('');
+  const [dueDay, setDueDay] = useState('');
+  const [dueMonth, setDueMonth] = useState('');
+  const [statusAnchor, setStatusAnchor] = useState<TicketStatusAnchorLayout | null>(null);
 
-  const loadTickets = useCallback(async (overrideInitialTab?: TicketTab) => {
+  const dueYearDisplay = React.useMemo(() => new Date().getFullYear(), []);
+
+  const applyDueFieldsFromDate = React.useCallback((d: Date) => {
+    setDueHour(String(d.getHours()).padStart(2, '0'));
+    setDueMinute(String(d.getMinutes()).padStart(2, '0'));
+    setDueDay(String(d.getDate()).padStart(2, '0'));
+    setDueMonth(String(d.getMonth() + 1).padStart(2, '0'));
+  }, []);
+
+  React.useEffect(() => {
+    if (!statusMenuTicket) return;
+    const iso = statusMenuTicket.dueAt;
+    setDueTimeEnabled(!!iso);
+    if (iso) {
+      const d = new Date(iso);
+      if (Number.isFinite(d.getTime())) {
+        applyDueFieldsFromDate(d);
+        return;
+      }
+    }
+    setDueHour('');
+    setDueMinute('');
+    setDueDay('');
+    setDueMonth('');
+  }, [statusMenuTicket, applyDueFieldsFromDate]);
+
+  const loadTickets = useCallback(async (overrideInitialTab?: TicketTab, opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await dashboardService.getTicketsData();
       setTicketsData(data);
       // If we came here with an explicit initial tab (e.g. after creating a ticket),
@@ -65,7 +127,7 @@ export default function TicketsScreen() {
       setTicketsData({ selectedTab: fallbackTab, tickets: [] });
       setSelectedTab(fallbackTab);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -86,19 +148,13 @@ export default function TicketsScreen() {
       const params = (route as any).params as { initialTab?: TicketTab } | undefined;
       const overrideInitialTab = params?.initialTab;
 
-      // Refresh tickets whenever Tickets screen gains focus
-      loadTickets(overrideInitialTab);
+      // Refresh when returning to the tab (no full-screen loader).
+      loadTickets(overrideInitialTab, { silent: true });
+      void markAllTicketTagNotificationsRead().then(() => invalidateNotificationBadges());
     }, [route, loadTickets])
   );
 
-  // Calculate total unread chat messages for badge
-  const { chats } = useChatStore();
-  const chatBadgeCount = React.useMemo(
-    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
-    [chats]
-  );
-
-  const handleTabPress = (tab: string) => {
+  const handleTabPress = (tab: string, options?: { fromRoomsAssignmentBadge?: boolean }) => {
     if (tab === 'AIHome') {
       openAIChatOverlay();
       return;
@@ -108,7 +164,9 @@ export default function TicketsScreen() {
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
-      navigation.navigate('Rooms' as any);
+      navigation.navigate('Rooms' as any, {
+        prioritizeMyAssignedRooms: !!options?.fromRoomsAssignmentBadge,
+      });
     } else if (tab === 'Chat') {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
@@ -141,9 +199,73 @@ export default function TicketsScreen() {
     // navigation.navigate('TicketDetail', { ticketId: ticket.id });
   };
 
-  const handleStatusPress = (ticket: TicketData) => {
+  const handleStatusPress = (ticket: TicketData, anchor?: TicketStatusAnchorLayout) => {
     setStatusMenuTicket(ticket);
+    setStatusAnchor(anchor ?? null);
   };
+
+  const buildDueAtIsoFromFields = React.useCallback((): string | null => {
+    const h = parseInt(dueHour, 10);
+    const mi = parseInt(dueMinute, 10);
+    const d = parseInt(dueDay, 10);
+    const mo = parseInt(dueMonth, 10);
+    const y = dueYearDisplay;
+    if (![h, mi, d, mo].every((n) => Number.isFinite(n))) return null;
+    if (h < 0 || h > 23 || mi < 0 || mi > 59 || d < 1 || d > 31 || mo < 1 || mo > 12) return null;
+    const dt = new Date(y, mo - 1, d, h, mi, 0, 0);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+    return dt.toISOString();
+  }, [dueHour, dueMinute, dueDay, dueMonth, dueYearDisplay]);
+
+  const persistDueAt = React.useCallback(async () => {
+    if (!statusMenuTicket || !dueTimeEnabled) return;
+    const iso = buildDueAtIsoFromFields();
+    if (!iso) return;
+    const ticketId = statusMenuTicket.id;
+    try {
+      await updateTicketDueAt(ticketId, iso);
+      setStatusMenuTicket((t) => (t?.id === ticketId ? { ...t, dueAt: iso } : t));
+      await loadTickets(selectedTab);
+    } catch (e) {
+      console.warn('[TicketsScreen] Failed to save due time', e);
+    }
+  }, [statusMenuTicket, dueTimeEnabled, buildDueAtIsoFromFields, loadTickets, selectedTab]);
+
+  const handleDueTimeToggle = React.useCallback(
+    async (value: boolean) => {
+      if (value && statusMenuTicket) {
+        const ticketId = statusMenuTicket.id;
+        const now = new Date();
+        applyDueFieldsFromDate(now);
+        setDueTimeEnabled(true);
+        try {
+          const iso = now.toISOString();
+          await updateTicketDueAt(ticketId, iso);
+          setStatusMenuTicket((t) => (t?.id === ticketId ? { ...t, dueAt: iso } : t));
+          await loadTickets(selectedTab);
+        } catch (e) {
+          console.warn('[TicketsScreen] Failed to save default due time', e);
+        }
+        return;
+      }
+      setDueTimeEnabled(false);
+      if (!value && statusMenuTicket) {
+        const ticketId = statusMenuTicket.id;
+        try {
+          await updateTicketDueAt(ticketId, null);
+          setDueHour('');
+          setDueMinute('');
+          setDueDay('');
+          setDueMonth('');
+          setStatusMenuTicket((t) => (t?.id === ticketId ? { ...t, dueAt: null } : t));
+          await loadTickets(selectedTab);
+        } catch (e) {
+          console.warn('[TicketsScreen] Failed to clear due time', e);
+        }
+      }
+    },
+    [statusMenuTicket, loadTickets, selectedTab, applyDueFieldsFromDate]
+  );
 
   const handleStatusSelect = async (nextStatus: TicketStatus) => {
     if (!statusMenuTicket) return;
@@ -172,14 +294,35 @@ export default function TicketsScreen() {
   const filteredTickets = tickets.filter((ticket) => {
     if (selectedTab === 'myTickets') {
       if (!currentUserId) return false;
-      return ticket.assignedToId === currentUserId;
+      return (
+        ticket.assignedToId === currentUserId ||
+        ticket.createdById === currentUserId ||
+        ticket.viewerIsTagged === true
+      );
     } else if (selectedTab === 'open') {
-      return ticket.status === 'unsolved';
+      return ticket.status === 'unsolved' || ticket.status === 'ofo';
     } else if (selectedTab === 'closed') {
       return ticket.status === 'done';
     }
     return true; // 'all' shows all tickets
   });
+
+  const statusPopoverPosition = React.useMemo(() => {
+    if (!statusAnchor) return null;
+    const left = TICKET_STATUS_POPOVER.left * scaleX;
+    const popoverW = TICKET_STATUS_POPOVER.width * scaleX;
+    const popoverH = dueTimeEnabled ? STATUS_POPOVER_HEIGHT_EXPANDED : STATUS_POPOVER_HEIGHT_COLLAPSED;
+
+    const desiredTop = statusAnchor.y + statusAnchor.height + 8 * scaleX;
+    const top = Math.max(left, Math.min(windowHeight - popoverH - left, desiredTop));
+
+    const notchSize = STATUS_POPOVER_NOTCH_SIZE;
+    const anchorCenterX = statusAnchor.x + statusAnchor.width / 2;
+    const notchCenterX = anchorCenterX - left;
+    const notchLeft = Math.max(14 * scaleX, Math.min(popoverW - 14 * scaleX - notchSize, notchCenterX - notchSize / 2));
+
+    return { left, top, notchLeft, width: popoverW };
+  }, [statusAnchor, windowWidth, windowHeight, dueTimeEnabled]);
 
   return (
     <View style={styles.container}>
@@ -203,12 +346,8 @@ export default function TicketsScreen() {
                 <TicketCard
                   ticket={ticket}
                   onPress={() => handleTicketPress(ticket)}
-                  onStatusPress={() => handleStatusPress(ticket)}
+                  onStatusPress={(anchor) => handleStatusPress(ticket, anchor)}
                 />
-                {/* Divider */}
-                {index < filteredTickets.length - 1 && (
-                  <View style={styles.divider} />
-                )}
               </React.Fragment>
             ))
           )}
@@ -224,26 +363,182 @@ export default function TicketsScreen() {
         animationType="fade"
         onRequestClose={() => setStatusMenuTicket(null)}
       >
-        <TouchableWithoutFeedback onPress={() => (statusUpdating ? null : setStatusMenuTicket(null))}>
-          <View style={styles.statusModalOverlay}>
-            <View style={styles.statusDropdown}>
+        <View style={styles.statusModalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              if (!statusUpdating) setStatusMenuTicket(null);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss status menu"
+          />
+          <View
+            style={[
+              styles.statusPopover,
+              statusPopoverPosition
+                ? {
+                    position: 'absolute',
+                    left: statusPopoverPosition.left,
+                    top: statusPopoverPosition.top,
+                    width: statusPopoverPosition.width,
+                  }
+                : null,
+            ]}
+          >
+            <View
+              style={[
+                styles.statusPopoverNotch,
+                statusPopoverPosition ? { left: statusPopoverPosition.notchLeft } : null,
+              ]}
+            />
+
+            <Text style={styles.statusSectionTitle}>Change Status</Text>
+
+            <View style={styles.statusGrid}>
               <TouchableOpacity
-                style={styles.statusOption}
-                onPress={() => handleStatusSelect('done')}
+                style={styles.statusGridItem}
+                activeOpacity={0.8}
                 disabled={statusUpdating}
+                onPress={() => {
+                  // Ticket priority is not yet wired from this UI in backend.
+                  // Keep UI parity with Figma without mutating server state.
+                }}
               >
-                <Text style={[styles.statusOptionText, styles.statusOptionDone]}>Done</Text>
+                <View style={[styles.statusCircle, styles.statusCirclePriority]}>
+                  <Image
+                    source={require('../../assets/icons/priority-status.png')}
+                    style={styles.statusCircleIconRush}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={styles.statusGridLabel}>Priority</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
-                style={styles.statusOption}
-                onPress={() => handleStatusSelect('unsolved')}
+                style={styles.statusGridItem}
+                activeOpacity={0.8}
                 disabled={statusUpdating}
+                onPress={() => handleStatusSelect('unsolved')}
               >
-                <Text style={[styles.statusOptionText, styles.statusOptionUnsolved]}>Unsolved</Text>
+                <View style={[styles.statusCircle, styles.statusCircleUnsolved]}>
+                  <Image
+                    source={require('../../assets/icons/unsolved.png')}
+                    style={styles.statusCircleIconOnDark}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={styles.statusGridLabel}>Unsolved</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.statusGridItem}
+                activeOpacity={0.8}
+                disabled={statusUpdating}
+                onPress={() => handleStatusSelect('done')}
+              >
+                <View style={[styles.statusCircle, styles.statusCircleSolved]}>
+                  <Image
+                    source={require('../../assets/icons/done.png')}
+                    style={styles.statusCircleIconSolved}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={styles.statusGridLabel}>Solved</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.statusGridItem}
+                activeOpacity={0.8}
+                disabled={statusUpdating}
+                onPress={() => handleStatusSelect('ofo')}
+              >
+                <View style={styles.statusCircleOfoOuter}>
+                  <View style={styles.statusCircleOfoInner} />
+                </View>
+                <Text style={styles.statusGridLabel}>OFO</Text>
               </TouchableOpacity>
             </View>
+
+            <View style={styles.statusDivider} />
+
+            <View style={styles.dueTimeRow}>
+              <Text style={styles.statusSectionTitle}>Due time</Text>
+              <Switch
+                value={dueTimeEnabled}
+                onValueChange={handleDueTimeToggle}
+                disabled={statusUpdating}
+                trackColor={{ false: '#eef2f7', true: '#5b769e' }}
+                thumbColor="#ffffff"
+                style={styles.dueTimeSwitch}
+              />
+            </View>
+
+            {dueTimeEnabled && (
+              <View style={styles.dueTimeFields}>
+                <View style={styles.dueTimeColumns}>
+                  <View style={{ width: DUE_TIME_BOX_W }}>
+                    <Text style={styles.dueTimeColLabel}>Time</Text>
+                    <View style={[styles.dueTimeBox, { width: DUE_TIME_BOX_W }]}>
+                      <TextInput
+                        style={styles.dueTimeInput}
+                        value={dueHour}
+                        onChangeText={(t) => setDueHour(t.replace(/\D/g, '').slice(0, 2))}
+                        onBlur={persistDueAt}
+                        placeholder="H"
+                        placeholderTextColor="rgba(0,0,0,0.35)"
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        editable={!statusUpdating}
+                      />
+                      <View style={styles.dueTimeInnerDivider} />
+                      <TextInput
+                        style={styles.dueTimeInput}
+                        value={dueMinute}
+                        onChangeText={(t) => setDueMinute(t.replace(/\D/g, '').slice(0, 2))}
+                        onBlur={persistDueAt}
+                        placeholder="M"
+                        placeholderTextColor="rgba(0,0,0,0.35)"
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        editable={!statusUpdating}
+                      />
+                    </View>
+                  </View>
+                  <View style={{ width: DUE_DATE_BOX_W }}>
+                    <Text style={styles.dueTimeColLabel}>Date</Text>
+                    <View style={[styles.dueTimeBox, { width: DUE_DATE_BOX_W }]}>
+                      <TextInput
+                        style={styles.dueTimeInput}
+                        value={dueDay}
+                        onChangeText={(t) => setDueDay(t.replace(/\D/g, '').slice(0, 2))}
+                        onBlur={persistDueAt}
+                        placeholder="DD"
+                        placeholderTextColor="rgba(0,0,0,0.35)"
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        editable={!statusUpdating}
+                      />
+                      <View style={styles.dueTimeInnerDivider} />
+                      <TextInput
+                        style={styles.dueTimeInput}
+                        value={dueMonth}
+                        onChangeText={(t) => setDueMonth(t.replace(/\D/g, '').slice(0, 2))}
+                        onBlur={persistDueAt}
+                        placeholder="MM"
+                        placeholderTextColor="rgba(0,0,0,0.35)"
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        editable={!statusUpdating}
+                      />
+                      <View style={styles.dueTimeInnerDivider} />
+                      <Text style={styles.dueYearStatic}>{dueYearDisplay}</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
-        </TouchableWithoutFeedback>
+        </View>
       </Modal>
 
       {/* Header - Fixed at top */}
@@ -256,11 +551,7 @@ export default function TicketsScreen() {
       <TicketsTabs selectedTab={selectedTab} onTabPress={handleTabChange} />
 
       {/* Bottom Navigation */}
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        chatBadgeCount={chatBadgeCount}
-      />
+      <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
     </View>
   );
 }
@@ -303,32 +594,171 @@ const styles = StyleSheet.create({
   statusModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
   },
-  statusDropdown: {
-    width: 220 * scaleX,
+  statusPopover: {
+    zIndex: 1,
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e3e3e3',
     borderRadius: 10 * scaleX,
-    paddingVertical: 8 * scaleX,
-  },
-  statusOption: {
-    paddingVertical: 12 * scaleX,
     paddingHorizontal: 16 * scaleX,
+    paddingTop: 16 * scaleX,
+    paddingBottom: 14 * scaleX,
+    shadowColor: '#6483B0',
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
-  statusOptionText: {
+  statusPopoverNotch: {
+    position: 'absolute',
+    top: -6 * scaleX,
+    width: STATUS_POPOVER_NOTCH_SIZE,
+    height: STATUS_POPOVER_NOTCH_SIZE,
+    backgroundColor: '#ffffff',
+    borderLeftWidth: 1,
+    borderTopWidth: 1,
+    borderColor: '#e3e3e3',
+    transform: [{ rotate: '45deg' }],
+  },
+  statusSectionTitle: {
     fontSize: 16 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700',
+    color: '#5b769e',
+  },
+  statusGrid: {
+    marginTop: 14 * scaleX,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  statusGridItem: {
+    width: 64 * scaleX,
+    alignItems: 'center',
+  },
+  statusCircle: {
+    width: 44 * scaleX,
+    height: 44 * scaleX,
+    borderRadius: 22 * scaleX,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusCirclePriority: {
+    backgroundColor: '#ffebeb',
+  },
+  statusCircleUnsolved: {
+    backgroundColor: '#f92424',
+  },
+  statusCircleSolved: {
+    backgroundColor: '#41d541',
+  },
+  /** Thick grey ring + white center (Figma OFO), not a thin outline. */
+  statusCircleOfoOuter: {
+    width: 44 * scaleX,
+    height: 44 * scaleX,
+    borderRadius: 22 * scaleX,
+    backgroundColor: '#c6c5c5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusCircleOfoInner: {
+    width: 20 * scaleX,
+    height: 20 * scaleX,
+    borderRadius: 10 * scaleX,
+    backgroundColor: '#ffffff',
+  },
+  statusCircleIcon: {
+    width: 24 * scaleX,
+    height: 24 * scaleX,
+    tintColor: '#f92424',
+  },
+  /** Priority / rush — full-color asset from Figma; do not tint. */
+  statusCircleIconRush: {
+    width: 26 * scaleX,
+    height: 26 * scaleX,
+  },
+  statusCircleIconOnDark: {
+    width: 24 * scaleX,
+    height: 24 * scaleX,
+    tintColor: '#ffffff',
+  },
+  /** Same glyph as ticket “done” state, white on green circle. */
+  statusCircleIconSolved: {
+    width: 24 * scaleX,
+    height: 24 * scaleX,
+    tintColor: '#ffffff',
+  },
+  statusGridLabel: {
+    marginTop: 8 * scaleX,
+    fontSize: 13 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000000',
     textAlign: 'center',
   },
-  statusOptionDone: {
-    color: '#41d541',
+  statusDivider: {
+    height: 1,
+    backgroundColor: '#e3e3e3',
+    marginTop: 14 * scaleX,
+    marginBottom: 10 * scaleX,
   },
-  statusOptionUnsolved: {
-    color: '#f92424',
+  dueTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dueTimeSwitch: {
+    transform: [{ scaleX: 0.88 }, { scaleY: 0.88 }],
+  },
+  dueTimeFields: {
+    marginTop: 12 * scaleX,
+  },
+  dueTimeColumns: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: DUE_FIELDS_GAP,
+  },
+  dueTimeColLabel: {
+    marginBottom: 8 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000000',
+  },
+  dueTimeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 58 * scaleX,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 0,
+    overflow: 'hidden',
+  },
+  dueTimeInput: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 8 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000000',
+    textAlign: 'center',
+  },
+  dueTimeInnerDivider: {
+    width: 1,
+    height: 28 * scaleX,
+    backgroundColor: '#e5e5e5',
+  },
+  dueYearStatic: {
+    flexShrink: 0,
+    paddingHorizontal: 10 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: 'rgba(0,0,0,0.18)',
   },
 });
 

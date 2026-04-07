@@ -12,10 +12,16 @@ interface LoadingOverlayProps {
   message?: string;
 }
 
-export function LoadingOverlay({ fullScreen = false }: LoadingOverlayProps) {
+export function LoadingOverlay({ fullScreen = false, message }: LoadingOverlayProps) {
+  const label = message ?? 'Loading';
   return (
-    <View style={[styles.container, fullScreen && styles.fullScreen]}>
-      <ActivityIndicator size="large" color={colors.primary.main} />
+    <View
+      style={[styles.container, fullScreen && styles.fullScreen]}
+      accessibilityLabel={label}
+      accessibilityRole="progressbar"
+      importantForAccessibility={fullScreen ? 'yes' : 'auto'}
+    >
+      <ActivityIndicator size="large" color={colors.primary.main} accessibilityLabel={label} />
     </View>
   );
 }

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, typography } from '../theme';
-import { scaleX, ROOM_DETAIL_HEADER, DETAIL_TABS, CONTENT_AREA, GUEST_INFO, NOTES_SECTION, LOST_AND_FOUND, ASSIGNED_TO, ASSIGNED_TASK_CARD } from '../constants/roomDetailStyles';
+import { scaleX, ROOM_DETAIL_HEADER, DETAIL_TABS, CONTENT_AREA, ASSIGNED_TASK_CARD } from '../constants/roomDetailStyles';
 import RoomDetailHeader from '../components/roomDetail/RoomDetailHeader';
 import DetailTabNavigation from '../components/roomDetail/DetailTabNavigation';
 import GuestInfoCard from '../components/roomDetail/GuestInfoCard';
@@ -403,7 +403,7 @@ export default function ArrivalDepartureDetailScreen() {
     // Navigate to Lost and Found screen and open the register modal
     navigation.navigate('Main' as any, {
       screen: 'LostAndFound',
-      params: { openRegisterModal: true },
+      params: { openRegisterModal: true, preselectedRoomId: localRoom?.id },
     } as any);
   };
 
@@ -539,82 +539,71 @@ export default function ArrivalDepartureDetailScreen() {
           {/* Content Sections - Only show Overview tab content for now */}
           {activeTab === 'Overview' && (
           <>
-            {/* Guest Info Section */}
             {(hasArrivalGuest || hasDepartureGuest) && (
-              <View style={styles.guestInfoSection}>
-                <Text style={styles.guestInfoTitle}>Guest Info</Text>
-
-                {/* Arrival Guest */}
+              <View style={styles.overviewGuestBlock}>
+                <Text style={styles.guestInfoTitleFlex}>Guest Info</Text>
                 {arrivalGuest && (
                   <GuestInfoCard
                     guest={arrivalGuest}
-                    isArrival={true}
+                    category="Arrival"
                     numberBadge={room.guests[0]?.vipCode?.toString()}
                     specialInstructions={roomDetail.specialInstructions}
-                    absoluteTop={GUEST_INFO.arrival.name.top}
-                    contentAreaTop={CONTENT_AREA.top}
                   />
                 )}
-
-                {/* Divider - show after arrival guest if there's a departure guest */}
-                {arrivalGuest && departureGuest && <View style={styles.divider1} />}
-
-                {/* Departure Guest */}
+                {arrivalGuest && departureGuest ? <View style={styles.sectionDivider} /> : null}
                 {departureGuest && (
                   <GuestInfoCard
                     guest={departureGuest}
-                    isArrival={false}
-                    numberBadge={room.guests[1]?.vipCode?.toString() || room.guests[0]?.vipCode?.toString()}
-                    specialInstructions={undefined} // Departure guests don't have special instructions
-                    isSecondGuest={!!arrivalGuest} // Second guest if there's an arrival guest
-                    absoluteTop={GUEST_INFO.departure.name.top}
-                    contentAreaTop={CONTENT_AREA.top}
+                    category="Departure"
+                    numberBadge={
+                      room.guests[1]?.vipCode?.toString() || room.guests[0]?.vipCode?.toString()
+                    }
                   />
                 )}
-
-                {/* Divider - show after departure guest in Arrival/Departure rooms */}
-                {departureGuest && arrivalGuest && <View style={styles.divider2} />}
+                <View style={styles.sectionDivider} />
               </View>
             )}
 
-            {/* Spacer to reserve space for absolutely positioned card */}
-            <View style={styles.cardSpacer} />
+            {roomDetail.assignedTo ? (
+              <>
+                <Text style={styles.assignedToHeadingFlex}>Assigned to</Text>
+                <View style={{ height: 30 * scaleX }} />
+              </>
+            ) : null}
 
-            {/* Assigned to Section Container - Similar structure to Lost and Found */}
-            {roomDetail.assignedTo && (
-              <View style={styles.assignedToSectionContainer}>
-                {/* Assigned to Title - Outside and above the card */}
-                <Text style={styles.assignedToTitle}>Assigned to</Text>
+            {(roomDetail.assignedTo || (roomDetail.tasks && roomDetail.tasks.length > 0)) ? (
+              <View
+                style={[
+                  styles.assignedCardFlex,
+                  { minHeight: ASSIGNED_TASK_CARD.height * scaleX },
+                ]}
+              >
+                {roomDetail.assignedTo ? (
+                  <AssignedToSection
+                    staff={roomDetail.assignedTo}
+                    onReassignPress={handleReassign}
+                  />
+                ) : null}
+                {roomDetail.assignedTo && roomDetail.tasks && roomDetail.tasks.length > 0 ? (
+                  <View style={styles.cardDividerFlex} />
+                ) : null}
+                {roomDetail.tasks && roomDetail.tasks.length > 0 ? (
+                  <TaskSection
+                    tasks={roomDetail.tasks || []}
+                    onAddPress={handleAddTask}
+                    onSeeMorePress={handleSeeMoreTask}
+                  />
+                ) : null}
               </View>
-            )}
+            ) : null}
 
-            {/* Card Container for Assigned to and Task sections */}
-            <View style={styles.assignedTaskCard}>
-              {/* Assigned to Section */}
-              {roomDetail.assignedTo && (
-                <AssignedToSection
-                  staff={roomDetail.assignedTo}
-                  onReassignPress={handleReassign}
-                />
-              )}
-
-              {/* Divider between Assigned to and Task sections */}
-              <View style={styles.cardDivider} />
-
-              {/* Task Section */}
-              <TaskSection
-                tasks={roomDetail.tasks || []}
-                onAddPress={handleAddTask}
-                onSeeMorePress={handleSeeMoreTask}
+            <View style={{ marginTop: 38 * scaleX }}>
+              <LostAndFoundSection
+                displayType="empty"
+                onAddPhotosPress={handleAddPhotos}
+                onTitlePress={handleLostAndFoundTitlePress}
               />
             </View>
-
-            {/* Lost and Found Section */}
-            <LostAndFoundSection 
-              displayType="empty"
-              onAddPhotosPress={handleAddPhotos}
-              onTitlePress={handleLostAndFoundTitlePress}
-            />
 
             {/* Notes Section */}
             <NotesSection
@@ -778,38 +767,50 @@ const styles = StyleSheet.create({
     backgroundColor: CONTENT_AREA.backgroundTop,
     zIndex: 0,
   },
-  guestInfoSection: {
-    position: 'relative',
+  overviewGuestBlock: {
     width: '100%',
-    paddingTop: (GUEST_INFO.title.top - CONTENT_AREA.top) * scaleX, // Space from content area start to Guest Info title
-    minHeight: (625 - 303) * scaleX, // From Guest Info title (303) to second divider (625) - reduced gap
+    paddingTop: (303 - CONTENT_AREA.top) * scaleX,
   },
-  guestInfoTitle: {
-    position: 'absolute',
-    left: GUEST_INFO.title.left * scaleX,
-    top: (GUEST_INFO.title.top - CONTENT_AREA.top) * scaleX, // 303 - 285 = 18px from scroll start
-    fontSize: GUEST_INFO.title.fontSize * scaleX,
+  guestInfoTitleFlex: {
+    fontSize: 15 * scaleX,
     fontFamily: 'Helvetica',
     fontWeight: 'bold' as any,
-    color: GUEST_INFO.title.color,
+    color: '#000000',
+    marginBottom: 8 * scaleX,
+    paddingHorizontal: 20 * scaleX,
   },
-  divider1: {
-    position: 'absolute',
-    left: GUEST_INFO.divider.left,
-    top: (GUEST_INFO.divider.top - CONTENT_AREA.top) * scaleX,
-    width: GUEST_INFO.divider.width * scaleX,
-    height: GUEST_INFO.divider.height,
-    backgroundColor: GUEST_INFO.divider.color,
-    zIndex: 0, // Below guest info content
+  sectionDivider: {
+    height: 1,
+    width: '100%',
+    backgroundColor: '#c6c5c5',
+    marginVertical: 12 * scaleX,
   },
-  divider2: {
-    position: 'absolute',
-    left: GUEST_INFO.divider2.left,
-    top: (GUEST_INFO.divider2.top - CONTENT_AREA.top) * scaleX,
-    width: GUEST_INFO.divider2.width * scaleX,
-    height: GUEST_INFO.divider2.height,
-    backgroundColor: GUEST_INFO.divider2.color,
-    zIndex: 0, // Below guest info content
+  assignedToHeadingFlex: {
+    fontSize: 15 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: 'bold' as any,
+    color: '#000000',
+    paddingHorizontal: 20 * scaleX,
+    marginTop: 4 * scaleX,
+  },
+  assignedCardFlex: {
+    position: 'relative',
+    alignSelf: 'center',
+    width: ASSIGNED_TASK_CARD.width * scaleX,
+    borderRadius: ASSIGNED_TASK_CARD.borderRadius * scaleX,
+    backgroundColor: ASSIGNED_TASK_CARD.backgroundColor,
+    borderWidth: ASSIGNED_TASK_CARD.borderWidth,
+    borderColor: ASSIGNED_TASK_CARD.borderColor,
+    paddingHorizontal: ASSIGNED_TASK_CARD.paddingHorizontal * scaleX,
+    paddingVertical: ASSIGNED_TASK_CARD.paddingVertical * scaleX,
+    overflow: 'hidden',
+  },
+  cardDividerFlex: {
+    height: 1,
+    backgroundColor: ASSIGNED_TASK_CARD.divider.backgroundColor,
+    width: '100%',
+    marginTop: 12 * scaleX,
+    marginBottom: 12 * scaleX,
   },
   placeholderContent: {
     padding: 40 * scaleX,
@@ -820,58 +821,6 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 16 * scaleX,
     color: '#999',
-  },
-  cardSpacer: {
-    // Spacer to reserve space for the absolutely positioned card and title
-    // From Figma:
-    // Guest Info section ends at divider 2: 625px absolute = (625 - 285) = 340px from content area
-    // "Assigned to" title starts at: 644px absolute = (644 - 285) = 359px from content area (19px gap)
-    // Card starts at: 674px absolute = (674 - 285) = 389px from content area (30px gap from title)
-    // Card ends at: 674 + 206.09 = 880.09px absolute = (880.09 - 285) = 595.09px from content area
-    // Total spacer height: From Guest Info end (625px) to card end (880.09px) = 255.09px
-    height: ((ASSIGNED_TASK_CARD.top - GUEST_INFO.divider2.top) + ASSIGNED_TASK_CARD.height) * scaleX, // (674 - 625) + 206.09 = 255.09px
-    width: '100%',
-  },
-  assignedToSectionContainer: {
-    position: 'absolute',
-    left: 0,
-    width: '100%',
-    top: (ASSIGNED_TO.title.top - CONTENT_AREA.top) * scaleX, // 644 - 285 = 359px from content area start (Figma)
-    height: 20 * scaleX, // Height for title section (title is 15px, so 20px gives some space)
-    zIndex: 2, // Above card
-  },
-  assignedToTitle: {
-    position: 'absolute',
-    left: ASSIGNED_TO.title.left * scaleX,
-    top: 0, // At top of container (similar to Lost and Found)
-    fontSize: ASSIGNED_TO.title.fontSize * scaleX,
-    fontFamily: 'Helvetica',
-    fontWeight: 'bold' as any,
-    color: ASSIGNED_TO.title.color,
-  },
-  assignedTaskCard: {
-    position: 'absolute',
-    left: ASSIGNED_TASK_CARD.left * scaleX,
-    top: (ASSIGNED_TASK_CARD.top - CONTENT_AREA.top) * scaleX, // 674 - 285 = 389px from content area start (Figma)
-    width: ASSIGNED_TASK_CARD.width * scaleX,
-    height: ASSIGNED_TASK_CARD.height * scaleX, // Fixed height: 206.09px from Figma
-    borderRadius: ASSIGNED_TASK_CARD.borderRadius * scaleX,
-    backgroundColor: ASSIGNED_TASK_CARD.backgroundColor,
-    borderWidth: ASSIGNED_TASK_CARD.borderWidth,
-    borderColor: ASSIGNED_TASK_CARD.borderColor,
-    paddingHorizontal: ASSIGNED_TASK_CARD.paddingHorizontal * scaleX,
-    paddingVertical: ASSIGNED_TASK_CARD.paddingVertical * scaleX,
-    zIndex: 1, // Ensure card is above spacer
-    overflow: 'hidden', // Clip content that extends beyond card boundaries
-  },
-  cardDivider: {
-    position: 'absolute',
-    left: ASSIGNED_TASK_CARD.paddingHorizontal * scaleX, // Divider starts after card padding
-    top: ASSIGNED_TASK_CARD.divider.top * scaleX, // 80px from card content top (updated)
-    width: ASSIGNED_TASK_CARD.divider.width * scaleX,
-    height: ASSIGNED_TASK_CARD.divider.height, // 1px
-    backgroundColor: ASSIGNED_TASK_CARD.divider.backgroundColor,
-    zIndex: 2, // Above both Assigned to (zIndex: 1) and Task sections (zIndex: 0)
   },
   ticketsTabContainer: {
     flex: 1,

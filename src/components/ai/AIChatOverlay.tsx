@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
-  Dimensions,
   Platform,
   Image,
   ScrollView,
@@ -22,19 +21,9 @@ import {
   requestRecordingPermissionsAsync,
 } from 'expo-audio';
 import { colors, typography } from '../../theme';
-import { normalizedScaleX } from '../../utils/responsive';
 import { useToast } from '../../contexts/ToastContext';
 import { transcribeAndRespond, sendTextToAgent } from '../../services/aiAgent';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
-
-// Pixel-perfect icon size (rounded) to avoid blur – match Figma
-const HESTIA_ICON_WIDTH = Math.round(120 * normalizedScaleX);
-const HESTIA_ICON_HEIGHT = Math.round(32 * normalizedScaleX);
-
-const OVERLAY_HEIGHT = 280 * scaleX;
+import { useDesignScale } from '../../hooks/useDesignScale';
 
 export interface AIChatMessage {
   role: 'user' | 'assistant';
@@ -48,6 +37,11 @@ interface AIChatOverlayProps {
 }
 
 export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) {
+  const { width: windowWidth, scaleX, normalizedScaleX } = useDesignScale();
+  const hestiaIconW = Math.round(120 * normalizedScaleX);
+  const hestiaIconH = Math.round(32 * normalizedScaleX);
+  const overlayHeight = 280 * scaleX;
+  const styles = useMemo(() => buildAIChatOverlayStyles(scaleX), [scaleX]);
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<AIChatMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -156,9 +150,6 @@ export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) 
     toast,
   ]);
 
-  // Fixed overlay height.
-  const overlayHeight = OVERLAY_HEIGHT;
-
   // When keyboard is closed, sit just above the tab bar. When open, move up slightly more than
   // the keyboard height so there's clear space and the input is never under the keyboard.
   const tabBarHeight = 152 * scaleX;
@@ -187,7 +178,7 @@ export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) 
           style={[
             styles.overlay,
             {
-              width: SCREEN_WIDTH,
+              width: windowWidth,
               height: overlayHeight,
               left: 0,
               bottom: overlayBottom,
@@ -199,7 +190,7 @@ export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) 
             <View style={styles.header}>
               <Image
                 source={require('../../../assets/icons/ai-chat-icon.png')}
-                style={[styles.hestiaIcon, { width: HESTIA_ICON_WIDTH, height: HESTIA_ICON_HEIGHT }]}
+                style={[styles.hestiaIcon, { width: hestiaIconW, height: hestiaIconH }]}
                 resizeMode="contain"
               />
               <View style={styles.headerSpacer} />
@@ -300,7 +291,8 @@ export default function AIChatOverlay({ visible, onClose }: AIChatOverlayProps) 
   );
 }
 
-const styles = StyleSheet.create({
+function buildAIChatOverlayStyles(scaleX: number) {
+  return StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -361,7 +353,7 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular as string,
+    fontWeight: typography.fontWeights.regular as any,
     fontSize: 13 * scaleX,
     color: colors.text.primary,
   },
@@ -404,7 +396,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular as string,
+    fontWeight: typography.fontWeights.regular as any,
     fontSize: 15 * scaleX,
     color: colors.text.primary,
     paddingVertical: 2,
@@ -418,3 +410,5 @@ const styles = StyleSheet.create({
     padding: 2,
   },
 });
+}
+

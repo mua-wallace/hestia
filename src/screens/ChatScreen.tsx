@@ -13,13 +13,8 @@ import ChatItem, { ChatItemData } from '../components/chat/ChatItem';
 import NewChatMenu, { NewChatMenuOption } from '../components/chat/NewChatMenu';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
-import {
-  CHAT_SPACING,
-  CHAT_COLORS,
-  CHAT_ITEM_POSITIONS,
-  CHAT_ITEM,
-  scaleX,
-} from '../constants/chatStyles';
+import { invalidateNotificationBadges } from '../services/inAppNotifications';
+import { CHAT_SPACING, CHAT_COLORS, CHAT_ITEM, scaleX } from '../constants/chatStyles';
 
 type MainTabsParamList = {
   Home: undefined;
@@ -58,11 +53,12 @@ export default function ChatScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadChats();
+      void loadChats();
+      invalidateNotificationBadges();
     }, [loadChats])
   );
 
-  const handleTabPress = (tab: string) => {
+  const handleTabPress = (tab: string, options?: { fromRoomsAssignmentBadge?: boolean }) => {
     if (tab === 'AIHome') {
       openAIChatOverlay();
       return;
@@ -72,7 +68,9 @@ export default function ChatScreen() {
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
-      navigation.navigate('Rooms' as any);
+      navigation.navigate('Rooms' as any, {
+        prioritizeMyAssignedRooms: !!options?.fromRoomsAssignmentBadge,
+      });
     } else if (tab === 'Chat') {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
@@ -125,11 +123,6 @@ export default function ChatScreen() {
   }, [loadChats]);
 
   const isLoading = loading && chats.length === 0;
-
-  // Calculate total unread chat messages for badge
-  const chatBadgeCount = React.useMemo(() => {
-    return chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
-  }, [chats]);
 
   // Filter chats based on search query
   const filteredChats = searchQuery
@@ -190,11 +183,7 @@ export default function ChatScreen() {
       />
 
       {/* Bottom Navigation - Outside KeyboardAvoidingView to prevent movement */}
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        chatBadgeCount={chatBadgeCount}
-      />
+      <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
 
       {/* New Chat Menu */}
       <NewChatMenu

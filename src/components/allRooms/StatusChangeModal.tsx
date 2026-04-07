@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text, Animated, Platform, Switch, Image } from 'react-native';
+import { Modal, TouchableOpacity, StyleSheet, Dimensions, View, Text, Animated, Platform, Switch, Image, Pressable } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RoomStatus, StatusChangeOption, STATUS_OPTIONS, STATUS_CONFIGS, RoomCardData } from '../../types/allRooms.types';
@@ -302,13 +302,13 @@ export default function StatusChangeModal({
             />
           )}
           
-          <TouchableOpacity
+          <Pressable
             style={[
               styles.modalContainer,
               !showTriangle && styles.modalContainerNoGap
             ]}
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
+            onPress={() => {}}
+            onStartShouldSetResponder={() => true}
           >
             {/* Change Status Header Text */}
             <Text style={styles.headerText}>Change status</Text>
@@ -374,7 +374,7 @@ export default function StatusChangeModal({
               />
             </View>
 
-          </TouchableOpacity>
+          </Pressable>
           </Animated.View>
         </BlurView>
       </Animated.View>

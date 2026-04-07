@@ -1,12 +1,7 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
-import { TouchableOpacity } from 'react-native-gesture-handler';
+import React, { useMemo } from 'react';
+import { View, Text, Image, StyleSheet, Platform, Pressable } from 'react-native';
 import { colors, typography } from '../../theme';
-import { normalizedScaleX } from '../../utils/responsive';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+import { useDesignScale } from '../../hooks/useDesignScale';
 
 interface TabBarItemProps {
   icon: any;
@@ -17,125 +12,155 @@ interface TabBarItemProps {
   iconWidth?: number;
   iconHeight?: number;
   iconOpacity?: number;
+  /** Some PNGs are not visually centered; allow a small horizontal nudge. */
+  iconOffsetX?: number;
 }
 
-export default function TabBarItem({ icon, label, active = false, badge, onPress, iconWidth, iconHeight, iconOpacity }: TabBarItemProps) {
-  // Use Math.round to ensure pixel-perfect rendering and prevent blurriness
-  // Icons are used directly without tintColor to preserve original colors from Figma
+export default function TabBarItem({
+  icon,
+  label,
+  active = false,
+  badge,
+  onPress,
+  iconWidth,
+  iconHeight,
+  iconOpacity,
+  iconOffsetX = 0,
+}: TabBarItemProps) {
+  const { normalizedScaleX: ns } = useDesignScale();
+  const styles = useMemo(() => buildTabBarItemStyles(ns), [ns]);
+
   const finalOpacity = iconOpacity !== undefined ? iconOpacity : 1;
-  const iconStyle = iconWidth && iconHeight 
-    ? { 
-        width: Math.round(iconWidth * normalizedScaleX), 
-        height: Math.round(iconHeight * normalizedScaleX),
-        opacity: finalOpacity,
-      }
-    : { ...styles.icon, opacity: finalOpacity };
-    
+  const activeColor = '#FF46A3';
+  const iconStyle = iconWidth && iconHeight
+    ? ([
+        {
+          width: Math.round(iconWidth * ns),
+          height: Math.round(iconHeight * ns),
+          opacity: finalOpacity,
+          ...(iconOffsetX ? { transform: [{ translateX: iconOffsetX * ns }] } : null),
+        },
+        active ? { tintColor: activeColor } : null,
+      ].filter(Boolean) as any)
+    : ([
+        styles.icon,
+        { opacity: finalOpacity },
+        iconOffsetX ? { transform: [{ translateX: iconOffsetX * ns }] } : null,
+        active ? { tintColor: activeColor } : null,
+      ].filter(Boolean) as any);
+
   return (
-    <TouchableOpacity
+    <Pressable
       style={styles.container}
       onPress={onPress}
-      activeOpacity={0.6}
       hitSlop={{ top: 24, bottom: 24, left: 20, right: 20 }}
       accessibilityRole="button"
     >
       <View style={styles.contentWrapper}>
         <View style={styles.iconWrapper}>
           <View style={styles.iconContainer}>
-            <Image
-              source={icon}
-              style={iconStyle}
-              resizeMode="contain"
-            />
-            {(badge !== undefined && badge > 0) ? (
+            <Image source={icon} style={iconStyle} resizeMode="contain" />
+            {badge !== undefined && badge > 0 ? (
               <View style={styles.badgeContainer}>
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{String(badge)}</Text>
+                  <Text style={styles.badgeText}>
+                    {badge > 99 ? '99+' : String(badge)}
+                  </Text>
                 </View>
               </View>
             ) : null}
           </View>
         </View>
-        {label ? <Text style={[styles.label, active && styles.labelActive]}>{label}</Text> : null}
+        {label ? (
+          <View style={styles.labelContainer}>
+            <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
+              {label}
+            </Text>
+          </View>
+        ) : null}
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%', // Fill parent container
-    minWidth: Math.round(40 * normalizedScaleX), // Rounded for pixel-perfect rendering
-  },
-  contentWrapper: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconWrapper: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 0, // No gap – label sits right below icon
-  },
-  iconContainer: {
-    position: 'relative',
-    width: Math.round(70 * normalizedScaleX), // Accommodate largest icon (70)
-    height: Math.round(56 * normalizedScaleX), // Match max icon height – less vertical gap
-    justifyContent: 'center', // Center icon vertically
-    alignItems: 'center',
-    overflow: 'visible',
-  },
-  icon: {
-    width: '100%',
-    height: '100%',
-    // Icons are used directly without tintColor to preserve original colors
-  },
-  badgeContainer: {
-    position: 'absolute',
-    // Position badge at top-right of icon, overlapping the icon edge (as per Figma)
-    // Chat icon is 56x56, centered in 70x68 container
-    // Icon top edge: (68-56)/2 = 6px from container top
-    // Icon right edge: (70-56)/2 = 7px from container right
-    // Badge size: 20.455px (radius ~10.2275px)
-    // Position badge center to overlap icon's top-right corner
-    // Position badge center at icon's top-right area (8-9px) so badge clearly overlaps icon
-    top: Math.round(8 * normalizedScaleX), // Badge center 8px from top (2px inside icon top edge at 6px)
-    right: Math.round(8 * normalizedScaleX), // Badge center 8px from right (1px inside icon right edge at 7px)
-    zIndex: 10,
-  },
-  badge: {
-    backgroundColor: '#FF46A3',
-    borderRadius: Math.round(10.2275 * normalizedScaleX),
-    minWidth: Math.round(20.455 * normalizedScaleX),
-    height: Math.round(20.455 * normalizedScaleX),
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Math.round(4 * normalizedScaleX),
-    borderWidth: Math.round(2 * normalizedScaleX),
-    borderColor: colors.background.primary,
-  },
-  badgeText: {
-    color: colors.text.white,
-    fontSize: Math.round(13 * normalizedScaleX),
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
-    includeFontPadding: false,
-  },
-  label: {
-    fontSize: Math.round(15 * normalizedScaleX),
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.regular as any,
-    color: colors.primary.main, // Match icon color
-    includeFontPadding: false, // Remove extra padding for consistent rendering
-    textAlign: 'center',
-  },
-  labelActive: {
-    fontWeight: '700' as any, // Extra bold for active tab
-    color: colors.primary.light, // Light blue (#607aa1) for active tab
-    includeFontPadding: false, // Remove extra padding for consistent rendering
-  },
-});
-
+function buildTabBarItemStyles(normalizedScaleX: number) {
+  const ns = normalizedScaleX;
+  return StyleSheet.create({
+    container: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      minWidth: Math.round(40 * ns),
+    },
+    contentWrapper: {
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    iconWrapper: {
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 0,
+    },
+    labelContainer: {
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: Math.round(20 * ns),
+      marginTop: Math.round(2 * ns),
+    },
+    iconContainer: {
+      position: 'relative',
+      width: Math.round(70 * ns),
+      height: Math.round(56 * ns),
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'visible',
+    },
+    icon: {
+      width: '100%',
+      height: '100%',
+    },
+    // Inset from icon corner so the pill doesn’t sit flush on the artwork (Chat + Tickets).
+    badgeContainer: {
+      position: 'absolute',
+      top: Math.round(10 * ns),
+      right: Math.round(18 * ns),
+      zIndex: 10,
+    },
+    badge: {
+      backgroundColor: '#FF46A3',
+      borderRadius: Math.round(10.2275 * ns),
+      minWidth: Math.round(20.455 * ns),
+      height: Math.round(20.455 * ns),
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: Math.round(4 * ns),
+      borderWidth: Math.round(2 * ns),
+      borderColor: colors.background.primary,
+    },
+    badgeText: {
+      color: colors.text.white,
+      fontSize: Math.round(13 * ns),
+      fontFamily: typography.fontFamily.primary,
+      fontWeight: typography.fontWeights.light as any,
+      includeFontPadding: false,
+    },
+    label: {
+      fontSize: Math.round(15 * ns),
+      lineHeight: Math.round(15 * ns),
+      fontFamily: Platform.OS === 'ios' ? 'Helvetica' : typography.fontFamily.primary,
+      fontWeight: typography.fontWeights.regular as any,
+      color: colors.primary.main,
+      includeFontPadding: false,
+      textAlign: 'center',
+    },
+    labelActive: {
+      fontFamily: Platform.OS === 'ios' ? 'Helvetica' : typography.fontFamily.primary,
+      fontWeight: '700' as any,
+      color: '#FF46A3',
+      includeFontPadding: false,
+    },
+  });
+}

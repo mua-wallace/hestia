@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,20 +7,24 @@ import {
   Image,
   StyleSheet,
   ScrollView,
-  Dimensions,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
+  PixelRatio,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { typography } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+import {
+  CREATE_TICKET_AI_IMAGE,
+  CREATE_TICKET_BETA_OVERLAP_AI_PX,
+  CREATE_TICKET_BETA_TO_DESCRIPTION_PX,
+  createTicketScaleX,
+} from '../constants/createTicketStyles';
 
 type SelectTicketLocationScreenRouteProp = RouteProp<RootStackParamList, 'SelectTicketLocation'>;
 type SelectTicketLocationScreenNavigationProp = NativeStackNavigationProp<
@@ -43,6 +47,14 @@ export default function SelectTicketLocationScreen() {
   const navigation = useNavigation<SelectTicketLocationScreenNavigationProp>();
   const route = useRoute<SelectTicketLocationScreenRouteProp>();
   const departmentName = route.params?.departmentName ?? 'Engineering';
+
+  const { width: windowWidth } = useWindowDimensions();
+  const scaleX = createTicketScaleX(windowWidth);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => buildSelectTicketLocationStyles(scaleX, windowWidth),
+    [scaleX, windowWidth],
+  );
 
   const [locationType, setLocationType] = useState<'room' | 'publicArea'>('room');
   const [searchQuery, setSearchQuery] = useState('');
@@ -158,6 +170,11 @@ export default function SelectTicketLocationScreen() {
     return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
   };
 
+  const handleAICreatePress = () => {
+    // TODO: Implement AI ticket creation
+    console.log('AI Create Ticket pressed');
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -184,14 +201,21 @@ export default function SelectTicketLocationScreen() {
         >
           {/* AI Create Ticket Button */}
           <View style={styles.aiButtonSection}>
-            <TouchableOpacity style={styles.aiButton} activeOpacity={0.7}>
-              <Text style={styles.aiButtonText}>Create Ticket</Text>
-              <View style={styles.aiBadge}>
-                <Text style={styles.aiBadgeText}>AI</Text>
-              </View>
+            <TouchableOpacity
+              style={styles.aiButtonTouchable}
+              onPress={handleAICreatePress}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={CREATE_TICKET_AI_IMAGE.source}
+                style={styles.aiButtonImage}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
-            <Text style={styles.betaLabel}>BETA</Text>
-            <Text style={styles.aiDescription}>
+            <Text style={styles.betaLabel} maxFontSizeMultiplier={1.35}>
+              BETA
+            </Text>
+            <Text style={styles.aiDescription} maxFontSizeMultiplier={1.35}>
               AI detects issues and auto-creates tickets for the right department no manual reporting needed.
             </Text>
           </View>
@@ -427,7 +451,10 @@ export default function SelectTicketLocationScreen() {
       <TouchableOpacity
         style={[
           styles.continueButton,
-          ((locationType === 'room' && !selectedRoom) || (locationType === 'publicArea' && !selectedPublicArea)) && styles.continueButtonDisabled
+          ((locationType === 'room' && !selectedRoom) || (locationType === 'publicArea' && !selectedPublicArea)) && styles.continueButtonDisabled,
+          {
+            bottom: PixelRatio.roundToNearestPixel(40 * scaleX + Math.max(insets.bottom, 8 * scaleX)),
+          },
         ]}
         onPress={handleContinue}
         disabled={(locationType === 'room' && !selectedRoom) || (locationType === 'publicArea' && !selectedPublicArea)}
@@ -439,7 +466,19 @@ export default function SelectTicketLocationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function buildSelectTicketLocationStyles(scaleX: number, windowWidth: number) {
+  const androidText = Platform.select({
+    android: { includeFontPadding: false } as const,
+    default: {} as const,
+  });
+  const aiW = PixelRatio.roundToNearestPixel(CREATE_TICKET_AI_IMAGE.width * scaleX);
+  const aiH = PixelRatio.roundToNearestPixel(CREATE_TICKET_AI_IMAGE.height * scaleX);
+  const descriptionMaxWidth = Math.min(
+    318 * scaleX,
+    Math.max(0, windowWidth - PixelRatio.roundToNearestPixel(32)),
+  );
+
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -469,6 +508,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#607aa1',
     marginLeft: 80 * scaleX,
+    ...androidText,
   },
   scrollView: {
     flex: 1,
@@ -483,48 +523,22 @@ const styles = StyleSheet.create({
     marginTop: 48 * scaleX,
     marginBottom: 48 * scaleX,
   },
-  aiButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 60 * scaleX,
-    paddingHorizontal: 24 * scaleX,
-    borderWidth: 1,
-    borderColor: '#ff4dd8',
-    borderRadius: 45 * scaleX,
-    position: 'relative',
+  aiButtonTouchable: {
+    width: aiW,
+    height: aiH,
   },
-  aiButtonText: {
-    fontSize: 16 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '700',
-    color: '#5a759d',
-  },
-  aiBadge: {
-    position: 'absolute',
-    right: -5 * scaleX,
-    bottom: -10 * scaleX,
-    width: 29 * scaleX,
-    height: 30 * scaleX,
-    borderRadius: 15 * scaleX,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  aiBadgeText: {
-    fontSize: 12 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '700',
-    color: '#ff46a3',
+  aiButtonImage: {
+    width: aiW,
+    height: aiH,
   },
   betaLabel: {
     fontSize: 9 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '700',
     color: '#ff4dd8',
-    marginTop: 8 * scaleX,
+    marginTop: -CREATE_TICKET_BETA_OVERLAP_AI_PX * scaleX,
+    marginBottom: CREATE_TICKET_BETA_TO_DESCRIPTION_PX * scaleX,
+    ...androidText,
   },
   aiDescription: {
     fontSize: 14 * scaleX,
@@ -532,9 +546,11 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     color: '#000',
     textAlign: 'center',
-    marginTop: 16 * scaleX,
-    maxWidth: 318 * scaleX,
+    marginTop: 0,
+    maxWidth: descriptionMaxWidth,
+    alignSelf: 'center',
     lineHeight: 20 * scaleX,
+    ...androidText,
   },
   sectionTitle: {
     fontSize: 16 * scaleX,
@@ -820,3 +836,4 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 });
+}

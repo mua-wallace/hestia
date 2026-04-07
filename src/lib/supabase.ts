@@ -25,10 +25,38 @@ if (!isSupabaseConfigured) {
   );
 }
 
+function createTimeoutFetch(defaultTimeoutMs: number) {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
+    // iOS/RN: default 20s is too short for Storage uploads and heavy PostgREST nested selects.
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : 'request';
+    // Storage: POST /storage/v1/object/{bucket}/{path}
+    const isStorageObjectRequest = url.includes('/storage/v1/object/');
+    // PostgREST: nested selects (e.g. rooms → reservations → guests) can exceed 20s on slow networks.
+    const isRestQuery = url.includes('/rest/v1/');
+    const timeoutMs =
+      isStorageObjectRequest || isRestQuery ? 120000 : defaultTimeoutMs;
+
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(input, { ...init, signal: controller.signal });
+    } catch (err) {
+      console.error('[SupabaseFetch] failed', { url, message: err instanceof Error ? err.message : String(err) });
+      throw err;
+    } finally {
+      clearTimeout(id);
+    }
+  };
+}
+
 export const supabase = createClient<Database>(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabasePublishableKey || 'placeholder-key',
   {
+    global: {
+      // Helps iOS devices on slow networks avoid hanging requests.
+      fetch: createTimeoutFetch(20000),
+    },
     auth: {
       storage: AsyncStorage,
       autoRefreshToken: true,

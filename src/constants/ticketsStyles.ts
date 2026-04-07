@@ -9,6 +9,11 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 export const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
+/** Use with `useWindowDimensions().width` for rotation / split-screen. */
+export function ticketsScaleX(windowWidth: number): number {
+  return windowWidth / DESIGN_WIDTH;
+}
+
 // Header Styles
 export const TICKETS_HEADER = {
   height: 133,
@@ -29,16 +34,20 @@ export const TICKETS_HEADER = {
     fontWeight: 'bold' as const,
     color: '#607aa1',
   },
+  // Create Ticket AI (Figma frame 152×74, node 3005:59 under 667:3068).
+  // Vertical position is derived in TicketsHeader to align with backButton center.
   createButton: {
-    right: 44, // From Figma: x=315, screen width=440, so right = 440-315-81 = 44px
-    top: 69,
-    fontSize: 24, // "+" symbol
-    fontWeight: 'bold' as const,
-    createTextFontSize: 20, // "Create" text
-    createTextFontWeight: 'light' as const,
-    color: '#607aa1',
+    right: 27,
+    width: 152,
+    height: 74,
   },
 } as const;
+
+/** Same vertical center as back arrow for Tickets header controls */
+export function getTicketsCreateButtonTopPx(): number {
+  const { backButton, createButton } = TICKETS_HEADER;
+  return backButton.top + (backButton.height - createButton.height) / 2;
+}
 
 // Tab Navigation Styles
 export const TICKETS_TABS = {
@@ -102,6 +111,15 @@ export const TICKET_CARD = {
   paddingBottom: 19, // From Figma: button at y=602, card ends at y=629, so 629-602-8=19px
 } as const;
 
+/**
+ * Change Status popover (Figma node 3129:1647 Union, Tickets frame 3129:1500).
+ * W=396, left=21 on 440-wide artboard — narrower than the 409-wide card, not edge-aligned to card.
+ */
+export const TICKET_STATUS_POPOVER = {
+  width: 396,
+  left: 21,
+} as const;
+
 // Ticket Content Styles
 export const TICKET_CONTENT = {
   title: {
@@ -121,7 +139,7 @@ export const TICKET_CONTENT = {
     maxWidth: 190, // From Figma: description width
   },
   dueDateBadge: {
-    backgroundColor: '#ffebeb', // Light pink/red
+    backgroundColor: '#FFEBEB', // Light pink/red
     borderRadius: 44,
     paddingHorizontal: 7,
     paddingVertical: 4,
@@ -291,7 +309,7 @@ export const TICKETS_COLORS = {
   textTertiary: '#a0a0a0',
   tabActive: '#5a759d',
   tabInactive: '#5a759d', // Same color but different weight
-  dueDateBadge: '#ffebeb',
+  dueDateBadge: '#FFEBEB',
   statusDone: '#41d541',
   statusUnsolved: '#f92424',
   statusUnsolvedBg: 'rgba(249, 36, 36, 0.06)',
@@ -303,13 +321,6 @@ export const TICKETS_TYPOGRAPHY = {
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold' as const,
-    color: '#607aa1',
-  },
-  createButton: {
-    plusFontSize: 24,
-    plusFontWeight: 'bold' as const,
-    textFontSize: 20,
-    textFontWeight: 'light' as const,
     color: '#607aa1',
   },
   tab: {

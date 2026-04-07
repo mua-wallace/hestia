@@ -1,25 +1,29 @@
 import { useMemo } from 'react';
-import { Dimensions } from 'react-native';
-import { scaleX, scaleY, scaleFont } from '../utils/scaling';
-
-const DESIGN_WIDTH = 440;
+import { useWindowDimensions } from 'react-native';
+import {
+  DEFAULT_DESIGN_WIDTH,
+  DEFAULT_DESIGN_HEIGHT,
+  scaleXForWidth,
+  scaleYForHeight,
+} from '../utils/layoutScale';
 
 /**
- * Hook to get scaling functions based on current screen dimensions
+ * Scaling helpers that always use the **current** window size (unlike static `utils/scaling`).
  */
-export const useScale = () => {
-  const dimensions = useMemo(() => Dimensions.get('window'), []);
-  
-  return useMemo(
-    () => ({
-      scaleX,
-      scaleY,
-      scaleFont,
-      width: dimensions.width,
-      height: dimensions.height,
-      designWidth: DESIGN_WIDTH,
-    }),
-    [dimensions]
-  );
-};
+export const useScale = (options?: { designWidth?: number; designHeight?: number }) => {
+  const { width, height } = useWindowDimensions();
+  const designWidth = options?.designWidth ?? DEFAULT_DESIGN_WIDTH;
+  const designHeight = options?.designHeight ?? DEFAULT_DESIGN_HEIGHT;
 
+  return useMemo(() => {
+    return {
+      scaleX: (size: number) => scaleXForWidth(size, width, designWidth),
+      scaleY: (size: number) => scaleYForHeight(size, height, designHeight),
+      scaleFont: (size: number) => scaleXForWidth(size, width, designWidth),
+      width,
+      height,
+      designWidth,
+      designHeight,
+    };
+  }, [width, height, designWidth, designHeight]);
+};

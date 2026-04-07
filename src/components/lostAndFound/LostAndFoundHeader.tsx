@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { typography } from '../../theme';
 import {
   LOST_AND_FOUND_HEADER,
@@ -11,22 +12,26 @@ import {
 interface LostAndFoundHeaderProps {
   onBackPress?: () => void;
   onRegisterPress?: () => void;
+  /** Non-blocking sync (e.g. refetch when returning to tab) — small spinner beside title */
+  syncing?: boolean;
 }
 
 export default function LostAndFoundHeader({
   onBackPress,
   onRegisterPress,
+  syncing = false,
 }: LostAndFoundHeaderProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { height: LOST_AND_FOUND_HEADER.height * scaleX + insets.top }]}>
       {/* Blue background */}
-      <View style={styles.headerBackground} />
+      <View style={[styles.headerBackground, { height: LOST_AND_FOUND_HEADER.background.height * scaleX + insets.top }]} />
 
       {/* Top section with back button, title, and register button */}
       <View style={styles.topSection}>
         {/* Back arrow */}
         <TouchableOpacity
-          style={styles.backButton}
+          style={[styles.backButton, { top: insets.top + LOST_AND_FOUND_HEADER.backButton.top * scaleX }]}
           onPress={onBackPress || (() => {})}
           activeOpacity={0.7}
         >
@@ -39,11 +44,20 @@ export default function LostAndFoundHeader({
         </TouchableOpacity>
 
         {/* Title */}
-        <Text style={styles.title}>Lost & Found</Text>
+        <View style={[styles.titleRow, { top: insets.top + LOST_AND_FOUND_HEADER.title.top * scaleX }]}>
+          <Text style={styles.title}>Lost & Found</Text>
+          {syncing ? (
+            <ActivityIndicator
+              size="small"
+              color={LOST_AND_FOUND_TYPOGRAPHY.headerTitle.color}
+              style={styles.titleSpinner}
+            />
+          ) : null}
+        </View>
 
         {/* Register Button */}
         <TouchableOpacity
-          style={styles.registerButton}
+          style={[styles.registerButton, { top: insets.top + LOST_AND_FOUND_HEADER.registerButton.top * scaleX }]}
           onPress={onRegisterPress || (() => {})}
           activeOpacity={0.7}
         >
@@ -63,7 +77,6 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: LOST_AND_FOUND_HEADER.height * scaleX,
     zIndex: 10,
   },
   headerBackground: {
@@ -71,20 +84,18 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: LOST_AND_FOUND_HEADER.background.height * scaleX,
     backgroundColor: LOST_AND_FOUND_COLORS.headerBackground,
   },
   topSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: LOST_AND_FOUND_HEADER.backButton.left * scaleX,
-    paddingTop: LOST_AND_FOUND_HEADER.backButton.top * scaleX,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     height: LOST_AND_FOUND_HEADER.background.height * scaleX,
   },
   backButton: {
     position: 'absolute',
     left: LOST_AND_FOUND_HEADER.backButton.left * scaleX,
-    top: LOST_AND_FOUND_HEADER.backButton.top * scaleX,
     width: LOST_AND_FOUND_HEADER.backButton.width * scaleX,
     height: LOST_AND_FOUND_HEADER.backButton.height * scaleX,
     justifyContent: 'center',
@@ -94,14 +105,22 @@ const styles = StyleSheet.create({
     width: LOST_AND_FOUND_HEADER.backButton.width * scaleX,
     height: LOST_AND_FOUND_HEADER.backButton.height * scaleX,
   },
+  titleRow: {
+    position: 'absolute',
+    left: LOST_AND_FOUND_HEADER.title.left * scaleX,
+    top: LOST_AND_FOUND_HEADER.title.top * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: '62%',
+  },
   title: {
     fontSize: LOST_AND_FOUND_TYPOGRAPHY.headerTitle.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: LOST_AND_FOUND_TYPOGRAPHY.headerTitle.fontWeight as any,
     color: LOST_AND_FOUND_TYPOGRAPHY.headerTitle.color,
-    position: 'absolute',
-    left: LOST_AND_FOUND_HEADER.title.left * scaleX,
-    top: LOST_AND_FOUND_HEADER.title.top * scaleX,
+  },
+  titleSpinner: {
+    marginLeft: 8 * scaleX,
   },
   registerButton: {
     position: 'absolute',

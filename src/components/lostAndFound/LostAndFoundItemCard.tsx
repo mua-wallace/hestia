@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Animated, ActivityIndicator } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useToast } from '../../contexts/ToastContext';
 import { typography } from '../../theme';
@@ -17,14 +17,44 @@ import {
 } from '../../constants/lostAndFoundStyles';
 import { LostAndFoundItem } from '../../types/lostAndFound.types';
 
+export type LostAndFoundStatusAnchorLayout = { x: number; y: number; width: number; height: number };
+
 interface LostAndFoundItemCardProps {
   item: LostAndFoundItem;
   onPress?: () => void;
-  onStatusPress?: () => void;
+  onStatusPress?: (anchor?: LostAndFoundStatusAnchorLayout) => void;
+  statusUpdating?: boolean;
 }
 
-export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: LostAndFoundItemCardProps) {
+export default function LostAndFoundItemCard({ item, onPress, onStatusPress, statusUpdating = false }: LostAndFoundItemCardProps) {
   const toast = useToast();
+  const [isImageLoading, setIsImageLoading] = useState<boolean>(false);
+  const imagePulse = useRef(new Animated.Value(0.35)).current;
+  const formatPublicAreaTimestamp = (iso?: string) => {
+    if (!iso) return '';
+    const dt = new Date(iso);
+    if (Number.isNaN(dt.getTime())) return '';
+    const hh = String(dt.getHours()).padStart(2, '0');
+    const mm = String(dt.getMinutes()).padStart(2, '0');
+    const dd = String(dt.getDate()).padStart(2, '0');
+    const mo = String(dt.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(dt.getFullYear());
+    return `${hh}:${mm} ${dd}/${mo}/${yyyy}`;
+  };
+  const shippedLocationDisplay = (() => {
+    const v = (item.shippedLocation ?? '').trim();
+    return v || '—';
+  })();
+  const isPublicAreaItem =
+    item.publicArea != null ||
+    (typeof item.location === 'string' && !item.location.toLowerCase().startsWith('room'));
+  const roomBadgeText =
+    item.roomNumber != null
+      ? String(item.roomNumber)
+      : (() => {
+          const m = (item.location || '').match(/room\s*(\d+)/i);
+          return m?.[1] ?? null;
+        })();
   const statusConfig =
     item.status === 'shipped' || item.status === 'returned'
       ? LOST_AND_FOUND_STATUS.shipped
@@ -32,8 +62,73 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
         ? LOST_AND_FOUND_STATUS.discarded
         : LOST_AND_FOUND_STATUS.stored;
 
-  // Always show "Registered by" and the person who registered the item
-  const registeredByLabel = 'Registered by';
+  // Always show "Stored by" and the person who stored the item
+  const registeredByLabel = 'Stored by';
+
+  const statusButtonRef = useRef<View>(null);
+  const handleStatusPressIn = (e: any) => {
+    if (!onStatusPress) return;
+    const ne = e?.nativeEvent;
+    const pageX = typeof ne?.pageX === 'number' ? ne.pageX : undefined;
+    const pageY = typeof ne?.pageY === 'number' ? ne.pageY : undefined;
+    if (pageX == null || pageY == null) return;
+    // Use an estimated button rect as an immediate anchor so the popover opens below
+    // even before `measureInWindow()` resolves.
+    const approxButtonH = LOST_AND_FOUND_STATUS.button.height * scaleX;
+    onStatusPress({
+      x: pageX,
+      y: pageY - approxButtonH / 2,
+      width: 0,
+      height: approxButtonH,
+    });
+  };
+  const handleStatusPress = () => {
+    if (!onStatusPress) return;
+    // Always open the status popover; on iOS, `measureInWindow` may be unavailable
+    // or fail to invoke its callback for certain refs, which would otherwise prevent
+    // the modal from opening entirely.
+    onStatusPress(undefined);
+
+    const measure = (statusButtonRef.current as any)?.measureInWindow as
+      | ((cb: (x: number, y: number, width: number, height: number) => void) => void)
+      | undefined;
+    if (typeof measure !== 'function') return;
+
+    try {
+      measure((x, y, width, height) => {
+        // Update anchor position if measurement succeeds.
+        onStatusPress({ x, y, width, height });
+      });
+    } catch {
+      // Swallow iOS measurement crashes (e.g. __internalInstanceHandle undefined).
+      // The popover is already open; it will just use the fallback positioning.
+    }
+  };
+
+  useEffect(() => {
+    setIsImageLoading(false);
+    imagePulse.setValue(0.35);
+  }, [item.image, imagePulse]);
+
+  useEffect(() => {
+    if (!isImageLoading) return;
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(imagePulse, {
+          toValue: 0.8,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(imagePulse, {
+          toValue: 0.35,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [isImageLoading, imagePulse]);
 
   const handleCopyId = async () => {
     try {
@@ -78,19 +173,11 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
       <Text style={styles.foundInLabel}>Found in</Text>
       <View style={styles.foundInCard}>
         <View style={styles.foundInCardContent}>
-          {/* Left: primary location text (Room / Public Area) */}
-          <View style={styles.foundInLocationSection}>
-            <Text style={styles.foundInLocationText} numberOfLines={1}>
-              {item.location}
-            </Text>
-          </View>
-
-          {/* Right: guest info / room badge (for room-based items) */}
-          {item.guestName || item.roomNumber || item.guestImage ? (
+          {/* Room: guest block starts from left (Figma 3107:70). */}
+          {!isPublicAreaItem && (item.guestName || item.guestDates || item.guestImage) ? (
             <>
-              <View style={styles.foundInDivider} />
               <View style={styles.foundInGuestSection}>
-                {/* Small guest image thumbnail on the right, as in Figma */}
+                {/* Guest thumbnail */}
                 {item.guestImage && (
                   <View style={styles.foundInImageThumbContainer}>
                     <Image source={item.guestImage} style={styles.foundInImageThumb} resizeMode="cover" />
@@ -98,49 +185,93 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
                 )}
 
                 <View style={styles.foundInGuestTextContainer}>
-                  {item.guestName && (
-                    <Text style={styles.foundInGuestName} numberOfLines={1} ellipsizeMode="tail">
-                      {item.guestName}
-                    </Text>
-                  )}
-                  {item.roomNumber != null && (
-                    <View style={styles.roomBadge}>
-                      <Text style={styles.roomBadgeText}>{item.roomNumber}</Text>
-                    </View>
-                  )}
+                  <View style={styles.foundInGuestNameRow}>
+                    {item.guestName && (
+                      <Text style={styles.foundInGuestName} numberOfLines={1} ellipsizeMode="tail">
+                        {item.guestName}
+                      </Text>
+                    )}
+                    {roomBadgeText ? (
+                      <View style={styles.roomBadge}>
+                        <Text style={styles.roomBadgeText} numberOfLines={1}>
+                          {roomBadgeText}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
                   {!!item.guestDates && (
                     <Text style={styles.foundInGuestDates} numberOfLines={1} ellipsizeMode="tail">
                       {item.guestDates}
-                      {typeof item.guestCount === 'number' ? `  ${item.guestCount}/2` : ''}
                     </Text>
                   )}
                 </View>
               </View>
+
             </>
+          ) : isPublicAreaItem ? (
+            <View style={styles.publicAreaFoundInSection}>
+              <View style={styles.publicAreaFoundInIconTile} aria-hidden>
+                <Image
+                  source={require('../../../assets/icons/public-areea-icon.png')}
+                  style={styles.publicAreaFoundInIcon}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={styles.publicAreaFoundInTextContainer}>
+                <View style={styles.publicAreaFoundInTitleRow}>
+                  <Text style={styles.publicAreaFoundInTitle} numberOfLines={1} ellipsizeMode="tail">
+                    {item.publicArea ?? item.location ?? 'Public Area'}
+                  </Text>
+                  <View style={styles.publicAreaBadge}>
+                    <Text style={styles.publicAreaBadgeText} numberOfLines={1}>
+                      public area
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.publicAreaFoundInSubTitle} numberOfLines={1} ellipsizeMode="tail">
+                  {formatPublicAreaTimestamp(item.storedAt ?? item.createdAt) ||
+                    item.guestDates ||
+                    ''}
+                </Text>
+              </View>
+            </View>
           ) : null}
         </View>
       </View>
 
       {/* Stored Location Section */}
-      <View style={styles.storedLocationIconContainer}>
-        <Image
-          source={require('../../../assets/icons/location-pin-icon.png')}
-          style={styles.locationPinIcon}
-          resizeMode="contain"
-        />
+      <View style={styles.storedLocationContainer}>
+        <View style={styles.storedLocationTextContainer}>
+          <Text style={styles.storedLocationLabel}>
+            {item.status === 'shipped' ? 'Shipped Location' : 'Stored Location'}
+          </Text>
+          <Text style={styles.storedLocationName} numberOfLines={1}>
+            {item.status === 'shipped'
+              ? shippedLocationDisplay
+              : item.storedLocation}
+          </Text>
+        </View>
       </View>
-      <Text style={styles.storedLocationLabel}>Stored Location</Text>
-      <Text style={styles.storedLocationName} numberOfLines={1}>
-        {item.storedLocation}
-      </Text>
 
       {/* Item Image */}
       {item.image && (
-        <Image
-          source={item.image}
-          style={styles.itemImage}
-          resizeMode="cover"
-        />
+        <View style={styles.itemImageContainer}>
+          {isImageLoading && (
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.imageLoadingPlaceholder, { opacity: imagePulse }]}
+            />
+          )}
+          <Image
+            source={item.image}
+            style={[styles.itemImage, isImageLoading && styles.itemImageHidden]}
+            resizeMode="cover"
+            onLoadStart={() => setIsImageLoading(true)}
+            onLoad={() => setIsImageLoading(false)}
+            onLoadEnd={() => setIsImageLoading(false)}
+            onError={() => setIsImageLoading(false)}
+          />
+        </View>
       )}
 
       {/* Horizontal Divider */}
@@ -175,71 +306,60 @@ export default function LostAndFoundItemCard({ item, onPress, onStatusPress }: L
       </Text>
 
       {/* Status Button */}
-      <TouchableOpacity
+      <View
+        ref={statusButtonRef}
+        collapsable={false}
         style={[
           styles.statusButton,
           {
             backgroundColor: statusConfig.backgroundColor,
-            width: statusConfig.width * scaleX,
-            left: statusConfig.left * scaleX,
+            right: (statusConfig as any).right != null ? (statusConfig as any).right * scaleX : undefined,
+            minWidth: statusConfig.width * scaleX,
             top: statusConfig.top * scaleX,
           },
         ]}
-        onPress={onStatusPress}
-        activeOpacity={0.7}
       >
-        {/* Status Icon */}
-        {(item.status === 'shipped' || item.status === 'returned') ? (
-          <Image
-            source={require('../../../assets/icons/tick.png')}
-            style={[
-              styles.statusIcon,
-              {
-                position: 'absolute',
-                left: (statusConfig.iconLeft - statusConfig.left) * scaleX,
-                top: (statusConfig.iconTop - statusConfig.top) * scaleX,
-                width: statusConfig.iconWidth * scaleX,
-                height: statusConfig.iconHeight * scaleX,
-                tintColor: '#ffffff',
-              },
-            ]}
-            resizeMode="contain"
-          />
-        ) : (
-          <Image
-            source={require('../../../assets/icons/down-arrow.png')}
-            style={[
-              styles.statusIcon,
-              {
-                position: 'absolute',
-                left: (statusConfig.iconLeft - statusConfig.left) * scaleX,
-                top: (statusConfig.iconTop - statusConfig.top) * scaleX,
-                width: statusConfig.iconWidth * scaleX,
-                height: statusConfig.iconHeight * scaleX,
-                tintColor: '#ffffff',
-              },
-            ]}
-            resizeMode="contain"
-          />
-        )}
-        <Text
-          style={[
-            styles.statusText,
-            {
-              color: statusConfig.textColor,
-              position: 'absolute',
-              left: (statusConfig.textLeft - statusConfig.left) * scaleX,
-              top: (statusConfig.textTop - statusConfig.top) * scaleX,
-            },
-          ]}
-        >
-          {item.status === 'shipped' || item.status === 'returned'
-            ? 'Returned'
-            : item.status === 'discarded'
-              ? 'Discarded'
-              : 'Stored'}
-        </Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          onPressIn={handleStatusPressIn}
+          onPress={handleStatusPress}
+          activeOpacity={0.7}
+          disabled={statusUpdating}
+          accessibilityRole="button"
+          accessibilityLabel="Change lost and found status"
+        />
+        <View style={styles.statusButtonContent} pointerEvents="none">
+          {statusUpdating ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <>
+              <Text style={[styles.statusText, { color: statusConfig.textColor }]} numberOfLines={1}>
+                {item.status === 'shipped' || item.status === 'returned'
+                  ? 'Shipped'
+                  : item.status === 'discarded'
+                    ? 'Discarded'
+                    : 'Stored'}
+              </Text>
+              <Image
+                source={
+                  item.status === 'shipped' || item.status === 'returned'
+                    ? require('../../../assets/icons/tick.png')
+                    : require('../../../assets/icons/down-arrow.png')
+                }
+                style={[
+                  styles.statusIcon,
+                  {
+                    width: statusConfig.iconWidth * scaleX,
+                    height: statusConfig.iconHeight * scaleX,
+                    tintColor: '#ffffff',
+                  },
+                ]}
+                resizeMode="contain"
+              />
+            </>
+          )}
+        </View>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -255,6 +375,7 @@ const styles = StyleSheet.create({
     marginHorizontal: LOST_AND_FOUND_CARD.marginHorizontal * scaleX,
     marginBottom: LOST_AND_FOUND_CARD.marginBottom * scaleX,
     position: 'relative',
+    overflow: 'hidden',
   },
   itemName: {
     position: 'absolute',
@@ -300,29 +421,31 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: LOST_AND_FOUND_CONTENT.location.left * scaleX,
     top: LOST_AND_FOUND_CONTENT.location.top * scaleX,
-    fontSize: LOST_AND_FOUND_CONTENT.location.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
+    width: 84 * scaleX,
+    height: 19 * scaleX,
+    fontSize: 13 * scaleX,
+    fontFamily: 'Inter',
     fontWeight: '300' as any,
-    color: LOST_AND_FOUND_CONTENT.location.color,
+    color: '#000000',
+    lineHeight: undefined,
+    includeFontPadding: false,
   },
   foundInCard: {
     position: 'absolute',
     left: LOST_AND_FOUND_CONTENT.guestName.left * scaleX,
     top: LOST_AND_FOUND_CONTENT.guestName.top * scaleX,
-    maxWidth: (LOST_AND_FOUND_IMAGE.left - LOST_AND_FOUND_CONTENT.guestName.left - 4) * scaleX,
-    maxHeight: (LOST_AND_FOUND_STORED_LOCATION.icon.top - LOST_AND_FOUND_CONTENT.guestName.top - 2) * scaleX,
+    width: (LOST_AND_FOUND_IMAGE.left - LOST_AND_FOUND_CONTENT.guestName.left - 10) * scaleX,
     borderRadius: 6 * scaleX,
-    backgroundColor: 'rgba(100,131,176,0.07)',
+    backgroundColor: 'transparent',
     paddingHorizontal: 12 * scaleX,
     paddingVertical: 8 * scaleX,
     overflow: 'hidden',
   },
   foundInCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  foundInLocationSection: {
-    minWidth: 90 * scaleX,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    minHeight: 42 * scaleX,
   },
   foundInLocationText: {
     fontSize: 14 * scaleX,
@@ -330,24 +453,24 @@ const styles = StyleSheet.create({
     fontWeight: '300' as any,
     color: LOST_AND_FOUND_COLORS.tabActive,
   },
-  foundInDivider: {
-    width: 1,
-    height: 36 * scaleX,
-    backgroundColor: '#e5e7eb',
-    marginHorizontal: 12 * scaleX,
-  },
   foundInGuestSection: {
-    flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
     minWidth: 0,
+    paddingRight: 0,
+    minHeight: 30 * scaleX,
+    marginLeft: 0,
   },
   foundInImageThumbContainer: {
-    width: 34 * scaleX,
-    height: 34 * scaleX,
+    // Figma: ~34.6px square thumbnail
+    width: 34.6 * scaleX,
+    height: 34.6 * scaleX,
     borderRadius: 5 * scaleX,
     overflow: 'hidden',
-    marginRight: 10 * scaleX,
+    // Figma gap between thumb and name ~11px
+    marginRight: 11 * scaleX,
+    backgroundColor: '#e5e7eb',
   },
   foundInImageThumb: {
     width: '100%',
@@ -358,81 +481,166 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'flex-start',
     minWidth: 0,
+    justifyContent: 'flex-start',
+    paddingLeft: 0,
+  },
+  foundInGuestNameRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    minWidth: 0,
   },
   foundInGuestName: {
-    fontSize: LOST_AND_FOUND_CONTENT.guestName.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: LOST_AND_FOUND_CONTENT.guestName.fontWeight as any,
-    color: LOST_AND_FOUND_CONTENT.guestName.color,
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    color: '#000000',
     marginRight: 6 * scaleX,
     marginBottom: 0,
     flexShrink: 1,
     minWidth: 0,
+    lineHeight: 14 * scaleX,
+    includeFontPadding: false,
   },
   foundInGuestDates: {
-    fontSize: 12 * scaleX,
-    fontFamily: typography.fontFamily.primary,
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
     fontWeight: '300' as any,
-    color: LOST_AND_FOUND_CONTENT.guestName.color,
+    color: '#000000',
+    marginTop: 6 * scaleX,
     flexShrink: 1,
     minWidth: 0,
   },
   roomBadge: {
-    width: LOST_AND_FOUND_CONTENT.roomBadge.width * scaleX,
-    height: LOST_AND_FOUND_CONTENT.roomBadge.height * scaleX,
-    borderRadius: LOST_AND_FOUND_CONTENT.roomBadge.borderRadius * scaleX,
-    backgroundColor: LOST_AND_FOUND_CONTENT.roomBadge.backgroundColor,
+    backgroundColor: 'rgba(59,193,246,0.25)',
+    borderRadius: 7 * scaleX,
+    minHeight: 18 * scaleX,
+    paddingHorizontal: 10 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
   },
   roomBadgeText: {
-    fontSize: LOST_AND_FOUND_CONTENT.roomBadgeText.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: LOST_AND_FOUND_CONTENT.roomBadgeText.fontWeight as any,
-    color: LOST_AND_FOUND_CONTENT.roomBadgeText.color,
+    fontSize: 9 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '300' as any,
+    color: '#000000',
+    includeFontPadding: false,
+    lineHeight: 10 * scaleX,
   },
-  storedLocationIconContainer: {
-    position: 'absolute',
-    left: LOST_AND_FOUND_STORED_LOCATION.icon.left * scaleX,
-    top: LOST_AND_FOUND_STORED_LOCATION.icon.top * scaleX,
-    width: LOST_AND_FOUND_STORED_LOCATION.icon.size * scaleX,
-    height: LOST_AND_FOUND_STORED_LOCATION.icon.size * scaleX,
-    borderRadius: (LOST_AND_FOUND_STORED_LOCATION.icon.size / 2) * scaleX,
-    backgroundColor: LOST_AND_FOUND_STORED_LOCATION.icon.backgroundColor,
+  // Match foundInGuestSection: same thumb size + gap so text aligns with room “Found in” rows
+  publicAreaFoundInSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    minWidth: 0,
+    minHeight: 30 * scaleX,
+  },
+  publicAreaFoundInIconTile: {
+    width: 34.6 * scaleX,
+    height: 34.6 * scaleX,
+    borderRadius: 5 * scaleX,
+    backgroundColor: '#F0F5FB',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 11 * scaleX,
   },
-  locationPinIcon: {
-    width: LOST_AND_FOUND_STORED_LOCATION.pinIcon.width * scaleX,
-    height: LOST_AND_FOUND_STORED_LOCATION.pinIcon.height * scaleX,
-    tintColor: '#ffffff',
+  publicAreaFoundInIcon: {
+    width: 20 * scaleX,
+    height: 20 * scaleX,
+    tintColor: '#5A759D',
+  },
+  publicAreaFoundInTextContainer: {
+    flex: 1,
+    minWidth: 0,
+    paddingLeft: 0,
+  },
+  publicAreaFoundInTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  publicAreaFoundInTitle: {
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    color: '#000000',
+    flexShrink: 1,
+    minWidth: 0,
+    includeFontPadding: false,
+  },
+  publicAreaBadge: {
+    marginLeft: 10 * scaleX,
+    backgroundColor: 'rgba(59,193,246,0.25)',
+    borderRadius: 7 * scaleX,
+    height: 18 * scaleX,
+    paddingHorizontal: 10 * scaleX,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  publicAreaBadgeText: {
+    fontSize: 9 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '300' as any,
+    color: '#000000',
+    includeFontPadding: false,
+    lineHeight: 10 * scaleX,
+  },
+  publicAreaFoundInSubTitle: {
+    marginTop: 6 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '300' as any,
+    color: '#000000',
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  // Align with Found In card inner content: guestName.left + foundInCard paddingHorizontal
+  storedLocationContainer: {
+    position: 'absolute',
+    left: (LOST_AND_FOUND_CONTENT.guestName.left + 12) * scaleX,
+    // Keep a safe lane below "Found in" content to prevent overlap.
+    top: (LOST_AND_FOUND_STORED_LOCATION.icon.top + 19) * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth:
+      (LOST_AND_FOUND_IMAGE.left + 8 - LOST_AND_FOUND_CONTENT.guestName.left - 12 - 12) * scaleX,
+  },
+  storedLocationTextContainer: {
+    flex: 1,
+    minWidth: 0,
   },
   storedLocationLabel: {
-    position: 'absolute',
-    left: LOST_AND_FOUND_STORED_LOCATION.label.left * scaleX,
-    top: LOST_AND_FOUND_STORED_LOCATION.label.top * scaleX,
     fontSize: LOST_AND_FOUND_TYPOGRAPHY.storedLocationLabel.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '300' as any,
     color: LOST_AND_FOUND_TYPOGRAPHY.storedLocationLabel.color,
   },
   storedLocationName: {
-    position: 'absolute',
-    left: LOST_AND_FOUND_STORED_LOCATION.name.left * scaleX,
-    top: LOST_AND_FOUND_STORED_LOCATION.name.top * scaleX,
     fontSize: LOST_AND_FOUND_TYPOGRAPHY.storedLocationName.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: LOST_AND_FOUND_TYPOGRAPHY.storedLocationName.fontWeight as any,
     color: LOST_AND_FOUND_TYPOGRAPHY.storedLocationName.color,
-    maxWidth: 220 * scaleX,
   },
-  itemImage: {
+  itemImageContainer: {
     position: 'absolute',
     left: (LOST_AND_FOUND_IMAGE.left + 8) * scaleX,
     top: LOST_AND_FOUND_IMAGE.top * scaleX,
     width: (LOST_AND_FOUND_IMAGE.width - 8) * scaleX,
     height: LOST_AND_FOUND_IMAGE.height * scaleX,
     borderRadius: LOST_AND_FOUND_IMAGE.borderRadius * scaleX,
+    overflow: 'hidden',
+    backgroundColor: '#e5e7eb',
+  },
+  imageLoadingPlaceholder: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#cbd5e1',
+  },
+  itemImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: LOST_AND_FOUND_IMAGE.borderRadius * scaleX,
+  },
+  itemImageHidden: {
+    opacity: 0,
   },
   divider: {
     position: 'absolute',
@@ -499,9 +707,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     height: LOST_AND_FOUND_STATUS.button.height * scaleX,
     borderRadius: LOST_AND_FOUND_STATUS.button.borderRadius * scaleX,
+    justifyContent: 'center',
+  },
+  statusButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14 * scaleX,
   },
   statusIcon: {
     // Icon styles are set inline
+    marginLeft: 8 * scaleX,
   },
   statusText: {
     fontSize: LOST_AND_FOUND_STATUS.text.fontSize * scaleX,

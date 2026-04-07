@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { View, ScrollView, StyleSheet, Dimensions, RefreshControl, useWindowDimensions, Text, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, useWindowDimensions, Text, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -12,14 +12,20 @@ import { dashboardService } from '../services/dashboard';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import { mockHomeData } from '../data/mockHomeData';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
-import { useChatStore } from '../store/useChatStore';
 import { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import AllRoomsHeader from '../components/allRooms/AllRoomsHeader';
 import RoomCard from '../components/allRooms/RoomCard';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import StatusChangeModal from '../components/allRooms/StatusChangeModal';
 import InspectedStatusSlideModal from '../components/allRooms/InspectedStatusSlideModal';
-import type { RootStackParamList } from '../navigation/types';
+import CleanChecklistModal from '../components/allRooms/CleanChecklistModal';
+import type { RootStackParamList, MainTabsParamList } from '../navigation/types';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  invalidateNotificationBadges,
+  markAllRoomAssignmentNotificationsRead,
+} from '../services/inAppNotifications';
+import { getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt } from '../services/rooms';
 import { BlurView } from 'expo-blur';
 import { FilterState, FilterCounts } from '../types/filter.types';
 import type { CategoryName } from '../types/home.types';
@@ -30,46 +36,38 @@ import { getShiftFromTime } from '../utils/shiftUtils';
 import { getStayoverWithLinen } from '../utils/stayoverLinen';
 import { getFloorFromRoomNumber } from '../utils/formatting';
 
+/** PM All Rooms list: Turndown + reservation Occupied (aligned with reservations cron / DB). */
+function isPmTurndownOccupiedRoom(room: RoomCardData): boolean {
+  const res = (room.reservationStatus || '').toLowerCase();
+  return room.frontOfficeStatus === 'Turndown' && res === 'occupied';
+}
+
 /** When user taps a status badge or priority badge on Home. */
 export type CategoryFilterParam = {
   category: CategoryName;
   roomState: 'dirty' | 'inProgress' | 'cleaned' | 'inspected' | 'priority';
 };
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
-// Modal dimensions for positioning calculations
-const MODAL_HEIGHT_ESTIMATE = 200 * scaleX; // Approximate modal height
-const MODAL_SPACING = 20 * scaleX; // Spacing between button and modal (increased for better visibility)
-const BOTTOM_NAV_HEIGHT = 152 * scaleX; // Bottom navigation height
-const HEADER_HEIGHT = 217 * scaleX; // Header height
-
-type MainTabsParamList = {
-  Home: undefined;
-  Rooms: undefined;
-  Chat: undefined;
-  Tickets: undefined;
-  LostAndFound: undefined;
-  Staff: undefined;
-  Settings: undefined;
-};
-
-type AllRoomsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, 'Rooms'> & 
+type AllRoomsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, 'Rooms'> &
   NativeStackNavigationProp<RootStackParamList>;
 
 export default function AllRoomsScreen() {
   const navigation = useNavigation<AllRoomsScreenNavigationProp>();
+  const { session } = useAuth();
   const { open: openAIChatOverlay } = useAIChatOverlay();
   const route = useRoute();
   const routeShift = (route.params as any)?.selectedShift as ShiftType | undefined;
   const initialShift = routeShift || getShiftFromTime();
+  // PM should behave like AM during AM hours.
+  const effectiveInitialShift: ShiftType =
+    initialShift === 'PM' && getShiftFromTime() === 'AM' ? 'AM' : initialShift;
   const { data: allRoomsData, loading, refreshing, fetchRooms, updateRoom, setSelectedShift, setRoomAttendant } = useRoomsStore();
 
   React.useEffect(() => {
-    fetchRooms(initialShift);
-  }, [initialShift]);
+    fetchRooms(effectiveInitialShift);
+  }, [effectiveInitialShift]);
 
   const loadRoomsData = React.useCallback((shift: ShiftType) => { fetchRooms(shift); }, [fetchRooms]);
 
@@ -79,6 +77,9 @@ export default function AllRoomsScreen() {
   const [showInspectedModal, setShowInspectedModal] = useState(false);
   const [roomForInspection, setRoomForInspection] = useState<RoomCardData | null>(null);
   const [buttonPositionForInspection, setButtonPositionForInspection] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [showCleanChecklistModal, setShowCleanChecklistModal] = useState(false);
+  const [roomForCleaning, setRoomForCleaning] = useState<RoomCardData | null>(null);
+  const [buttonPositionForCleaning, setButtonPositionForCleaning] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [selectedRoomForStatusChange, setSelectedRoomForStatusChange] = useState<RoomCardData | null>(null);
   const [roomToAssign, setRoomToAssign] = useState<RoomCardData | null>(null);
@@ -93,12 +94,56 @@ export default function AllRoomsScreen() {
   const cardRefs = useRef<{ [key: string]: any }>({});
   const statusButtonRefs = useRef<{ [key: string]: any }>({});
   const scrollViewRef = useRef<ScrollView>(null);
-  const { height: SCREEN_HEIGHT } = useWindowDimensions();
-  
+  const { width: windowWidth, height: SCREEN_HEIGHT } = useWindowDimensions();
+  const scaleX = windowWidth / DESIGN_WIDTH;
+  const BOTTOM_NAV_HEIGHT = 152 * scaleX;
+  const styles = useMemo(() => buildAllRoomsStyles(scaleX), [scaleX]);
+
   // Check if we came from a stack navigation (show back button) or tab navigation (don't show)
   const showBackButton = (route.params as any)?.showBackButton ?? false;
   const routeFilters = (route.params as any)?.filters as FilterState | undefined;
   const routeCategoryFilter = (route.params as any)?.categoryFilter as CategoryFilterParam | undefined;
+  const prioritizeMyAssignedRooms =
+    (route.params as { prioritizeMyAssignedRooms?: boolean } | undefined)?.prioritizeMyAssignedRooms === true;
+  /** Filter/sort list while param is true (decoupled from badge count so list stays after notifications are marked read). */
+  const shouldPrioritizeAssignedOnly = prioritizeMyAssignedRooms;
+
+  const [assignedRoomIdsOrdered, setAssignedRoomIdsOrdered] = useState<string[]>([]);
+  const [assignedRoomOrderLoading, setAssignedRoomOrderLoading] = useState(false);
+  const markedRoomAssignmentNotificationsReadRef = useRef(false);
+
+  React.useEffect(() => {
+    if (!shouldPrioritizeAssignedOnly || !session?.user?.id) {
+      setAssignedRoomIdsOrdered([]);
+      setAssignedRoomOrderLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setAssignedRoomOrderLoading(true);
+    void getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt(session.user.id).then((ids) => {
+      if (!cancelled) {
+        setAssignedRoomIdsOrdered(ids);
+        setAssignedRoomOrderLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldPrioritizeAssignedOnly, session?.user?.id]);
+
+  // Opening Rooms from the assignment badge: mark inbox rows read once so the tab badge clears (like Tickets).
+  useFocusEffect(
+    React.useCallback(() => {
+      if (route.name !== 'Rooms') return;
+      if (!prioritizeMyAssignedRooms) {
+        markedRoomAssignmentNotificationsReadRef.current = false;
+        return;
+      }
+      if (markedRoomAssignmentNotificationsReadRef.current) return;
+      markedRoomAssignmentNotificationsReadRef.current = true;
+      void markAllRoomAssignmentNotificationsRead().then(() => invalidateNotificationBadges());
+    }, [route.name, prioritizeMyAssignedRooms])
+  );
 
   // Initialize local filters: merge route filters with categoryFilter.roomState when coming from Home badge tap
   const [localFilters, setLocalFilters] = useState<FilterState | undefined>(() => {
@@ -131,6 +176,10 @@ export default function AllRoomsScreen() {
   );
 
   const displayData = allRoomsData ?? { ...mockAllRoomsData, selectedShift: initialShift };
+  const effectiveShift: ShiftType =
+    displayData.selectedShift === 'PM' && getShiftFromTime() === 'AM'
+      ? 'AM'
+      : (displayData.selectedShift ?? 'AM');
 
   // Sync local filters with route params when navigating (e.g. from Home with categoryFilter)
   React.useEffect(() => {
@@ -208,8 +257,11 @@ export default function AllRoomsScreen() {
   // Calculate filter counts from current shift's room list (AM: rooms, PM: roomsPM)
   const filterCounts: FilterCounts = useMemo(() => {
     const roomsPM = displayData.roomsPM ?? [];
-    const usePMRooms = displayData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    const sourceRooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
+    const usePMRooms = effectiveShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    let sourceRooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
+    if (effectiveShift === 'PM') {
+      sourceRooms = sourceRooms.filter(isPmTurndownOccupiedRoom);
+    }
 
     const roomStates = {
       dirty: 0,
@@ -294,7 +346,7 @@ export default function AllRoomsScreen() {
     };
 
     return { roomStates, guests, reservations, floors, totalRooms };
-  }, [displayData.rooms, displayData.roomsPM, displayData.selectedShift]);
+  }, [displayData.rooms, displayData.roomsPM, effectiveShift]);
 
   const handleApplyFilters = (appliedFilters: FilterState) => {
     setLocalFilters(appliedFilters);
@@ -549,14 +601,7 @@ export default function AllRoomsScreen() {
     }, [route.name])
   );
 
-  // Calculate total unread chat messages for badge
-  const { chats } = useChatStore();
-  const chatBadgeCount = React.useMemo(
-    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
-    [chats]
-  );
-
-  const handleTabPress = (tab: string) => {
+  const handleTabPress = (tab: string, options?: { fromRoomsAssignmentBadge?: boolean }) => {
     if (tab === 'AIHome') {
       openAIChatOverlay();
       return;
@@ -567,7 +612,9 @@ export default function AllRoomsScreen() {
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
-      navigation.navigate('Rooms' as any);
+      navigation.navigate('Rooms' as any, {
+        prioritizeMyAssignedRooms: !!options?.fromRoomsAssignmentBadge,
+      });
     } else if (tab === 'Chat') {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
@@ -582,12 +629,14 @@ export default function AllRoomsScreen() {
   };
 
   const onRefresh = React.useCallback(() => {
-    fetchRooms(allRoomsData?.selectedShift ?? getShiftFromTime());
+    const desired = allRoomsData?.selectedShift ?? getShiftFromTime();
+    const effective: ShiftType = desired === 'PM' && getShiftFromTime() === 'AM' ? 'AM' : desired;
+    fetchRooms(effective);
   }, [fetchRooms, allRoomsData?.selectedShift]);
 
   const filteredRooms = useMemo(() => {
     const roomsPM = displayData.roomsPM ?? [];
-    const usePMRooms = displayData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const usePMRooms = effectiveShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     let rooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
 
     // When user tapped a status badge or priority badge on Home
@@ -656,7 +705,7 @@ export default function AllRoomsScreen() {
             }
           }
 
-          // Check guest filters (AM: Arrival/Departure/Stayover/Turndown; PM: Turndown/No Task + reservation Vacant)
+          // Check guest filters (AM: Arrival/Departure/Stayover; PM list is Turndown+Occupied before this)
           if (hasGuestFilter) {
             const matchesGuest =
               (activeFilters.guests.arrivals && (room.frontOfficeStatus === 'Arrival' || room.frontOfficeStatus === 'Arrival/Departure')) ||
@@ -700,20 +749,40 @@ export default function AllRoomsScreen() {
       );
     }
 
-    if (displayData.selectedShift === 'PM' && !usePMRooms) {
-      rooms = rooms.filter(
-        (room) =>
-          room.frontOfficeStatus === 'Turndown' ||
-          room.frontOfficeStatus === 'No Task' ||
-          room.reservationStatus === 'Vacant'
-      );
+    if (effectiveShift === 'PM') {
+      rooms = rooms.filter(isPmTurndownOccupiedRoom);
     }
-    if (displayData.selectedShift === 'AM') {
+    if (effectiveShift === 'AM') {
       rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');
     }
 
+    // Tab badge: show only rooms assigned to this user, newest assignment first (room_assignments.created_at).
+    if (shouldPrioritizeAssignedOnly && !assignedRoomOrderLoading) {
+      if (assignedRoomIdsOrdered.length === 0) {
+        rooms = [];
+      } else {
+        const orderIndex = new Map(assignedRoomIdsOrdered.map((id, i) => [id, i]));
+        rooms = rooms.filter((r) => orderIndex.has(r.id));
+        rooms.sort((a, b) => (orderIndex.get(a.id)! - orderIndex.get(b.id)!));
+      }
+    }
+
     return rooms;
-  }, [displayData.rooms, displayData.roomsPM, displayData.selectedShift, activeFilters, searchQuery, routeCategoryFilter]);
+  }, [
+    displayData.rooms,
+    displayData.roomsPM,
+    effectiveShift,
+    activeFilters,
+    searchQuery,
+    routeCategoryFilter,
+    shouldPrioritizeAssignedOnly,
+    assignedRoomOrderLoading,
+    assignedRoomIdsOrdered,
+  ]);
+
+  const showNoMatchingRoomsEmptyState =
+    filteredRooms.length === 0 &&
+    (hasActiveFilters || (shouldPrioritizeAssignedOnly && !assignedRoomOrderLoading));
 
   return (
     <View style={[
@@ -721,6 +790,9 @@ export default function AllRoomsScreen() {
       displayData?.selectedShift === 'PM' && styles.containerPM
     ]}>
       {loading && !allRoomsData && <LoadingOverlay fullScreen message="Loading rooms…" />}
+      {shouldPrioritizeAssignedOnly && assignedRoomOrderLoading && allRoomsData && (
+        <LoadingOverlay fullScreen message="Loading your assigned rooms…" />
+      )}
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -745,7 +817,7 @@ export default function AllRoomsScreen() {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
           >
-          {hasActiveFilters && filteredRooms.length === 0 ? (
+          {showNoMatchingRoomsEmptyState ? (
             // Empty state card when filters don't match any rooms
             <View style={[
               styles.emptyStateCard,
@@ -768,7 +840,9 @@ export default function AllRoomsScreen() {
               <Text style={[
                 styles.emptyStateMessage,
               ]}>
-                The chosen filter options do not match any rooms.{'\n'}Try adjusting your filters or search query.
+                {shouldPrioritizeAssignedOnly
+                  ? 'No assigned rooms match this shift or filters.\nTry another shift or clear filters.'
+                  : `The chosen filter options do not match any rooms.${'\n'}Try adjusting your filters or search query.`}
               </Text>
             </View>
           ) : (
@@ -825,11 +899,7 @@ export default function AllRoomsScreen() {
       </KeyboardAvoidingView>
 
       {/* Bottom Navigation - Outside KeyboardAvoidingView to prevent movement */}
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        chatBadgeCount={chatBadgeCount}
-      />
+      <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
 
       {/* Status Change Modal */}
       <StatusChangeModal
@@ -856,6 +926,13 @@ export default function AllRoomsScreen() {
             setRoomForInspection(selectedRoomForStatusChange);
             setButtonPositionForInspection(statusButtonPosition);
             setShowInspectedModal(true);
+          }
+        }}
+        onCleanedSelect={() => {
+          if (selectedRoomForStatusChange) {
+            setRoomForCleaning(selectedRoomForStatusChange);
+            setButtonPositionForCleaning(statusButtonPosition);
+            setShowCleanChecklistModal(true);
           }
         }}
         currentStatus={selectedRoomForStatusChange?.houseKeepingStatus || 'InProgress'}
@@ -895,6 +972,29 @@ export default function AllRoomsScreen() {
         showTriangle={true}
       />
 
+      {/* Clean Checklist Modal - shown when changing to Cleaned */}
+      <CleanChecklistModal
+        visible={showCleanChecklistModal}
+        onClose={() => {
+          setShowCleanChecklistModal(false);
+          setRoomForCleaning(null);
+          setButtonPositionForCleaning(null);
+          if (originalScrollY > 0 && scrollViewRef.current) {
+            setTimeout(() => {
+              scrollViewRef.current?.scrollTo({
+                y: originalScrollY,
+                animated: true,
+              });
+              setOriginalScrollY(0);
+            }, 100);
+          }
+        }}
+        onComplete={() => handleStatusSelect('Cleaned', roomForCleaning)}
+        buttonPosition={buttonPositionForCleaning}
+        headerHeight={217}
+        showTriangle={true}
+      />
+
       {/* Assign Staff Modal - staff list when room has no assignee */}
       <ReassignModal
         visible={showAssignStaffModal}
@@ -924,7 +1024,8 @@ export default function AllRoomsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function buildAllRoomsStyles(scaleX: number) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
@@ -1038,4 +1139,5 @@ const styles = StyleSheet.create({
     color: colors.text.white,
   },
 });
+}
 

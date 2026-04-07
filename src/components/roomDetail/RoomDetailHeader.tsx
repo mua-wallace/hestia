@@ -45,7 +45,10 @@ export default function RoomDetailHeader({
   const statusConfig = STATUS_CONFIGS[status] ?? STATUS_CONFIGS.Dirty;
   const isReturnLater = customStatusText === 'Return Later';
   const isPromiseTime = customStatusText === 'Promise Time' || customStatusText === 'Promised Time';
-  const isRefuseService = customStatusText === 'Refuse Service' && refuseServiceReason != null;
+  /** Figma 2333-835: light blue header while choosing reason or after confirm */
+  const showRefuseServiceHeader =
+    customStatusText === 'Refuse Service' || refuseServiceReason != null;
+  const RS = ROOM_DETAIL_HEADER.refuseServiceLight;
   const hasReturnLaterTime = isReturnLater && (returnLaterAtTimestamp != null || returnLaterAt);
   const hasPromiseTimeTime = isPromiseTime && promiseTimeAtTimestamp != null;
 
@@ -60,38 +63,40 @@ export default function RoomDetailHeader({
       const now = Date.now();
       const diff = returnLaterAtTimestamp - now;
       if (diff <= 0) {
-        setReturnLaterRemaining('0h 0 min 0s');
+        setReturnLaterRemaining('0 mins');
         return;
       }
-      const totalMins = Math.floor(diff / 60000);
-      const secs = Math.floor((diff % 60000) / 1000);
-      if (totalMins >= 60) {
-        const hours = Math.floor(diff / 3600000);
-        const mins = Math.floor((diff % 3600000) / 60000);
-        setReturnLaterRemaining(`${hours}h ${mins} min ${secs}s`);
-      } else {
-        setReturnLaterRemaining(`${totalMins} mins ${secs}s`);
-      }
+      const totalMins = Math.max(0, Math.ceil(diff / 60000));
+      const next = totalMins >= 60
+        ? `${Math.floor(totalMins / 60)}h ${totalMins % 60} min`
+        : `${totalMins} mins`;
+      // Avoid pointless state churn (keeps the UI smooth on slower devices).
+      setReturnLaterRemaining((prev) => (prev === next ? prev : next));
     };
     tick();
-    const id = setInterval(tick, 1000);
+    // Update at most once per 10s; the label is minute-based.
+    const id = setInterval(tick, 10_000);
     return () => clearInterval(id);
   }, [hasReturnLaterTime, returnLaterAtTimestamp]);
 
   // Use custom status text if provided; when pausedAt is set show "Paused"
-  const displayStatusText = pausedAt ? 'Paused' : (customStatusText || statusConfig.label);
+  const displayStatusText = pausedAt
+    ? 'Paused'
+    : showRefuseServiceHeader
+      ? 'Refused Service'
+      : (customStatusText || statusConfig.label);
 
-  // Paused / Return Later / Promise Time / Refuse Service (with reason): light #FCF1CF
+  // Paused: cream • Return Later / Promise Time: cream • Refused Service: light blue #e4eefe (Figma 2333-835)
   const isPaused = !!(customStatusText === 'Pause' || pausedAt);
   const headerBackgroundColor = isPaused
-      ? ROOM_DETAIL_HEADER.paused.headerBackground
+    ? ROOM_DETAIL_HEADER.paused.headerBackground
+    : showRefuseServiceHeader
+      ? RS.headerBackground
       : isReturnLater
         ? ROOM_DETAIL_HEADER.returnLater.headerBackground
         : isPromiseTime
           ? ROOM_DETAIL_HEADER.returnLater.headerBackground
-          : isRefuseService
-            ? ROOM_DETAIL_HEADER.returnLater.headerBackground
-            : statusConfig.color;
+          : statusConfig.color;
 
   // Promise Time countdown (same format as Return Later: "2:30 PM · 30 mins 2s" or "1h 30 min 2s")
   const [promiseTimeRemaining, setPromiseTimeRemaining] = useState<string>('');
@@ -122,7 +127,6 @@ export default function RoomDetailHeader({
     return () => clearInterval(id);
   }, [hasPromiseTimeTime, promiseTimeAtTimestamp]);
 
-  const isLightHeader = isPaused || isReturnLater || isPromiseTime || isRefuseService;
   const returnTimeOnly = returnLaterAtTimestamp != null
     ? new Date(returnLaterAtTimestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
     : '';
@@ -135,7 +139,7 @@ export default function RoomDetailHeader({
     if (customStatusText === 'Pause' || pausedAt) {
       return require('../../../assets/icons/pause.png');
     }
-    if (customStatusText === 'Refuse Service') {
+    if (customStatusText === 'Refuse Service' || refuseServiceReason) {
       return require('../../../assets/icons/refuse-service.png');
     }
     if (customStatusText === 'Return Later') {
@@ -180,8 +184,10 @@ export default function RoomDetailHeader({
           style={styles.backArrow}
           tintColor={
             isPaused
-                ? ROOM_DETAIL_HEADER.paused.backArrowTint
-                : (isReturnLater || isPromiseTime || isRefuseService)
+              ? ROOM_DETAIL_HEADER.paused.backArrowTint
+              : showRefuseServiceHeader
+                ? RS.backArrowTint
+                : isReturnLater || isPromiseTime
                   ? ROOM_DETAIL_HEADER.returnLater.backArrowTint
                   : '#FFFFFF'
           }
@@ -195,7 +201,10 @@ export default function RoomDetailHeader({
           style={[
           styles.roomNumber,
           isPaused && { color: ROOM_DETAIL_HEADER.paused.roomNumberColor },
-            (isReturnLater || isPromiseTime || isRefuseService) && { color: ROOM_DETAIL_HEADER.returnLater.roomNumberColor },
+            showRefuseServiceHeader && { color: RS.roomNumberColor },
+            (isReturnLater || isPromiseTime) && !showRefuseServiceHeader && {
+              color: ROOM_DETAIL_HEADER.returnLater.roomNumberColor,
+            },
           ]}
         >
           Room {roomNumber}
@@ -217,7 +226,9 @@ export default function RoomDetailHeader({
         style={[
           styles.roomCode,
           isPaused && { color: ROOM_DETAIL_HEADER.paused.roomCodeColor },
-          (isReturnLater || isPromiseTime || isRefuseService) && { color: ROOM_DETAIL_HEADER.returnLater.roomCodeColor },
+          showRefuseServiceHeader && { color: RS.roomCodeColor },
+          (isReturnLater || isPromiseTime) &&
+            !showRefuseServiceHeader && { color: ROOM_DETAIL_HEADER.returnLater.roomCodeColor },
         ]}
       >
         {roomCode}
@@ -230,7 +241,9 @@ export default function RoomDetailHeader({
             style={[
               styles.frontOfficeLabel,
               isPaused && { color: ROOM_DETAIL_HEADER.paused.roomCodeColor },
-              (isReturnLater || isPromiseTime || isRefuseService) && { color: ROOM_DETAIL_HEADER.returnLater.roomCodeColor },
+              showRefuseServiceHeader && { color: RS.roomCodeColor },
+              (isReturnLater || isPromiseTime) &&
+                !showRefuseServiceHeader && { color: ROOM_DETAIL_HEADER.returnLater.roomCodeColor },
             ]}
           >
             {frontOfficeLabel}
@@ -261,18 +274,28 @@ export default function RoomDetailHeader({
               tintColor={
                 isPaused
                   ? ROOM_DETAIL_HEADER.paused.statusTextAndIconColor
-                  : (isReturnLater || isPromiseTime || isRefuseService)
-                    ? ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor
-                    : shouldTintIcon
-                      ? '#FFFFFF'
-                      : undefined
+                  : showRefuseServiceHeader
+                    ? RS.statusTextAndIconColor
+                    : isReturnLater || isPromiseTime
+                      ? ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor
+                      : shouldTintIcon
+                        ? '#FFFFFF'
+                        : undefined
               }
             />
             <Text
               style={[
                 styles.statusText,
                 isPaused && { color: ROOM_DETAIL_HEADER.paused.statusTextAndIconColor },
-                (isReturnLater || isPromiseTime || isRefuseService) && { color: ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor },
+                showRefuseServiceHeader && {
+                  color: RS.statusTextAndIconColor,
+                  fontWeight: '700' as const,
+                  fontSize: 18 * scaleX,
+                },
+                (isReturnLater || isPromiseTime) &&
+                  !showRefuseServiceHeader && {
+                    color: ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor,
+                  },
               ]}
             >
               {displayStatusText}
@@ -282,7 +305,11 @@ export default function RoomDetailHeader({
               style={[
                 styles.dropdownArrow,
                 isPaused && { tintColor: ROOM_DETAIL_HEADER.paused.statusTextAndIconColor },
-                (isReturnLater || isPromiseTime || isRefuseService) && { tintColor: ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor },
+                showRefuseServiceHeader && { tintColor: RS.statusTextAndIconColor },
+                (isReturnLater || isPromiseTime) &&
+                  !showRefuseServiceHeader && {
+                    tintColor: ROOM_DETAIL_HEADER.returnLater.statusTextAndIconColor,
+                  },
               ]}
               resizeMode="contain"
             />
@@ -319,12 +346,12 @@ export default function RoomDetailHeader({
         </Text>
       )}
 
-      {/* Refuse Service: selected reason or custom reason (like Return Later / Promise Time) */}
-      {isRefuseService && refuseServiceReason && (
-        <Text style={[styles.returnLaterAt, { color: ROOM_DETAIL_HEADER.returnLater.returnTimeColor }]}>
+      {/* Refused Service: reason line below status (Figma 2333-835) */}
+      {refuseServiceReason ? (
+        <Text style={[styles.returnLaterAt, { color: RS.subtitleColor }]}>
           {refuseServiceReason}
         </Text>
-      )}
+      ) : null}
     </View>
   );
 }

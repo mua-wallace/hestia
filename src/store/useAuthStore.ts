@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import type { Session } from '@supabase/supabase-js';
 import { authService } from '../services/auth';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { registerAndSyncPushToken } from '../services/notifications';
 
 interface AuthState {
   session: Session | null;
@@ -78,6 +79,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   init: () => {
     authService.getSession().then((session) => {
       set({ session, isLoading: false });
+      if (session) {
+        registerAndSyncPushToken().catch(() => {});
+      }
     }).catch(() => {
       set({ session: null, isLoading: false });
     });
@@ -86,6 +90,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const { data: { subscription } } = authService.onAuthStateChange((_event, session) => {
       set({ session });
+      if (session) {
+        registerAndSyncPushToken().catch(() => {});
+      }
     });
     return () => subscription.unsubscribe();
   },

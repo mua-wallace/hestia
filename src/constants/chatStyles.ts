@@ -101,13 +101,16 @@ export const CHAT_ITEM = {
     fontWeight: 'light' as const, // For messages with sender name prefix
   },
   badge: {
-    size: 32,
-    backgroundColor: '#f92424', // Red badge color (same as TabBarItem badge)
-    borderRadius: 16, // Circular
-    fontSize: 15,
+    /** Match BottomTabBar / TabBarItem chat tab badge */
+    minHeight: 22,
+    minWidth: 22,
+    paddingHorizontal: 6,
+    backgroundColor: '#FF46A3',
+    borderRadius: 11,
+    fontSize: 13,
     fontWeight: 'bold' as const,
     color: '#ffffff',
-    right: 48, // 440 - 360 - 32 = 48px from right
+    right: 48, // legacy; list row uses flex layout (kept for any absolute refs)
   },
   groupLabel: {
     backgroundColor: '#ffebeb',
@@ -158,7 +161,7 @@ export const CHAT_COLORS = {
   background: '#ffffff',
   headerBackground: '#e4eefe',
   searchBackground: '#f1f6fc',
-  badgeBackground: '#f92424',
+  badgeBackground: '#FF46A3',
   divider: '#e6e6e6',
   textPrimary: '#1e1e1e',
   textSecondary: '#607aa1',
@@ -188,7 +191,7 @@ export const CHAT_TYPOGRAPHY = {
     color: '#1e1e1e',
   },
   badge: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: 'bold' as const,
     color: '#ffffff',
   },

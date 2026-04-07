@@ -1,24 +1,21 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { useDesignScale } from '../hooks/useDesignScale';
+import { HOME_HEADER_HEIGHT_DESIGN_PX } from '../constants/homeLayout';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
-import { Dimensions } from 'react-native';
 import { colors } from '../theme';
 import SearchInput from '../components/SearchInput';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 import type { ShiftType } from '../types/home.types';
 import { mockHomeData } from '../data/mockHomeData';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserStore } from '../store/useUserStore';
 import { userProfileFromSession } from '../services/user';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
-import { useChatStore } from '../store/useChatStore';
 import { mockAllRoomsData } from '../data/mockAllRoomsData';
 import { useRoomsStore } from '../store/useRoomsStore';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
@@ -42,6 +39,8 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 >;
 
 export default function HomeScreen() {
+  const { scaleX } = useDesignScale();
+  const styles = useMemo(() => buildHomeScreenStyles(scaleX), [scaleX]);
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const route = useRoute();
   const { open: openAIChatOverlay } = useAIChatOverlay();
@@ -65,6 +64,13 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
+
+  // PM should behave like AM during AM hours; only show Turndown in PM hours.
+  const currentShiftFromClock = useMemo(() => getShiftFromTime(), []);
+  const effectiveShift: ShiftType =
+    homeData.selectedShift === 'PM' && currentShiftFromClock === 'AM'
+      ? 'AM'
+      : homeData.selectedShift;
 
   const { profile, loading: userLoading, fetchProfile } = useUserStore();
   const sessionFallback = useMemo(
@@ -99,12 +105,6 @@ export default function HomeScreen() {
     }, [route.name])
   );
 
-  const { chats } = useChatStore();
-  const chatBadgeCount = useMemo(
-    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
-    [chats]
-  );
-
   const handleShiftToggle = (shift: ShiftType) => {
     setHomeData(prev => ({ ...prev, selectedShift: shift }));
     // Reset filters and search when shift changes
@@ -129,7 +129,7 @@ export default function HomeScreen() {
     navigation.navigate('UserProfile', { user: homeData.user });
   };
 
-  const handleTabPress = (tab: string) => {
+  const handleTabPress = (tab: string, options?: { fromRoomsAssignmentBadge?: boolean }) => {
     if (tab === 'AIHome') {
       openAIChatOverlay();
       return;
@@ -140,7 +140,9 @@ export default function HomeScreen() {
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
-      navigation.navigate('Rooms' as any);
+      navigation.navigate('Rooms' as any, {
+        prioritizeMyAssignedRooms: !!options?.fromRoomsAssignmentBadge,
+      });
     } else if (tab === 'Chat') {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
@@ -159,7 +161,7 @@ export default function HomeScreen() {
     navigation.navigate('AllRooms', { 
       showBackButton: true, 
       filters: activeFilters,
-      selectedShift: homeData.selectedShift,
+      selectedShift: effectiveShift,
     } as any);
   };
 
@@ -169,7 +171,7 @@ export default function HomeScreen() {
       showBackButton: true,
       filters: activeFilters,
       categoryFilter: { category: category.name, roomState },
-      selectedShift: homeData.selectedShift,
+      selectedShift: effectiveShift,
     } as any);
   };
 
@@ -179,7 +181,7 @@ export default function HomeScreen() {
       showBackButton: true,
       filters: activeFilters,
       categoryFilter: { category: category.name, roomState: 'priority' },
-      selectedShift: homeData.selectedShift,
+      selectedShift: effectiveShift,
     } as any);
   };
 
@@ -237,7 +239,7 @@ export default function HomeScreen() {
 
   const derivedCategories = useMemo(() => {
     const roomsPM = roomsForHome.roomsPM ?? [];
-    const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const usePMRooms = effectiveShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
     
     // Apply filters to the correct shift's data
@@ -255,7 +257,7 @@ export default function HomeScreen() {
 
     const categories: CategorySection[] = [];
 
-    if (homeData.selectedShift === 'PM') {
+    if (effectiveShift === 'PM') {
       // PM shift: show only Turndown, No Task, Vacant cards
       // If using roomsPM, they're already filtered; otherwise filter from AM rooms
       if (!usePMRooms) {
@@ -284,7 +286,7 @@ export default function HomeScreen() {
     }
 
     return categories;
-  }, [activeFilters, homeData.selectedShift, searchQuery, roomsForHome]);
+  }, [activeFilters, effectiveShift, searchQuery, roomsForHome]);
 
   // Sync route filters -> local state
   useEffect(() => {
@@ -298,20 +300,20 @@ export default function HomeScreen() {
   }, [derivedCategories]);
 
   React.useEffect(() => {
-    fetchRooms(homeData.selectedShift);
-  }, [homeData.selectedShift, fetchRooms]);
+    fetchRooms(effectiveShift);
+  }, [effectiveShift, fetchRooms]);
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchRooms(homeData.selectedShift);
-    }, [homeData.selectedShift, fetchRooms])
+      fetchRooms(effectiveShift);
+    }, [effectiveShift, fetchRooms])
   );
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    await fetchRooms(homeData.selectedShift);
+    await fetchRooms(effectiveShift);
     setRefreshing(false);
-  }, [fetchRooms, homeData.selectedShift]);
+  }, [fetchRooms, effectiveShift]);
 
   // Calculate filter counts from homeData (use derivedCategories when categories not yet synced for current shift)
   const filterCounts: FilterCounts = useMemo(() => {
@@ -356,7 +358,7 @@ export default function HomeScreen() {
     });
 
     const roomsPM = roomsForHome.roomsPM ?? [];
-    const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const usePMRooms = effectiveShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
 
     // Reservations (Vacant) - from categories when PM, or from room data
@@ -364,7 +366,7 @@ export default function HomeScreen() {
       occupied: 0,
       vacant: 0,
     };
-    if (homeData.selectedShift === 'PM') {
+    if (effectiveShift === 'PM') {
       categoriesForCounts.forEach((category) => {
         if (category.name === 'Vacant') {
           reservations.vacant += category.total;
@@ -398,7 +400,7 @@ export default function HomeScreen() {
     };
 
     return { roomStates, guests, floors, totalRooms, reservations };
-  }, [homeData.categories, derivedCategories, homeData.selectedShift, roomsForHome]);
+  }, [homeData.categories, derivedCategories, effectiveShift, roomsForHome]);
 
   const handleGoToResults = (filters: FilterState) => {
     // Apply filters to Home stats/cards in both AM and PM modes
@@ -522,11 +524,7 @@ export default function HomeScreen() {
       </KeyboardAvoidingView>
 
       {/* Bottom Navigation - Outside KeyboardAvoidingView to prevent movement */}
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        chatBadgeCount={chatBadgeCount}
-      />
+      <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
 
       {/* Filter Modal */}
       <HomeFilterModal
@@ -542,7 +540,8 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function buildHomeScreenStyles(scaleX: number) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
@@ -565,7 +564,7 @@ const styles = StyleSheet.create({
   },
   contentBlurOverlay: {
     position: 'absolute',
-    top: (153 + 14 + 59) * scaleX, // Start below header + search bar
+    top: (HOME_HEADER_HEIGHT_DESIGN_PX + 14 + 59) * scaleX, // Start below header + search bar
     left: 0,
     right: 0,
     bottom: 152 * scaleX, // Stop above bottom nav
@@ -574,7 +573,7 @@ const styles = StyleSheet.create({
   searchSection: {
     position: 'absolute',
     left: 15 * scaleX,
-    top: (153 + 14) * scaleX, // Header height (153) + margin (14)
+    top: (HOME_HEADER_HEIGHT_DESIGN_PX + 14) * scaleX, // Header + margin
     flexDirection: 'row',
     alignItems: 'center',
     zIndex: 99,
@@ -660,4 +659,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(200, 200, 200, 0.6)',
   },
 });
+}
 

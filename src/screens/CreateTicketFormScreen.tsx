@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
@@ -28,6 +30,52 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+
+function DescriptionAIGradientLabel({
+  fontSize,
+  fontFamily,
+  fontWeight,
+}: {
+  fontSize: number;
+  fontFamily: string;
+  fontWeight: string;
+}) {
+  const [width, setWidth] = useState(0);
+  const gradId = useMemo(() => `desc_ai_grad_${Math.random().toString(16).slice(2)}`, []);
+  const textStyle = { fontSize, fontFamily, fontWeight: fontWeight as '700' };
+
+  return (
+    <View style={descriptionAiBadgeStyles.measureWrap} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      {width > 0 ? (
+        <Svg width={width} height={fontSize * 1.45}>
+          <Defs>
+            <SvgLinearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor="#ff46a3" />
+              <Stop offset="1" stopColor="#4a91fc" />
+            </SvgLinearGradient>
+          </Defs>
+          <SvgText
+            x={width / 2}
+            y={fontSize * 1.15}
+            textAnchor="middle"
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            fontWeight={fontWeight}
+            fill={`url(#${gradId})`}
+          >
+            AI
+          </SvgText>
+        </Svg>
+      ) : (
+        <Text style={textStyle}>AI</Text>
+      )}
+    </View>
+  );
+}
+
+const descriptionAiBadgeStyles = StyleSheet.create({
+  measureWrap: { alignItems: 'center', justifyContent: 'center' },
+});
 
 type CreateTicketFormScreenRouteProp = RouteProp<RootStackParamList, 'CreateTicketForm'>;
 type CreateTicketFormScreenNavigationProp = NativeStackNavigationProp<
@@ -83,6 +131,12 @@ export default function CreateTicketFormScreen() {
     paramRoomNumber ? `Room ${paramRoomNumber}` : paramIsPublicArea ? paramPublicAreaName || 'Public Area' : 'Room 201'
   );
   const [activeTab, setActiveTab] = useState<'Overview' | 'Tickets' | 'Checklist' | 'History'>('Tickets');
+  const descriptionInputRef = useRef<TextInput>(null);
+
+  // If the department changes, previously tagged staff may no longer be valid.
+  useEffect(() => {
+    setAssignedStaff([]);
+  }, [selectedDepartment]);
 
   // Load rooms
   useEffect(() => {
@@ -168,6 +222,14 @@ export default function CreateTicketFormScreen() {
     setPictures((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleOpenStaffModal = () => {
+    if (!selectedDepartment) {
+      toast.show('Please select a department first.', { type: 'error' });
+      return;
+    }
+    setShowStaffModal(true);
+  };
+
   const handleSubmit = async () => {
     // Validation
     if (!ticketName.trim()) {
@@ -191,10 +253,13 @@ export default function CreateTicketFormScreen() {
         title: ticketName,
         description: combinedDescription,
         priority: priority === 'high' ? 'urgent' : priority === 'medium' ? 'medium' : 'notUrgent',
+        departmentName: selectedDepartment,
         assignedToId,
+        taggedStaffIds: assignedStaff,
         roomId: paramIsPublicArea ? null : (paramRoomId ?? null),
         locationType,
         publicAreaName: paramIsPublicArea ? (paramPublicAreaName ?? null) : null,
+        pictures,
       });
 
       toast.show('Ticket created successfully', { type: 'success', title: 'Success' });
@@ -288,7 +353,9 @@ export default function CreateTicketFormScreen() {
                     resizeMode="contain"
                   />
                 </View>
-                <Text style={[styles.departmentLabel, isSelected && styles.departmentLabelSelected]}>
+                <Text
+                  style={[styles.departmentLabel, isSelected && styles.departmentLabelSelected]}
+                >
                   {dept.name}
                 </Text>
               </TouchableOpacity>
@@ -379,7 +446,7 @@ export default function CreateTicketFormScreen() {
               ) : null}
               <TouchableOpacity
                 style={[styles.addStaffButton, assignedStaff.length === 0 && { marginLeft: 0 }]}
-                onPress={() => setShowStaffModal(true)}
+                onPress={handleOpenStaffModal}
                 activeOpacity={0.7}
               >
                 <Text style={styles.addStaffText}>+</Text>
@@ -496,25 +563,43 @@ export default function CreateTicketFormScreen() {
           )}
         </View>
 
-        {/* Description */}
+        {/* Description — Figma: nested card, gradient AI badge, inner white field + edit control */}
         <View style={styles.section}>
-          <View style={styles.descriptionHeader}>
-            <Text style={styles.sectionTitle}>Description</Text>
-            <View style={styles.descriptionAIBadge}>
-              <Text style={styles.descriptionAIText}>AI</Text>
+          <View style={styles.descriptionCard}>
+            <View style={styles.descriptionHeaderRow}>
+              <Text style={styles.descriptionLabel}>Description</Text>
+              <View style={styles.descriptionAIBadgeCircle}>
+                <DescriptionAIGradientLabel
+                  fontSize={12 * scaleX}
+                  fontFamily={typography.fontFamily.primary}
+                  fontWeight="700"
+                />
+              </View>
             </View>
-          </View>
-          <View style={styles.descriptionContainer}>
-            <TextInput
-              style={styles.descriptionInput}
-              placeholder="Room 201 – Broken shower head reported. Guest unable to use shower normally."
-              placeholderTextColor="#999"
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+            <View style={styles.descriptionInnerField}>
+              <TextInput
+                ref={descriptionInputRef}
+                style={styles.descriptionInput}
+                placeholder="Room 201 – Broken shower head reported. Guest unable to use shower normally."
+                placeholderTextColor="#999999"
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                numberOfLines={5}
+                textAlignVertical="top"
+                underlineColorAndroid="transparent"
+              />
+              <TouchableOpacity
+                style={styles.descriptionEditButton}
+                onPress={() => descriptionInputRef.current?.focus()}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="Edit description"
+                activeOpacity={0.7}
+              >
+                <Ionicons name="pencil-outline" size={16 * scaleX} color="#5a759d" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -543,7 +628,7 @@ export default function CreateTicketFormScreen() {
         onSelect={(staffIds) => {
           setAssignedStaff(staffIds);
         }}
-        departmentName={paramDepartmentName || 'Department'}
+        departmentName={selectedDepartment || paramDepartmentName || 'Department'}
         loading={loadingStaff}
       />
     </View>
@@ -670,6 +755,7 @@ const styles = StyleSheet.create({
   departmentItem: {
     alignItems: 'center',
     marginRight: 24 * scaleX,
+    width: 90 * scaleX, // fixed label width so wrapped lines stay centered under icon
   },
   departmentIconContainer: {
     width: 55.482 * scaleX,
@@ -693,7 +779,9 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     color: '#000000',
     textAlign: 'center',
-    maxWidth: 80 * scaleX,
+    width: '100%',
+    maxWidth: 90 * scaleX,
+    alignSelf: 'center',
   },
   departmentLabelSelected: {
     fontWeight: '600',
@@ -977,41 +1065,60 @@ const styles = StyleSheet.create({
     fontSize: 18 * scaleX,
     fontWeight: 'bold',
   },
-  descriptionHeader: {
+  descriptionCard: {
+    backgroundColor: '#f5f6f8',
+    borderWidth: 1,
+    borderColor: '#e8eaee',
+    borderRadius: 14 * scaleX,
+    padding: 16 * scaleX,
+  },
+  descriptionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 12 * scaleX,
   },
-  descriptionAIBadge: {
+  descriptionLabel: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#1e1e1e',
+  },
+  descriptionAIBadgeCircle: {
     width: 30 * scaleX,
     height: 30 * scaleX,
     borderRadius: 15 * scaleX,
     backgroundColor: '#ffffff',
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderColor: '#f0d0e4',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8 * scaleX,
+    overflow: 'hidden',
   },
-  descriptionAIText: {
-    fontSize: 12 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: '700',
-    color: '#ff46a3',
-  },
-  descriptionContainer: {
+  descriptionInnerField: {
+    position: 'relative',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#e0e0e0',
     borderRadius: 8 * scaleX,
-    padding: 16 * scaleX,
-    minHeight: 120 * scaleX,
+    minHeight: 132 * scaleX,
   },
   descriptionInput: {
     fontSize: 14 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: '300',
-    color: '#000000',
-    minHeight: 80 * scaleX,
+    color: '#44474e',
+    lineHeight: 20 * scaleX,
+    paddingHorizontal: 14 * scaleX,
+    paddingVertical: 12 * scaleX,
+    paddingRight: 44 * scaleX,
+    paddingBottom: 14 * scaleX,
+    minHeight: 120 * scaleX,
+  },
+  descriptionEditButton: {
+    position: 'absolute',
+    right: 12 * scaleX,
+    bottom: 12 * scaleX,
   },
   submitButton: {
     height: 70 * scaleX,

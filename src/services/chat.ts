@@ -10,6 +10,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { ChatMessage } from '../types';
 import type { ChatItemData } from '../components/chat/ChatItem';
 import { base64ToArrayBuffer } from '../utils/encoding';
+import { notifyServer } from './notifications';
 
 const MESSAGE_TYPE = 'text'; // DB: text, image, system
 export const CHAT_ATTACHMENTS_BUCKET = 'chat-attachments';
@@ -98,6 +99,28 @@ export async function getCurrentUserId(): Promise<string | null> {
   return data?.session?.user?.id ?? null;
 }
 
+/** Unread `chat_message` inbox rows per chat (`notifications.data.chatId`), for list badges. */
+async function getUnreadChatMessageCountsByChatId(): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  if (!isSupabaseConfigured) return map;
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('data')
+    .eq('type', 'chat_message')
+    .is('read_at', null);
+  if (error) {
+    console.warn('[Chat] unread notification counts', error.message);
+    return map;
+  }
+  for (const row of data ?? []) {
+    const d = row?.data as { chatId?: string } | null | undefined;
+    const cid = d?.chatId;
+    if (typeof cid !== 'string' || !cid) continue;
+    map.set(cid, (map.get(cid) ?? 0) + 1);
+  }
+  return map;
+}
+
 export type UploadChatAttachmentOptions = {
   type: 'image' | 'file';
   fileName?: string;
@@ -176,6 +199,8 @@ export async function getChatsForUser(): Promise<ChatItemData[]> {
   }
   if (!chats?.length) return [];
 
+  const unreadByChatId = await getUnreadChatMessageCountsByChatId();
+
   const result: (ChatItemData & { lastMessageAt: string })[] = [];
 
   for (const chat of chats as ChatRow[]) {
@@ -214,7 +239,7 @@ export async function getChatsForUser(): Promise<ChatItemData[]> {
       name: displayName,
       lastMessage: lastMessageText,
       lastMessageSender: lastMessageSender || undefined,
-      unreadCount: 0,
+      unreadCount: unreadByChatId.get(chat.id) ?? 0,
       avatar: avatarUrl ? { uri: avatarUrl } : undefined,
       isGroup: chat.type === 'group',
       lastMessageAt,
@@ -442,6 +467,11 @@ export async function sendMessage(
 
   if (error) throw error;
   const row = inserted as MessageRow & { users?: null };
+
+  // Fire-and-forget push notifications to other participants.
+  // Server will create in-app notification rows and dispatch Expo push.
+  notifyServer({ type: 'chat_message', messageId: row.id }).catch(() => {});
+
   const msg: ChatMessage = {
     id: row.id,
     chatId: row.chat_id,

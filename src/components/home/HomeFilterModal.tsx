@@ -17,13 +17,14 @@ import { FilterState, FilterCounts, FilterOption } from '../../types/filter.type
 import { getFloorLabel } from '../../utils/formatting';
 import { ShiftType } from '../../types/home.types';
 import { useHomeFilters } from '../../hooks/useHomeFilters';
+import { HOME_HEADER_HEIGHT_DESIGN_PX } from '../../constants/homeLayout';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DESIGN_WIDTH = 440;
 const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
 // Default values for HomeScreen
-const DEFAULT_HEADER_HEIGHT = 153 * scaleX;
+const DEFAULT_HEADER_HEIGHT = HOME_HEADER_HEIGHT_DESIGN_PX * scaleX;
 const DEFAULT_HEADER_MARGIN = 14 * scaleX;
 const DEFAULT_SEARCH_BAR_HEIGHT = 59 * scaleX;
 

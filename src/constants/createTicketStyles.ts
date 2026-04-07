@@ -7,8 +7,27 @@
 import { Dimensions } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+/** Figma frame width — use `createTicketScaleX(useWindowDimensions().width)` in screens for responsive layout */
 const DESIGN_WIDTH = 440;
+export const CREATE_TICKET_DESIGN_WIDTH = DESIGN_WIDTH;
 export const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+
+/** Width-based scale; pass `useWindowDimensions().width` so layout updates on rotation/resize. */
+export function createTicketScaleX(windowWidth: number): number {
+  return windowWidth / DESIGN_WIDTH;
+}
+
+/** Figma "Create Ticket AI" frame: 152×74 (667:3068 → 3005:59, 1085:2628 → 1107:3855). */
+export const CREATE_TICKET_AI_IMAGE = {
+  source: require('../../assets/icons/CreateTicketAI.png') as number,
+  width: 152,
+  height: 74,
+} as const;
+
+/** Figma 1085:2628 — BETA 1107:3861 y=243; AI frame 1107:3855 bottom y=249 → 6px overlap. */
+export const CREATE_TICKET_BETA_OVERLAP_AI_PX = 6;
+/** Figma: description (1107:3862) y=279; BETA box ends ~252 → 27px gap. */
+export const CREATE_TICKET_BETA_TO_DESCRIPTION_PX = 27;
 
 // Header Styles
 export const CREATE_TICKET_HEADER = {

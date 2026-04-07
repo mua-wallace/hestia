@@ -45,12 +45,19 @@ export default function NotesSection({ notes, isArrivalDeparture = false, isPrio
     ? NOTES_SECTION.rushedIcon.positions.arrivalDeparture
     : NOTES_SECTION.rushedIcon.positions.withNotes;
 
-  // Notes icon position: leftmost (14) when not priority, otherwise at normal position (40.03)
-  const notesIconLeft = isPriority ? iconPos.left : rushedIconPos.left;
+  // Notes icon position:
+  // - priority: keep Figma "notes right of priority icon"
+  // - rushed+notes: push notes icon right to create visible gap
+  // - notes only: keep notes icon in left slot
+  const rushToNotesGap = 4; // px gap between rush and notes icons
+  const hasRushIcon = isPriority || !!notes.hasRushed;
+  const notesIconLeft = hasRushIcon
+    ? (rushedIconPos.left + NOTES_SECTION.rushedIcon.width + rushToNotesGap)
+    : rushedIconPos.left;
   const notesIconTop = iconPos.top;
 
-  // Badge position: adjust based on notes icon position
-  const notesBadgeLeft = isPriority ? badgePos.left : (rushedIconPos.left + NOTES_SECTION.rushedIcon.width - NOTES_SECTION.badge.width / 2);
+  // Badge should always follow whichever notes icon position is active.
+  const notesBadgeLeft = notesIconLeft + NOTES_SECTION.icon.width - NOTES_SECTION.badge.width / 2 + 8;
   const notesBadgeTop = badgePos.top;
 
   const containerBackground = isArrivalDeparture 
@@ -74,17 +81,6 @@ export default function NotesSection({ notes, isArrivalDeparture = false, isPrio
             style={[styles.priorityIcon, { left: rushedIconPos.left * scaleX, top: rushedIconPos.top * scaleX }]}
             resizeMode="contain"
           />
-          {/* Priority Icon Badge - Figma: top-right of priority icon (only show if notes exist) */}
-          {notes.count > 0 && (
-            <View style={[styles.badgeContainer, { 
-              left: NOTES_SECTION.priorityBadge.left * scaleX, 
-              top: NOTES_SECTION.priorityBadge.top * scaleX,
-            }]}>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{notes.count}</Text>
-              </View>
-            </View>
-          )}
         </>
       )}
       

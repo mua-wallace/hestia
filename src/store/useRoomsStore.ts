@@ -3,6 +3,7 @@
  */
 
 import { create } from 'zustand';
+import { invalidateNotificationBadges } from '../services/inAppNotifications';
 import { dashboardService, type RoomStateUpdate } from '../services/dashboard';
 import type { AllRoomsScreenData, RoomCardData, StaffInfo } from '../types/allRooms.types';
 import type { ShiftType } from '../types/home.types';
@@ -46,6 +47,7 @@ export const useRoomsStore = create<RoomsState>((set, get) => ({
         roomsPM: data.roomsPM?.map(update) ?? data.roomsPM,
       },
     });
+    queueMicrotask(() => invalidateNotificationBadges());
   },
 
   fetchRooms: async (shift?: ShiftType) => {
@@ -65,6 +67,7 @@ export const useRoomsStore = create<RoomsState>((set, get) => ({
         refreshing: false,
         error: null,
       });
+      queueMicrotask(() => invalidateNotificationBadges());
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
       set({
@@ -89,6 +92,7 @@ export const useRoomsStore = create<RoomsState>((set, get) => ({
           ...(updates.priority != null && { isPriority: updates.priority === 'high' }),
           ...(updates.flagged != null && { flagged: updates.flagged }),
           ...(updates.special_instructions !== undefined && { specialInstructions: updates.special_instructions }),
+          ...(updates.return_later_at !== undefined && { returnLaterAt: updates.return_later_at }),
         };
       };
       set({

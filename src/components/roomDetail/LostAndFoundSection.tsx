@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
 import { scaleX, LOST_AND_FOUND, CONTENT_AREA } from '../../constants/roomDetailStyles';
 import type { LostAndFoundItem } from '../../types/lostAndFound.types';
-import LostAndFoundItemDisplay from './LostAndFoundItemDisplay';
+import LostAndFoundItemCard from '../lostAndFound/LostAndFoundItemCard';
 
 interface LostAndFoundSectionProps {
   displayType: 'empty' | 'withItems'; // Type of display based on room type
@@ -62,7 +62,7 @@ export default function LostAndFoundSection({
       {showItems && (
         <View style={styles.itemsContainer}>
           {items.map((item) => (
-            <LostAndFoundItemDisplay
+            <LostAndFoundItemCard
               key={item.id}
               item={item}
               onPress={() => onItemPress?.(item)}
@@ -76,27 +76,23 @@ export default function LostAndFoundSection({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
     width: '100%',
-    marginTop: 26 * scaleX, // Space between card (ends at 880.09px) and title (906px) = 26px
-    minHeight: ((LOST_AND_FOUND.box.top - LOST_AND_FOUND.title.top) + LOST_AND_FOUND.box.height + 20) * scaleX, // Full height needed
+    marginTop: 0,
+    paddingBottom: 12 * scaleX,
     overflow: 'visible',
+    paddingHorizontal: 0,
   },
   title: {
-    position: 'absolute',
-    left: LOST_AND_FOUND.title.left * scaleX,
-    top: 0, // Title at top of container (absolute 906px achieved via marginTop on container)
+    paddingHorizontal: 20 * scaleX,
+    marginBottom: 12 * scaleX,
     fontSize: LOST_AND_FOUND.title.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: LOST_AND_FOUND.title.color,
     lineHeight: LOST_AND_FOUND.title.fontSize * scaleX,
-    zIndex: 10, // Ensure visibility
   },
   box: {
-    position: 'absolute',
-    left: LOST_AND_FOUND.box.left * scaleX,
-    top: (LOST_AND_FOUND.box.top - LOST_AND_FOUND.title.top) * scaleX, // 34px below title (940 - 906)
+    alignSelf: 'center',
     width: LOST_AND_FOUND.box.width * scaleX,
     height: LOST_AND_FOUND.box.height * scaleX,
     borderRadius: LOST_AND_FOUND.box.borderRadius * scaleX,
@@ -143,12 +139,8 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   itemsContainer: {
-    position: 'absolute',
-    left: LOST_AND_FOUND.box.left * scaleX,
-    top: (LOST_AND_FOUND.box.top - LOST_AND_FOUND.title.top) * scaleX, // Same position as box
-    width: LOST_AND_FOUND.box.width * scaleX,
+    width: '100%',
     flexDirection: 'column',
-    gap: 12 * scaleX, // Space between items
   },
 });
 

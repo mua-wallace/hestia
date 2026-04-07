@@ -30,7 +30,8 @@ export default function MessageBubble({ message, isCurrentUser, isGroup, onLongP
         .failOffsetY([-25, 25])
         .minDistance(15)
         .onEnd((e) => {
-          if (e.translationX < -SWIPE_REPLY_THRESHOLD) {
+          const dx = e.translationX;
+          if (dx < -SWIPE_REPLY_THRESHOLD || dx > SWIPE_REPLY_THRESHOLD) {
             onSwipeReply?.(message);
           }
         }),
@@ -53,25 +54,32 @@ export default function MessageBubble({ message, isCurrentUser, isGroup, onLongP
         <Text style={styles.senderName}>{typeof message.senderName === 'string' ? message.senderName : ''}</Text>
       )}
 
-      {/* Tagged User Indicator */}
-      {message.taggedUserName && (
-        <View style={styles.taggedIndicator}>
-          <Text style={styles.taggedText}>@{message.taggedUserName}</Text>
-        </View>
-      )}
-
       {/* Message bubble - WhatsApp style with tail */}
       <View
         style={[
           styles.bubble,
           isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
+          message.replyTo ? styles.bubbleWithReply : null,
         ]}
       >
-        {/* Reply-to quote - WhatsApp left border */}
+        {/* Reply preview: WhatsApp = full-width strip at top of bubble, not a nested “inner message” card */}
         {message.replyTo && (
-          <View style={[styles.replyToBlock, isCurrentUser ? styles.replyToBlockCurrent : styles.replyToBlockOther]}>
-            <Text style={[styles.replyToSender, isCurrentUser ? styles.replyToTextCurrent : styles.replyToTextOther]} numberOfLines={1}>{message.replyTo.senderName}</Text>
-            <Text style={[styles.replyToPreview, isCurrentUser ? styles.replyToTextCurrent : styles.replyToTextOther]} numberOfLines={2}>{message.replyTo.message}</Text>
+          <View style={[styles.replyToStrip, isCurrentUser ? styles.replyToStripSent : styles.replyToStripReceived]}>
+            <View style={[styles.replyToAccent, isCurrentUser ? styles.replyToAccentSent : styles.replyToAccentReceived]} />
+            <View style={styles.replyToStripBody}>
+              <Text
+                style={[styles.replyToSender, isCurrentUser ? styles.replyToSenderSent : styles.replyToSenderReceived]}
+                numberOfLines={1}
+              >
+                {message.replyTo.senderName}
+              </Text>
+              <Text
+                style={[styles.replyToPreview, isCurrentUser ? styles.replyToPreviewSent : styles.replyToPreviewReceived]}
+                numberOfLines={2}
+              >
+                {message.replyTo.message}
+              </Text>
+            </View>
           </View>
         )}
 
@@ -79,7 +87,7 @@ export default function MessageBubble({ message, isCurrentUser, isGroup, onLongP
         {message.type === 'image' && message.imageUri && (
           <Image
             source={{ uri: message.imageUri }}
-            style={styles.messageImage}
+            style={[styles.messageImage, message.replyTo ? styles.messageImageAfterReply : null]}
             resizeMode="cover"
           />
         )}
@@ -87,7 +95,11 @@ export default function MessageBubble({ message, isCurrentUser, isGroup, onLongP
         {/* File Message */}
         {message.type === 'file' && (message.fileUri || message.fileName) && (
           <TouchableOpacity
-            style={[styles.fileAttachment, isCurrentUser ? styles.fileAttachmentCurrent : styles.fileAttachmentOther]}
+            style={[
+              styles.fileAttachment,
+              isCurrentUser ? styles.fileAttachmentCurrent : styles.fileAttachmentOther,
+              message.replyTo ? styles.fileAfterReply : null,
+            ]}
             onPress={() => message.fileUri && Linking.openURL(message.fileUri)}
             activeOpacity={0.7}
           >
@@ -100,7 +112,7 @@ export default function MessageBubble({ message, isCurrentUser, isGroup, onLongP
 
         {/* Voice Message - WhatsApp style: play | waveform | duration */}
         {message.type === 'voice' && (
-          <View style={styles.voiceMessageContainer}>
+          <View style={[styles.voiceMessageContainer, message.replyTo ? styles.voiceAfterReply : null]}>
             <TouchableOpacity
               style={[
                 styles.voicePlayButton,
@@ -130,16 +142,19 @@ export default function MessageBubble({ message, isCurrentUser, isGroup, onLongP
           </View>
         )}
 
-        {/* Text Message (skip for file/image - we show image/file UI above) */}
+        {/* @mention on media/voice: WhatsApp caption sits below attachment, same typography flow as body text */}
+        {message.taggedUserName &&
+          (message.type === 'image' || message.type === 'file' || message.type === 'voice') && (
+            <MediaMentionCaption taggedName={message.taggedUserName} isCurrentUser={isCurrentUser} />
+          )}
+
+        {/* Text Message — @mentions: same font metrics as body, only color differs (no “boxed” nested look) */}
         {message.type !== 'file' && message.type !== 'image' && message.message != null && message.message !== '' && (
-          <Text
-            style={[
-              styles.messageText,
-              isCurrentUser ? styles.currentUserText : styles.otherUserText,
-            ]}
-          >
-            {typeof message.message === 'string' ? message.message : String(message.message)}
-          </Text>
+          <MessageTextWithMention
+            body={typeof message.message === 'string' ? message.message : String(message.message)}
+            taggedName={message.taggedUserName}
+            isCurrentUser={isCurrentUser}
+          />
         )}
 
         {/* Timestamp inside bubble - pill style */}
@@ -162,6 +177,60 @@ export default function MessageBubble({ message, isCurrentUser, isGroup, onLongP
     );
   }
   return content;
+}
+
+/** WhatsApp: @mention below photo/file/voice — caption row, same size as message text, not a separate “header”. */
+function MediaMentionCaption({
+  taggedName,
+  isCurrentUser,
+}: {
+  taggedName: string;
+  isCurrentUser: boolean;
+}) {
+  const label = `@${taggedName.trim()}`;
+  const baseStyle = [styles.messageText, isCurrentUser ? styles.currentUserText : styles.otherUserText];
+  const mentionStyle = isCurrentUser ? styles.mentionInlineSent : styles.mentionInlineReceived;
+  return (
+    <Text style={[baseStyle, styles.mediaCaptionWrap]}>
+      <Text style={mentionStyle}>{label}</Text>
+    </Text>
+  );
+}
+
+/** WhatsApp: @name flows inline with body — same line height / size as surrounding text, only color weight changes. */
+function MessageTextWithMention({
+  body,
+  taggedName,
+  isCurrentUser,
+}: {
+  body: string;
+  taggedName?: string;
+  isCurrentUser: boolean;
+}) {
+  const baseStyle = [styles.messageText, isCurrentUser ? styles.currentUserText : styles.otherUserText];
+  if (!taggedName?.trim()) {
+    return <Text style={baseStyle}>{body}</Text>;
+  }
+  const label = `@${taggedName.trim()}`;
+  const idx = body.indexOf(label);
+  const mentionStyle = isCurrentUser ? styles.mentionInlineSent : styles.mentionInlineReceived;
+  if (idx === -1) {
+    return (
+      <Text style={baseStyle}>
+        <Text style={mentionStyle}>{label} </Text>
+        {body}
+      </Text>
+    );
+  }
+  const before = body.slice(0, idx);
+  const after = body.slice(idx + label.length);
+  return (
+    <Text style={baseStyle}>
+      {before}
+      <Text style={mentionStyle}>{label}</Text>
+      {after}
+    </Text>
+  );
 }
 
 function formatVoiceDuration(seconds: number): string {
@@ -233,21 +302,24 @@ const styles = StyleSheet.create({
     marginLeft: 6 * scaleX,
     letterSpacing: 0.3,
   },
-  taggedIndicator: {
-    marginBottom: 4 * scaleX,
-    marginLeft: 6 * scaleX,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10 * scaleX,
-    paddingVertical: 4 * scaleX,
-    borderRadius: 12 * scaleX,
-    backgroundColor: 'rgba(90, 117, 157, 0.12)',
-  },
-  taggedText: {
-    fontSize: 12 * scaleX,
+  mentionInlineSent: {
+    fontSize: 15 * scaleX,
+    lineHeight: 22 * scaleX,
     fontFamily: 'Helvetica',
-    color: colors.primary.main,
-    fontWeight: '700' as any,
-    letterSpacing: 0.2,
+    fontWeight: '600' as any,
+    color: '#c8f5d4',
+  },
+  mentionInlineReceived: {
+    fontSize: 15 * scaleX,
+    lineHeight: 22 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '600' as any,
+    color: '#0077c8',
+  },
+  mediaCaptionWrap: {
+    marginTop: 4 * scaleX,
+    marginBottom: 2 * scaleX,
+    alignSelf: 'flex-start',
   },
   bubble: {
     paddingHorizontal: 14 * scaleX,
@@ -284,38 +356,61 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border.light,
   },
-  replyToBlock: {
+  bubbleWithReply: {
+    paddingTop: 0,
+  },
+  /** WhatsApp: quote strip stays inside bubble bounds — no negative margins (avoids bleed/overlap with other rows) */
+  replyToStrip: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
     marginBottom: 8 * scaleX,
-    paddingLeft: 12 * scaleX,
-    borderLeftWidth: 4,
-    paddingVertical: 6 * scaleX,
-    paddingRight: 6 * scaleX,
-    backgroundColor: 'rgba(0,0,0,0.06)',
+    paddingVertical: 8 * scaleX,
+    paddingRight: 4 * scaleX,
     borderRadius: 8 * scaleX,
-    marginHorizontal: -2 * scaleX,
   },
-  replyToBlockCurrent: {
-    borderLeftColor: 'rgba(255,255,255,0.95)',
+  replyToStripSent: {
+    backgroundColor: 'rgba(0,0,0,0.14)',
   },
-  replyToBlockOther: {
-    borderLeftColor: colors.primary.light,
+  replyToStripReceived: {
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  replyToAccent: {
+    width: 3 * scaleX,
+    alignSelf: 'stretch',
+    borderRadius: 2 * scaleX,
+    marginLeft: 0,
+    marginRight: 10 * scaleX,
+  },
+  replyToAccentSent: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+  },
+  replyToAccentReceived: {
+    backgroundColor: colors.primary.main,
+  },
+  replyToStripBody: {
+    flex: 1,
+    minWidth: 0,
   },
   replyToSender: {
     fontSize: 13 * scaleX,
-    fontWeight: '700' as any,
+    fontWeight: '600' as any,
     marginBottom: 2 * scaleX,
-    letterSpacing: 0.2,
+  },
+  replyToSenderSent: {
+    color: 'rgba(255,255,255,0.95)',
+  },
+  replyToSenderReceived: {
+    color: colors.text.primary,
   },
   replyToPreview: {
-    fontSize: 12 * scaleX,
-    opacity: 0.92,
-    lineHeight: 16 * scaleX,
+    fontSize: 12.5 * scaleX,
+    lineHeight: 17 * scaleX,
   },
-  replyToTextCurrent: {
-    color: colors.text.white,
+  replyToPreviewSent: {
+    color: 'rgba(255,255,255,0.82)',
   },
-  replyToTextOther: {
-    color: colors.text.primary,
+  replyToPreviewReceived: {
+    color: colors.text.secondary,
   },
   messageText: {
     fontSize: 15 * scaleX,
@@ -370,7 +465,7 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     aspectRatio: 1,
     borderRadius: 12 * scaleX,
-    marginBottom: 6 * scaleX,
+    marginBottom: 4 * scaleX,
     overflow: 'hidden',
     ...Platform.select({
       ios: {
@@ -381,6 +476,15 @@ const styles = StyleSheet.create({
       },
       android: { elevation: 2 },
     }),
+  },
+  messageImageAfterReply: {
+    marginTop: 2 * scaleX,
+  },
+  fileAfterReply: {
+    marginTop: 2 * scaleX,
+  },
+  voiceAfterReply: {
+    marginTop: 2 * scaleX,
   },
   fileAttachment: {
     flexDirection: 'row',

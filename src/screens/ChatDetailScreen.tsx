@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect, Fragment, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  Pressable,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -13,12 +14,15 @@ import {
   Modal,
   FlatList,
   useWindowDimensions,
+  ActivityIndicator,
+  ActionSheetIOS,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import { useRoute, useNavigation, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import { BlurView } from 'expo-blur';
 import {
   useAudioRecorder,
   useAudioRecorderState,
@@ -47,17 +51,41 @@ import {
 } from '../services/chat';
 import * as DocumentPicker from 'expo-document-picker';
 import { useChatStore } from '../store/useChatStore';
+import {
+  markChatMessageNotificationsReadForChat,
+  invalidateNotificationBadges,
+} from '../services/inAppNotifications';
 import { useToast } from '../contexts/ToastContext';
 import { useMessageModal } from '../contexts/MessageModalContext';
 import { Ionicons } from '@expo/vector-icons';
 
 type ChatDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatDetail'>;
 
+/**
+ * WhatsApp-style @ compose: active while typing after `@` at a word boundary until a trailing
+ * space completes the mention. Skips `@` inside emails (e.g. `user@mail.com`).
+ */
+function getActiveMention(text: string): { start: number; query: string } | null {
+  let at = text.lastIndexOf('@');
+  while (at >= 0) {
+    const prev = at === 0 ? ' ' : text.charAt(at - 1);
+    const atWordBoundary = at === 0 || /\s/.test(prev);
+    if (atWordBoundary) {
+      const after = text.slice(at + 1);
+      if (after.endsWith(' ')) return null;
+      return { start: at, query: after };
+    }
+    at = text.lastIndexOf('@', at - 1);
+  }
+  return null;
+}
+
 export default function ChatDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, 'ChatDetail'>>();
   const navigation = useNavigation<ChatDetailScreenNavigationProp>();
   const { chatId, chat: chatParam } = route.params;
   const scrollViewRef = useRef<ScrollView>(null);
+  const textInputRef = useRef<TextInput>(null);
 
   const isSupabaseChat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chatId);
   const [fetchedChat, setFetchedChat] = useState<{ name: string; isGroup: boolean; created_by_id: string } | null>(null);
@@ -78,6 +106,34 @@ export default function ChatDetailScreen() {
 
   const { messagesByChatId, loadMessages, appendMessage, sendMessage: sendMessageToStore, removeChat, updateChatName, clearMessages } = useChatStore();
   const messages = messagesByChatId[chatId] ?? [];
+  const messageLayoutY = useRef<Record<string, number>>({});
+
+  const messagesTaggingMe = useMemo(() => {
+    const uid = currentUserId ?? '';
+    if (!uid) return [];
+    return messages.filter((m) => m.taggedUserId === uid && m.senderId !== uid);
+  }, [messages, currentUserId]);
+
+  const latestMentionOfMe = messagesTaggingMe.length > 0 ? messagesTaggingMe[messagesTaggingMe.length - 1] : null;
+
+  const latestMentionSnippet = useMemo(() => {
+    const m = latestMentionOfMe;
+    if (!m) return '';
+    if (m.type === 'image') return '📷 Photo';
+    if (m.type === 'file') return m.fileName ? `📎 ${m.fileName}` : '📎 File';
+    if (m.type === 'voice') return '🎤 Voice message';
+    return (m.message || '').trim().slice(0, 120);
+  }, [latestMentionOfMe]);
+
+  const scrollToMentionMessage = useCallback(() => {
+    if (!latestMentionOfMe) return;
+    const y = messageLayoutY.current[latestMentionOfMe.id];
+    if (y == null) {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+      return;
+    }
+    scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+  }, [latestMentionOfMe]);
   const toast = useToast();
   const messageModal = useMessageModal();
 
@@ -88,7 +144,6 @@ export default function ChatDetailScreen() {
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<{ uri: string; name: string } | null>(null);
-  const [showTagModal, setShowTagModal] = useState(false);
   const [taggedUser, setTaggedUser] = useState<{ id: string; name: string } | null>(null);
   const [showEditGroupModal, setShowEditGroupModal] = useState(false);
   const [editGroupName, setEditGroupName] = useState('');
@@ -96,12 +151,30 @@ export default function ChatDetailScreen() {
   const [groupParticipants, setGroupParticipants] = useState<GroupParticipant[]>([]);
   const [replyToMessage, setReplyToMessage] = useState<ChatMessage | null>(null);
   const [tagParticipantsList, setTagParticipantsList] = useState<GroupParticipant[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
   useEffect(() => {
-    if (!isSupabaseChat) return;
+    if (!isSupabaseChat) {
+      setMessagesLoading(false);
+      return;
+    }
+    let cancelled = false;
     getCurrentUserId().then(setCurrentUserId);
-    loadMessages(chatId);
+    setMessagesLoading(true);
+    loadMessages(chatId).finally(() => {
+      if (!cancelled) setMessagesLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [chatId, isSupabaseChat, loadMessages]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isSupabaseChat) return;
+      void markChatMessageNotificationsReadForChat(chatId).then(() => invalidateNotificationBadges());
+    }, [chatId, isSupabaseChat])
+  );
 
   useEffect(() => {
     if (!isSupabaseChat) return;
@@ -167,11 +240,18 @@ export default function ChatDetailScreen() {
     if (names.length === 3) return `${names[0]}, ${names[1]} and ${names[2]}`;
     return `${names[0]}, ${names[1]} and ${names.length - 2} others`;
   };
-  /** Participants for tag modal: real group members when group (excluding self), else empty for DM */
-  const getParticipantsForTag = () => {
-    if (isGroup) return otherParticipants.map((p) => ({ id: p.user_id, name: p.full_name || 'Unknown' }));
-    return [];
-  };
+  /** WhatsApp-style: show picker while composing `@name` (group only). */
+  const activeMention = useMemo(() => (isGroup ? getActiveMention(inputText) : null), [isGroup, inputText]);
+
+  const mentionPickerItems = useMemo(() => {
+    const q = (activeMention?.query ?? '').trim().toLowerCase();
+    const base = otherParticipants.map((p) => ({
+      id: p.user_id,
+      name: (p.full_name || '').trim() || 'Unknown',
+    }));
+    if (!q) return base;
+    return base.filter((x) => x.name.toLowerCase().includes(q));
+  }, [activeMention?.query, otherParticipants]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -381,34 +461,39 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const handleTagUser = async () => {
-    if (isGroup && isSupabaseChat) {
-      const participants = await getGroupParticipants(chatId);
+  const handleTagUser = useCallback(async () => {
+    if (!isGroup || !isSupabaseChat) return;
+    let participants = tagParticipantsList;
+    if (participants.length === 0) {
+      participants = await getGroupParticipants(chatId);
       setTagParticipantsList(participants);
-    } else {
-      setTagParticipantsList([]);
     }
-    setShowTagModal(true);
-  };
+    const others = participants.filter((p) => p.user_id !== (currentUserId ?? ''));
+    if (others.length === 0) {
+      toast.show('No other members to mention in this group.', { type: 'info', title: 'Mentions' });
+      return;
+    }
+    setInputText((prev) => (getActiveMention(prev) ? prev : `${prev}@`));
+    requestAnimationFrame(() => textInputRef.current?.focus());
+  }, [isGroup, isSupabaseChat, chatId, tagParticipantsList, currentUserId, toast]);
 
   const handleSelectTaggedUser = (userId: string, userName: string) => {
-    setTaggedUser({ id: userId, name: userName });
-    setInputText((prev) => prev + `@${userName} `);
-    setShowTagModal(false);
+    const display = userName.trim() || 'Unknown';
+    setTaggedUser({ id: userId, name: display });
+    setInputText((prev) => {
+      const mention = getActiveMention(prev);
+      const token = `@${display} `;
+      if (mention) return prev.slice(0, mention.start) + token;
+      return `${prev}${token}`;
+    });
   };
 
-  /** When user types @ in the input, open the tag modal to pick a member */
   const handleInputChange = (text: string) => {
-    if (text.endsWith('@')) {
-      setInputText(text.slice(0, -1));
-      handleTagUser();
-    } else {
-      setInputText(text);
+    setInputText(text);
+    if (taggedUser) {
+      const needle = `@${taggedUser.name}`;
+      if (!text.includes(needle)) setTaggedUser(null);
     }
-  };
-
-  const removeTaggedUser = () => {
-    setTaggedUser(null);
   };
 
   const removeImage = () => setSelectedImage(null);
@@ -450,6 +535,32 @@ export default function ChatDetailScreen() {
   const handleBackPress = () => {
     navigation.goBack();
   };
+
+  const handleMessageLongPress = useCallback(
+    (msg: ChatMessage) => {
+      if (Platform.OS === 'ios') {
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            options: ['Cancel', 'Reply'],
+            cancelButtonIndex: 0,
+          },
+          (buttonIndex) => {
+            if (buttonIndex === 1) setReplyToMessage(msg);
+          }
+        );
+        return;
+      }
+      messageModal.show({
+        title: 'Message',
+        buttons: [
+          { text: 'Reply', onPress: () => setReplyToMessage(msg) },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+        cancelable: true,
+      });
+    },
+    [messageModal]
+  );
 
   const handleGroupOptionsPress = () => {
     const buttons: { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }[] = [
@@ -540,11 +651,12 @@ export default function ChatDetailScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={keyboardBehavior}
-        keyboardVerticalOffset={0}
+        // Keep header fixed; move messages + input above keyboard.
+        keyboardVerticalOffset={Platform.OS === 'ios' ? CHAT_HEADER_BAR_HEIGHT : 0}
       >
         {/* Header - WhatsApp style */}
         <ChatHeader
@@ -559,7 +671,40 @@ export default function ChatDetailScreen() {
           onGroupOptionsPress={isGroupAdmin ? handleGroupOptionsPress : undefined}
         />
 
+        {/* @mentions of you: compact row under header — flow layout only (no absolute blur bleed onto list) */}
+        {latestMentionOfMe ? (
+          <Pressable
+            onPress={scrollToMentionMessage}
+            style={({ pressed }) => [styles.mentionBannerOuter, pressed && styles.mentionBannerPressed]}
+          >
+            <BlurView
+              pointerEvents="none"
+              intensity={Platform.OS === 'ios' ? 40 : 25}
+              tint="light"
+              style={styles.mentionBannerBlurBg}
+            />
+            <View style={styles.mentionBannerRow} pointerEvents="box-none">
+              <View style={styles.mentionSnippetBox}>
+                <Text style={styles.mentionSnippetFaded} numberOfLines={2}>
+                  {latestMentionSnippet || '—'}
+                </Text>
+              </View>
+              <View style={styles.mentionBannerTextCol}>
+                <Text style={styles.mentionBannerTitle}>Mentioned you</Text>
+                <Text style={styles.mentionBannerSender} numberOfLines={1}>
+                  {latestMentionOfMe.senderName}
+                </Text>
+                {messagesTaggingMe.length > 1 ? (
+                  <Text style={styles.mentionBannerMore}>+{messagesTaggingMe.length - 1} more</Text>
+                ) : null}
+              </View>
+              <Ionicons name="chevron-down-circle-outline" size={24} color={colors.primary.main} />
+            </View>
+          </Pressable>
+        ) : null}
+
         {/* Messages List */}
+        <View style={styles.messagesWrapper}>
         <ScrollView
           ref={scrollViewRef}
           style={[styles.messagesContainer, { marginTop: 0 }]}
@@ -579,7 +724,12 @@ export default function ChatDetailScreen() {
           const showDateSeparator = shouldShowDateSeparator(message, prevMessage);
           // Key: id + index so duplicate ids (e.g. from realtime race) don't break React
           return (
-            <Fragment key={`${message.id}-${index}`}>
+            <View
+              key={`${message.id}-${index}`}
+              onLayout={(e) => {
+                messageLayoutY.current[message.id] = e.nativeEvent.layout.y;
+              }}
+            >
               {showDateSeparator ? (
                 <View style={styles.dateSeparator}>
                   <View style={styles.dateSeparatorLine} />
@@ -593,13 +743,19 @@ export default function ChatDetailScreen() {
                 message={message}
                 isCurrentUser={isCurrentUser}
                 isGroup={isGroup}
-                onLongPress={(msg) => setReplyToMessage(msg)}
+                onLongPress={handleMessageLongPress}
                 onSwipeReply={(msg) => setReplyToMessage(msg)}
               />
-            </Fragment>
+            </View>
           );
         })}
         </ScrollView>
+        {messagesLoading && (
+          <View style={styles.messagesLoadingOverlay} pointerEvents="none">
+            <ActivityIndicator size="large" color={colors.primary.main} />
+          </View>
+        )}
+        </View>
 
         {/* Input Area - minimal padding, flush above keyboard when open */}
         <View style={[
@@ -609,11 +765,12 @@ export default function ChatDetailScreen() {
             paddingTop: keyboardVisible ? 0 : 6,
           },
         ]}>
-          {/* WhatsApp-style @ mention list: inline above input, no full-screen modal */}
-          {showTagModal && (
+          {/* WhatsApp order: @ picker (if open) → reply strip → composer — vertical stack, no overlap */}
+          {Boolean(activeMention) && !isRecording && (
             <View style={styles.tagListPanel}>
+              <Text style={styles.tagListHeader}>Mention someone</Text>
               <FlatList
-                data={getParticipantsForTag()}
+                data={mentionPickerItems}
                 keyExtractor={(item) => item.id}
                 keyboardShouldPersistTaps="handled"
                 style={styles.tagListScroll}
@@ -628,19 +785,32 @@ export default function ChatDetailScreen() {
                         {(item.name || '?').charAt(0).toUpperCase()}
                       </Text>
                     </View>
-                    <Text style={styles.tagListName} numberOfLines={1}>{item.name}</Text>
+                    <Text style={styles.tagListName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
                   </TouchableOpacity>
                 )}
-                ListEmptyComponent={isGroup ? <Text style={styles.emptyTagList}>No members to tag</Text> : null}
+                ListEmptyComponent={
+                  <Text style={styles.emptyTagList}>
+                    {otherParticipants.length === 0
+                      ? 'Loading members…'
+                      : (activeMention?.query ?? '').trim()
+                        ? 'No matching members'
+                        : 'No members to mention'}
+                  </Text>
+                }
               />
             </View>
           )}
 
           {replyToMessage && (
             <View style={styles.replyPreviewBar}>
+              <View style={styles.replyPreviewAccent} />
               <View style={styles.replyPreviewContent}>
                 <Text style={styles.replyPreviewLabel}>Replying to {replyToMessage.senderName}</Text>
-                <Text style={styles.replyPreviewSnippet} numberOfLines={1}>{replyToMessage.message}</Text>
+                <Text style={styles.replyPreviewSnippet} numberOfLines={1}>
+                  {replyToMessage.message}
+                </Text>
               </View>
               <TouchableOpacity onPress={() => setReplyToMessage(null)} style={styles.replyPreviewDismiss}>
                 <Text style={styles.replyPreviewDismissText}>×</Text>
@@ -649,7 +819,7 @@ export default function ChatDetailScreen() {
           )}
 
           <View style={styles.inputRow}>
-            {!isRecording && (isGroup || getParticipantsForTag().length > 0) && (
+            {!isRecording && isGroup && (
               <TouchableOpacity style={styles.iconButton} onPress={handleTagUser} activeOpacity={0.7}>
                 <Ionicons name="at-outline" size={22} color={colors.text.secondary} />
               </TouchableOpacity>
@@ -686,6 +856,7 @@ export default function ChatDetailScreen() {
 
               {!isRecording && (
                 <TextInput
+                  ref={textInputRef}
                   style={styles.input}
                   placeholder="Message"
                   placeholderTextColor={colors.text.tertiary}
@@ -839,6 +1010,87 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingHorizontal: 8 * scaleX,
     paddingBottom: 0,
+    flexShrink: 0,
+  },
+  messagesWrapper: {
+    flex: 1,
+    minHeight: 0,
+    position: 'relative',
+  },
+  mentionBannerOuter: {
+    width: '100%',
+    flexShrink: 0,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: colors.background.secondary,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border.light,
+    ...Platform.select({
+      android: { elevation: 0 },
+    }),
+  },
+  mentionBannerPressed: {
+    opacity: 0.9,
+  },
+  mentionBannerBlurBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  mentionBannerRow: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10 * scaleX,
+    paddingHorizontal: 12 * scaleX,
+    minHeight: 52 * scaleX,
+    zIndex: 1,
+  },
+  mentionSnippetBox: {
+    flex: 1,
+    minHeight: 40 * scaleX,
+    maxHeight: 40 * scaleX,
+    justifyContent: 'center',
+    borderRadius: 8 * scaleX,
+    paddingHorizontal: 10 * scaleX,
+    paddingVertical: 4 * scaleX,
+    marginRight: 10 * scaleX,
+    backgroundColor: 'rgba(0,0,0,0.055)',
+    overflow: 'hidden',
+  },
+  mentionSnippetFaded: {
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    lineHeight: 18 * scaleX,
+    color: colors.text.primary,
+    opacity: 0.4,
+  },
+  mentionBannerTextCol: {
+    width: 118 * scaleX,
+    flexShrink: 0,
+    marginRight: 4 * scaleX,
+  },
+  mentionBannerTitle: {
+    fontSize: 13 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '700' as any,
+    color: colors.primary.main,
+  },
+  mentionBannerSender: {
+    fontSize: 12 * scaleX,
+    fontFamily: 'Helvetica',
+    color: colors.text.secondary,
+    marginTop: 2 * scaleX,
+  },
+  mentionBannerMore: {
+    fontSize: 11 * scaleX,
+    fontFamily: 'Helvetica',
+    color: colors.text.tertiary,
+    marginTop: 2 * scaleX,
+  },
+  messagesLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.55)',
   },
   messagesContainer: {
     flex: 1,
@@ -846,7 +1098,8 @@ const styles = StyleSheet.create({
   },
   messagesContent: {
     flexGrow: 1,
-    justifyContent: 'flex-end',
+    // Start messages at top (no empty space above first message).
+    justifyContent: 'flex-start',
   },
   inputRow: {
     flexDirection: 'row',
@@ -971,37 +1224,6 @@ const styles = StyleSheet.create({
     marginLeft: 6 * scaleX,
     flex: 1,
   },
-  taggedUserContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background.tertiary,
-    paddingHorizontal: 12 * scaleX,
-    paddingVertical: 6 * scaleX,
-    borderRadius: 16 * scaleX,
-    marginBottom: 8 * scaleX,
-    marginHorizontal: 16 * scaleX,
-    alignSelf: 'flex-start',
-  },
-  taggedUserText: {
-    fontSize: 13 * scaleX,
-    fontFamily: 'Helvetica',
-    color: colors.primary.main,
-    fontWeight: '600' as any,
-    marginRight: 8 * scaleX,
-  },
-  removeTagButton: {
-    width: 18 * scaleX,
-    height: 18 * scaleX,
-    borderRadius: 9 * scaleX,
-    backgroundColor: colors.primary.main,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  removeTagText: {
-    color: colors.text.white,
-    fontSize: 12 * scaleX,
-    fontWeight: 'bold' as any,
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1045,7 +1267,8 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
   tagListPanel: {
-    maxHeight: 200,
+    maxHeight: 220,
+    flexShrink: 0,
     backgroundColor: colors.background.primary,
     borderTopLeftRadius: 12 * scaleX,
     borderTopRightRadius: 12 * scaleX,
@@ -1055,8 +1278,17 @@ const styles = StyleSheet.create({
     borderColor: colors.border.light,
     overflow: 'hidden',
   },
+  tagListHeader: {
+    fontSize: 13 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: '600' as any,
+    color: colors.text.tertiary,
+    paddingHorizontal: 12 * scaleX,
+    paddingTop: 10 * scaleX,
+    paddingBottom: 6 * scaleX,
+  },
   tagListScroll: {
-    maxHeight: 200,
+    maxHeight: 170,
   },
   tagListItem: {
     flexDirection: 'row',
@@ -1091,17 +1323,31 @@ const styles = StyleSheet.create({
   },
   replyPreviewBar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background.tertiary,
+    alignItems: 'stretch',
+    backgroundColor: colors.background.primary,
     borderRadius: 8 * scaleX,
-    paddingVertical: 8 * scaleX,
-    paddingLeft: 12 * scaleX,
-    paddingRight: 8 * scaleX,
     marginBottom: 8 * scaleX,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary.main,
+    overflow: 'hidden',
+    flexShrink: 0,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border.light,
+    ...Platform.select({
+      android: { elevation: 0 },
+    }),
   },
-  replyPreviewContent: { flex: 1 },
+  replyPreviewAccent: {
+    width: 4 * scaleX,
+    backgroundColor: colors.primary.main,
+    alignSelf: 'stretch',
+  },
+  replyPreviewContent: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 8 * scaleX,
+    paddingLeft: 10 * scaleX,
+    paddingRight: 6 * scaleX,
+    justifyContent: 'center',
+  },
   replyPreviewLabel: {
     fontSize: 12 * scaleX,
     fontWeight: '600',
@@ -1113,7 +1359,10 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   replyPreviewDismiss: {
-    padding: 4,
+    alignSelf: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10 * scaleX,
+    paddingVertical: 8 * scaleX,
   },
   replyPreviewDismissText: {
     fontSize: 20,

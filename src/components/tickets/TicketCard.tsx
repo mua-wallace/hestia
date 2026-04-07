@@ -1,30 +1,21 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
 import {
-  TICKET_CARD,
-  TICKET_CONTENT,
-  TICKET_LOCATION,
-  TICKET_CREATOR,
-  TICKET_STATUS,
-  TICKET_DIVIDER,
-  TICKETS_COLORS,
-  TICKETS_TYPOGRAPHY,
   scaleX,
 } from '../../constants/ticketsStyles';
 import { TicketData } from '../../types/tickets.types';
+import { formatDueAtCalendarLabel } from '../../utils/ticketDue';
+
+export type TicketStatusAnchorLayout = { x: number; y: number; width: number; height: number };
 
 interface TicketCardProps {
   ticket: TicketData;
   onPress?: () => void;
-  onStatusPress?: () => void;
+  onStatusPress?: (anchor?: TicketStatusAnchorLayout) => void;
 }
 
 export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCardProps) {
-  const statusConfig = ticket.status === 'done' 
-    ? TICKET_STATUS.done 
-    : TICKET_STATUS.unsolved;
-
   const getInitials = (name: string) => {
     const parts = (name || '').trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) return '?';
@@ -32,29 +23,36 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
     return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
   };
 
-  const [nowMs, setNowMs] = useState(Date.now());
+  const dueAtLine = useMemo(() => {
+    if (!ticket.dueAt) return undefined;
+    return formatDueAtCalendarLabel(ticket.dueAt);
+  }, [ticket.dueAt]);
 
-  useEffect(() => {
-    if (ticket.status !== 'unsolved' || !ticket.createdAt) return;
-    const t = setInterval(() => setNowMs(Date.now()), 60000); // update each minute
-    return () => clearInterval(t);
-  }, [ticket.status, ticket.createdAt]);
+  const createdAtText = useMemo(() => {
+    if (!ticket.createdAt) return undefined;
+    const dt = new Date(ticket.createdAt);
+    if (!Number.isFinite(dt.getTime())) return undefined;
 
-  const dueTimeText = useMemo(() => {
-    if (ticket.status !== 'unsolved') return undefined;
-    if (ticket.createdAt) {
-      const createdAtMs = new Date(ticket.createdAt).getTime();
-      if (!Number.isFinite(createdAtMs)) return undefined;
-      const elapsedMinutes = (nowMs - createdAtMs) / 60000;
-      const totalMins = Math.max(0, Math.floor(elapsedMinutes));
-      const hours = Math.floor(totalMins / 60);
-      const mins = totalMins % 60;
-      if (hours <= 0) return mins === 1 ? '1 min' : `${mins} mins`;
-      return `${hours} hrs ${mins} mins`;
-    }
-    // No createdAt from Supabase: hide the badge instead of using any mock/fallback values.
-    return undefined;
-  }, [ticket.status, ticket.createdAt, nowMs]);
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    const hh = pad2(dt.getHours());
+    const mm = pad2(dt.getMinutes());
+    const dd = pad2(dt.getDate());
+    const mo = pad2(dt.getMonth() + 1);
+    const yyyy = dt.getFullYear();
+    return `${hh}:${mm}, ${dd}/${mo}/${yyyy}`;
+  }, [ticket.createdAt]);
+
+  const statusPillRef = useRef<View>(null);
+
+  const handleStatusPress = () => {
+    if (!onStatusPress) return;
+    statusPillRef.current?.measureInWindow?.((x, y, width, height) => {
+      onStatusPress({ x, y, width, height });
+    });
+  };
+
+  const isDone = ticket.status === 'done';
+  const isOfo = ticket.status === 'ofo';
 
   return (
     <TouchableOpacity
@@ -62,326 +60,434 @@ export default function TicketCard({ ticket, onPress, onStatusPress }: TicketCar
       onPress={onPress}
       activeOpacity={0.7}
     >
-      {/* Due Date Badge */}
-      {dueTimeText && (
-        <View style={[
-          styles.dueDateBadge,
-          styles.dueDateBadgeTopLeft
-        ]}>
-          <Text style={styles.dueDateText} numberOfLines={1}>
-            Due in: {dueTimeText}
-          </Text>
+      <View style={styles.topRow}>
+        <View style={styles.topRowLeft}>
+          <View style={styles.titleRow}>
+            <Text
+              style={[styles.title, isDone ? styles.titleDone : isOfo ? styles.titleOfo : styles.titleOpen]}
+              numberOfLines={1}
+            >
+              {ticket.title}
+            </Text>
+            {!!ticket.roomNumber && (
+              <View style={[styles.roomPill, isDone ? styles.roomPillDone : isOfo ? styles.roomPillOfo : styles.roomPillOpen]}>
+                <Text style={styles.roomPillText} numberOfLines={1}>
+                  {ticket.roomNumber}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {!!dueAtLine && (
+            <Text style={styles.dueAtLine} numberOfLines={1}>
+              {dueAtLine}
+            </Text>
+          )}
+
+          {!!ticket.guest?.name && (
+            <View style={styles.guestRow}>
+              {ticket.guest.imageUrl ? (
+                <Image source={{ uri: ticket.guest.imageUrl }} style={styles.guestThumb} resizeMode="cover" />
+              ) : (
+                <View style={styles.guestThumbPlaceholder}>
+                  <Text style={styles.guestThumbInitial}>{getInitials(ticket.guest.name)}</Text>
+                </View>
+              )}
+              <View style={styles.guestTextCol}>
+                <Text style={styles.guestName} numberOfLines={1} ellipsizeMode="tail">
+                  {ticket.guest.name}
+                </Text>
+                {!!ticket.guest.stayRange && (
+                  <Text style={styles.guestDates} numberOfLines={1} ellipsizeMode="tail">
+                    {ticket.guest.stayRange}
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
         </View>
-      )}
 
-      {/* Title */}
-      <Text style={styles.title} numberOfLines={1}>
-        {ticket.title}
-      </Text>
-
-      {/* Description */}
-      <Text style={styles.description} numberOfLines={2}>
-        {ticket.description}
-      </Text>
-
-      {/* Category */}
-      {ticket.category && ticket.categoryIcon && (
-        <>
-          <Image
-            source={ticket.categoryIcon}
-            style={[
-              styles.categoryIcon,
-              ticket.category.toLowerCase() === 'laundry' && { tintColor: '#f92424' },
-            ]}
-            resizeMode="contain"
+        <View
+          ref={statusPillRef}
+          collapsable={false}
+          style={[styles.statusPill, isDone ? styles.statusPillDone : isOfo ? styles.statusPillOfo : styles.statusPillOpen]}
+        >
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            onPress={handleStatusPress}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Change ticket status"
           />
-          <Text style={styles.categoryText}>{ticket.category}</Text>
-        </>
-      )}
-
-      {/* Location Icon */}
-      <View style={styles.locationIconContainer}>
-        <Image
-          source={require('../../../assets/icons/location.png')}
-          style={styles.locationPinIcon}
-          resizeMode="contain"
-        />
+          {isOfo ? (
+            <>
+              <View style={styles.ofoPillBadge}>
+                <Text style={styles.ofoPillLabel}>OFT</Text>
+              </View>
+              <Image
+                source={require('../../../assets/icons/dropdown-arrow.png')}
+                style={[styles.statusChevron, styles.statusChevronOfo]}
+                resizeMode="contain"
+              />
+            </>
+          ) : (
+            <>
+              <Image
+                source={
+                  ticket.status === 'done'
+                    ? require('../../../assets/icons/done.png')
+                    : require('../../../assets/icons/unsolved.png')
+                }
+                style={[
+                  styles.statusIcon,
+                  ticket.status === 'done' ? styles.statusIconDone : styles.statusIconUnsolved,
+                ]}
+                resizeMode="contain"
+              />
+              <Image
+                source={require('../../../assets/icons/dropdown-arrow.png')}
+                style={[styles.statusChevron, isDone ? styles.statusChevronDone : styles.statusChevronOpen]}
+                resizeMode="contain"
+              />
+            </>
+          )}
+        </View>
       </View>
 
-      {/* Location Label */}
-      <Text style={styles.locationLabel}>Location</Text>
+      <View style={styles.divider} />
 
-      {/* Room Number */}
-      <Text style={styles.locationRoom} numberOfLines={1} ellipsizeMode="tail">
-        {ticket.locationText ?? `Room ${ticket.roomNumber}`}
-      </Text>
-
-      {/* Creator Avatar */}
-      {ticket.createdBy.avatar ? (
-        <Image
-          // Supabase may return `avatar_url` as a string URL, while mock data uses `require()`.
-          source={typeof ticket.createdBy.avatar === 'string'
-            ? { uri: ticket.createdBy.avatar }
-            : ticket.createdBy.avatar}
-          style={styles.creatorAvatar}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={styles.creatorAvatarPlaceholder}>
-          <Text style={styles.creatorInitial}>
-            {getInitials(ticket.createdBy.name)}
-          </Text>
+      {!!ticket.images?.length && (
+        <View style={styles.imagesRow}>
+          {ticket.images.slice(0, 3).map((uri, idx) => (
+            <View key={`${uri}-${idx}`} style={styles.imageThumbWrap}>
+              <Image source={{ uri }} style={styles.imageThumb} resizeMode="cover" />
+            </View>
+          ))}
         </View>
       )}
 
-      {/* Creator Label */}
-      <Text style={styles.creatorLabel}>created by</Text>
+      <View style={styles.footerRow}>
+        <View style={styles.footerPerson}>
+          {ticket.createdBy.avatar ? (
+            <Image
+              source={typeof ticket.createdBy.avatar === 'string' ? { uri: ticket.createdBy.avatar } : ticket.createdBy.avatar}
+              style={styles.footerAvatar}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.footerAvatarPlaceholder}>
+              <Text style={styles.footerAvatarInitial}>{getInitials(ticket.createdBy.name)}</Text>
+            </View>
+          )}
+          <View style={styles.footerMeta}>
+            <Text style={styles.footerName} numberOfLines={1}>
+              {ticket.createdBy.name}
+            </Text>
+            <Text style={styles.footerSub} numberOfLines={1}>
+              {createdAtText ?? '—'}
+            </Text>
+          </View>
+        </View>
 
-      {/* Creator Name */}
-      <Text style={styles.creatorName}>{ticket.createdBy.name}</Text>
+        <Image
+          source={require('../../../assets/icons/arrow-forward.png')}
+          style={[styles.footerArrow, styles.footerArrowReversed]}
+          resizeMode="contain"
+        />
 
-      {/* Horizontal Divider */}
-      <View style={styles.divider} />
-
-      {/* Status Button */}
-      <TouchableOpacity
-        style={[
-          styles.statusButton,
-          {
-            backgroundColor: statusConfig.backgroundColor,
-            width: statusConfig.width * scaleX,
-            left: statusConfig.left * scaleX,
-            top: statusConfig.top * scaleX,
-          },
-        ]}
-        onPress={onStatusPress}
-        activeOpacity={0.7}
-      >
-        {/* Status Icon */}
-        {statusConfig.iconWidth && (
-          <Image
-            source={
-              ticket.status === 'done'
-                ? require('../../../assets/icons/done.png')
-                : require('../../../assets/icons/unsolved.png')
-            }
-            style={[
-              styles.statusIcon,
-              {
-                position: 'absolute',
-                left: (statusConfig.iconLeft - statusConfig.left) * scaleX,
-                top: (statusConfig.iconTop - statusConfig.top) * scaleX,
-                width: statusConfig.iconWidth * scaleX,
-                height: statusConfig.iconHeight * scaleX,
-                tintColor: ticket.status === 'done' ? '#ffffff' : '#f92424',
-                transform: 'iconRotate' in statusConfig && statusConfig.iconRotate != null
-                  ? [{ rotate: `${(statusConfig as { iconRotate: number }).iconRotate}deg` }]
-                  : [],
-              },
-            ]}
-            resizeMode="contain"
-          />
-        )}
-        <Text
-          style={[
-            styles.statusText,
-            {
-              color: statusConfig.textColor,
-              position: 'absolute',
-              left: statusConfig.textLeft
-                ? (statusConfig.textLeft - statusConfig.left) * scaleX
-                : undefined,
-              top: statusConfig.textTop
-                ? (statusConfig.textTop - statusConfig.top) * scaleX
-                : undefined,
-            },
-          ]}
-        >
-          {ticket.status === 'done' ? 'Done' : 'Unsolved'}
-        </Text>
-      </TouchableOpacity>
+        <View style={styles.footerPerson}>
+          {ticket.assignedTo?.avatar ? (
+            <Image
+              source={typeof ticket.assignedTo.avatar === 'string' ? { uri: ticket.assignedTo.avatar } : ticket.assignedTo.avatar}
+              style={styles.footerAvatar}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.footerAvatarPlaceholder}>
+              <Text style={styles.footerAvatarInitial}>
+                {ticket.assignedTo?.name ? getInitials(ticket.assignedTo.name) : '—'}
+              </Text>
+            </View>
+          )}
+          <View style={styles.footerMeta}>
+            <Text style={styles.footerName} numberOfLines={1}>
+              {ticket.assignedTo?.name ?? 'Tag staff'}
+            </Text>
+            <Text style={styles.footerSub} numberOfLines={1}>
+              {ticket.assignedTo?.departmentName ?? (ticket.assignedTo?.name ? '—' : 'Select staff')}
+            </Text>
+          </View>
+        </View>
+      </View>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    width: TICKET_CARD.width * scaleX,
-    height: TICKET_CARD.height * scaleX,
-    backgroundColor: TICKET_CARD.backgroundColor,
-    borderWidth: TICKET_CARD.borderWidth,
-    borderColor: TICKET_CARD.borderColor,
-    borderRadius: TICKET_CARD.borderRadius * scaleX,
-    marginHorizontal: TICKET_CARD.marginHorizontal * scaleX,
-    marginBottom: TICKET_CARD.marginBottom * scaleX,
+    width: 409 * scaleX,
+    minHeight: 216 * scaleX,
+    backgroundColor: '#f9fafc',
+    borderWidth: 1,
+    borderColor: '#e3e3e3',
+    borderRadius: 9 * scaleX,
+    marginHorizontal: 16 * scaleX,
+    marginBottom: 16 * scaleX,
     position: 'relative',
-  },
-  dueDateBadge: {
-    position: 'absolute',
-    backgroundColor: TICKET_CONTENT.dueDateBadge.backgroundColor,
-    borderRadius: TICKET_CONTENT.dueDateBadge.borderRadius * scaleX,
-    paddingLeft: TICKET_CONTENT.dueDateBadge.paddingHorizontal * scaleX,
-    paddingRight: TICKET_CONTENT.dueDateBadge.paddingHorizontal * scaleX,
-    paddingTop: TICKET_CONTENT.dueDateBadge.paddingVertical * scaleX,
-    paddingBottom: TICKET_CONTENT.dueDateBadge.paddingVertical * scaleX,
-    overflow: 'hidden',
-    alignSelf: 'flex-start',
-  },
-  dueDateBadgeCentered: {
-    // First card: centered position from constants
-    left: TICKET_CONTENT.dueDateBadgeCentered.left * scaleX,
-    top: TICKET_CONTENT.dueDateBadgeCentered.top * scaleX,
-  },
-  dueDateBadgeTopLeft: {
-    // Second card: top-left position from constants
-    left: TICKET_CONTENT.dueDateBadgeTopLeft.left * scaleX,
-    top: TICKET_CONTENT.dueDateBadgeTopLeft.top * scaleX,
-  },
-  dueDateText: {
-    fontSize: TICKETS_TYPOGRAPHY.dueDate.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: TICKETS_TYPOGRAPHY.dueDate.fontWeight as any,
-    color: TICKETS_TYPOGRAPHY.dueDate.color,
-    textAlign: 'left',
-    includeFontPadding: false,
-    padding: 0,
-    margin: 0,
-    lineHeight: TICKETS_TYPOGRAPHY.dueDate.fontSize * 1.2 * scaleX,
-  },
-  title: {
-    position: 'absolute',
-    left: TICKET_CONTENT.title.left * scaleX,
-    top: TICKET_CONTENT.title.top * scaleX,
-    fontSize: TICKETS_TYPOGRAPHY.ticketTitle.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: TICKETS_TYPOGRAPHY.ticketTitle.fontWeight as any,
-    color: TICKETS_TYPOGRAPHY.ticketTitle.color,
-  },
-  description: {
-    position: 'absolute',
-    left: TICKET_CONTENT.description.left * scaleX,
-    top: TICKET_CONTENT.description.top * scaleX,
-    fontSize: TICKETS_TYPOGRAPHY.ticketDescription.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: TICKETS_TYPOGRAPHY.ticketDescription.fontWeight as any,
-    color: TICKETS_TYPOGRAPHY.ticketDescription.color,
-    lineHeight: TICKETS_TYPOGRAPHY.ticketDescription.lineHeight * scaleX,
-    maxWidth: TICKET_CONTENT.description.maxWidth * scaleX,
-  },
-  categoryIcon: {
-    position: 'absolute',
-    left: TICKET_CONTENT.category.iconLeft * scaleX,
-    top: TICKET_CONTENT.category.iconTop * scaleX,
-    width: TICKET_CONTENT.category.iconWidth * scaleX,
-    height: TICKET_CONTENT.category.iconHeight * scaleX,
-    tintColor: TICKETS_COLORS.textTertiary,
-  },
-  categoryText: {
-    position: 'absolute',
-    left: TICKET_CONTENT.category.textLeft * scaleX,
-    top: TICKET_CONTENT.category.textTop * scaleX,
-    fontSize: TICKETS_TYPOGRAPHY.category.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: TICKETS_TYPOGRAPHY.category.fontWeight as any,
-    color: TICKETS_TYPOGRAPHY.category.color,
-  },
-  locationIconContainer: {
-    position: 'absolute',
-    left: TICKET_LOCATION.icon.left * scaleX,
-    top: TICKET_LOCATION.icon.top * scaleX,
-    width: TICKET_LOCATION.icon.size * scaleX,
-    height: TICKET_LOCATION.icon.size * scaleX,
-    borderRadius: (TICKET_LOCATION.icon.size / 2) * scaleX,
-    backgroundColor: TICKETS_COLORS.locationPin,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  locationPinIcon: {
-    width: TICKET_LOCATION.pinIcon.width * scaleX,
-    height: TICKET_LOCATION.pinIcon.height * scaleX,
-    tintColor: '#ffffff',
-  },
-  locationLabel: {
-    position: 'absolute',
-    left: TICKET_LOCATION.label.left * scaleX,
-    top: TICKET_LOCATION.label.top * scaleX,
-    fontSize: TICKETS_TYPOGRAPHY.locationLabel.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: TICKETS_TYPOGRAPHY.locationLabel.fontWeight as any,
-    color: TICKETS_TYPOGRAPHY.locationLabel.color,
-  },
-  locationRoom: {
-    position: 'absolute',
-    left: TICKET_LOCATION.roomNumber.left * scaleX,
-    top: TICKET_LOCATION.roomNumber.top * scaleX,
-    fontSize: TICKETS_TYPOGRAPHY.locationRoom.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: TICKETS_TYPOGRAPHY.locationRoom.fontWeight as any,
-    color: TICKETS_TYPOGRAPHY.locationRoom.color,
-    maxWidth: 92 * scaleX,
-  },
-  creatorAvatar: {
-    position: 'absolute',
-    left: TICKET_CREATOR.avatar.left * scaleX,
-    top: TICKET_CREATOR.avatar.top * scaleX,
-    width: TICKET_CREATOR.avatar.size * scaleX,
-    height: TICKET_CREATOR.avatar.size * scaleX,
-    borderRadius: (TICKET_CREATOR.avatar.size / 2) * scaleX,
-  },
-  creatorAvatarPlaceholder: {
-    position: 'absolute',
-    left: TICKET_CREATOR.avatar.left * scaleX,
-    top: TICKET_CREATOR.avatar.top * scaleX,
-    width: TICKET_CREATOR.avatar.size * scaleX,
-    height: TICKET_CREATOR.avatar.size * scaleX,
-    borderRadius: (TICKET_CREATOR.avatar.size / 2) * scaleX,
-    backgroundColor: TICKETS_COLORS.cardBackground,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  creatorInitial: {
-    fontSize: 12 * scaleX,
-    fontWeight: 'bold' as any,
-    color: TICKETS_COLORS.textSecondary,
-  },
-  creatorLabel: {
-    position: 'absolute',
-    left: TICKET_CREATOR.label.left * scaleX,
-    top: TICKET_CREATOR.label.top * scaleX,
-    fontSize: TICKETS_TYPOGRAPHY.creatorLabel.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: TICKETS_TYPOGRAPHY.creatorLabel.fontWeight as any,
-    color: TICKETS_TYPOGRAPHY.creatorLabel.color,
-  },
-  creatorName: {
-    position: 'absolute',
-    left: TICKET_CREATOR.name.left * scaleX,
-    top: TICKET_CREATOR.name.top * scaleX,
-    fontSize: TICKETS_TYPOGRAPHY.creatorName.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: TICKETS_TYPOGRAPHY.creatorName.fontWeight as any,
-    color: TICKETS_TYPOGRAPHY.creatorName.color,
+    paddingHorizontal: 22 * scaleX,
+    paddingTop: 18 * scaleX,
+    paddingBottom: 14 * scaleX,
   },
   divider: {
-    position: 'absolute',
-    left: TICKET_DIVIDER.left * scaleX,
-    top: TICKET_DIVIDER.top * scaleX,
-    width: TICKET_DIVIDER.width * scaleX,
-    height: TICKET_DIVIDER.height,
-    backgroundColor: TICKET_DIVIDER.color,
+    height: 1,
+    backgroundColor: '#e3e3e3',
+    marginTop: 16 * scaleX,
+    marginBottom: 12 * scaleX,
   },
-  statusButton: {
-    position: 'absolute',
-    height: TICKET_STATUS.button.height * scaleX,
-    borderRadius: TICKET_STATUS.button.borderRadius * scaleX,
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12 * scaleX,
+  },
+  topRowLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+    gap: 10 * scaleX,
+  },
+  title: {
+    flexShrink: 1,
+    fontSize: 27 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    includeFontPadding: false,
+  },
+  titleOpen: {
+    color: '#f92424',
+  },
+  /** Figma 3129:1362 — solved ticket title */
+  titleDone: {
+    color: '#7ae07c',
+  },
+  /** Figma 3147:114 — OFO / OFT ticket title */
+  titleOfo: {
+    color: '#c6c5c5',
+  },
+  roomPill: {
+    borderRadius: 7 * scaleX,
+    paddingHorizontal: 14 * scaleX,
+    paddingVertical: 8 * scaleX,
+    flexShrink: 0,
+  },
+  roomPillOpen: {
+    backgroundColor: '#f92424',
+  },
+  roomPillDone: {
+    backgroundColor: '#41d541',
+  },
+  /** Figma 3147:127 — room badge when OFO */
+  roomPillOfo: {
+    backgroundColor: '#c6c5c5',
+  },
+  dueAtLine: {
+    marginTop: 4 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '400',
+    color: '#334866',
+    includeFontPadding: false,
+  },
+  roomPillText: {
+    fontSize: 24 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#fff',
+    includeFontPadding: false,
+  },
+  guestRow: {
+    marginTop: 10 * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10 * scaleX,
+  },
+  guestThumb: {
+    width: 34.6 * scaleX,
+    height: 34.6 * scaleX,
+    borderRadius: 5 * scaleX,
+  },
+  guestThumbPlaceholder: {
+    width: 34.6 * scaleX,
+    height: 34.6 * scaleX,
+    borderRadius: 5 * scaleX,
+    backgroundColor: '#e4eefe',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guestThumbInitial: {
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#5a759d',
+  },
+  guestTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  guestName: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#1e1e1e',
+  },
+  guestDates: {
+    marginTop: 2 * scaleX,
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#1e1e1e',
+  },
+  statusPill: {
+    width: 67 * scaleX,
+    height: 44 * scaleX,
+    borderRadius: 75 * scaleX,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6 * scaleX,
+    paddingHorizontal: 12 * scaleX,
+  },
+  statusPillOpen: {
+    backgroundColor: '#f9edef',
+  },
+  /** Figma 3147:79 — solved status control */
+  statusPillDone: {
+    backgroundColor: '#41d541',
+  },
+  /** Figma 3147:147 — OFT pill (grey) */
+  statusPillOfo: {
+    backgroundColor: '#c6c5c5',
+    gap: 4 * scaleX,
+    paddingHorizontal: 10 * scaleX,
+  },
+  /** Figma 3147:229 — white 26×26 circle holding "OFT" */
+  ofoPillBadge: {
+    width: 26 * scaleX,
+    height: 26 * scaleX,
+    borderRadius: 13 * scaleX,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /** Figma 3147:230 — "OFT" inside the white circle */
+  ofoPillLabel: {
+    fontSize: 9 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#c6c5c5',
+    includeFontPadding: false,
   },
   statusIcon: {
-    // Icon tint color will be handled per status if needed
+    width: 17 * scaleX,
+    height: 17 * scaleX,
   },
-  statusText: {
-    fontSize: TICKETS_TYPOGRAPHY.statusButton.fontSize * scaleX,
+  statusIconUnsolved: {
+    tintColor: '#f92424',
+  },
+  statusIconDone: {
+    tintColor: '#ffffff',
+  },
+  statusChevron: {
+    width: 10 * scaleX,
+    height: 10 * scaleX,
+  },
+  statusChevronOpen: {
+    tintColor: '#f92424',
+  },
+  statusChevronDone: {
+    tintColor: '#ffffff',
+  },
+  statusChevronOfo: {
+    tintColor: '#ffffff',
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10 * scaleX,
+  },
+  imagesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10 * scaleX,
+    marginTop: 10 * scaleX,
+    marginBottom: 8 * scaleX,
+  },
+  imageThumbWrap: {
+    width: 78 * scaleX,
+    height: 78 * scaleX,
+    borderRadius: 5 * scaleX,
+    overflow: 'hidden',
+    backgroundColor: '#e6e6e6',
+  },
+  imageThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  footerPerson: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+    gap: 8 * scaleX,
+  },
+  footerAvatar: {
+    width: 28 * scaleX,
+    height: 28 * scaleX,
+    borderRadius: 14 * scaleX,
+  },
+  footerAvatarPlaceholder: {
+    width: 28 * scaleX,
+    height: 28 * scaleX,
+    borderRadius: 14 * scaleX,
+    backgroundColor: '#e4eefe',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerAvatarInitial: {
+    fontSize: 11 * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: TICKETS_TYPOGRAPHY.statusButton.fontWeight as any,
+    fontWeight: '700',
+    color: '#5a759d',
+  },
+  footerMeta: {
+    flex: 1,
+    minWidth: 0,
+  },
+  footerName: {
+    fontSize: 13 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700',
+    color: '#1e1e1e',
+  },
+  footerSub: {
+    marginTop: 2 * scaleX,
+    fontSize: 12 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000',
+  },
+  footerArrow: {
+    width: 18 * scaleX,
+    height: 18 * scaleX,
+    tintColor: '#1e1e1e',
+  },
+  footerArrowReversed: {
+    transform: [{ rotate: '180deg' }],
   },
 });
 

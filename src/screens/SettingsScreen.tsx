@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BlurView } from 'expo-blur';
@@ -8,13 +8,9 @@ import BottomTabBar from '../components/navigation/BottomTabBar';
 import { useAuth } from '../contexts/AuthContext';
 import { mockHomeData } from '../data/mockHomeData';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
-import { useChatStore } from '../store/useChatStore';
 import { useMessageModal } from '../contexts/MessageModalContext';
 import type { ReturnToTab } from '../navigation/types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+import { useDesignScale } from '../hooks/useDesignScale';
 
 type MainTabsParamList = {
   Home: undefined;
@@ -29,6 +25,8 @@ type MainTabsParamList = {
 type SettingsScreenNavigationProp = NativeStackNavigationProp<MainTabsParamList, 'Settings'>;
 
 export default function SettingsScreen() {
+  const { scaleX } = useDesignScale();
+  const styles = useMemo(() => buildSettingsStyles(scaleX), [scaleX]);
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const route = useRoute();
   const { open: openAIChatOverlay } = useAIChatOverlay();
@@ -65,21 +63,19 @@ export default function SettingsScreen() {
     }, [route.name])
   );
 
-  // Calculate total unread chat messages for badge
-  const { chats } = useChatStore();
-  const chatBadgeCount = React.useMemo(
-    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
-    [chats]
-  );
-
-  const handleTabPress = (tab: string) => {
+  const handleTabPress = (tab: string, options?: { fromRoomsAssignmentBadge?: boolean }) => {
     if (tab === 'AIHome') {
       openAIChatOverlay();
       return;
     }
     setActiveTab(tab); // Update immediately
-    const returnToTab = (route.name as string) as 'Home' | 'Rooms' | 'Chat' | 'Tickets' | 'LostAndFound' | 'Staff' | 'Settings';
-    if (tab === 'Home' || tab === 'Rooms' || tab === 'Chat' || tab === 'Tickets' || tab === 'LostAndFound' || tab === 'Staff' || tab === 'Settings') {
+    if (tab === 'Rooms') {
+      navigation.navigate('Rooms', {
+        prioritizeMyAssignedRooms: !!options?.fromRoomsAssignmentBadge,
+      });
+      return;
+    }
+    if (tab === 'Home' || tab === 'Chat' || tab === 'Tickets' || tab === 'LostAndFound' || tab === 'Staff' || tab === 'Settings') {
       navigation.navigate(tab as keyof MainTabsParamList);
     }
   };
@@ -107,16 +103,13 @@ export default function SettingsScreen() {
         
       </View>
       
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        chatBadgeCount={chatBadgeCount}
-      />
+      <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+function buildSettingsStyles(scaleX: number) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
@@ -170,4 +163,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+}
 

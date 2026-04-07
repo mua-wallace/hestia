@@ -81,6 +81,8 @@ export interface RoomCardData {
   houseKeepingStatus: RoomStatus;
   reservationStatus?: ReservationStatus; // Due in / Due out, Occupied, Checked out / Due in, Checked in, Checked out, Due out, Vacant, Out Of Order, Due Out / Out Of Order, Checked out / Out Of Order
   promisedTime?: PromisedTime; // 12:00, 13:00, or null
+  /** When set (ISO timestamp), room is in "Return Later" state until that time. */
+  returnLaterAt?: string | null;
   guests: GuestInfo[]; // Array to support Arrival/Departure rooms with 2 guests
   /** When null, room card shows "Assign Staff" button; when set, shows staff info. */
   roomAttendantAssigned: StaffInfo | null;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { colors, typography } from '../../theme';
+import { HOME_HEADER_HEIGHT_DESIGN_PX } from '../../constants/homeLayout';
 import { scaleX } from '../../constants/allRoomsStyles';
 import AMPMToggle from '../home/AMPMToggle';
 import SearchInput from '../SearchInput';
@@ -153,7 +154,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   containerModalOpen: {
-    height: 153 * scaleX, // Match HomeScreen header height when modal is open
+    height: HOME_HEADER_HEIGHT_DESIGN_PX * scaleX, // Match HomeScreen header when modal is open
   },
   headerBackground: {
     position: 'absolute',
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
   },
   headerBackgroundWhite: {
     backgroundColor: '#FFF', // White when filter modal is open
-    height: 153 * scaleX, // Match HomeScreen header height when modal is open
+    height: HOME_HEADER_HEIGHT_DESIGN_PX * scaleX, // Match HomeScreen header when modal is open
   },
   topSection: {
     flexDirection: 'row',
@@ -294,7 +295,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#38414F', // Dark slate gray for PM mode
   },
   headerBackgroundPMModal: {
-    height: 153 * scaleX, // Match HomeScreen header height when modal is open
+    height: HOME_HEADER_HEIGHT_DESIGN_PX * scaleX, // Match HomeScreen header when modal is open
   },
   titlePM: {
     color: colors.text.white,

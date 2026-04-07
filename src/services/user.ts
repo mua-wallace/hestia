@@ -72,9 +72,11 @@ export async function updateAvatar(
   if (!isSupabaseConfigured) {
     throw new Error('Profile update requires Supabase to be configured.');
   }
-  const fileName = `avatars/${userId}.${fileExtension}`;
+  const normalizedExt = fileExtension.toLowerCase() === 'jpg' ? 'jpeg' : fileExtension.toLowerCase();
+  const contentType = normalizedExt === 'png' ? 'image/png' : 'image/jpeg';
+  // Use unique file names to avoid stale CDN/image cache showing old avatar.
+  const fileName = `avatars/${userId}-${Date.now()}.${normalizedExt}`;
   const arrayBuffer = base64ToArrayBuffer(imageBase64);
-  const contentType = `image/${fileExtension}`;
 
   const { error: uploadError } = await supabase.storage
     .from('avatars')
@@ -112,6 +114,7 @@ function mapUserRowToUser(row: UserRow, email = ''): User {
     name: row.full_name ?? 'User',
     email,
     role: row.roles?.name ?? row.departments?.name ?? 'Staff',
+    department: row.departments?.name ?? undefined,
     avatar: row.avatar_url ?? undefined,
   };
 }
@@ -187,11 +190,42 @@ export async function getDepartmentIdByName(departmentName: string): Promise<str
 /**
  * List users in a given department (by department name).
  * Used when tagging staff on a ticket for that department.
+ *
+ * Fetches **all pages** — `getUsers` is paginated (max 100 per page), so we loop until every
+ * staff member in that department is loaded.
  */
 export async function getUsersByDepartment(departmentName: string, params?: Omit<GetUsersParams, 'departmentId'>): Promise<GetUsersResponse> {
   const departmentId = await getDepartmentIdByName(departmentName);
-  if (!departmentId) return { data: [], total: 0, page: 1, limit: params?.limit ?? 20, totalPages: 0 };
-  return getUsers({ ...params, departmentId });
+  if (!departmentId) return { data: [], total: 0, page: 1, limit: 0, totalPages: 0 };
+
+  const { page: _ignoredPage, ...rest } = params ?? {};
+  const pageSize = Math.min(rest.limit ?? 100, 100);
+  const allUsers: User[] = [];
+  let total = 0;
+  let page = 1;
+  let totalPages = 1;
+
+  do {
+    const res = await getUsers({
+      ...rest,
+      departmentId,
+      page,
+      limit: pageSize,
+    });
+    total = res.total;
+    totalPages = res.totalPages;
+    allUsers.push(...res.data);
+    if (res.data.length === 0 || page >= totalPages) break;
+    page += 1;
+  } while (page <= totalPages);
+
+  return {
+    data: allUsers,
+    total,
+    page: 1,
+    limit: allUsers.length,
+    totalPages: 1,
+  };
 }
 
 /**

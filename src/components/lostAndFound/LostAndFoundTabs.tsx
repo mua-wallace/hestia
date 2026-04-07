@@ -1,11 +1,13 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { typography } from '../../theme';
 import { scaleX } from '../../constants/lostAndFoundStyles';
 import {
   LOST_AND_FOUND_TABS,
   LOST_AND_FOUND_COLORS,
   LOST_AND_FOUND_TYPOGRAPHY,
+  LOST_AND_FOUND_DIVIDER,
 } from '../../constants/lostAndFoundStyles';
 import type { LostAndFoundTab } from '../../types/lostAndFound.types';
 
@@ -16,10 +18,12 @@ interface LostAndFoundTabsProps {
 }
 
 export default function LostAndFoundTabs({ selectedTab, onTabPress, onSearchPress }: LostAndFoundTabsProps) {
+  const insets = useSafeAreaInsets();
+  const [labelWidths, setLabelWidths] = React.useState<Partial<Record<LostAndFoundTab, number>>>({});
   const tabs = [
     { id: 'created' as LostAndFoundTab, label: 'All' },
     { id: 'stored' as LostAndFoundTab, label: 'Stored' },
-    { id: 'returned' as LostAndFoundTab, label: 'Returned' },
+    { id: 'returned' as LostAndFoundTab, label: 'Shipped' },
     { id: 'discarded' as LostAndFoundTab, label: 'Discarded' },
   ];
 
@@ -28,8 +32,11 @@ export default function LostAndFoundTabs({ selectedTab, onTabPress, onSearchPres
     const selectedTabConfig = LOST_AND_FOUND_TABS.tabs[selectedTab];
     
     // Use exact left position from Figma design
-    const indicatorLeft = selectedTabConfig.indicatorLeft * scaleX;
-    const indicatorWidth = selectedTabConfig.indicatorWidth * scaleX;
+    const indicatorLeft = selectedTabConfig.left * scaleX;
+    const measured = labelWidths[selectedTab];
+    const indicatorWidth = (measured != null && measured > 0)
+      ? measured
+      : selectedTabConfig.indicatorWidth * scaleX;
     
     return { left: indicatorLeft, width: indicatorWidth };
   };
@@ -37,7 +44,7 @@ export default function LostAndFoundTabs({ selectedTab, onTabPress, onSearchPres
   const indicatorPos = getIndicatorPosition();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { top: LOST_AND_FOUND_TABS.container.top * scaleX + insets.top }]}>
       <View style={styles.tabsWrapper}>
         {tabs.map((tab) => {
           const tabConfig = LOST_AND_FOUND_TABS.tabs[tab.id];
@@ -60,6 +67,10 @@ export default function LostAndFoundTabs({ selectedTab, onTabPress, onSearchPres
                   styles.tabText,
                   isActive ? styles.tabTextActive : styles.tabTextInactive,
                 ]}
+                onLayout={(e) => {
+                  const w = e.nativeEvent.layout.width;
+                  setLabelWidths((prev) => (prev[tab.id] === w ? prev : { ...prev, [tab.id]: w }));
+                }}
               >
                 {tab.label}
               </Text>
@@ -78,6 +89,9 @@ export default function LostAndFoundTabs({ selectedTab, onTabPress, onSearchPres
           ]}
         />
       </View>
+
+      {/* Divider below tabs */}
+      <View style={styles.tabsDivider} pointerEvents="none" />
 
       {/* Search Icon */}
       <TouchableOpacity
@@ -104,6 +118,8 @@ const styles = StyleSheet.create({
     height: LOST_AND_FOUND_TABS.container.height * scaleX,
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
+    zIndex: 12,
+    elevation: 12,
   },
   tabsWrapper: {
     position: 'relative',
@@ -141,10 +157,19 @@ const styles = StyleSheet.create({
   },
   indicator: {
     position: 'absolute',
-    top: (LOST_AND_FOUND_TABS.indicator.top - LOST_AND_FOUND_TABS.container.top) * scaleX,
+    // Reduce vertical gap between tab label and underline.
+    top: (LOST_AND_FOUND_TABS.indicator.top - LOST_AND_FOUND_TABS.container.top - 4) * scaleX,
     height: LOST_AND_FOUND_TABS.indicator.height * scaleX,
     backgroundColor: LOST_AND_FOUND_TABS.indicator.backgroundColor,
     borderRadius: LOST_AND_FOUND_TABS.indicator.borderRadius * scaleX,
+  },
+  tabsDivider: {
+    position: 'absolute',
+    left: LOST_AND_FOUND_DIVIDER.left * scaleX,
+    top: (LOST_AND_FOUND_TABS.indicator.top - LOST_AND_FOUND_TABS.container.top + LOST_AND_FOUND_TABS.indicator.height + 5) * scaleX,
+    width: (LOST_AND_FOUND_DIVIDER.width + 32) * scaleX,
+    height: LOST_AND_FOUND_DIVIDER.height,
+    backgroundColor: LOST_AND_FOUND_DIVIDER.color,
   },
   searchButton: {
     position: 'absolute',
@@ -154,6 +179,7 @@ const styles = StyleSheet.create({
     height: LOST_AND_FOUND_TABS.searchIcon.height * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 2,
   },
   searchIcon: {
     width: LOST_AND_FOUND_TABS.searchIcon.width * scaleX,

@@ -13,7 +13,9 @@ export interface LostAndFoundItem {
   guestDates?: string; // e.g., "07/10-15/10"
   guestCount?: number; // e.g., 2
   guestImage?: { uri: string } | any; // Guest avatar/image
-  storedLocation: string; // e.g., "HSK Office"
+  storedLocation: string; // e.g., "Office"
+  /** When status is `shipped`/`returned`, where the item was shipped to (Figma 3107:70). */
+  shippedLocation?: string;
   registeredBy: {
     name: string;
     avatar?: any; // Image source

@@ -90,7 +90,9 @@ export const authService = {
       return null;
     }
     try {
-      const timeoutMs = 5000;
+      // iOS can occasionally be slower to resolve network + keychain/session reads,
+      // especially right after app start or when the device switches networks.
+      const timeoutMs = 15000;
       const sessionPromise = supabase.auth.getSession();
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('getSession timeout')), timeoutMs)

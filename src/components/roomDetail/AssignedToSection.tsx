@@ -3,15 +3,18 @@ import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { typography } from '../../theme';
 import { scaleX, ASSIGNED_TO } from '../../constants/roomDetailStyles';
 
+export type AssignedStaffInfo = {
+  id: string;
+  name: string;
+  avatar?: any;
+  initials?: string;
+  avatarColor?: string;
+  department?: string;
+};
+
 interface AssignedToSectionProps {
-  staff: {
-    id: string;
-    name: string;
-    avatar?: any;
-    initials?: string;
-    avatarColor?: string;
-    department?: string; // Department/role (e.g., "HSK")
-  };
+  /** When null/undefined, shows empty assignee row with Reassign (Arrival / ArrivalDeparture parity with Figma). */
+  staff: AssignedStaffInfo | null | undefined;
   onReassignPress?: () => void;
 }
 
@@ -19,10 +22,26 @@ export default function AssignedToSection({
   staff,
   onReassignPress,
 }: AssignedToSectionProps) {
-  // Get first letter for initial if no avatar
+  if (!staff) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.leftColumn}>
+          <Text style={styles.unassignedLabel}>Not assigned</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.reassignButton}
+          onPress={onReassignPress}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.reassignButtonText}>Reassign</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const initial = staff.initials || (staff.name ? staff.name.charAt(0).toUpperCase() : '?');
-  
-  // Generate color for initial circle based on name
+
   const getInitialColor = (name: string): string => {
     const colors = ['#ff4dd8', '#5a759d', '#607aa1', '#f0be1b'];
     const index = name.charCodeAt(0) % colors.length;
@@ -74,48 +93,40 @@ export default function AssignedToSection({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    top: 0, // Start at top of card content area
-    left: 0,
     width: '100%',
-    height: 80 * scaleX, // Height up to divider (80px from card content top per Figma)
-    zIndex: 1, // Below divider, above Task section
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    overflow: 'hidden', // Ensure content doesn't extend beyond container
   },
   leftColumn: {
-    flexDirection: 'row', // Change to row to position name next to picture
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'flex-start',
-    marginTop: ASSIGNED_TO.profilePicture.top * scaleX,
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8 * scaleX,
   },
   profilePicture: {
     width: ASSIGNED_TO.profilePicture.width * scaleX,
     height: ASSIGNED_TO.profilePicture.height * scaleX,
     borderRadius: (ASSIGNED_TO.profilePicture.width / 2) * scaleX,
-    marginLeft: ASSIGNED_TO.profilePicture.left * scaleX,
-    marginRight: (ASSIGNED_TO.staffName.left - ASSIGNED_TO.profilePicture.left - ASSIGNED_TO.profilePicture.width) * scaleX, // Space between picture and name
+    marginRight: (ASSIGNED_TO.staffName.left - ASSIGNED_TO.profilePicture.left - ASSIGNED_TO.profilePicture.width) * scaleX,
   },
   staffName: {
     fontSize: ASSIGNED_TO.staffName.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: ASSIGNED_TO.staffName.color,
-    marginTop: (ASSIGNED_TO.staffName.top - ASSIGNED_TO.profilePicture.top) * scaleX, // Align with picture top (18 - 17 = 1px)
   },
   department: {
     fontSize: ASSIGNED_TO.department.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.light as any,
     color: ASSIGNED_TO.department.color,
-    marginTop: (ASSIGNED_TO.department.top - ASSIGNED_TO.staffName.top - ASSIGNED_TO.staffName.fontSize) * scaleX, // Space between name and department (34 - 18 - 13 = 3px)
+    marginTop: 2 * scaleX,
   },
   reassignButton: {
-    position: 'absolute',
-    right: 16 * scaleX, // 16px padding from card edge
-    top: ASSIGNED_TO.reassignButton.top * scaleX, // Relative to card content area
+    flexShrink: 0,
     width: ASSIGNED_TO.reassignButton.width * scaleX,
     height: ASSIGNED_TO.reassignButton.height * scaleX,
     borderRadius: ASSIGNED_TO.reassignButton.borderRadius * scaleX,
@@ -134,14 +145,19 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
   },
+  unassignedLabel: {
+    fontSize: ASSIGNED_TO.staffName.fontSize * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.light as any,
+    color: '#5a759d',
+  },
   initialsCircle: {
     width: ASSIGNED_TO.profilePicture.width * scaleX,
     height: ASSIGNED_TO.profilePicture.height * scaleX,
     borderRadius: (ASSIGNED_TO.profilePicture.width / 2) * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: ASSIGNED_TO.profilePicture.left * scaleX,
-    marginRight: (ASSIGNED_TO.staffName.left - ASSIGNED_TO.profilePicture.left - ASSIGNED_TO.profilePicture.width) * scaleX, // Space between picture and name
+    marginRight: (ASSIGNED_TO.staffName.left - ASSIGNED_TO.profilePicture.left - ASSIGNED_TO.profilePicture.width) * scaleX,
   },
   initialsText: {
     fontSize: 16 * scaleX,

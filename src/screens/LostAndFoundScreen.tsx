@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, Modal, TouchableOpacity, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, Modal, TouchableOpacity, Text, Pressable, useWindowDimensions, Image, TextInput } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import LostAndFoundHeader from '../components/lostAndFound/LostAndFoundHeader';
 import LostAndFoundTabs from '../components/lostAndFound/LostAndFoundTabs';
-import LostAndFoundItemCard from '../components/lostAndFound/LostAndFoundItemCard';
+import LostAndFoundItemCard, { type LostAndFoundStatusAnchorLayout } from '../components/lostAndFound/LostAndFoundItemCard';
 import RegisterLostAndFoundModal from '../components/lostAndFound/RegisterLostAndFoundModal';
 import ItemRegisteredSuccessModal from '../components/lostAndFound/ItemRegisteredSuccessModal';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
-import { useChatStore } from '../store/useChatStore';
 import { LostAndFoundTab, LostAndFoundItem, LostAndFoundStatus } from '../types/lostAndFound.types';
 import {
   LOST_AND_FOUND_SPACING,
@@ -22,6 +22,8 @@ import type { ReturnToTab } from '../navigation/types';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import * as FileSystem from 'expo-file-system/legacy';
+import { typography } from '../theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { base64ToArrayBuffer } from '../utils/encoding';
 
 type MainTabsParamList = {
@@ -38,14 +40,21 @@ type LostAndFoundScreenNavigationProp = BottomTabNavigationProp<MainTabsParamLis
 
 export default function LostAndFoundScreen() {
   const navigation = useNavigation<LostAndFoundScreenNavigationProp>();
+  const insets = useSafeAreaInsets();
   const route = useRoute();
   const { open: openAIChatOverlay } = useAIChatOverlay();
-  const params = route.params as { openRegisterModal?: boolean } | undefined;
+  const params = route.params as { openRegisterModal?: boolean; preselectedRoomId?: string } | undefined;
   const [activeTab, setActiveTab] = useState('LostAndFound');
   const [selectedTab, setSelectedTab] = useState<LostAndFoundTab>('created');
   const [items, setItems] = useState<LostAndFoundItem[]>([]);
+  /** First open / blank list — full-screen spinner. */
+  const [listLoading, setListLoading] = useState(true);
+  /** Refocus reload after we already have data — header indicator only (non-blocking). */
+  const [refetchLoading, setRefetchLoading] = useState(false);
+  const hasLoadedOnceRef = React.useRef(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [preselectedRoomIdForRegister, setPreselectedRoomIdForRegister] = useState<string | undefined>(undefined);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successData, setSuccessData] = useState<{
     trackingNumber: string;
@@ -53,6 +62,53 @@ export default function LostAndFoundScreen() {
     itemData: any;
   } | null>(null);
   const [statusModalItem, setStatusModalItem] = useState<LostAndFoundItem | null>(null);
+  const [statusAnchor, setStatusAnchor] = useState<LostAndFoundStatusAnchorLayout | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [statusUpdatingItemId, setStatusUpdatingItemId] = useState<string | null>(null);
+  const [shippingMode, setShippingMode] = useState(false);
+  const [shippingLocation, setShippingLocation] = useState('');
+  const [shippingLocationCache, setShippingLocationCache] = useState<string[]>([]);
+  const [shippingLocationByItemId, setShippingLocationByItemId] = useState<Record<string, string>>({});
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+
+  /**
+   * PostgREST schema cache may not include newly added columns immediately.
+   * null = unknown, true = available, false = not available (fallback to local cache + status-only updates).
+   */
+  const shippedLocationColumnAvailableRef = React.useRef<boolean | null>(null);
+
+  const SHIPPING_LOCATION_CACHE_KEY = 'lost_and_found:shipped_location_cache:v1';
+  const SHIPPING_LOCATION_BY_ITEM_KEY = 'lost_and_found:shipped_location_by_item:v1';
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(SHIPPING_LOCATION_CACHE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setShippingLocationCache(parsed.filter((v) => typeof v === 'string').map((v) => v.trim()).filter(Boolean));
+        }
+      } catch {
+        // ignore cache parse errors
+      }
+    })();
+  }, []);
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(SHIPPING_LOCATION_BY_ITEM_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          setShippingLocationByItemId(parsed as Record<string, string>);
+        }
+      } catch {
+        // ignore cache parse errors
+      }
+    })();
+  }, []);
 
   const formatGuestDates = (arrival?: string | null, departure?: string | null): string => {
     if (!arrival || !departure) return '';
@@ -64,51 +120,133 @@ export default function LostAndFoundScreen() {
     return `${fmt(a)}-${fmt(d)}`;
   };
 
+  const formatRegisteredTimestamp = (iso?: string | null): string => {
+    if (!iso) return '';
+    const dt = new Date(iso);
+    if (Number.isNaN(dt.getTime())) return '';
+    const hh = String(dt.getHours()).padStart(2, '0');
+    const mm = String(dt.getMinutes()).padStart(2, '0');
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return `${hh}:${mm}, ${dt.getDate()} ${monthNames[dt.getMonth()]} ${dt.getFullYear()}`;
+  };
+
   // Load items from Supabase lost_and_found_items table (with room + guest info)
-  const loadItems = React.useCallback(async () => {
+  const loadItems = React.useCallback(async (source: 'mount' | 'focus' | 'pull' = 'mount') => {
     if (!isSupabaseConfigured) {
       setItems([]);
+      setListLoading(false);
+      setRefetchLoading(false);
+      hasLoadedOnceRef.current = true;
       return;
     }
+
+    if (source === 'pull') {
+      /* refreshing toggled by onRefresh */
+    } else if (source === 'focus' && hasLoadedOnceRef.current) {
+      setRefetchLoading(true);
+    } else {
+      setListLoading(true);
+    }
+
     try {
-      const { data, error } = await supabase
-        .from('lost_and_found_items')
-        .select(`
-          id,
-          item_name,
-          description,
-          status,
-          storage_location,
-          room_id,
-          found_location,
-          tracking_number,
-          image_url,
-          rooms (
-            room_number,
-            reservations (
-              guests (
-                full_name,
-                vip_code,
-                image_url
-              ),
-              arrival_date,
-              departure_date,
-              adults,
-              kids
-            )
+      const baseSelect = `
+        id,
+        item_name,
+        description,
+        status,
+        storage_location,
+        room_id,
+        found_location,
+        created_at,
+        found_by_id,
+        registered_by_id,
+        tracking_number,
+        image_url,
+        rooms (
+          room_number,
+          reservations (
+            guests (
+              full_name,
+              vip_code,
+              image_url
+            ),
+            arrival_date,
+            departure_date,
+            adults,
+            kids
           )
-        `)
-        .order('found_at', { ascending: false });
+        )
+      `;
+
+      // `shipped_location` is added by a later migration; gracefully fallback when DB is behind.
+      const withShippedSelect = baseSelect.replace('storage_location,', 'storage_location,\n        shipped_location,');
+
+      let data: any[] | null = null;
+      let error: any = null;
+
+      ({ data, error } = await supabase
+        .from('lost_and_found_items')
+        .select(withShippedSelect)
+        .order('found_at', { ascending: false }));
+
+      if (!error) shippedLocationColumnAvailableRef.current = true;
+
+      if (error && error.code === '42703') {
+        shippedLocationColumnAvailableRef.current = false;
+        ({ data, error } = await supabase
+          .from('lost_and_found_items')
+          .select(baseSelect)
+          .order('found_at', { ascending: false }));
+      }
+
       if (error || !data) {
         console.warn('[LostAndFoundScreen] Failed to load items', error);
         setItems([]);
         return;
       }
-      const mapped: LostAndFoundItem[] = (data as any[]).map((row) => {
+      const rows = data as any[];
+
+      const staffIds = Array.from(
+        new Set(
+          rows
+            .map((row) => row.registered_by_id ?? row.found_by_id)
+            .filter((id): id is string => Boolean(id))
+        )
+      );
+
+      const userById = new Map<string, { full_name?: string | null; avatar_url?: string | null }>();
+      if (staffIds.length > 0) {
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('id, full_name, avatar_url')
+          .in('id', staffIds);
+        if (usersError) {
+          console.warn('[LostAndFoundScreen] Failed to load registered-by users', usersError);
+        } else if (usersData) {
+          (usersData as any[]).forEach((user) => {
+            userById.set(user.id, user);
+          });
+        }
+      }
+      const mapped: LostAndFoundItem[] = rows.map((row) => {
         const room = (row as any).rooms;
         const reservation = room?.reservations?.[0];
         const guest = reservation?.guests?.[0];
         const guestCount = (reservation?.adults || 0) + (reservation?.kids || 0);
+        const registeredByUser = userById.get(row.registered_by_id ?? row.found_by_id);
 
         // Normalize image URL: legacy rows may store only the storage path.
         let imageUri: string | undefined;
@@ -145,34 +283,48 @@ export default function LostAndFoundScreen() {
           guestCount: guestCount || undefined,
           guestImage: guest?.image_url ? { uri: guest.image_url } : undefined,
           storedLocation: row.storage_location ?? '',
+          shippedLocation:
+            (row as any).shipped_location ??
+            shippingLocationByItemId[row.id] ??
+            undefined,
           registeredBy: {
-            name: 'Staff',
-            avatar: undefined,
-            timestamp: '',
+            name: registeredByUser?.full_name ?? 'Staff',
+            avatar: registeredByUser?.avatar_url
+              ? { uri: registeredByUser.avatar_url }
+              : undefined,
+            timestamp: formatRegisteredTimestamp((row as any).created_at),
           },
           // Prefer normalized public URL for the item image
           image: imageUri ? { uri: imageUri } : undefined,
           status: (row.status as LostAndFoundItem['status']) ?? 'stored',
-          createdAt: '',
+          storedAt: (row as any).found_at ?? (row as any).created_at ?? undefined,
+          createdAt: (row as any).created_at ?? '',
         };
       });
       setItems(mapped);
     } catch (e) {
       console.warn('[LostAndFoundScreen] Unexpected error loading items', e);
       setItems([]);
+    } finally {
+      if (source !== 'pull') {
+        setListLoading(false);
+      }
+      setRefetchLoading(false);
+      hasLoadedOnceRef.current = true;
     }
-  }, []);
+  }, [shippingLocationByItemId]);
 
   useEffect(() => {
-    loadItems();
+    loadItems('mount');
   }, [loadItems]);
 
   // Open register modal if param is set
   useEffect(() => {
     if (params?.openRegisterModal) {
+      setPreselectedRoomIdForRegister(params?.preselectedRoomId);
       setShowRegisterModal(true);
       // Clear the param to prevent reopening on subsequent renders
-      navigation.setParams({ openRegisterModal: false } as any);
+      navigation.setParams({ openRegisterModal: false, preselectedRoomId: undefined } as any);
     }
   }, [params?.openRegisterModal, navigation]);
 
@@ -183,19 +335,12 @@ export default function LostAndFoundScreen() {
       if (routeName === 'Home' || routeName === 'Rooms' || routeName === 'Chat' || routeName === 'Tickets') {
         setActiveTab(routeName);
       }
-      // Reload Lost & Found items when screen gains focus
-      loadItems();
+      // Reload when returning to this tab; after first load this is non-blocking (header spinner only)
+      loadItems('focus');
     }, [route.name, loadItems])
   );
 
-  // Calculate total unread chat messages for badge
-  const { chats } = useChatStore();
-  const chatBadgeCount = React.useMemo(
-    () => chats.reduce((total, chat) => total + (chat.unreadCount || 0), 0),
-    [chats]
-  );
-
-  const handleTabPress = (tab: string) => {
+  const handleTabPress = (tab: string, options?: { fromRoomsAssignmentBadge?: boolean }) => {
     if (tab === 'AIHome') {
       openAIChatOverlay();
       return;
@@ -205,7 +350,9 @@ export default function LostAndFoundScreen() {
     if (tab === 'Home') {
       navigation.navigate('Home' as any);
     } else if (tab === 'Rooms') {
-      navigation.navigate('Rooms' as any);
+      navigation.navigate('Rooms' as any, {
+        prioritizeMyAssignedRooms: !!options?.fromRoomsAssignmentBadge,
+      });
     } else if (tab === 'Chat') {
       navigation.navigate('Chat' as any);
     } else if (tab === 'Tickets') {
@@ -234,6 +381,7 @@ export default function LostAndFoundScreen() {
 
   const handleCloseRegisterModal = () => {
     setShowRegisterModal(false);
+    setPreselectedRoomIdForRegister(undefined);
   };
 
   const handleRegisterNext = async (data: {
@@ -267,6 +415,7 @@ export default function LostAndFoundScreen() {
         const selectedDate: Date = itemData.selectedDate ?? new Date();
         const selectedHour: number = itemData.selectedHour ?? selectedDate.getHours();
         const selectedMinute: number = itemData.selectedMinute ?? selectedDate.getMinutes();
+        const registeredByIdFromForm: string | null = itemData.registeredBy ?? null;
 
         const { data: sessionData } = await supabase.auth.getSession();
         const userId = sessionData?.session?.user?.id ?? null;
@@ -339,21 +488,6 @@ export default function LostAndFoundScreen() {
               .toString(36)
               .slice(2)}.${normalizedExt}`;
 
-            const bodyByteLength =
-              body && typeof (body as any).byteLength === 'number'
-                ? (body as any).byteLength
-                : body && typeof (body as any).size === 'number'
-                  ? (body as any).size
-                  : undefined;
-
-            console.log('[LostAndFoundScreen] Uploading lost-and-found image', {
-              firstImageUri,
-              normalizedExt,
-              contentType,
-              fileName,
-              bodyByteLength,
-            });
-
             let uploadData: any = null;
             let uploadError: any = null;
 
@@ -364,13 +498,6 @@ export default function LostAndFoundScreen() {
                 .createSignedUploadUrl(fileName, { upsert: false });
 
               if (!signedUrlError && signedUpload?.token) {
-                console.log('[LostAndFoundScreen] Using signed upload', {
-                  fileName,
-                  tokenLength: String(signedUpload.token).length,
-                    signedUrl: signedUpload.signedUrl,
-                    bodyType: typeof body,
-                });
-
                 const { data: signedUploadData, error: signedUploadError } = await supabase.storage
                   .from('lost-and-found')
                   .uploadToSignedUrl(fileName, signedUpload.token, body, {
@@ -446,6 +573,7 @@ export default function LostAndFoundScreen() {
               storage_location: storedLocation,
               found_at: foundAt,
               found_by_id: userId,
+              registered_by_id: registeredByIdFromForm ?? userId,
               found_location: foundLocation,
               room_id:
                 selectedLocation === 'room' && selectedRoom
@@ -458,7 +586,7 @@ export default function LostAndFoundScreen() {
           if (!error && inserted?.tracking_number) {
             trackingNumberFromDb = inserted.tracking_number;
           }
-          await loadItems();
+          await loadItems('focus');
           // Ensure the newly created item shows image and (for rooms) guest name on the Created tab
           if (inserted?.id) {
             // Only use a remote URL that we successfully wrote to the DB/upload.
@@ -509,13 +637,22 @@ export default function LostAndFoundScreen() {
     console.log('Item pressed:', item.id);
   };
 
-  const handleStatusPress = (item: LostAndFoundItem) => {
+  const handleStatusPress = (item: LostAndFoundItem, anchor?: LostAndFoundStatusAnchorLayout) => {
     setStatusModalItem(item);
+    setStatusAnchor(anchor ?? null);
+    setShippingMode(false);
+    setShippingLocation(item.shippedLocation ?? '');
   };
 
   const handleStatusSelect = async (newStatus: LostAndFoundStatus) => {
     const item = statusModalItem;
-    setStatusModalItem(null);
+    if (newStatus === 'shipped') {
+      // Open shipped-location popover (Figma 3107:70)
+      setShippingMode(true);
+      return;
+    }
+    setStatusUpdating(true);
+    setStatusUpdatingItemId(item?.id ?? null);
     if (!item || !isSupabaseConfigured) return;
     try {
       const { error } = await supabase
@@ -526,15 +663,151 @@ export default function LostAndFoundScreen() {
         console.warn('[LostAndFoundScreen] Failed to update status', error);
         return;
       }
-      await loadItems();
+      setStatusModalItem(null);
+      setStatusAnchor(null);
+      await loadItems('focus');
     } catch (e) {
       console.warn('[LostAndFoundScreen] Error updating status', e);
+    } finally {
+      setStatusUpdating(false);
+      setStatusUpdatingItemId(null);
     }
   };
 
+  const shippedLocationOptions = React.useMemo(() => {
+    const unique = new Map<string, string>(); // lower -> original
+    const add = (v: string) => {
+      const trimmed = v.trim();
+      if (!trimmed) return;
+      const key = trimmed.toLowerCase();
+      if (!unique.has(key)) unique.set(key, trimmed);
+    };
+    // Prefer local cache (recent first), then DB values.
+    for (const v of shippingLocationCache) add(v);
+    for (const it of items) add(it.shippedLocation ?? '');
+
+    const q = shippingLocation.trim().toLowerCase();
+    const values = Array.from(unique.values());
+    if (!q) return values.slice(0, 20);
+
+    // “Contains” matching with stronger ranking for exact/prefix/word-boundary matches.
+    const tokens = q.split(/\s+/).filter(Boolean);
+    const score = (v: string) => {
+      const lc = v.toLowerCase();
+      let s = 0;
+
+      if (lc === q) s += 100;
+      if (lc.startsWith(q)) s += 60;
+      if (lc.includes(` ${q}`) || lc.includes(`-${q}`) || lc.includes(`,${q}`)) s += 40; // word-ish boundary
+      if (lc.includes(q)) s += 20;
+
+      for (const t of tokens) {
+        if (!t) continue;
+        if (lc === t) s += 10;
+        if (lc.startsWith(t)) s += 6;
+        if (lc.includes(` ${t}`) || lc.includes(`-${t}`) || lc.includes(`,${t}`)) s += 4;
+        if (lc.includes(t)) s += 2;
+      }
+
+      // Prefer shorter strings when scores tie (more exact).
+      s -= Math.min(10, Math.floor(lc.length / 20));
+      return s;
+    };
+    return values
+      .map((v) => ({ v, s: score(v) }))
+      .filter((x) => x.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .map((x) => x.v)
+      .slice(0, 20);
+  }, [items, shippingLocationCache, shippingLocation]);
+
+  const saveShippedLocation = React.useCallback(
+    async (value: string) => {
+      const item = statusModalItem;
+      const trimmed = value.trim();
+      if (!item || !isSupabaseConfigured || !trimmed) return;
+      setStatusUpdating(true);
+      setStatusUpdatingItemId(item.id);
+      try {
+        // Always cache locally (we may be in schema-cache lag).
+        setShippingLocationByItemId((prev) => {
+          const next = { ...prev, [item.id]: trimmed };
+          AsyncStorage.setItem(SHIPPING_LOCATION_BY_ITEM_KEY, JSON.stringify(next)).catch(() => {});
+          return next;
+        });
+
+        // If PostgREST doesn't know this column yet, do a status-only update without warning spam.
+        const shippedLocationColumnAvailable = shippedLocationColumnAvailableRef.current;
+        if (shippedLocationColumnAvailable === false) {
+          const statusOnly = await supabase.from('lost_and_found_items').update({ status: 'shipped' }).eq('id', item.id);
+          if (statusOnly.error) {
+            console.warn('[LostAndFoundScreen] Failed to update shipped status', statusOnly.error);
+            return;
+          }
+        } else {
+          // Attempt full update; if schema cache rejects shipped_location, remember and fallback.
+          const { error } = await supabase
+            .from('lost_and_found_items')
+            .update({ status: 'shipped', shipped_location: trimmed })
+            .eq('id', item.id);
+
+          if (error && error.code === 'PGRST204') {
+            shippedLocationColumnAvailableRef.current = false;
+            const statusOnly = await supabase.from('lost_and_found_items').update({ status: 'shipped' }).eq('id', item.id);
+            if (statusOnly.error) {
+              console.warn('[LostAndFoundScreen] Failed to update shipped status', statusOnly.error);
+              return;
+            }
+          } else if (error) {
+            console.warn('[LostAndFoundScreen] Failed to update shipped location', error);
+            return;
+          } else {
+            shippedLocationColumnAvailableRef.current = true;
+          }
+        }
+
+        setStatusModalItem(null);
+        setStatusAnchor(null);
+        setShippingMode(false);
+        setShippingLocation('');
+        // Update local cache (recent-first) so it shows up as suggestions next time.
+        setShippingLocationCache((prev) => {
+          const next = [trimmed, ...prev.filter((p) => p.trim().toLowerCase() !== trimmed.toLowerCase())].slice(0, 30);
+          AsyncStorage.setItem(SHIPPING_LOCATION_CACHE_KEY, JSON.stringify(next)).catch(() => {});
+          return next;
+        });
+        await loadItems('focus');
+      } catch (e) {
+        console.warn('[LostAndFoundScreen] Error updating shipped location', e);
+      } finally {
+        setStatusUpdating(false);
+        setStatusUpdatingItemId(null);
+      }
+    },
+    [statusModalItem, loadItems]
+  );
+
+  const statusPopoverPosition = React.useMemo(() => {
+    if (!statusAnchor) return null;
+    const margin = 16 * scaleX;
+    const popoverW = 340 * scaleX;
+    const popoverH = 230 * scaleX; // approximate, clamped
+    // Center the popover under the anchor (more robust than aligning by right edge,
+    // and works even when we only have a tap point with width/height = 0).
+    const anchorCenterX = statusAnchor.x + (statusAnchor.width || 0) / 2;
+    const left = Math.max(margin, Math.min(windowWidth - popoverW - margin, anchorCenterX - popoverW / 2));
+    const desiredTop = statusAnchor.y + statusAnchor.height + 14 * scaleX;
+    const top = Math.max(margin, Math.min(windowHeight - popoverH - margin, desiredTop));
+
+    const notchSize = 12 * scaleX;
+    const notchCenterX = anchorCenterX - left;
+    const notchLeft = Math.max(14 * scaleX, Math.min(popoverW - 14 * scaleX - notchSize, notchCenterX - notchSize / 2));
+    return { left, top, notchLeft, width: popoverW };
+  }, [statusAnchor, windowWidth, windowHeight]);
+
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    loadItems().finally(() => setRefreshing(false));
+    loadItems('pull').finally(() => setRefreshing(false));
   }, [loadItems]);
 
   // Filter items based on selected tab
@@ -545,7 +818,7 @@ export default function LostAndFoundScreen() {
       case 'stored':
         return item.status === 'stored';
       case 'returned':
-        return item.status === 'shipped'; // Returned tab shows items with "shipped" status
+        return item.status === 'shipped'; // Shipped tab shows items with "shipped" status
       case 'discarded':
         return item.status === 'discarded';
       default:
@@ -555,11 +828,15 @@ export default function LostAndFoundScreen() {
 
   return (
     <View style={styles.container}>
-      {refreshing && <LoadingOverlay fullScreen message="Refreshing…" />}
+      {listLoading && <LoadingOverlay fullScreen message="Loading items…" />}
+      {refreshing && !listLoading && <LoadingOverlay fullScreen message="Refreshing…" />}
       <View style={styles.scrollContainer}>
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: LOST_AND_FOUND_SPACING.contentPaddingTop * scaleX + insets.top },
+          ]}
           showsVerticalScrollIndicator={false}
           scrollEnabled={true}
           refreshControl={
@@ -572,7 +849,8 @@ export default function LostAndFoundScreen() {
               key={item.id}
               item={item}
               onPress={() => handleItemPress(item)}
-              onStatusPress={() => handleStatusPress(item)}
+              onStatusPress={(anchor) => handleStatusPress(item, anchor)}
+              statusUpdating={statusUpdating && statusUpdatingItemId === item.id}
             />
           ))}
         </ScrollView>
@@ -584,23 +862,21 @@ export default function LostAndFoundScreen() {
       <LostAndFoundHeader
         onBackPress={handleBackPress}
         onRegisterPress={handleRegisterPress}
+        syncing={refetchLoading}
       />
 
       {/* Tabs - Fixed below header */}
       <LostAndFoundTabs selectedTab={selectedTab} onTabPress={handleTabChange} />
 
       {/* Bottom Navigation */}
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        chatBadgeCount={chatBadgeCount}
-      />
+      <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
 
       {/* Register Modal */}
       <RegisterLostAndFoundModal
         visible={showRegisterModal}
         onClose={handleCloseRegisterModal}
         onNext={handleRegisterNext}
+        preselectedRoomId={preselectedRoomIdForRegister}
       />
 
       {/* Success Modal */}
@@ -611,43 +887,140 @@ export default function LostAndFoundScreen() {
         itemImage={successData?.itemImage}
       />
 
-      {/* Change status modal */}
+      {/* Change status popover (anchored, like Tickets) */}
       <Modal
         visible={!!statusModalItem}
         transparent
         animationType="fade"
         onRequestClose={() => setStatusModalItem(null)}
       >
-        <TouchableOpacity
-          style={styles.statusModalOverlay}
-          activeOpacity={1}
-          onPress={() => setStatusModalItem(null)}
-        >
-          <View style={styles.statusModalContent} onStartShouldSetResponder={() => true}>
-            <Text style={styles.statusModalTitle}>Change status</Text>
-            <TouchableOpacity
-              style={[styles.statusOption, statusModalItem?.status === 'stored' && styles.statusOptionActive]}
-              onPress={() => handleStatusSelect('stored')}
-            >
-              <Text style={styles.statusOptionText}>Stored</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.statusOption, (statusModalItem?.status === 'shipped' || statusModalItem?.status === 'returned') && styles.statusOptionActive]}
-              onPress={() => handleStatusSelect('shipped')}
-            >
-              <Text style={styles.statusOptionText}>Returned</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.statusOption, statusModalItem?.status === 'discarded' && styles.statusOptionActive]}
-              onPress={() => handleStatusSelect('discarded')}
-            >
-              <Text style={styles.statusOptionText}>Discarded</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.statusModalCancel} onPress={() => setStatusModalItem(null)}>
-              <Text style={styles.statusModalCancelText}>Cancel</Text>
-            </TouchableOpacity>
+        <View style={styles.statusModalOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              if (statusUpdating) return;
+              setStatusModalItem(null);
+              setStatusAnchor(null);
+              setShippingMode(false);
+              setShippingLocation('');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss status menu"
+          />
+          <View
+            style={[
+              styles.statusPopover,
+              statusPopoverPosition
+                ? { position: 'absolute', left: statusPopoverPosition.left, top: statusPopoverPosition.top, width: statusPopoverPosition.width }
+                : null,
+            ]}
+          >
+            <View
+              style={[
+                styles.statusPopoverNotch,
+                statusPopoverPosition ? { left: statusPopoverPosition.notchLeft } : null,
+              ]}
+            />
+            {shippingMode ? (
+              <View>
+                <Text style={styles.shippedPopoverTitle}>Shipped Location</Text>
+                <View style={styles.shippedInputRow}>
+                  <TextInput
+                    value={shippingLocation}
+                    onChangeText={setShippingLocation}
+                    placeholder="Enter location"
+                    placeholderTextColor="rgba(0,0,0,0.35)"
+                    editable={!statusUpdating}
+                    style={styles.shippedInput}
+                    onSubmitEditing={() => saveShippedLocation(shippingLocation)}
+                    returnKeyType="done"
+                  />
+                  <TouchableOpacity
+                    style={styles.shippedSendBtn}
+                    disabled={statusUpdating || !shippingLocation.trim()}
+                    onPress={() => saveShippedLocation(shippingLocation)}
+                  >
+                    <Image source={require('../../assets/icons/arrow-forward.png')} style={styles.shippedSendIcon} resizeMode="contain" />
+                  </TouchableOpacity>
+                </View>
+
+                {shippedLocationOptions.length > 0 && (
+                  <ScrollView style={styles.shippedOptions} contentContainerStyle={styles.shippedOptionsContent} showsVerticalScrollIndicator={false}>
+                    {shippedLocationOptions.map((opt) => {
+                      const active = opt.trim().toLowerCase() === shippingLocation.trim().toLowerCase();
+                      return (
+                        <TouchableOpacity
+                          key={opt}
+                          style={styles.shippedOptionRow}
+                          disabled={statusUpdating}
+                          onPress={() => {
+                            setShippingLocation(opt);
+                            saveShippedLocation(opt);
+                          }}
+                        >
+                          <Image source={require('../../assets/icons/location-pin-icon.png')} style={styles.shippedOptionIcon} resizeMode="contain" />
+                          <Text style={styles.shippedOptionText} numberOfLines={1}>
+                            {opt}
+                          </Text>
+                          {active ? (
+                            <Image source={require('../../assets/icons/tick.png')} style={styles.shippedOptionCheck} resizeMode="contain" />
+                          ) : null}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+              </View>
+            ) : (
+              <>
+                <Text style={styles.statusModalTitle}>Change status</Text>
+                <View style={styles.statusGrid}>
+                  <TouchableOpacity
+                    style={styles.statusGridItem}
+                    activeOpacity={0.8}
+                    disabled={statusUpdating}
+                    onPress={() => handleStatusSelect('stored')}
+                  >
+                    <View style={[styles.statusCircle, styles.statusCircleStored, statusModalItem?.status === 'stored' && styles.statusCircleActive]}>
+                      <Image source={require('../../assets/icons/down-arrow.png')} style={styles.statusCircleIcon} resizeMode="contain" />
+                    </View>
+                    <Text style={styles.statusGridLabel}>Stored</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.statusGridItem}
+                    activeOpacity={0.8}
+                    disabled={statusUpdating}
+                    onPress={() => handleStatusSelect('shipped')}
+                  >
+                    <View
+                      style={[
+                        styles.statusCircle,
+                        styles.statusCircleShipped,
+                        (statusModalItem?.status === 'shipped' || statusModalItem?.status === 'returned') && styles.statusCircleActive,
+                      ]}
+                    >
+                      <Image source={require('../../assets/icons/tick.png')} style={styles.statusCircleIcon} resizeMode="contain" />
+                    </View>
+                    <Text style={styles.statusGridLabel}>Shipped</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.statusGridItem}
+                    activeOpacity={0.8}
+                    disabled={statusUpdating}
+                    onPress={() => handleStatusSelect('discarded')}
+                  >
+                    <View style={[styles.statusCircle, styles.statusCircleDiscarded, statusModalItem?.status === 'discarded' && styles.statusCircleActive]}>
+                      <Text style={styles.statusCircleText}>×</Text>
+                    </View>
+                    <Text style={styles.statusGridLabel}>Discarded</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </View>
   );
@@ -685,44 +1058,156 @@ const styles = StyleSheet.create({
   },
   statusModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    paddingHorizontal: 24 * scaleX,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
   },
-  statusModalContent: {
+  statusPopover: {
+    zIndex: 1,
     backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: '#e3e3e3',
+    borderRadius: 12 * scaleX,
+    paddingVertical: 14 * scaleX,
+    paddingHorizontal: 16 * scaleX,
+    shadowColor: '#6483B0',
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+  statusPopoverNotch: {
+    position: 'absolute',
+    top: -6 * scaleX,
+    width: 12 * scaleX,
+    height: 12 * scaleX,
+    backgroundColor: '#ffffff',
+    borderLeftWidth: 1,
+    borderTopWidth: 1,
+    borderColor: '#e3e3e3',
+    transform: [{ rotate: '45deg' }],
   },
   statusModalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 18 * scaleX,
+    fontWeight: '700',
     color: LOST_AND_FOUND_COLORS.tabActive,
-    marginBottom: 16,
-    textAlign: 'center',
+    marginBottom: 12 * scaleX,
+    textAlign: 'left',
   },
-  statusOption: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+  statusGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
-  statusOptionActive: {
-    backgroundColor: 'rgba(96, 122, 161, 0.15)',
-  },
-  statusOptionText: {
-    fontSize: 16,
-    color: '#1e1e1e',
-  },
-  statusModalCancel: {
-    marginTop: 12,
-    paddingVertical: 12,
+  statusGridItem: {
+    width: 64 * scaleX,
     alignItems: 'center',
   },
-  statusModalCancelText: {
-    fontSize: 16,
-    color: LOST_AND_FOUND_COLORS.tabActive,
+  statusCircle: {
+    width: 44 * scaleX,
+    height: 44 * scaleX,
+    borderRadius: 22 * scaleX,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusCircleStored: {
+    backgroundColor: LOST_AND_FOUND_COLORS.statusStored,
+  },
+  statusCircleShipped: {
+    backgroundColor: LOST_AND_FOUND_COLORS.statusShipped,
+  },
+  statusCircleDiscarded: {
+    backgroundColor: '#9ca3af',
+  },
+  statusCircleActive: {
+    borderWidth: 2 * scaleX,
+    borderColor: '#5b769e',
+  },
+  statusCircleIcon: {
+    width: 12 * scaleX,
+    height: 12 * scaleX,
+    tintColor: '#ffffff',
+  },
+  statusCircleText: {
+    fontSize: 12 * scaleX,
+    fontWeight: '700',
+    color: '#ffffff',
+    includeFontPadding: false,
+    lineHeight: 12 * scaleX,
+  },
+  statusGridLabel: {
+    marginTop: 8 * scaleX,
+    fontSize: 13 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000000',
+    textAlign: 'center',
+  },
+  shippedPopoverTitle: {
+    fontSize: 16 * scaleX,
+    fontWeight: '700',
+    color: '#48c755',
+    marginBottom: 12 * scaleX,
+  },
+  shippedInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#bdbaba',
+    borderRadius: 5 * scaleX,
+    height: 45 * scaleX,
+    paddingLeft: 12 * scaleX,
+    paddingRight: 8 * scaleX,
+  },
+  shippedInput: {
+    flex: 1,
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000000',
+    paddingVertical: 0,
+  },
+  shippedSendBtn: {
+    width: 34 * scaleX,
+    height: 34 * scaleX,
+    borderRadius: 17 * scaleX,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shippedSendIcon: {
+    width: 14 * scaleX,
+    height: 14 * scaleX,
+    tintColor: '#5a759d',
+    transform: [{ rotate: '90deg' }],
+  },
+  shippedOptions: {
+    marginTop: 12 * scaleX,
+    maxHeight: 4 * (40 * scaleX), // max 4 rows visible, then scroll
+  },
+  shippedOptionsContent: {
+    paddingBottom: 2 * scaleX,
+  },
+  shippedOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10 * scaleX,
+  },
+  shippedOptionIcon: {
+    width: 16 * scaleX,
+    height: 16 * scaleX,
+    tintColor: '#c6c5c5',
+    marginRight: 10 * scaleX,
+  },
+  shippedOptionText: {
+    flex: 1,
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '300',
+    color: '#000000',
+  },
+  shippedOptionCheck: {
+    width: 14 * scaleX,
+    height: 14 * scaleX,
+    tintColor: '#5a759d',
   },
 });

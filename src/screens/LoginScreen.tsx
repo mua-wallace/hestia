@@ -1,18 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, TextInput, TouchableOpacity, Image, ScrollView, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../navigation/types';
 import { colors, typography } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
+import { useDesignScale } from '../hooks/useDesignScale';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-// Design is based on iPhone 16 Pro Max (440px width, 956px height)
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
 
 const LANGUAGES = [
   { code: 'EN', name: 'English' },
@@ -22,6 +18,8 @@ const LANGUAGES = [
 ];
 
 export default function LoginScreen() {
+  const { scaleX, height: windowHeight } = useDesignScale();
+  const styles = useMemo(() => buildLoginStyles(scaleX, windowHeight), [scaleX, windowHeight]);
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const insets = useSafeAreaInsets();
   const { signIn } = useAuth();
@@ -240,13 +238,14 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function buildLoginStyles(scaleX: number, windowHeight: number) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#eef0f6', // Exact color from Figma
   },
   contentContainer: {
-    minHeight: SCREEN_HEIGHT,
+    minHeight: windowHeight,
     paddingBottom: 40,
   },
   // Header Logo (Group 207) - x=35, y=85, 34.673×32.711px
@@ -548,3 +547,5 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
 });
+}
+

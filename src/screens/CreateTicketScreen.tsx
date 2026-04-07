@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,10 @@ import {
   Image,
   StyleSheet,
   ScrollView,
-  Dimensions,
   ActivityIndicator,
+  useWindowDimensions,
+  Platform,
+  PixelRatio,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,14 +21,15 @@ import {
   DEPARTMENT_GRID_LAYOUT,
   DEPARTMENT_NAME_TO_ICON,
   CREATE_TICKET_AI_BUTTON,
+  CREATE_TICKET_AI_IMAGE,
+  CREATE_TICKET_BETA_OVERLAP_AI_PX,
+  CREATE_TICKET_BETA_TO_DESCRIPTION_PX,
   CREATE_TICKET_COLORS,
   CREATE_TICKET_TYPOGRAPHY,
-  scaleX,
+  createTicketScaleX,
 } from '../constants/createTicketStyles';
 import { getDepartments } from '../services/departments';
 import type { RootStackParamList } from '../navigation/types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type CreateTicketScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -41,12 +44,179 @@ interface DepartmentDisplayItem {
   noTint: boolean;
   left: number;
   top: number;
-  labelLeft: number;
   labelTop: number;
+}
+
+function buildCreateTicketStyles(windowWidth: number) {
+  const scaleX = createTicketScaleX(windowWidth);
+  const androidTextMetrics = Platform.select({
+    android: { includeFontPadding: false } as const,
+    default: {} as const,
+  });
+  const aiW = PixelRatio.roundToNearestPixel(CREATE_TICKET_AI_IMAGE.width * scaleX);
+  const aiH = PixelRatio.roundToNearestPixel(CREATE_TICKET_AI_IMAGE.height * scaleX);
+  const descriptionMaxWidth = Math.min(
+    CREATE_TICKET_AI_BUTTON.description.width * scaleX,
+    Math.max(0, windowWidth - PixelRatio.roundToNearestPixel(32)),
+  );
+
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: CREATE_TICKET_COLORS.background,
+    },
+    headerBackground: {
+      position: 'absolute',
+      top: CREATE_TICKET_HEADER.background.top * scaleX,
+      left: 0,
+      right: 0,
+      height: CREATE_TICKET_HEADER.background.height * scaleX,
+      backgroundColor: CREATE_TICKET_COLORS.headerBackground,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      minHeight: 900 * scaleX,
+      paddingBottom: 100 * scaleX,
+    },
+    header: {
+      height: CREATE_TICKET_HEADER.height * scaleX,
+      position: 'relative',
+    },
+    backButtonContainer: {
+      position: 'absolute',
+      left: CREATE_TICKET_HEADER.backButton.left * scaleX,
+      top: CREATE_TICKET_HEADER.backButton.top * scaleX,
+      flexDirection: 'row',
+      alignItems: 'center',
+      zIndex: 1,
+    },
+    backArrow: {
+      width: 28 * scaleX,
+      height: 28 * scaleX,
+      tintColor: '#607AA1',
+    },
+    headerTitle: {
+      fontSize: 24 * scaleX,
+      fontFamily: typography.fontFamily.primary,
+      fontWeight: '700' as any,
+      color: '#607AA1',
+      lineHeight: undefined,
+      marginLeft: 10 * scaleX,
+      ...androidTextMetrics,
+    },
+    heading: {
+      position: 'absolute',
+      left: (windowWidth / 2) + (CREATE_TICKET_CONTENT.heading.leftOffset * scaleX),
+      top: CREATE_TICKET_CONTENT.heading.top * scaleX,
+      fontSize: CREATE_TICKET_TYPOGRAPHY.heading.fontSize * scaleX,
+      fontFamily: typography.fontFamily.primary,
+      fontWeight: '700',
+      color: CREATE_TICKET_TYPOGRAPHY.heading.color,
+    },
+    selectDepartmentLabel: {
+      position: 'absolute',
+      left: CREATE_TICKET_CONTENT.selectDepartmentLabel.left * scaleX,
+      top: CREATE_TICKET_CONTENT.selectDepartmentLabel.top * scaleX,
+      fontSize: CREATE_TICKET_TYPOGRAPHY.selectDepartmentLabel.fontSize * scaleX,
+      fontFamily: typography.fontFamily.secondary,
+      fontWeight: '300',
+      color: CREATE_TICKET_TYPOGRAPHY.selectDepartmentLabel.color,
+    },
+    departmentLoading: {
+      position: 'absolute',
+      left: DEPARTMENT_GRID.container.left * scaleX,
+      top: DEPARTMENT_GRID.container.top * scaleX,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 24 * scaleX,
+    },
+    departmentLoadingText: {
+      marginTop: 8 * scaleX,
+      fontSize: 14 * scaleX,
+      color: CREATE_TICKET_COLORS.textSecondary,
+    },
+    departmentErrorText: {
+      fontSize: 14 * scaleX,
+      color: '#c00',
+    },
+    departmentContainer: {
+      position: 'absolute',
+    },
+    departmentIcon: {
+      position: 'absolute',
+      width: 55.482 * scaleX,
+      height: 55.482 * scaleX,
+      borderRadius: DEPARTMENT_GRID.item.borderRadius * scaleX,
+      aspectRatio: 55.48 / 55.48,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    departmentIconImage: {
+      width: (55.482 * 0.65) * scaleX,
+      height: (55.482 * 0.65) * scaleX,
+      aspectRatio: 55.48 / 55.48,
+    },
+    departmentLabel: {
+      position: 'absolute',
+      fontSize: CREATE_TICKET_TYPOGRAPHY.departmentLabel.fontSize * scaleX,
+      fontFamily: typography.fontFamily.secondary,
+      fontWeight: '300',
+      color: CREATE_TICKET_TYPOGRAPHY.departmentLabel.color,
+      textAlign: 'center',
+    },
+    aiButtonSection: {
+      width: '100%',
+      alignItems: 'center',
+      paddingHorizontal: 24 * scaleX,
+    },
+    aiButtonWrapper: {
+      width: '100%',
+      alignItems: 'center',
+      marginBottom: 0,
+    },
+    aiButtonContainer: {
+      width: aiW,
+      height: aiH,
+    },
+    aiButtonImage: {
+      width: aiW,
+      height: aiH,
+    },
+    betaLabel: {
+      fontSize: CREATE_TICKET_TYPOGRAPHY.betaLabel.fontSize * scaleX,
+      fontFamily: typography.fontFamily.primary,
+      fontWeight: '700',
+      color: CREATE_TICKET_TYPOGRAPHY.betaLabel.color,
+      textAlign: 'center',
+      marginTop: -CREATE_TICKET_BETA_OVERLAP_AI_PX * scaleX,
+      marginBottom: CREATE_TICKET_BETA_TO_DESCRIPTION_PX * scaleX,
+      ...androidTextMetrics,
+    },
+    description: {
+      fontSize: CREATE_TICKET_TYPOGRAPHY.description.fontSize * scaleX,
+      fontFamily: typography.fontFamily.primary,
+      fontWeight: '300',
+      color: CREATE_TICKET_TYPOGRAPHY.description.color,
+      textAlign: 'center',
+      lineHeight:
+        CREATE_TICKET_TYPOGRAPHY.description.lineHeight === 'normal'
+          ? undefined
+          : (CREATE_TICKET_TYPOGRAPHY.description.fontSize * 1.2) * scaleX,
+      paddingHorizontal: 16 * scaleX,
+      maxWidth: descriptionMaxWidth,
+      alignSelf: 'center',
+      ...androidTextMetrics,
+    },
+  });
 }
 
 export default function CreateTicketScreen() {
   const navigation = useNavigation<CreateTicketScreenNavigationProp>();
+  const { width: windowWidth } = useWindowDimensions();
+  const scaleX = createTicketScaleX(windowWidth);
+  const styles = useMemo(() => buildCreateTicketStyles(windowWidth), [windowWidth]);
   const [departments, setDepartments] = useState<DepartmentDisplayItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -68,8 +238,6 @@ export default function CreateTicketScreen() {
         const left = layout.colLeft[col];
         const top = layout.rowTopStart + row * layout.rowGap;
         const labelTop = top + layout.labelOffset;
-        const labelWidth = Math.min(layout.maxLabelWidth, dept.name.length * 8);
-        const labelLeft = left + layout.iconSize / 2 - labelWidth / 2;
         const iconInfo = DEPARTMENT_NAME_TO_ICON[dept.name] ?? {
           icon: require('../../assets/icons/reception.png'),
           noTint: false,
@@ -81,7 +249,6 @@ export default function CreateTicketScreen() {
           noTint: !!iconInfo.noTint,
           left,
           top,
-          labelLeft,
           labelTop,
         };
       });
@@ -89,7 +256,9 @@ export default function CreateTicketScreen() {
       setLoadError(null);
       setLoading(false);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleBackPress = () => {
@@ -109,18 +278,14 @@ export default function CreateTicketScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header Background */}
       <View style={styles.headerBackground} />
 
-      {/* Scrollable Content */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
-          {/* Back Button with Text */}
           <TouchableOpacity
             style={styles.backButtonContainer}
             onPress={handleBackPress}
@@ -131,24 +296,16 @@ export default function CreateTicketScreen() {
               style={styles.backArrow}
               resizeMode="contain"
             />
-            <Text style={styles.headerTitle}>
-              {CREATE_TICKET_HEADER.title.text}
-            </Text>
+            <Text style={styles.headerTitle}>{CREATE_TICKET_HEADER.title.text}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Main Content */}
-        {/* Heading */}
-        <Text style={styles.heading}>
-          {CREATE_TICKET_CONTENT.heading.text}
-        </Text>
+        <Text style={styles.heading}>{CREATE_TICKET_CONTENT.heading.text}</Text>
 
-        {/* Select Department Label */}
         <Text style={styles.selectDepartmentLabel}>
           {CREATE_TICKET_CONTENT.selectDepartmentLabel.text}
         </Text>
 
-        {/* Department Grid - from Supabase */}
         {loading ? (
           <View style={styles.departmentLoading}>
             <ActivityIndicator size="small" color={CREATE_TICKET_COLORS.textSecondary} />
@@ -185,7 +342,7 @@ export default function CreateTicketScreen() {
                 style={[
                   styles.departmentLabel,
                   {
-                    left: department.labelLeft * scaleX,
+                    left: (department.left + DEPARTMENT_GRID_LAYOUT.iconSize / 2 - DEPARTMENT_GRID_LAYOUT.maxLabelWidth / 2) * scaleX,
                     top: department.labelTop * scaleX,
                     width: DEPARTMENT_GRID_LAYOUT.maxLabelWidth * scaleX,
                   },
@@ -198,41 +355,26 @@ export default function CreateTicketScreen() {
           ))
         )}
 
-        {/* AI Create Ticket Button Section */}
         <View style={[styles.aiButtonSection, { marginTop: CREATE_TICKET_AI_BUTTON.container.top * scaleX }]}>
-          {/* Button Container */}
           <View style={styles.aiButtonWrapper}>
             <TouchableOpacity
               style={styles.aiButtonContainer}
               onPress={handleAICreatePress}
               activeOpacity={0.7}
             >
-              {/* Button */}
-              <View style={styles.aiButton}>
-                {/* Button Text */}
-                <Text style={styles.aiButtonText}>
-                  {CREATE_TICKET_AI_BUTTON.text.text}
-                </Text>
-
-                {/* AI Badge */}
-                <View style={styles.aiBadge}>
-                  {/* Note: For true gradient text, would need react-native-svg or mask approach */}
-                  {/* Using gradient start color as fallback for now */}
-                  <Text style={styles.aiBadgeText}>
-                    {CREATE_TICKET_AI_BUTTON.aiText.text}
-                  </Text>
-                </View>
-              </View>
+              <Image
+                source={CREATE_TICKET_AI_IMAGE.source}
+                style={styles.aiButtonImage}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
           </View>
 
-          {/* Beta Label */}
-          <Text style={styles.betaLabel}>
+          <Text style={styles.betaLabel} maxFontSizeMultiplier={1.35}>
             {CREATE_TICKET_AI_BUTTON.betaLabel.text}
           </Text>
 
-          {/* Description */}
-          <Text style={styles.description}>
+          <Text style={styles.description} maxFontSizeMultiplier={1.35}>
             {CREATE_TICKET_AI_BUTTON.description.text}
           </Text>
         </View>
@@ -240,189 +382,3 @@ export default function CreateTicketScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: CREATE_TICKET_COLORS.background,
-  },
-  headerBackground: {
-    position: 'absolute',
-    top: CREATE_TICKET_HEADER.background.top * scaleX,
-    left: 0,
-    right: 0,
-    height: CREATE_TICKET_HEADER.background.height * scaleX,
-    backgroundColor: CREATE_TICKET_COLORS.headerBackground,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    minHeight: 900 * scaleX, // Ensure enough height for all content including description
-    paddingBottom: 100 * scaleX, // Extra padding for scroll
-  },
-  header: {
-    height: CREATE_TICKET_HEADER.height * scaleX,
-    position: 'relative',
-  },
-  backButtonContainer: {
-    position: 'absolute',
-    left: CREATE_TICKET_HEADER.backButton.left * scaleX,
-    top: CREATE_TICKET_HEADER.backButton.top * scaleX,
-    flexDirection: 'row',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  backArrow: {
-    width: 28 * scaleX, // From Figma: 28px
-    height: 28 * scaleX, // From Figma: 28px
-    tintColor: '#607AA1', // Match "Create Ticket" text color
-  },
-  headerTitle: {
-    fontSize: 24 * scaleX, // From Figma: 24px
-    fontFamily: 'Helvetica', // From Figma: Helvetica
-    fontWeight: '700' as any, // From Figma: 700
-    color: '#607AA1', // From Figma: #607AA1
-    lineHeight: undefined, // From Figma: normal (undefined = normal in React Native)
-    marginLeft: 10 * scaleX, // Spacing between arrow and text (approximately 8-12px as per Figma)
-  },
-  heading: {
-    position: 'absolute',
-    left: (SCREEN_WIDTH / 2) + (CREATE_TICKET_CONTENT.heading.leftOffset * scaleX), // leftOffset is negative, so this centers correctly
-    top: CREATE_TICKET_CONTENT.heading.top * scaleX,
-    fontSize: CREATE_TICKET_TYPOGRAPHY.heading.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary, // Helvetica
-    fontWeight: '700', // Helvetica Bold
-    color: CREATE_TICKET_TYPOGRAPHY.heading.color,
-  },
-  selectDepartmentLabel: {
-    position: 'absolute',
-    left: CREATE_TICKET_CONTENT.selectDepartmentLabel.left * scaleX,
-    top: CREATE_TICKET_CONTENT.selectDepartmentLabel.top * scaleX,
-    fontSize: CREATE_TICKET_TYPOGRAPHY.selectDepartmentLabel.fontSize * scaleX,
-    fontFamily: typography.fontFamily.secondary, // Inter
-    fontWeight: '300', // Inter Light
-    color: CREATE_TICKET_TYPOGRAPHY.selectDepartmentLabel.color,
-  },
-  departmentLoading: {
-    position: 'absolute',
-    left: DEPARTMENT_GRID.container.left * scaleX,
-    top: DEPARTMENT_GRID.container.top * scaleX,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24 * scaleX,
-  },
-  departmentLoadingText: {
-    marginTop: 8 * scaleX,
-    fontSize: 14 * scaleX,
-    color: CREATE_TICKET_COLORS.textSecondary,
-  },
-  departmentErrorText: {
-    fontSize: 14 * scaleX,
-    color: '#c00',
-  },
-  departmentContainer: {
-    position: 'absolute',
-  },
-  departmentIcon: {
-    position: 'absolute',
-    width: 55.482 * scaleX, // Background circle size
-    height: 55.482 * scaleX,
-    borderRadius: DEPARTMENT_GRID.item.borderRadius * scaleX,
-    aspectRatio: 55.48 / 55.48,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  departmentIconImage: {
-    // Icons should be smaller than the background circle to fit inside
-    width: (55.482 * 0.65) * scaleX, // 65% of background circle size
-    height: (55.482 * 0.65) * scaleX,
-    aspectRatio: 55.48 / 55.48,
-  },
-  departmentLabel: {
-    position: 'absolute',
-    fontSize: CREATE_TICKET_TYPOGRAPHY.departmentLabel.fontSize * scaleX,
-    fontFamily: typography.fontFamily.secondary, // Inter
-    fontWeight: '300', // Inter Light
-    color: CREATE_TICKET_TYPOGRAPHY.departmentLabel.color,
-    textAlign: 'left',
-  },
-  aiButtonSection: {
-    width: '100%',
-    alignItems: 'center',
-    paddingHorizontal: 24 * scaleX,
-  },
-  aiButtonWrapper: {
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 8 * scaleX,
-  },
-  aiButtonContainer: {
-    width: CREATE_TICKET_AI_BUTTON.button.width * scaleX,
-    height: CREATE_TICKET_AI_BUTTON.button.height * scaleX,
-    position: 'relative',
-  },
-  aiButton: {
-    width: CREATE_TICKET_AI_BUTTON.button.width * scaleX,
-    height: CREATE_TICKET_AI_BUTTON.button.height * scaleX,
-    borderRadius: CREATE_TICKET_AI_BUTTON.button.borderRadius * scaleX,
-    borderWidth: CREATE_TICKET_AI_BUTTON.button.borderWidth,
-    borderColor: CREATE_TICKET_AI_BUTTON.button.borderColor,
-    backgroundColor: CREATE_TICKET_AI_BUTTON.button.backgroundColor,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    position: 'relative',
-  },
-  aiButtonText: {
-    position: 'absolute',
-    left: CREATE_TICKET_AI_BUTTON.text.left * scaleX,
-    top: CREATE_TICKET_AI_BUTTON.text.top * scaleX,
-    fontSize: CREATE_TICKET_TYPOGRAPHY.aiButtonText.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary, // Helvetica
-    fontWeight: '700', // Helvetica Bold
-    color: CREATE_TICKET_TYPOGRAPHY.aiButtonText.color,
-    width: CREATE_TICKET_AI_BUTTON.text.width * scaleX,
-  },
-  aiBadge: {
-    position: 'absolute',
-    left: CREATE_TICKET_AI_BUTTON.aiBadge.left * scaleX,
-    top: CREATE_TICKET_AI_BUTTON.aiBadge.top * scaleX,
-    width: CREATE_TICKET_AI_BUTTON.aiBadge.width * scaleX,
-    height: CREATE_TICKET_AI_BUTTON.aiBadge.height * scaleX,
-    borderRadius: CREATE_TICKET_AI_BUTTON.aiBadge.borderRadius * scaleX,
-    backgroundColor: CREATE_TICKET_AI_BUTTON.aiBadge.backgroundColor,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  aiBadgeText: {
-    fontSize: CREATE_TICKET_AI_BUTTON.aiText.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary, // Helvetica
-    fontWeight: '700', // Helvetica Bold
-    color: CREATE_TICKET_AI_BUTTON.aiText.gradientStart, // Using gradient start color (full gradient requires react-native-svg)
-    textAlign: 'center',
-    width: CREATE_TICKET_AI_BUTTON.aiText.width * scaleX,
-  },
-  betaLabel: {
-    fontSize: CREATE_TICKET_TYPOGRAPHY.betaLabel.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary, // Helvetica
-    fontWeight: '700', // Helvetica Bold
-    color: CREATE_TICKET_TYPOGRAPHY.betaLabel.color,
-    textAlign: 'center',
-    marginTop: 8 * scaleX,
-    marginBottom: 16 * scaleX,
-  },
-  description: {
-    fontSize: CREATE_TICKET_TYPOGRAPHY.description.fontSize * scaleX,
-    fontFamily: typography.fontFamily.primary, // Helvetica Light
-    fontWeight: '300', // Helvetica Light (not Inter Light)
-    color: CREATE_TICKET_TYPOGRAPHY.description.color,
-    textAlign: 'center',
-    lineHeight: CREATE_TICKET_TYPOGRAPHY.description.lineHeight === 'normal'
-      ? undefined
-      : (CREATE_TICKET_TYPOGRAPHY.description.fontSize * 1.2) * scaleX,
-    paddingHorizontal: 16 * scaleX,
-    maxWidth: CREATE_TICKET_AI_BUTTON.description.width * scaleX,
-  },
-});
-

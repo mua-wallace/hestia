@@ -3,7 +3,7 @@
  * Shows logged-in user details, allows avatar update and logout
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
-  Dimensions,
   ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -25,10 +24,7 @@ import { useMessageModal } from '../contexts/MessageModalContext';
 import { useUserStore } from '../store/useUserStore';
 import { isSupabaseConfigured } from '../lib/supabase';
 import type { UserProfile } from '../types/home.types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DESIGN_WIDTH = 440;
-const scaleX = SCREEN_WIDTH / DESIGN_WIDTH;
+import { useDesignScale } from '../hooks/useDesignScale';
 
 type UserProfileRouteParams = {
   UserProfile: { user: UserProfile };
@@ -37,6 +33,8 @@ type UserProfileRouteParams = {
 const DEFAULT_USER: UserProfile = { name: 'User', role: 'Staff', department: undefined, hasFlag: false };
 
 export default function UserProfileScreen() {
+  const { scaleX } = useDesignScale();
+  const styles = useMemo(() => buildUserProfileStyles(scaleX), [scaleX]);
   const navigation = useNavigation();
   const route = useRoute<RouteProp<UserProfileRouteParams, 'UserProfile'>>();
   const { signOut, session } = useAuth();
@@ -75,9 +73,12 @@ export default function UserProfileScreen() {
     setIsUpdatingAvatar(true);
     try {
       const uri = result.assets[0].uri;
-      const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const uriWithoutQuery = uri.split('?')[0];
+      const rawExt = uriWithoutQuery.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileExt = rawExt === 'heic' ? 'jpg' : rawExt;
       const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
       await updateAvatarUrl(userId, base64, fileExt);
+      toast.show('Profile photo updated successfully.', { type: 'success', title: 'Updated' });
     } catch (err: unknown) {
       console.error('[UserProfile] Avatar update failed:', err);
       toast.show(
@@ -157,8 +158,10 @@ export default function UserProfileScreen() {
         </View>
 
         {/* Name & Role */}
-        <Text style={styles.userName}>{user.name}</Text>
-        <Text style={styles.userRole}>{user.role}</Text>
+        <View style={styles.nameRoleBlock}>
+          <Text style={styles.userName}>{user.name}</Text>
+          <Text style={styles.userRole}>{user.role}</Text>
+        </View>
 
         {/* Info card: Department */}
         {user.department != null && user.department !== '' && (
@@ -179,7 +182,8 @@ export default function UserProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function buildUserProfileStyles(scaleX: number) {
+  return StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.secondary,
@@ -279,20 +283,24 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.semibold as any,
     color: colors.primary.main,
   },
+  nameRoleBlock: {
+    width: '100%',
+    marginBottom: 20 * scaleX,
+  },
   userName: {
     fontSize: 24 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: typography.fontWeights.bold as any,
     color: colors.text.primary,
-    marginBottom: 6 * scaleX,
+    marginBottom: 4 * scaleX,
     textAlign: 'center',
   },
   userRole: {
-    fontSize: 16 * scaleX,
-    fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.semibold as any,
-    color: colors.text.secondary,
-    marginBottom: 24 * scaleX,
+    fontSize: 11 * scaleX,
+    fontFamily: typography.fontFamily.secondary,
+    fontStyle: 'normal',
+    fontWeight: typography.fontWeights.light as any,
+    color: '#000',
     textAlign: 'center',
   },
   infoCard: {
@@ -350,3 +358,5 @@ const styles = StyleSheet.create({
     color: '#c53030',
   },
 });
+}
+

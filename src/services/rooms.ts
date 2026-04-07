@@ -4,6 +4,8 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { invalidateNotificationBadges } from './inAppNotifications';
+import { notifyServer } from './notifications';
 import type {
   AllRoomsScreenData,
   RoomCardData,
@@ -26,6 +28,7 @@ type RoomRow = {
   flagged: boolean | null;
   special_instructions: string | null;
   house_keeping_status: string | null;
+  return_later_at?: string | null;
 };
 
 /** Aggregated note info per room (from room_notes table) */
@@ -233,6 +236,7 @@ function mapRoomToCard(
     houseKeepingStatus: normalizeHouseKeepingStatus(room.house_keeping_status),
     reservationStatus: reservationStatus as ReservationStatus,
     promisedTime: (promisedTime === '12:00' || promisedTime === '13:00' ? promisedTime : null) as PromisedTime,
+    returnLaterAt: (room.return_later_at ?? null) as string | null,
     guests: guestsForCard,
     roomAttendantAssigned: attendant,
     isPriority: room.priority === 'high',
@@ -286,10 +290,21 @@ const fetchRoomNotesAggregate = async (roomIds: string[]): Promise<Map<string, R
  * Fetch all rooms with reservations and guests (Supabase).
  */
 export async function fetchAllRooms(shift: 'AM' | 'PM'): Promise<AllRoomsScreenData> {
-  const { data, error } = await supabase
+  let data: unknown[] | null = null;
+  let error: any = null;
+
+  // `return_later_at` is added by a later migration; gracefully fallback when DB is behind.
+  ({ data, error } = await supabase
     .from('rooms')
-    .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status')
-    .order('room_number', { ascending: true });
+    .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status, return_later_at')
+    .order('room_number', { ascending: true }));
+
+  if (error && error.code === '42703') {
+    ({ data, error } = await supabase
+      .from('rooms')
+      .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status')
+      .order('room_number', { ascending: true }));
+  }
 
   if (error) throw error;
   const rooms = (data ?? []) as RoomRow[];
@@ -362,6 +377,8 @@ export type RoomStateUpdate = {
   priority?: 'high' | 'normal';
   flagged?: boolean;
   special_instructions?: string | null;
+  /** ISO timestamp (timestamptz) or null to clear. */
+  return_later_at?: string | null;
 };
 
 function isValidUUID(id: string): boolean {
@@ -466,9 +483,82 @@ export async function updateRoom(roomId: string, updates: RoomStateUpdate): Prom
   if (updates.priority != null) payload.priority = updates.priority;
   if (updates.flagged != null) payload.flagged = updates.flagged;
   if (updates.special_instructions !== undefined) payload.special_instructions = updates.special_instructions;
+  if (updates.return_later_at !== undefined) payload.return_later_at = updates.return_later_at;
   if (Object.keys(payload).length === 0) return;
-  const { error } = await supabase.from('rooms').update(payload).eq('id', roomId);
-  if (error) throw error;
+  let result = await supabase.from('rooms').update(payload).eq('id', roomId);
+  if (result.error && (result.error.code === '42703' || result.error.code === 'PGRST204')) {
+    // Schema behind PostgREST cache / migration not applied yet: retry without return_later_at.
+    if ('return_later_at' in payload) {
+      delete payload.return_later_at;
+      if (Object.keys(payload).length === 0) return;
+      result = await supabase.from('rooms').update(payload).eq('id', roomId);
+    }
+  }
+  if (result.error) throw result.error;
+}
+
+/**
+ * Count rooms the user is assigned to for the given shift (`room_assignments`, one row per room per shift).
+ */
+export async function countRoomAssignmentsForUser(userId: string, shift: 'AM' | 'PM'): Promise<number> {
+  if (!isValidUUID(userId)) return 0;
+  const shiftId = await getShiftIdByName(shift);
+  if (!shiftId) return 0;
+  const { count, error } = await supabase
+    .from('room_assignments')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('shift_id', shiftId);
+  if (error) {
+    console.warn('[rooms] countRoomAssignmentsForUser', error.message);
+    return 0;
+  }
+  return count ?? 0;
+}
+
+/**
+ * Distinct rooms assigned to this user across **all** shifts (tab badge).
+ * Single-shift counts often read 0 when UI shift and stored `shift_id` don’t line up.
+ */
+export async function countDistinctRoomsAssignedToUser(userId: string): Promise<number> {
+  if (!isValidUUID(userId)) return 0;
+  const { data, error } = await supabase.from('room_assignments').select('room_id').eq('user_id', userId);
+  if (error) {
+    console.warn('[rooms] countDistinctRoomsAssignedToUser', error.message);
+    return 0;
+  }
+  const ids = new Set<string>();
+  for (const row of data ?? []) {
+    const rid = (row as { room_id?: string }).room_id;
+    if (rid) ids.add(rid);
+  }
+  return ids.size;
+}
+
+/**
+ * Distinct rooms assigned to the user (any shift), ordered by latest `room_assignments.created_at` first.
+ * Used when opening Rooms from the tab badge so assigned rooms appear at the top in recency order.
+ */
+export async function getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt(userId: string): Promise<string[]> {
+  if (!isValidUUID(userId)) return [];
+  const { data, error } = await supabase
+    .from('room_assignments')
+    .select('room_id, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.warn('[rooms] getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt', error.message);
+    return [];
+  }
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const row of data ?? []) {
+    const rid = (row as { room_id?: string }).room_id;
+    if (!rid || seen.has(rid)) continue;
+    seen.add(rid);
+    ordered.push(rid);
+  }
+  return ordered;
 }
 
 /**
@@ -548,6 +638,12 @@ export async function assignRoomToStaff(
     }
   }
 
+  // Fire-and-forget push notification to assigned staff member.
+  notifyServer({ type: 'room_assignment', roomId, shiftId, assignedUserId: userId }).catch(() => {});
+
+  // Defer so tab bar listeners run after Supabase write is visible to the next read.
+  queueMicrotask(() => invalidateNotificationBadges());
+
   return staffInfo;
 }
 
@@ -594,11 +690,15 @@ export interface AssignedStaffDetail {
 
 export interface LostAndFoundItemDetail {
   id: string;
+  tracking_number: string | null;
   item_name: string;
   description: string | null;
   status: string | null;
   found_at: string;
+  found_by_id: string;
+  registered_by_id: string | null;
   storage_location: string | null;
+  image_url: string | null;
 }
 
 export interface TicketDetail {
@@ -621,6 +721,7 @@ export interface FullRoomDetails {
     flagged: boolean | null;
     special_instructions: string | null;
     house_keeping_status: string | null;
+    return_later_at?: string | null;
   };
   reservations: ReservationDetail[];
   notes: RoomNoteDetail[];
@@ -754,13 +855,30 @@ export async function fetchAllRoomsFromFullDetails(shift: 'AM' | 'PM'): Promise<
  * @param roomId - Optional. If provided, returns details for that room only; otherwise all rooms.
  */
 export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetails[]> {
-  const roomsQuery = supabase
+  const roomsQueryWithReturnLater = supabase
+    .from('rooms')
+    .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status, return_later_at')
+    .order('room_number', { ascending: true });
+  const roomsQueryBase = supabase
     .from('rooms')
     .select('id, room_number, category, credit, linen_status, priority, flagged, special_instructions, house_keeping_status')
     .order('room_number', { ascending: true });
-  const { data: roomsData, error: roomsError } = roomId
-    ? await roomsQuery.eq('id', roomId)
-    : await roomsQuery;
+
+  let roomsData: any[] | null = null;
+  let roomsError: any = null;
+
+  if (roomId) {
+    ({ data: roomsData, error: roomsError } = await roomsQueryWithReturnLater.eq('id', roomId));
+    if (roomsError && roomsError.code === '42703') {
+      ({ data: roomsData, error: roomsError } = await roomsQueryBase.eq('id', roomId));
+    }
+  } else {
+    ({ data: roomsData, error: roomsError } = await roomsQueryWithReturnLater);
+    if (roomsError && roomsError.code === '42703') {
+      ({ data: roomsData, error: roomsError } = await roomsQueryBase);
+    }
+  }
+
   if (roomsError) throw roomsError;
   const rooms = (roomsData ?? []) as RoomRow[];
   if (rooms.length === 0) {
@@ -787,7 +905,7 @@ export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetai
       .in('room_id', roomIds),
     supabase
       .from('lost_and_found_items')
-      .select('id, room_id, item_name, description, status, found_at, storage_location')
+      .select('id, room_id, tracking_number, item_name, description, status, found_at, found_by_id, registered_by_id, storage_location, image_url')
       .in('room_id', roomIds)
       .order('found_at', { ascending: false }),
     supabase
@@ -878,18 +996,34 @@ export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetai
     assignmentsByRoom.set(rid, roomAssignments);
   }
 
-  const lfRows = (lfRes.data ?? []) as { id: string; room_id: string; item_name: string; description: string | null; status: string | null; found_at: string; storage_location: string | null }[];
+  const lfRows = (lfRes.data ?? []) as {
+    id: string;
+    room_id: string;
+    tracking_number: string | null;
+    item_name: string;
+    description: string | null;
+    status: string | null;
+    found_at: string;
+    found_by_id: string;
+    registered_by_id: string | null;
+    storage_location: string | null;
+    image_url: string | null;
+  }[];
   const lfByRoom = new Map<string, LostAndFoundItemDetail[]>();
   for (const rid of roomIds) {
     const items = lfRows
       .filter((i) => i.room_id === rid)
       .map((i) => ({
         id: i.id,
+        tracking_number: i.tracking_number,
         item_name: i.item_name,
         description: i.description,
         status: i.status,
         found_at: i.found_at,
+        found_by_id: i.found_by_id,
+        registered_by_id: i.registered_by_id,
         storage_location: i.storage_location,
+        image_url: i.image_url,
       }));
     lfByRoom.set(rid, items);
   }
@@ -921,6 +1055,7 @@ export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetai
       flagged: room.flagged,
       special_instructions: room.special_instructions,
       house_keeping_status: room.house_keeping_status,
+      return_later_at: (room as any).return_later_at ?? null,
     },
     reservations: resWithGuestsByRoom.get(room.id) ?? [],
     notes: notesByRoom.get(room.id) ?? [],
@@ -929,7 +1064,8 @@ export async function getFullRoomDetails(roomId?: string): Promise<FullRoomDetai
     tickets: ticketsByRoom.get(room.id) ?? [],
   }));
 
-  console.log('[getFullRoomDetails] Room details:', JSON.stringify(result, null, 2));
+  // Avoid logging full payloads here: JSON.stringify on large room graphs can block the JS thread
+  // and make the app appear frozen on device.
   return result;
 }
 

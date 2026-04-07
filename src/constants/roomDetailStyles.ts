@@ -81,6 +81,15 @@ export const ROOM_DETAIL_HEADER = {
     statusTextAndIconColor: '#000000',
     returnTimeColor: '#6C7D99',
   },
+  // Refused Service — light blue header (Figma node 2333-835, Arrival room detail)
+  refuseServiceLight: {
+    headerBackground: '#e4eefe',
+    backArrowTint: '#6C7D99',
+    roomNumberColor: '#334866',
+    roomCodeColor: '#334866',
+    statusTextAndIconColor: '#334866',
+    subtitleColor: '#000000',
+  },
   // Refuse Service / Promise Time - dark header (white text)
   specialDark: {
     headerBackground: '#202A2F',
