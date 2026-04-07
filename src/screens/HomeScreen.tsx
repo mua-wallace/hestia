@@ -65,7 +65,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
 
-  // PM should behave like AM during AM hours; only show Turndown in PM hours.
+  // PM should behave like AM during AM hours; PM home categories differ from AM (see derivedCategories).
   const currentShiftFromClock = useMemo(() => getShiftFromTime(), []);
   const effectiveShift: ShiftType =
     homeData.selectedShift === 'PM' && currentShiftFromClock === 'AM'
@@ -239,7 +239,9 @@ export default function HomeScreen() {
 
   const derivedCategories = useMemo(() => {
     const roomsPM = roomsForHome.roomsPM ?? [];
-    const usePMRooms = effectiveShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    // Match the AM/PM toggle, not `effectiveShift` (which can force AM during morning hours for fetch).
+    const uiShift = homeData.selectedShift;
+    const usePMRooms = uiShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
     
     // Apply filters to the correct shift's data
@@ -257,25 +259,18 @@ export default function HomeScreen() {
 
     const categories: CategorySection[] = [];
 
-    if (effectiveShift === 'PM') {
-      // PM shift: show only Turndown, No Task, Vacant cards
-      // If using roomsPM, they're already filtered; otherwise filter from AM rooms
-      if (!usePMRooms) {
-        rooms = rooms.filter((r) => 
-          r.frontOfficeStatus === 'Turndown' ||
-          r.frontOfficeStatus === 'No Task' ||
-          r.reservationStatus === 'Vacant'
-        );
-      }
+    if (uiShift === 'PM') {
+      // PM shift: Flagged, Arrivals, Turndown
+      const flaggedRooms = rooms.filter((r) => !!r.flagged);
+      const arrivalRooms = rooms.filter(
+        (r) => r.frontOfficeStatus === 'Arrival' || r.frontOfficeStatus === 'Arrival/Departure'
+      );
       const turndownRooms = rooms.filter((r) => r.frontOfficeStatus === 'Turndown');
-      const noTaskRooms = rooms.filter((r) => r.frontOfficeStatus === 'No Task');
-      const vacantRooms = rooms.filter((r) => r.reservationStatus === 'Vacant');
+      categories.push(buildCategory('Flagged', 'flagged', '#6e1eee', flaggedRooms));
+      categories.push(buildCategory('Arrivals', 'arrivals', '#41d541', arrivalRooms));
       categories.push(buildCategory('Turndown', 'turndown', '#4a91fc', turndownRooms));
-      categories.push(buildCategory('No Task', 'noTask', '#8d908d', noTaskRooms));
-      categories.push(buildCategory('Vacant', 'vacant', '#41d541', vacantRooms));
     } else {
-      // AM shift: Flagged, Arrivals, StayOvers
-      // Hide Turndown rooms in AM mode
+      // AM shift: Flagged, Arrivals, StayOvers — hide Turndown from AM buckets
       rooms = rooms.filter((r) => r.frontOfficeStatus !== 'Turndown');
       const flaggedRooms = rooms.filter((r) => !!r.flagged);
       const arrivalRooms = rooms.filter((r) => r.frontOfficeStatus === 'Arrival' || r.frontOfficeStatus === 'Arrival/Departure');
@@ -286,7 +281,7 @@ export default function HomeScreen() {
     }
 
     return categories;
-  }, [activeFilters, effectiveShift, searchQuery, roomsForHome]);
+  }, [activeFilters, homeData.selectedShift, searchQuery, roomsForHome]);
 
   // Sync route filters -> local state
   useEffect(() => {
@@ -358,26 +353,17 @@ export default function HomeScreen() {
     });
 
     const roomsPM = roomsForHome.roomsPM ?? [];
-    const usePMRooms = effectiveShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
 
-    // Reservations (Vacant) - from categories when PM, or from room data
     const reservations = {
       occupied: 0,
       vacant: 0,
     };
-    if (effectiveShift === 'PM') {
-      categoriesForCounts.forEach((category) => {
-        if (category.name === 'Vacant') {
-          reservations.vacant += category.total;
-        }
-      });
-    } else {
-      sourceRooms.forEach((r) => {
-        if (r.reservationStatus === 'Vacant') reservations.vacant += 1;
-        else if (r.reservationStatus === 'Occupied') reservations.occupied += 1;
-      });
-    }
+    sourceRooms.forEach((r) => {
+      if (r.reservationStatus === 'Vacant') reservations.vacant += 1;
+      else if (r.reservationStatus === 'Occupied') reservations.occupied += 1;
+    });
 
     // Calculate departures from actual room data for current shift
     const departureRooms = sourceRooms.filter(
@@ -400,7 +386,7 @@ export default function HomeScreen() {
     };
 
     return { roomStates, guests, floors, totalRooms, reservations };
-  }, [homeData.categories, derivedCategories, effectiveShift, roomsForHome]);
+  }, [homeData.categories, derivedCategories, homeData.selectedShift, roomsForHome]);
 
   const handleGoToResults = (filters: FilterState) => {
     // Apply filters to Home stats/cards in both AM and PM modes

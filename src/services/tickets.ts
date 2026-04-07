@@ -5,6 +5,7 @@ import { getDepartmentIdByName } from './user';
 import * as FileSystem from 'expo-file-system/legacy';
 import { base64ToArrayBuffer } from '../utils/encoding';
 import { notifyServer } from './notifications';
+import { buildFriendlyRoomHistoryMessage } from './roomHistory';
 
 type TicketsRow = {
   id: string;
@@ -472,23 +473,32 @@ export async function createTicket(input: CreateTicketInput): Promise<void> {
   }
 
   const pictures = (input.pictures ?? []).filter(Boolean);
+
+  // Upload pictures first (if any), then log a *single* room_history event for this ticket creation.
+  // Ticket creation + adding photos is one user action.
+  let attachmentUrls: string[] = [];
   if (ticketId && roomId && pictures.length > 0) {
     try {
-      const urls = await uploadTicketImages(userId, pictures);
-      if (urls.length > 0) {
-        const { error: histError } = await supabase.from('room_history').insert({
-          room_id: roomId,
-          user_id: userId,
-          event_type: 'ticket',
-          event_id: ticketId,
-          description: `Ticket created: ${trimmedTitle}`,
-          attachments: urls,
-        });
-        if (histError) console.warn('[tickets.createTicket] Failed to persist room_history attachments', histError);
-      }
+      attachmentUrls = await uploadTicketImages(userId, pictures);
     } catch (e) {
       // Ticket row is already saved; do not fail the whole flow if Storage/network aborts.
       console.warn('[tickets.createTicket] Image upload failed (ticket still created)', e);
+    }
+  }
+
+  if (ticketId && roomId) {
+    // Keep writing to room_history for ticket attachments hydration in Tickets UI.
+    // The user-facing Room Detail history comes from activity_logs via DB triggers.
+    const { error: histError } = await supabase.from('room_history').insert({
+      room_id: roomId,
+      user_id: userId,
+      event_type: 'ticket',
+      event_id: ticketId,
+      description: buildFriendlyRoomHistoryMessage({ type: 'ticket', ticketTitle: trimmedTitle }),
+      attachments: attachmentUrls.length > 0 ? attachmentUrls : [],
+    });
+    if (histError) {
+      console.warn('[tickets.createTicket] Failed to persist room_history', histError.message, histError.code);
     }
   }
 }

@@ -36,12 +36,6 @@ import { getShiftFromTime } from '../utils/shiftUtils';
 import { getStayoverWithLinen } from '../utils/stayoverLinen';
 import { getFloorFromRoomNumber } from '../utils/formatting';
 
-/** PM All Rooms list: Turndown + reservation Occupied (aligned with reservations cron / DB). */
-function isPmTurndownOccupiedRoom(room: RoomCardData): boolean {
-  const res = (room.reservationStatus || '').toLowerCase();
-  return room.frontOfficeStatus === 'Turndown' && res === 'occupied';
-}
-
 /** When user taps a status badge or priority badge on Home. */
 export type CategoryFilterParam = {
   category: CategoryName;
@@ -258,10 +252,7 @@ export default function AllRoomsScreen() {
   const filterCounts: FilterCounts = useMemo(() => {
     const roomsPM = displayData.roomsPM ?? [];
     const usePMRooms = effectiveShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
-    let sourceRooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
-    if (effectiveShift === 'PM') {
-      sourceRooms = sourceRooms.filter(isPmTurndownOccupiedRoom);
-    }
+    const sourceRooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
 
     const roomStates = {
       dirty: 0,
@@ -705,7 +696,7 @@ export default function AllRoomsScreen() {
             }
           }
 
-          // Check guest filters (AM: Arrival/Departure/Stayover; PM list is Turndown+Occupied before this)
+          // Check guest filters (Arrival/Departure/Stayover/Turndown/No Task)
           if (hasGuestFilter) {
             const matchesGuest =
               (activeFilters.guests.arrivals && (room.frontOfficeStatus === 'Arrival' || room.frontOfficeStatus === 'Arrival/Departure')) ||
@@ -749,9 +740,6 @@ export default function AllRoomsScreen() {
       );
     }
 
-    if (effectiveShift === 'PM') {
-      rooms = rooms.filter(isPmTurndownOccupiedRoom);
-    }
     if (effectiveShift === 'AM') {
       rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');
     }

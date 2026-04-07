@@ -33,9 +33,10 @@ import { getMockHistoryEvents } from '../data/mockHistoryData';
 import { generateHistoryReport } from '../utils/generateHistoryReport';
 import { showStayoverWithLinenBadge } from '../utils/stayoverLinen';
 import { getDefaultTaskText } from '../utils/defaultTasks';
-import { getRoomNotes, addRoomNote, getRoomDetailsById, fullRoomDetailsToRoomCardData, type FullRoomDetails } from '../services/rooms';
+import { getRoomNotes, addRoomNote, getRoomDetailsById, fullRoomDetailsToRoomCardData, type FullRoomDetails, assignRoomToStaff } from '../services/rooms';
 import { fetchStaffFromSupabase } from '../services/staff';
 import { supabase } from '../lib/supabase';
+import { buildFriendlyRoomHistoryMessage, getRoomHistoryEvents, logRoomHistoryEvent } from '../services/roomHistory';
 
 type RoomDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -334,9 +335,25 @@ export default function RoomDetailScreen() {
   });
   
   // Track history events in state
-  const [historyEvents, setHistoryEvents] = useState<HistoryEvent[]>(() => {
-    return getMockHistoryEvents(room.roomNumber);
-  });
+  const [historyEvents, setHistoryEvents] = useState<HistoryEvent[]>(() => getMockHistoryEvents(room.roomNumber));
+
+  const refreshHistory = React.useCallback(async () => {
+    const id = room?.id;
+    if (!id || !UUID_REGEX.test(id)) {
+      setHistoryEvents(getMockHistoryEvents(room.roomNumber));
+      return;
+    }
+    try {
+      const events = await getRoomHistoryEvents(id);
+      setHistoryEvents(events);
+    } catch (e) {
+      console.warn('[RoomDetailScreen] Failed to refresh room history', e);
+    }
+  }, [room?.id, room?.roomNumber]);
+
+  useEffect(() => {
+    void refreshHistory();
+  }, [refreshHistory]);
   
   // Get task description - use actual tasks or default task
   const getTaskDescription = () => {
@@ -520,6 +537,7 @@ export default function RoomDetailScreen() {
       }).catch((e) => console.warn('Failed to update room status in Supabase', e));
       setShowStatusModal(false);
       setStatusButtonPosition(null);
+      void refreshHistory();
       return;
     }
 
@@ -543,6 +561,7 @@ export default function RoomDetailScreen() {
 
     setShowStatusModal(false);
     setStatusButtonPosition(null);
+    void refreshHistory();
   };
 
   const handleReturnLaterConfirm = (returnTime: string, period: 'AM' | 'PM', taskDescription?: string, _formattedDateTime?: string, returnAtTimestamp?: number) => {
@@ -566,6 +585,7 @@ export default function RoomDetailScreen() {
       }).catch((e) => console.warn('Failed to persist return later in Supabase', e));
     }
     setShowReturnLaterModal(false);
+    void refreshHistory();
   };
 
   const handlePromiseTimeConfirm = (promiseTime: string, period: 'AM' | 'PM', _formattedDateTime?: string, promiseAtTimestamp?: number) => {
@@ -573,12 +593,25 @@ export default function RoomDetailScreen() {
     if (promiseAtTimestamp != null) {
       setPromiseTimeAtTimestamp(promiseAtTimestamp);
     }
+    // Promise time is currently not persisted in DB; still record it in room_history for audit.
+    void logRoomHistoryEvent({
+      roomId: room.id,
+      type: 'promise_time',
+      description: buildFriendlyRoomHistoryMessage({ type: 'promise_time', promiseTimeLabel: `${promiseTime} ${period}` }),
+    });
     setShowPromiseTimeModal(false);
+    void refreshHistory();
   };
 
   const handleRefuseServiceConfirm = (reason: string) => {
     setRefuseServiceReason(reason);
+    void logRoomHistoryEvent({
+      roomId: room.id,
+      type: 'refuse_service',
+      description: buildFriendlyRoomHistoryMessage({ type: 'refuse_service', refuseReason: reason }),
+    });
     setShowRefuseServiceModal(false);
+    void refreshHistory();
   };
 
   const handleAddNote = () => {
@@ -607,6 +640,12 @@ export default function RoomDetailScreen() {
     };
     setTasks(prev => [...prev, newTask]);
     console.log('Task added for room:', room.roomNumber, 'task:', taskText);
+    void logRoomHistoryEvent({
+      roomId: room.id,
+      type: 'task',
+      description: buildFriendlyRoomHistoryMessage({ type: 'task', taskText }),
+    });
+    void refreshHistory();
   };
 
   const handleSaveNote = async (noteText: string) => {
@@ -620,6 +659,7 @@ export default function RoomDetailScreen() {
           notes: { count: (prev.notes?.count ?? 0) + 1, hasRushed: prev.notes?.hasRushed || false },
           noteMadeBy: { name: newNote.staff.name, avatar: newNote.staff.avatar },
         }));
+        void refreshHistory();
       } catch (e) {
         console.warn('Failed to save note to Supabase', e);
       }
@@ -646,6 +686,13 @@ export default function RoomDetailScreen() {
       notes: { count: updatedNotes.length, hasRushed: prev.notes?.hasRushed || false },
       noteMadeBy: { name: noteAuthorLabel, avatar: avatarUrl || undefined },
     }));
+    // Mock path: still write a history row when possible.
+    void logRoomHistoryEvent({
+      roomId: room.id,
+      type: 'note',
+      description: buildFriendlyRoomHistoryMessage({ type: 'note', noteText }),
+    });
+    void refreshHistory();
   };
 
   const handleAddPhotos = () => {
@@ -706,39 +753,24 @@ export default function RoomDetailScreen() {
     });
     setShowReassignModal(false);
 
-    // Best-effort: fill in real name/department if we can fetch staff list.
-    // (ReassignModal already fetched staff; we keep this lightweight and safe.)
+    // Persist assignment + refresh history (best-effort).
     (async () => {
       try {
-        const staffList = await fetchStaffFromSupabase();
-        const selected = staffList.find((s) => s.id === staffId);
-        if (!selected) return;
-
-        setAssignedStaff({
-          id: selected.id,
-          name: selected.name || safeName,
-          avatar: selected.avatar ?? require('../../assets/icons/profile-avatar.png'),
-          initials:
-            selected.initials ??
-            selected.name
-              .split(/\s+/)
-              .filter(Boolean)
-              .map((s) => s[0])
-              .join('')
-              .slice(0, 2)
-              .toUpperCase() ??
-            initials,
-          department: selected.department,
-          avatarColor:
-            selected.avatarColor ??
-            (() => {
-              const n = (selected.name || safeName).trim();
-              const i = n ? n.charCodeAt(0) : safeName.charCodeAt(0);
-              return colors[i % colors.length];
-            })(),
-        });
+        const info = await assignRoomToStaff(room.id, staffId, shift as 'AM' | 'PM');
+        if (info) {
+          setAssignedStaff({
+            id: staffId,
+            name: info.name,
+            avatar: info.avatar ? { uri: info.avatar } : require('../../assets/icons/profile-avatar.png'),
+            initials: info.initials,
+            department: undefined,
+          });
+        }
       } catch (e) {
-        console.warn('[RoomDetailScreen] Failed to refine assigned staff', e);
+        // Keep placeholder assignment; do not crash the flow.
+        console.warn('[RoomDetailScreen] Failed to persist assignment', e);
+      } finally {
+        void refreshHistory();
       }
     })();
   };
