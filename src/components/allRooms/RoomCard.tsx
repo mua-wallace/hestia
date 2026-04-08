@@ -377,6 +377,8 @@ const RoomCard = forwardRef<React.ElementRef<typeof TouchableOpacity>, RoomCardP
       {/* Staff Section - or "Assign Staff" when no one assigned */}
       <StaffSection
         staff={room.roomAttendantAssigned}
+        roomId={room.id}
+        roomStatus={room.houseKeepingStatus}
         isPriority={room.isPriority}
         frontOfficeStatus={room.frontOfficeStatus}
         selectedShift={selectedShift ?? 'AM'}

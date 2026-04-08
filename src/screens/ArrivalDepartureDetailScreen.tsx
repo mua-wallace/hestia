@@ -488,6 +488,7 @@ export default function ArrivalDepartureDetailScreen() {
         pausedAt={pausedAt}
         returnLaterAtTimestamp={returnLaterAtTimestamp}
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
+        refuseServiceAtTimestamp={refuseServiceReason ? Date.now() : undefined}
         refuseServiceReason={refuseServiceReason}
         isPriority={localRoom?.isPriority === true}
         flagged={localRoom?.flagged === true}

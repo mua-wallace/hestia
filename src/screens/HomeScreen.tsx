@@ -198,8 +198,14 @@ export default function HomeScreen() {
     inspected: number;
     priority: number;
     progressText: string;
-    pausedRoomLabel?: string;
-    pausedStartedAtIso?: string;
+    latestPill?: {
+      type: 'paused' | 'returnLater' | 'refused';
+      roomLabel: string;
+      /** ISO time used for elapsed/countdown when relevant */
+      timeIso?: string;
+      /** Secondary line text (timer or message) */
+      subText?: string;
+    };
   }>({ total: 0, dirty: 0, inProgress: 0, cleaned: 0, inspected: 0, priority: 0, progressText: '0/0' });
 
   const [portierRows, setPortierRows] = useState<
@@ -231,7 +237,7 @@ export default function HomeScreen() {
     const done = cleaned + inspected;
     const progressText = `${done}/${total || 0}`;
 
-    // Optional: show a paused row if we find one for current user.
+    // Latest pill (under progress bar): choose most recent of Pause / Return Later / Refuse Service.
     let pausedRoomLabel: string | undefined;
     let pausedStartedAtIso: string | undefined;
     try {
@@ -269,6 +275,82 @@ export default function HomeScreen() {
       // Non-blocking; UI can render without paused row.
     }
 
+    // Fallback: show any paused room (persisted on room record) even when assignment isn't paused.
+    if (!pausedRoomLabel) {
+      const pausedRooms = sourceRooms
+        .filter((r) => Boolean((r as any)?.pausedAt))
+        .map((r) => ({ r, t: new Date(String((r as any).pausedAt)).getTime() }))
+        .filter((x) => Number.isFinite(x.t))
+        .sort((a, b) => b.t - a.t);
+      const top = pausedRooms[0]?.r;
+      if (top?.roomNumber) {
+        pausedRoomLabel = `Room ${top.roomNumber}`;
+        pausedStartedAtIso = String((top as any).pausedAt);
+      }
+    }
+
+    // Return Later candidate (most recent returnLaterAt)
+    let returnLaterRoomLabel: string | undefined;
+    let returnLaterAtIso: string | undefined;
+    const returnLaterRooms = sourceRooms
+      .filter((r) => Boolean((r as any)?.returnLaterAt))
+      .map((r) => ({ r, t: new Date(String((r as any).returnLaterAt)).getTime() }))
+      .filter((x) => Number.isFinite(x.t))
+      .sort((a, b) => b.t - a.t);
+    const topReturnLater = returnLaterRooms[0]?.r;
+    if (topReturnLater?.roomNumber) {
+      returnLaterRoomLabel = `Room ${topReturnLater.roomNumber}`;
+      returnLaterAtIso = String((topReturnLater as any).returnLaterAt);
+    }
+
+    // Refuse Service candidate (most recent refuse_service_at, fallback to any with reason)
+    let refuseServiceRoomLabel: string | undefined;
+    let refuseServiceTimeIso: string | undefined;
+    let refuseServiceText: string | undefined;
+    const refusedRooms = sourceRooms
+      .filter((r) => Boolean((r as any)?.refuseServiceReason) || Boolean((r as any)?.refuseServiceAt))
+      .map((r) => ({ r, t: new Date(String((r as any).refuseServiceAt ?? 0)).getTime() }))
+      .sort((a, b) => (Number.isFinite(b.t) ? b.t : 0) - (Number.isFinite(a.t) ? a.t : 0));
+    const topRefused = refusedRooms[0]?.r;
+    if (topRefused?.roomNumber) {
+      refuseServiceRoomLabel = `Room ${topRefused.roomNumber}`;
+      const tIso = (topRefused as any).refuseServiceAt as string | null | undefined;
+      refuseServiceTimeIso = tIso ? String(tIso) : undefined;
+      const reason = (topRefused as any).refuseServiceReason as string | null | undefined;
+      refuseServiceText = reason ? `Refused: ${reason}` : 'Refused: —';
+    }
+
+    const candidates: Array<{
+      type: 'paused' | 'returnLater' | 'refused';
+      roomLabel?: string;
+      timeIso?: string;
+      timeMs: number;
+      subText?: string;
+    }> = [
+      {
+        type: 'paused',
+        roomLabel: pausedRoomLabel,
+        timeIso: pausedStartedAtIso,
+        timeMs: pausedStartedAtIso ? new Date(pausedStartedAtIso).getTime() : -1,
+      },
+      {
+        type: 'returnLater',
+        roomLabel: returnLaterRoomLabel,
+        timeIso: returnLaterAtIso,
+        timeMs: returnLaterAtIso ? new Date(returnLaterAtIso).getTime() : -1,
+      },
+      {
+        type: 'refused',
+        roomLabel: refuseServiceRoomLabel,
+        timeIso: refuseServiceTimeIso,
+        timeMs: refuseServiceTimeIso ? new Date(refuseServiceTimeIso).getTime() : -1,
+        subText: refuseServiceText,
+      },
+    ].filter((c) => Boolean(c.roomLabel)) as any;
+
+    candidates.sort((a, b) => (Number.isFinite(b.timeMs) ? b.timeMs : -1) - (Number.isFinite(a.timeMs) ? a.timeMs : -1));
+    const latest = candidates[0];
+
     setPortierOverview({
       total,
       dirty,
@@ -277,8 +359,14 @@ export default function HomeScreen() {
       inspected,
       priority,
       progressText,
-      pausedRoomLabel,
-      pausedStartedAtIso,
+      latestPill: latest?.roomLabel
+        ? {
+            type: latest.type,
+            roomLabel: latest.roomLabel,
+            timeIso: latest.timeIso,
+            subText: latest.subText,
+          }
+        : undefined,
     });
 
     const flagged = sourceRooms.filter((r) => !!r.flagged).length;
@@ -286,8 +374,7 @@ export default function HomeScreen() {
     const turndown = sourceRooms.filter((r) => r.frontOfficeStatus === 'Turndown').length;
     const departures = sourceRooms.filter((r) => r.frontOfficeStatus === 'Departure' || r.frontOfficeStatus === 'Arrival/Departure').length;
     const arrivals = sourceRooms.filter((r) => r.frontOfficeStatus === 'Arrival' || r.frontOfficeStatus === 'Arrival/Departure').length;
-
-    setPortierRows([
+    const baseRows = [
       { label: 'Flagged', count: flagged, icon: require('../../assets/icons/flag.png'), circleBg: '#ffebeb', iconTint: '#f92424' },
       {
         label: 'Stayover',
@@ -317,7 +404,9 @@ export default function HomeScreen() {
         iconTint: '#41d541',
         flipIconHorizontal: true,
       },
-    ]);
+    ];
+
+    setPortierRows(baseRows);
   }, [isHskPortierUser, roomsForHome, homeData.selectedShift, session?.user?.id]);
 
   useEffect(() => {
@@ -707,8 +796,7 @@ export default function HomeScreen() {
                   inspected={portierOverview.inspected}
                   priority={portierOverview.priority}
                   progressText={portierOverview.progressText}
-                  pausedRoomLabel={portierOverview.pausedRoomLabel}
-                  pausedStartedAtIso={portierOverview.pausedStartedAtIso}
+                  latestPill={portierOverview.latestPill}
                 />
                 <HskPortierCategoryListCard rows={portierRows} />
               </View>

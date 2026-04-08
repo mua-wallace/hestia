@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { colors, typography } from '../../theme';
-import { StaffInfo } from '../../types/allRooms.types';
+import { RoomStatus, StaffInfo } from '../../types/allRooms.types';
 import type { ShiftType } from '../../types/home.types';
 import { scaleX, STAFF_SECTION } from '../../constants/allRoomsStyles';
 
 interface StaffSectionProps {
   staff: StaffInfo | null; // When null, show "Assign Staff" button
+  roomId: string;
+  roomStatus: RoomStatus;
   isPriority?: boolean;
   frontOfficeStatus?: string;
   selectedShift?: ShiftType;
@@ -16,7 +18,20 @@ interface StaffSectionProps {
   isLoading?: boolean;
 }
 
-export default function StaffSection({ staff, isPriority = false, frontOfficeStatus = '', selectedShift, onAssignPress, onStaffSectionPress, isLoading = false }: StaffSectionProps) {
+function seededMinutes(roomId: string, modulo: number): number {
+  // Simple stable hash (deterministic, no flicker across renders)
+  let h = 0;
+  for (let i = 0; i < roomId.length; i++) h = (h * 31 + roomId.charCodeAt(i)) >>> 0;
+  return (h % modulo) + 1; // 1..modulo
+}
+
+function formatHHMM(d: Date): string {
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+export default function StaffSection({ staff, roomId, roomStatus, isPriority = false, frontOfficeStatus = '', selectedShift, onAssignPress, onStaffSectionPress, isLoading = false }: StaffSectionProps) {
   const isDeparture = frontOfficeStatus === 'Departure';
 
   // No staff assigned: show "Assign Staff" button
@@ -38,7 +53,7 @@ export default function StaffSection({ staff, isPriority = false, frontOfficeSta
           {isLoading ? (
             <ActivityIndicator size="small" color="#5a759d" />
           ) : (
-            <Text style={styles.assignButtonText}>Assign Staff</Text>
+            <Text style={styles.assignButtonText}>Not assigned</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -46,6 +61,26 @@ export default function StaffSection({ staff, isPriority = false, frontOfficeSta
   }
 
   const hasPromiseTime = !!staff.promiseTime;
+  const derivedStatusText = useMemo(() => {
+    // Rules requested:
+    // - Dirty + staff assigned -> "Not Started"
+    // - InProgress + staff assigned -> "Started"
+    // - Cleaned + staff assigned -> "Cleaned at: [time]" (random < now)
+    // - Inspected + staff assigned -> "Inspected at: [time]" (random < now)
+    if (roomStatus === 'Dirty') return 'Not Started';
+    if (roomStatus === 'InProgress') return 'Started';
+    if (roomStatus === 'Cleaned') {
+      const minsAgo = seededMinutes(roomId, 59);
+      const t = new Date(Date.now() - minsAgo * 60_000);
+      return `Cleaned At: ${formatHHMM(t)}`;
+    }
+    if (roomStatus === 'Inspected') {
+      const minsAgo = seededMinutes(roomId, 59);
+      const t = new Date(Date.now() - minsAgo * 60_000);
+      return `Inspected At: ${formatHHMM(t)}`;
+    }
+    return 'Not Started';
+  }, [roomId, roomStatus, staff.statusText]);
 
   // Departure cards have different positioning due to promiseTime
   const avatarLeft = isPriority ? STAFF_SECTION.avatar.left : (STAFF_SECTION.avatarStandard?.left ?? STAFF_SECTION.avatar.left);
@@ -112,7 +147,7 @@ export default function StaffSection({ staff, isPriority = false, frontOfficeSta
         numberOfLines={1}
         ellipsizeMode="tail"
       >
-        {staff.statusText}
+        {derivedStatusText}
       </Text>
 
       {/* Promise Time (if applicable) */}
@@ -222,7 +257,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontSize: STAFF_SECTION.status.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
-    fontWeight: typography.fontWeights.light as any,
+    fontWeight: typography.fontWeights.regular as any,
     lineHeight: STAFF_SECTION.status.lineHeight * scaleX,
     width: STAFF_SECTION.status.width * scaleX,
     flexShrink: 0, // Prevent text from shrinking

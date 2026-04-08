@@ -11,8 +11,7 @@ export default function HskPortierTasksOverviewCard({
   inspected,
   priority,
   progressText,
-  pausedRoomLabel,
-  pausedStartedAtIso,
+  latestPill,
 }: {
   total: number;
   dirty: number;
@@ -21,36 +20,42 @@ export default function HskPortierTasksOverviewCard({
   inspected: number;
   priority: number;
   progressText: string; // e.g. "2/8"
-  pausedRoomLabel?: string;
-  /** ISO timestamp when pause started (to display elapsed timer). */
-  pausedStartedAtIso?: string;
+  latestPill?: {
+    type: 'paused' | 'returnLater' | 'refused';
+    roomLabel: string;
+    timeIso?: string;
+    subText?: string;
+  };
 }) {
   const { scaleX } = useDesignScale();
   const styles = useMemo(() => buildStyles(scaleX), [scaleX]);
 
-  const [pausedTimerText, setPausedTimerText] = useState<string>('');
+  const [timerText, setTimerText] = useState<string>('');
   useEffect(() => {
-    if (!pausedRoomLabel || !pausedStartedAtIso) {
-      setPausedTimerText('');
+    if (!latestPill?.timeIso || (latestPill.type !== 'paused' && latestPill.type !== 'returnLater')) {
+      setTimerText('');
       return;
     }
-    const startMs = new Date(pausedStartedAtIso).getTime();
-    if (!Number.isFinite(startMs)) {
-      setPausedTimerText('');
+    const baseMs = new Date(latestPill.timeIso).getTime();
+    if (!Number.isFinite(baseMs)) {
+      setTimerText('');
       return;
     }
     const tick = () => {
-      const diff = Math.max(0, Date.now() - startMs);
+      const diff =
+        latestPill.type === 'paused'
+          ? Math.max(0, Date.now() - baseMs)
+          : Math.max(0, baseMs - Date.now());
       const totalSeconds = Math.floor(diff / 1000);
       const hh = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
       const mm = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
       const ss = String(totalSeconds % 60).padStart(2, '0');
-      setPausedTimerText(`${hh}:${mm}:${ss}`);
+      setTimerText(`${hh}:${mm}:${ss}`);
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [pausedRoomLabel, pausedStartedAtIso]);
+  }, [latestPill?.type, latestPill?.timeIso]);
 
   return (
     <View style={styles.card}>
@@ -118,18 +123,26 @@ export default function HskPortierTasksOverviewCard({
         <Text style={styles.progressText}>{progressText}</Text>
       </View>
 
-      {!!pausedRoomLabel && (
+      {!!latestPill?.roomLabel && (
         <View style={styles.pausedPill}>
           <View style={styles.pausedIconCircle}>
-            <Image source={require('../../../assets/icons/pause.png')} style={styles.pausedIcon} resizeMode="contain" />
+            <Image
+              source={require('../../../assets/icons/in-progress-icon.png')}
+              style={styles.pausedIcon}
+              resizeMode="contain"
+            />
           </View>
           <View style={styles.pausedTextCol}>
-            <Text style={styles.pausedRoom}>{pausedRoomLabel}</Text>
-            <Text style={styles.pausedTimer}>{pausedTimerText}</Text>
+            <Text style={styles.pausedRoom}>{latestPill.roomLabel}</Text>
+            <Text style={styles.pausedTimer}>
+              {latestPill.type === 'refused' ? (latestPill.subText ?? '') : timerText}
+            </Text>
           </View>
           <View style={styles.pausedRight}>
             <Image source={require('../../../assets/icons/pause.png')} style={styles.pausedRightIcon} resizeMode="contain" />
-            <Text style={styles.pausedRightText}>Paused</Text>
+            <Text style={styles.pausedRightText}>
+              {latestPill.type === 'paused' ? 'Paused' : latestPill.type === 'returnLater' ? 'Return Later' : 'Refused'}
+            </Text>
           </View>
         </View>
       )}
@@ -251,11 +264,11 @@ function buildStyles(scaleX: number) {
     },
     statusBadge: {
       position: 'absolute',
-      width: 30 * scaleX,
-      height: 30 * scaleX,
-      borderRadius: 15 * scaleX,
+      width: 34 * scaleX,
+      height: 34 * scaleX,
+      borderRadius: 17 * scaleX,
       backgroundColor: '#ffffff',
-      right: -14 * scaleX,
+      right: -10 * scaleX,
       bottom: -6 * scaleX,
       alignItems: 'center',
       justifyContent: 'center',
@@ -263,7 +276,7 @@ function buildStyles(scaleX: number) {
       elevation: 10,
     },
     statusBadgeText: {
-      fontSize: 18 * scaleX,
+      fontSize: 20 * scaleX,
       fontFamily: typography.fontFamily.primary,
       fontWeight: typography.fontWeights.bold as any,
       color: '#000000',

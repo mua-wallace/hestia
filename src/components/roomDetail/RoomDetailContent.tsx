@@ -64,6 +64,9 @@ export default function RoomDetailContent({
   onSaveTask,
   onAddLostAndFoundItem,
   onDownloadHistoryReport,
+  onResumePause,
+  onReturnLaterElapsed,
+  onClearRefuseService,
   customStatusText,
   pausedAt,
   returnLaterAtTimestamp,
@@ -189,10 +192,13 @@ export default function RoomDetailContent({
         statusButtonRef={statusButtonRef}
         customStatusText={customStatusText}
         pausedAt={pausedAt}
+        onResumePause={onResumePause}
         returnLaterAtTimestamp={returnLaterAtTimestamp}
+        onReturnLaterElapsed={onReturnLaterElapsed}
         promiseTimeAtTimestamp={promiseTimeAtTimestamp}
         refuseServiceAtTimestamp={refuseServiceAtTimestamp}
         refuseServiceReason={refuseServiceReason}
+        onClearRefuseService={onClearRefuseService}
         isPriority={isPriority}
         flagged={flagged}
         frontOfficeLabel={frontOfficeStatus === 'Stayover' ? 'Stayover' : undefined}

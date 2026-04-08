@@ -4,7 +4,7 @@
  * Supports: Arrival, Departure, ArrivalDeparture, Stayover, Turndown
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -151,7 +151,7 @@ export default function RoomDetailScreen() {
             department: assignment.staff.department_name,
           });
         } else {
-          setFetchedAssignedStaff(undefined);
+          setFetchedAssignedStaff(null);
         }
         const staffIds = Array.from(
           new Set(
@@ -223,7 +223,20 @@ export default function RoomDetailScreen() {
   const room = fetchedRoom ?? initialRoom ?? placeholderRoom;
   const roomType = fetchedRoomType ?? initialRoomType;
 
-  if (!room && !loadingDetails) {
+  // Ensure we never proceed with `room === null` (keeps hooks type-safe and avoids runtime crashes).
+  if (!room) {
+    if (loadingDetails && !initialRoom) {
+      return (
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary },
+          ]}
+        >
+          <ActivityIndicator size="large" color={colors.primary.main} />
+        </View>
+      );
+    }
     console.warn('RoomDetailScreen: No room data provided');
     return null;
   }
@@ -621,6 +634,14 @@ export default function RoomDetailScreen() {
     void refreshHistory();
   };
 
+  const handleReturnLaterElapsed = useCallback(() => {
+    // Time elapsed: clear Return Later and revert header to normal state.
+    setReturnLaterAtTimestamp(undefined);
+    setSelectedStatusText(undefined);
+    updateRoom(room.id, { return_later_at: null }).catch((e) => console.warn('Failed to clear return later in Supabase', e));
+    void refreshHistory();
+  }, [room.id, updateRoom, refreshHistory]);
+
   const handlePromiseTimeConfirm = (promiseTime: string, period: 'AM' | 'PM', _formattedDateTime?: string, promiseAtTimestamp?: number) => {
     console.log('Promise Time confirmed for room:', room.roomNumber, 'at:', promiseTime, period);
     if (promiseAtTimestamp != null) {
@@ -655,6 +676,23 @@ export default function RoomDetailScreen() {
     setShowRefuseServiceModal(false);
     void refreshHistory();
   };
+
+  const handleResumePause = () => {
+    setPausedAt(undefined);
+    setSelectedStatusText(undefined);
+    updateRoom(room.id, { paused_at: null }).catch((e) => console.warn('Failed to resume pause in Supabase', e));
+    void refreshHistory();
+  };
+
+  const handleClearRefuseService = useCallback(() => {
+    setRefuseServiceReason(undefined);
+    setRefuseServiceAtTimestamp(undefined);
+    setSelectedStatusText(undefined);
+    updateRoom(room.id, { refuse_service_at: null, refuse_service_reason: null }).catch((e) =>
+      console.warn('Failed to clear refuse service in Supabase', e)
+    );
+    void refreshHistory();
+  }, [room.id, updateRoom, refreshHistory]);
 
   const handleAddNote = () => {
     setShowAddNoteModal(true);
@@ -948,6 +986,9 @@ export default function RoomDetailScreen() {
         onSaveTask={handleSaveTask}
         onAddLostAndFoundItem={handleAddPhotos}
         onDownloadHistoryReport={handleDownloadReport}
+        onResumePause={pausedAt ? handleResumePause : undefined}
+        onReturnLaterElapsed={returnLaterAtTimestamp != null ? handleReturnLaterElapsed : undefined}
+        onClearRefuseService={refuseServiceReason || refuseServiceAtTimestamp != null ? handleClearRefuseService : undefined}
         initialTab={initialTab}
         departmentName={departmentName}
         customStatusText={
@@ -957,7 +998,9 @@ export default function RoomDetailScreen() {
               ? 'Promise Time'
               : showRefuseServiceModal || refuseServiceReason
                 ? 'Refuse Service'
-                : selectedStatusText
+                : returnLaterAtTimestamp != null
+                  ? 'Return Later'
+                  : selectedStatusText
         }
         pausedAt={pausedAt}
         returnLaterAtTimestamp={returnLaterAtTimestamp}

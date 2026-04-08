@@ -135,6 +135,12 @@ export interface RoomDetailScreenProps {
   onSaveTask?: (taskText: string) => void;
   onAddLostAndFoundItem?: () => void;
   onDownloadHistoryReport?: () => Promise<void>;
+  /** When the room is paused, resume clears pause and returns to normal UI. */
+  onResumePause?: () => void;
+  /** When return later time elapses, clear it and return to normal UI. */
+  onReturnLaterElapsed?: () => void;
+  /** Clear Refuse Service and return to normal UI. */
+  onClearRefuseService?: () => void;
   
   // Optional: Custom status text (for Pause, Return Later, etc.)
   customStatusText?: string;

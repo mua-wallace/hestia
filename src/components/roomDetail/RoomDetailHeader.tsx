@@ -19,6 +19,9 @@ interface RoomDetailHeaderProps {
   promiseTimeAtTimestamp?: number; // Epoch ms when room will be ready; header shows time + countdown
   refuseServiceAtTimestamp?: number; // Epoch ms when service was refused; header shows time
   refuseServiceReason?: string; // Selected reason or custom reason when Refuse Service is confirmed
+  onResumePause?: () => void;
+  onReturnLaterElapsed?: () => void;
+  onClearRefuseService?: () => void;
   isPriority?: boolean; // Reserved for future priority UI
   flagged?: boolean; // When true, show red flag in circular white badge after room number (flag room)
   frontOfficeLabel?: string; // Front office status e.g. "Stayover" - shown below room code for Stayover rooms
@@ -39,6 +42,9 @@ export default function RoomDetailHeader({
   promiseTimeAtTimestamp,
   refuseServiceAtTimestamp,
   refuseServiceReason,
+  onResumePause,
+  onReturnLaterElapsed,
+  onClearRefuseService,
   isPriority = false,
   flagged = false,
   frontOfficeLabel,
@@ -57,16 +63,26 @@ export default function RoomDetailHeader({
 
   // Remaining countdown "X mins Y s" for Return Later, updates every second
   const [returnLaterRemaining, setReturnLaterRemaining] = useState<string>('');
+  // Keep callback stable so countdown effect doesn't thrash.
+  const onReturnLaterElapsedRef = React.useRef(onReturnLaterElapsed);
+  useEffect(() => {
+    onReturnLaterElapsedRef.current = onReturnLaterElapsed;
+  }, [onReturnLaterElapsed]);
   useEffect(() => {
     if (!hasReturnLaterTime || returnLaterAtTimestamp == null) {
       setReturnLaterRemaining('');
       return;
     }
+    let didFire = false;
     const tick = () => {
       const now = Date.now();
       const diff = returnLaterAtTimestamp - now;
       if (diff <= 0) {
         setReturnLaterRemaining('0 mins');
+        if (!didFire) {
+          didFire = true;
+          onReturnLaterElapsedRef.current?.();
+        }
         return;
       }
       const totalMins = Math.max(0, Math.ceil(diff / 60000));
@@ -324,44 +340,63 @@ export default function RoomDetailHeader({
 
       {/* Paused Time - show when paused (Figma 2333-132) */}
       {pausedAt && (
-        <Text
-          style={[
-            styles.pausedTime,
-            isPaused && { color: ROOM_DETAIL_HEADER.paused.pausedTimeColor },
-          ]}
-        >
-          Paused at {pausedAt}
-        </Text>
+        <View style={styles.pausedRow} pointerEvents="box-none">
+          <Text
+            style={[
+              styles.pausedTimeInline,
+              isPaused && { color: ROOM_DETAIL_HEADER.paused.pausedTimeColor },
+            ]}
+          >
+            Paused at: {pausedAt}
+          </Text>
+          {!!onResumePause && (
+            <TouchableOpacity
+              onPress={onResumePause}
+              activeOpacity={0.75}
+              style={styles.resumeBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.resumeBtnText}>Resume</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       )}
 
       {/* Return Later: time only (no date) + remaining e.g. "2:30 PM · 30 mins 2s" */}
       {hasReturnLaterTime && (returnLaterAtTimestamp != null ? (
-        <Text style={[styles.returnLaterAt, { color: ROOM_DETAIL_HEADER.returnLater.returnTimeColor }]}>
+        <Text pointerEvents="none" style={[styles.returnLaterAt, { color: ROOM_DETAIL_HEADER.returnLater.returnTimeColor }]}>
           {returnTimeOnly}{returnLaterRemaining ? ` · ${returnLaterRemaining}` : ''}
         </Text>
       ) : returnLaterAt ? (
-        <Text style={[styles.returnLaterAt, { color: ROOM_DETAIL_HEADER.returnLater.returnTimeColor }]}>
+        <Text pointerEvents="none" style={[styles.returnLaterAt, { color: ROOM_DETAIL_HEADER.returnLater.returnTimeColor }]}>
           Return at {returnLaterAt}
         </Text>
       ) : null)}
 
       {/* Promise Time: time only + remaining e.g. "2:30 PM · 30 mins 2s" */}
       {hasPromiseTimeTime && (
-        <Text style={[styles.returnLaterAt, { color: ROOM_DETAIL_HEADER.returnLater.returnTimeColor }]}>
+        <Text pointerEvents="none" style={[styles.returnLaterAt, { color: ROOM_DETAIL_HEADER.returnLater.returnTimeColor }]}>
           {promiseTimeOnly}{promiseTimeRemaining ? ` · ${promiseTimeRemaining}` : ''}
         </Text>
       )}
 
       {/* Refused Service: reason line below status (Figma 2333-835) */}
-      {hasRefuseServiceTime ? (
-        <Text style={[styles.returnLaterAt, { color: RS.subtitleColor }]}>
-          Refused at {refuseTimeOnly}
-        </Text>
-      ) : null}
-      {refuseServiceReason ? (
-        <Text style={[styles.returnLaterAt, { color: RS.subtitleColor }]}>
-          {refuseServiceReason}
-        </Text>
+      {refuseServiceReason || hasRefuseServiceTime ? (
+        <View style={styles.refuseRow} pointerEvents="box-none">
+          <Text pointerEvents="none" style={[styles.refuseText, { color: RS.subtitleColor }]}>
+            Refused: {refuseServiceReason ?? refuseTimeOnly}
+          </Text>
+          {!!onClearRefuseService && (
+            <TouchableOpacity
+              onPress={onClearRefuseService}
+              activeOpacity={0.75}
+              style={styles.clearBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.clearBtnText}>Clear</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       ) : null}
     </View>
   );
@@ -386,7 +421,8 @@ const styles = StyleSheet.create({
     height: ROOM_DETAIL_HEADER.backButton.height * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 20, // Ensure it's above other elements
+    zIndex: 200, // Ensure it's above subtitle overlays
+    elevation: 200,
   },
   backArrow: {
     width: ROOM_DETAIL_HEADER.backButton.width * scaleX,
@@ -526,6 +562,40 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     textAlign: 'center',
   },
+  pausedRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: (ROOM_DETAIL_HEADER.statusIndicator.top + ROOM_DETAIL_HEADER.statusIndicator.height + 8) * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10 * scaleX,
+  },
+  pausedTimeInline: {
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: 'light' as any,
+    color: '#ffffff',
+    textAlign: 'center',
+  },
+  resumeBtn: {
+    height: 18 * scaleX,
+    paddingHorizontal: 0,
+    borderRadius: 0,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resumeBtnText: {
+    fontSize: 13 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.bold as any,
+    color: '#f92424',
+    includeFontPadding: false,
+  },
   returnLaterAt: {
     position: 'absolute',
     left: 0,
@@ -536,6 +606,39 @@ const styles = StyleSheet.create({
     fontWeight: 'light' as any,
     color: '#ffffff',
     textAlign: 'center',
+  },
+  refuseRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: (ROOM_DETAIL_HEADER.statusIndicator.top + ROOM_DETAIL_HEADER.statusIndicator.height + 8) * scaleX,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10 * scaleX,
+  },
+  refuseText: {
+    fontSize: 14 * scaleX,
+    fontFamily: 'Helvetica',
+    fontWeight: 'light' as any,
+    textAlign: 'center',
+  },
+  clearBtn: {
+    height: 18 * scaleX,
+    paddingHorizontal: 0,
+    borderRadius: 0,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  clearBtnText: {
+    fontSize: 13 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.bold as any,
+    color: '#f92424',
+    includeFontPadding: false,
   },
 });
 
