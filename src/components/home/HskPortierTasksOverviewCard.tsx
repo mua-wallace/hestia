@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { typography } from '../../theme';
 import { useDesignScale } from '../../hooks/useDesignScale';
@@ -30,32 +30,21 @@ export default function HskPortierTasksOverviewCard({
   const { scaleX } = useDesignScale();
   const styles = useMemo(() => buildStyles(scaleX), [scaleX]);
 
-  const [timerText, setTimerText] = useState<string>('');
-  useEffect(() => {
-    if (!latestPill?.timeIso || (latestPill.type !== 'paused' && latestPill.type !== 'returnLater')) {
-      setTimerText('');
-      return;
+  const displaySubText = useMemo(() => {
+    if (!latestPill) return '';
+    if (latestPill.type === 'refused') return latestPill.subText ?? '';
+    if (!latestPill.timeIso) return '';
+    const dt = new Date(latestPill.timeIso);
+    if (Number.isNaN(dt.getTime())) return '';
+    if (latestPill.type === 'paused') {
+      // Show the set pause time (not elapsed)
+      const hh = String(dt.getHours()).padStart(2, '0');
+      const mm = String(dt.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
     }
-    const baseMs = new Date(latestPill.timeIso).getTime();
-    if (!Number.isFinite(baseMs)) {
-      setTimerText('');
-      return;
-    }
-    const tick = () => {
-      const diff =
-        latestPill.type === 'paused'
-          ? Math.max(0, Date.now() - baseMs)
-          : Math.max(0, baseMs - Date.now());
-      const totalSeconds = Math.floor(diff / 1000);
-      const hh = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-      const mm = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-      const ss = String(totalSeconds % 60).padStart(2, '0');
-      setTimerText(`${hh}:${mm}:${ss}`);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [latestPill?.type, latestPill?.timeIso]);
+    // Return Later: show the set return time (not countdown)
+    return dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  }, [latestPill]);
 
   return (
     <View style={styles.card}>
@@ -134,9 +123,7 @@ export default function HskPortierTasksOverviewCard({
           </View>
           <View style={styles.pausedTextCol}>
             <Text style={styles.pausedRoom}>{latestPill.roomLabel}</Text>
-            <Text style={styles.pausedTimer}>
-              {latestPill.type === 'refused' ? (latestPill.subText ?? '') : timerText}
-            </Text>
+            <Text style={styles.pausedTimer}>{displaySubText}</Text>
           </View>
           <View style={styles.pausedRight}>
             <Image source={require('../../../assets/icons/pause.png')} style={styles.pausedRightIcon} resizeMode="contain" />

@@ -317,7 +317,7 @@ export default function HomeScreen() {
       const tIso = (topRefused as any).refuseServiceAt as string | null | undefined;
       refuseServiceTimeIso = tIso ? String(tIso) : undefined;
       const reason = (topRefused as any).refuseServiceReason as string | null | undefined;
-      refuseServiceText = reason ? `Refused: ${reason}` : 'Refused: —';
+      refuseServiceText = reason ? String(reason) : '—';
     }
 
     const candidates: Array<{
