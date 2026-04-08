@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { typography, colors } from '../../theme';
 import {
@@ -46,7 +45,6 @@ export default function ChatHeader({
   showMessageButton = true,
   onGroupOptionsPress,
 }: ChatHeaderProps) {
-  const insets = useSafeAreaInsets();
   const handleSearchChange = (text: string) => onSearch?.(text);
   const shouldShowSearch = showSearch && onSearch !== undefined;
 
@@ -155,33 +153,35 @@ export default function ChatHeader({
         ) : null}
       </View>
       {shouldShowSearch && (
-        <View style={styles.searchSection}>
-          <View style={styles.searchBar}>
-            <SearchInput
-              placeholder={searchPlaceholder}
-              onSearch={handleSearchChange}
-              inputStyle={styles.searchInput}
-              placeholderStyle={styles.placeholderText}
-              inputWrapperStyle={styles.searchInputWrapper}
-            />
-            <TouchableOpacity style={styles.searchIconContainer} activeOpacity={0.7}>
-              <Image
-                source={require('../../../assets/icons/search-icon.png')}
-                style={styles.searchIcon}
-                resizeMode="contain"
+        <>
+          <View style={styles.searchSection}>
+            <View style={styles.searchBar}>
+              <SearchInput
+                placeholder={searchPlaceholder}
+                onSearch={handleSearchChange}
+                inputStyle={styles.searchInput}
+                placeholderStyle={styles.placeholderText}
+                inputWrapperStyle={styles.searchInputWrapper}
               />
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.searchIconContainer} activeOpacity={0.7}>
+                <Image
+                  source={require('../../../assets/icons/search-icon.png')}
+                  style={styles.searchIcon}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            </View>
+            {onFilterPress && (
+              <TouchableOpacity style={styles.filterButton} onPress={onFilterPress} activeOpacity={0.7}>
+                <Image
+                  source={require('../../../assets/icons/menu-icon.png')}
+                  style={styles.filterIcon}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            )}
           </View>
-          {onFilterPress && (
-            <TouchableOpacity style={styles.filterButton} onPress={onFilterPress} activeOpacity={0.7}>
-              <Image
-                source={require('../../../assets/icons/menu-icon.png')}
-                style={styles.filterIcon}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-          )}
-        </View>
+        </>
       )}
     </View>
   );
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   searchIcon: {
     width: 19 * scaleX,
     height: 19 * scaleX,
-    tintColor: colors.primary.main,
+    tintColor: SEARCH_BAR.searchIcon.tintColor,
   },
   filterButton: {
     width: SEARCH_BAR.filterIcon.width * scaleX,

@@ -1,19 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, RefreshControl, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
-import { colors } from '../theme';
+import { typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import ChatHeader from '../components/chat/ChatHeader';
 import ChatItem, { ChatItemData } from '../components/chat/ChatItem';
+import NotificationItem, { NotificationItemData } from '../components/chat/NotificationItem';
 import NewChatMenu, { NewChatMenuOption } from '../components/chat/NewChatMenu';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useChatStore } from '../store/useChatStore';
 import { invalidateNotificationBadges } from '../services/inAppNotifications';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { CHAT_SPACING, CHAT_COLORS, CHAT_ITEM, scaleX } from '../constants/chatStyles';
 
 type MainTabsParamList = {
@@ -37,25 +40,90 @@ export default function ChatScreen() {
   const navigation = useNavigation<ChatScreenNavigationProp>();
   const route = useRoute();
   const { open: openAIChatOverlay } = useAIChatOverlay();
+  const { session } = useAuth();
   const [activeTab, setActiveTab] = useState('Chat');
   const [showNewChatMenu, setShowNewChatMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { chats, loading, fetchChats } = useChatStore();
   const [refreshing, setRefreshing] = useState(false);
+  const [topNotification, setTopNotification] = useState<NotificationItemData | null>(null);
+  const [dummyGeneralUnreadCount, setDummyGeneralUnreadCount] = useState(() => Math.floor(Math.random() * 10) + 1);
+  const [dummyTasksUnreadCount, setDummyTasksUnreadCount] = useState(() => Math.floor(Math.random() * 10) + 1);
+
+  const rerollDummyNotificationCounts = useCallback(() => {
+    setDummyGeneralUnreadCount(Math.floor(Math.random() * 10) + 1);
+    setDummyTasksUnreadCount(Math.floor(Math.random() * 10) + 1);
+  }, []);
+
+  const dummyGeneralNotification: NotificationItemData = {
+    id: 'dummy-general',
+    label: 'General',
+    title: 'All hotel staff are invited for the...',
+    timeText: '20:00',
+    unreadCount: dummyGeneralUnreadCount,
+    pillBackgroundColor: '#ff46a3',
+    pillTextColor: '#ffffff',
+  };
 
   const loadChats = useCallback(async () => {
     await fetchChats();
   }, [fetchChats]);
 
+  const loadTopNotification = useCallback(async () => {
+    if (!isSupabaseConfigured || !session?.user?.id) {
+      setTopNotification(null);
+      return;
+    }
+    const [countRes, latestRes] = await Promise.all([
+      supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .is('read_at', null)
+        .eq('type', 'room_assignment'),
+      supabase
+        .from('notifications')
+        .select('id,title,created_at')
+        .eq('type', 'room_assignment')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    const unreadCount = countRes.count ?? 0;
+    const latest = latestRes.data as { id?: string; title?: string | null; created_at?: string | null } | null;
+    if (!latest?.id || !latest?.title) {
+      setTopNotification(null);
+      return;
+    }
+
+    const createdAt = latest.created_at ? new Date(latest.created_at) : null;
+    const timeText =
+      createdAt && !Number.isNaN(createdAt.getTime())
+        ? createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+        : undefined;
+
+    setTopNotification({
+      id: latest.id,
+      label: 'Tasks',
+      title: latest.title,
+      timeText,
+      unreadCount,
+    });
+  }, [session?.user?.id]);
+
   useEffect(() => {
     loadChats();
-  }, [loadChats]);
+    void loadTopNotification();
+    rerollDummyNotificationCounts();
+  }, [loadChats, loadTopNotification]);
 
   useFocusEffect(
     useCallback(() => {
       void loadChats();
+      void loadTopNotification();
       invalidateNotificationBadges();
-    }, [loadChats])
+      rerollDummyNotificationCounts();
+    }, [loadChats, loadTopNotification])
   );
 
   const handleTabPress = (tab: string, options?: { fromRoomsAssignmentBadge?: boolean }) => {
@@ -118,9 +186,11 @@ export default function ChatScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    rerollDummyNotificationCounts();
     await loadChats();
+    await loadTopNotification();
     setRefreshing(false);
-  }, [loadChats]);
+  }, [loadChats, loadTopNotification, rerollDummyNotificationCounts]);
 
   const isLoading = loading && chats.length === 0;
 
@@ -152,16 +222,31 @@ export default function ChatScreen() {
             }
             keyboardShouldPersistTaps="handled"
           >
+            <Text style={styles.sectionTitle}>Notifications</Text>
+            <NotificationItem item={dummyGeneralNotification} />
+            <NotificationItem
+              item={
+                topNotification ?? {
+                  id: 'dummy-tasks',
+                  label: 'Tasks',
+                  title: 'You have been assigned to Room 201',
+                  timeText: '20:00',
+                  unreadCount: dummyTasksUnreadCount,
+                  pillBackgroundColor: '#4a91fc',
+                  pillTextColor: '#ffffff',
+                }
+              }
+              onPress={() => navigation.navigate('Rooms' as any)}
+            />
+
+            <Text style={styles.sectionTitle}>Chats</Text>
             {/* Chat Items */}
-            {filteredChats.map((chat, index) => (
+            {filteredChats.map((chat) => (
               <React.Fragment key={chat.id}>
                 <ChatItem
                   chat={chat}
                   onPress={() => handleChatPress(chat)}
                 />
-                {index < filteredChats.length - 1 ? (
-                  <View style={styles.divider} />
-                ) : null}
               </React.Fragment>
             ))}
           </ScrollView>
@@ -215,10 +300,15 @@ const styles = StyleSheet.create({
     paddingBottom: CHAT_SPACING.contentPaddingBottom * scaleX,
     minHeight: '100%',
   },
-  divider: {
-    height: 1,
-    backgroundColor: CHAT_ITEM.divider.color,
-    marginHorizontal: CHAT_ITEM.avatar.left * scaleX,
+  sectionTitle: {
+    marginTop: 12 * scaleX,
+    marginBottom: 8 * scaleX,
+    paddingHorizontal: CHAT_ITEM.avatar.left * scaleX,
+    fontSize: 16 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: '700' as any,
+    color: CHAT_COLORS.textPrimary,
+    includeFontPadding: false,
   },
   contentBlurOverlay: {
     position: 'absolute',

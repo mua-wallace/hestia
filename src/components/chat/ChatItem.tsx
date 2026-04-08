@@ -24,10 +24,10 @@ interface ChatItemProps {
 }
 
 export default function ChatItem({ chat, onPress }: ChatItemProps) {
-  const hasUnread = Boolean(chat.unreadCount && chat.unreadCount > 0);
+  const unreadCount = typeof chat.unreadCount === 'number' ? chat.unreadCount : 0;
+  const hasUnread = unreadCount > 0;
   const lastMsg = typeof chat.lastMessage === 'string' ? chat.lastMessage : '';
   const sender = typeof chat.lastMessageSender === 'string' ? chat.lastMessageSender : '';
-  const messageText = sender ? `${sender} ${lastMsg}` : lastMsg;
 
   return (
     <TouchableOpacity
@@ -63,7 +63,14 @@ export default function ChatItem({ chat, onPress }: ChatItemProps) {
             ]}
             numberOfLines={1}
           >
-            {messageText}
+            {sender ? (
+              <>
+                <Text style={styles.messageSender}>{sender} </Text>
+                <Text>{lastMsg}</Text>
+              </>
+            ) : (
+              lastMsg
+            )}
           </Text>
 
           {chat.isGroup ? (
@@ -73,13 +80,12 @@ export default function ChatItem({ chat, onPress }: ChatItemProps) {
           ) : null}
         </View>
 
-        {/* WhatsApp-style: unread count bottom-right, aligned with preview line */}
+        {/* Figma: unread badge at top-right for every chat (dummy when missing) */}
         {hasUnread ? (
           <View style={styles.rightMeta}>
-            <View style={styles.rightMetaSpacer} />
             <View style={styles.badge}>
               <Text style={styles.badgeText} numberOfLines={1}>
-                {typeof chat.unreadCount === 'number' && chat.unreadCount > 99 ? '99+' : String(chat.unreadCount ?? 0)}
+                {unreadCount > 99 ? '99+' : String(unreadCount)}
               </Text>
             </View>
           </View>
@@ -96,6 +102,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: CHAT_ITEM.avatar.left * scaleX,
     paddingVertical: 12 * scaleX,
     minHeight: 98 * scaleX,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: CHAT_COLORS.divider,
   },
   avatarContainer: {
     width: CHAT_ITEM.avatar.size * scaleX,
@@ -150,6 +158,10 @@ const styles = StyleSheet.create({
   messageLight: {
     fontWeight: CHAT_TYPOGRAPHY.messageLight.fontWeight as any,
   },
+  messageSender: {
+    fontWeight: '700' as any,
+    color: CHAT_TYPOGRAPHY.message.color,
+  },
   messageUnread: {
     fontWeight: '600' as any,
     color: CHAT_TYPOGRAPHY.message.color,
@@ -170,29 +182,25 @@ const styles = StyleSheet.create({
   },
   rightMeta: {
     alignSelf: 'stretch',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
     alignItems: 'flex-end',
     paddingLeft: 8 * scaleX,
-    paddingBottom: 2 * scaleX,
-  },
-  rightMetaSpacer: {
-    flex: 1,
-    minHeight: 18 * scaleX,
+    paddingTop: 2 * scaleX,
   },
   badge: {
-    minHeight: CHAT_ITEM.badge.minHeight * scaleX,
-    minWidth: CHAT_ITEM.badge.minWidth * scaleX,
-    paddingHorizontal: CHAT_ITEM.badge.paddingHorizontal * scaleX,
-    borderRadius: CHAT_ITEM.badge.borderRadius * scaleX,
-    backgroundColor: CHAT_ITEM.badge.backgroundColor,
+    width: 32 * scaleX,
+    height: 32 * scaleX,
+    borderRadius: 16 * scaleX,
+    backgroundColor: CHAT_ITEM.badge.backgroundColor, // #FF46A3
     justifyContent: 'center',
     alignItems: 'center',
   },
   badgeText: {
-    fontSize: CHAT_TYPOGRAPHY.badge.fontSize * scaleX,
+    fontSize: 15 * scaleX,
     fontFamily: typography.fontFamily.primary,
     fontWeight: CHAT_TYPOGRAPHY.badge.fontWeight as any,
     color: CHAT_TYPOGRAPHY.badge.color,
+    includeFontPadding: false,
   },
 });
 
