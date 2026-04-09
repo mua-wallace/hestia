@@ -38,10 +38,9 @@ export default function StaffTabs({
   }, [searchExpanded]);
 
   const tabs: { id: StaffTab; label: string }[] = [
-    { id: 'onShift', label: 'On Shift' },
+    { id: 'shifts', label: 'Shifts' },
     { id: 'am', label: 'AM' },
     { id: 'pm', label: 'PM' },
-    { id: 'departments', label: 'Departments' },
   ];
 
   const getIndicatorPosition = () => {
@@ -180,7 +179,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     position: 'absolute',
-    left: STAFF_TABS.tabs.onShift.left * scaleX,
+    left: STAFF_TABS.tabs.shifts.left * scaleX,
     right: (STAFF_TABS.searchIcon.right + 32) * scaleX,
     top: 0,
     bottom: 0,

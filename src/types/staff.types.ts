@@ -1,4 +1,4 @@
-export type StaffTab = 'onShift' | 'am' | 'pm' | 'departments';
+export type StaffTab = 'shifts' | 'am' | 'pm';
 
 /** Tab for reassign modal: On Shift, AM, PM, Departments */
 export type ReassignTab = 'OnShift' | 'AM' | 'PM' | 'departments';

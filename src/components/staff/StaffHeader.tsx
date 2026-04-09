@@ -1,16 +1,18 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../../theme';
 import { scaleX, STAFF_HEADER } from '../../constants/staffStyles';
 
 interface StaffHeaderProps {
   onBackPress?: () => void;
-  onSearchPress?: () => void;
+  /** Top-right action button (Figma shows a + button). */
+  onAddPress?: () => void;
 }
 
 export default function StaffHeader({
   onBackPress,
-  onSearchPress,
+  onAddPress,
 }: StaffHeaderProps) {
   return (
     <View style={styles.container}>
@@ -34,18 +36,16 @@ export default function StaffHeader({
       {/* Title */}
       <Text style={styles.title}>Staff</Text>
       
-      {/* Search Icon */}
-      {onSearchPress && (
+      {/* + Button */}
+      {onAddPress && (
         <TouchableOpacity
-          style={styles.searchButton}
-          onPress={onSearchPress}
+          style={styles.addButtonWrap}
+          onPress={onAddPress}
           activeOpacity={0.7}
         >
-          <Image
-            source={require('../../../assets/icons/search-icon.png')}
-            style={styles.searchIcon}
-            resizeMode="contain"
-          />
+          <View style={styles.addButtonCircle}>
+            <Ionicons name="add" size={28 * scaleX} color="#ffffff" />
+          </View>
         </TouchableOpacity>
       )}
     </View>
@@ -91,18 +91,22 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.bold as any,
     color: STAFF_HEADER.title.color,
   },
-  searchButton: {
+  addButtonWrap: {
     position: 'absolute',
-    right: STAFF_HEADER.searchIcon.right * scaleX,
-    top: STAFF_HEADER.searchIcon.top * scaleX,
-    width: STAFF_HEADER.searchIcon.width * scaleX,
-    height: STAFF_HEADER.searchIcon.height * scaleX,
+    right: 32 * scaleX,
+    top: 50 * scaleX,
+    width: 54 * scaleX,
+    height: 54 * scaleX,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  searchIcon: {
-    width: STAFF_HEADER.searchIcon.width * scaleX,
-    height: STAFF_HEADER.searchIcon.height * scaleX,
+  addButtonCircle: {
+    width: 54 * scaleX,
+    height: 54 * scaleX,
+    borderRadius: 999,
+    backgroundColor: 'rgba(90,117,157,0.59)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

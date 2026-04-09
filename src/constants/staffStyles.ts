@@ -49,7 +49,7 @@ export const STAFF_TABS = {
     inactiveColor: 'rgba(90,117,157,0.55)',
   },
   tabs: {
-    onShift: {
+    shifts: {
       left: 32,
       top: 158,
       width: 68,
@@ -69,13 +69,6 @@ export const STAFF_TABS = {
       width: 20, // Approximate
       indicatorWidth: 20,
       indicatorLeft: 198,
-    },
-    departments: {
-      left: 256,
-      top: 158,
-      width: 90, // Approximate
-      indicatorWidth: 90,
-      indicatorLeft: 256,
     },
   },
   indicator: {
@@ -347,4 +340,43 @@ export const STAFF_DEPARTMENT_PANEL = {
   },
 } as const;
 
+/** Expanded staff row — shift calendar card (Figma node 3232-71). */
+export const STAFF_SHIFT_CALENDAR = {
+  card: {
+    maxWidth: 401,
+    borderRadius: 9,
+    backgroundColor: '#f9fafc',
+    borderColor: '#e3e3e3',
+    borderWidth: 1,
+    marginHorizontal: 19,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  monthTitle: {
+    fontSize: 16,
+    color: '#5a759d',
+  },
+  editPill: {
+    paddingHorizontal: 19,
+    paddingVertical: 10,
+    borderRadius: 57,
+    backgroundColor: 'rgba(90,117,157,0.06)',
+    fontSize: 12,
+    color: '#5a759d',
+  },
+  weekdayLabel: {
+    fontSize: 14,
+    color: '#000000',
+  },
+  dayCircle: {
+    size: 36,
+    fontSize: 14,
+  },
+} as const;
+
+/** Shift-day fill colors (Figma: green / red / pink / yellow). */
+export const STAFF_SHIFT_DAY_COLORS = ['#28c76f', '#f92424', '#ff4dd8', '#f0be1b'] as const;
+
+export const STAFF_SHIFT_DAY_NEUTRAL = '#e8ecf2';
 
