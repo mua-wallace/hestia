@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { typography } from '../../theme';
 import { scaleX, STAFF_CARD } from '../../constants/staffStyles';
 import { StaffMember } from '../../types/staff.types';
@@ -7,9 +7,10 @@ import StaffCardProgressBar from './StaffCardProgressBar';
 
 interface StaffCardProps {
   staff: StaffMember;
+  onAssignRoomPress?: (staff: StaffMember) => void;
 }
 
-export default function StaffCard({ staff }: StaffCardProps) {
+export default function StaffCard({ staff, onAssignRoomPress }: StaffCardProps) {
   const hasCurrentTask = !!staff.currentTask;
   const cardHeight = hasCurrentTask
     ? STAFF_CARD.height.standard
@@ -100,8 +101,19 @@ export default function StaffCard({ staff }: StaffCardProps) {
               {staff.currentTask.timer}
             </Text>
           </View>
+          <Text style={styles.currentPillLabel}>Current</Text>
         </View>
       )}
+
+      {/* Assign Room */}
+      <TouchableOpacity
+        style={styles.assignRoomButton}
+        onPress={onAssignRoomPress ? () => onAssignRoomPress(staff) : undefined}
+        activeOpacity={onAssignRoomPress ? 0.85 : 1}
+        disabled={!onAssignRoomPress}
+      >
+        <Text style={styles.assignRoomText}>Assign Room</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -216,6 +228,15 @@ const styles = StyleSheet.create({
     marginLeft: (STAFF_CARD.currentTask.roomText.left - STAFF_CARD.currentTask.circle.left - STAFF_CARD.currentTask.circle.width) * scaleX,
     justifyContent: 'center',
   },
+  currentPillLabel: {
+    marginLeft: 12 * scaleX,
+    fontSize: 9 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.regular as any,
+    color: '#000000',
+    alignSelf: 'flex-start',
+    marginTop: 4 * scaleX,
+  },
   roomText: {
     fontSize: STAFF_CARD.currentTask.roomText.fontSize * scaleX,
     fontFamily: typography.fontFamily.primary,
@@ -229,6 +250,24 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.regular as any,
     marginTop: 2 * scaleX,
     lineHeight: STAFF_CARD.currentTask.timer.fontSize * scaleX * 1.2,
+  },
+  assignRoomButton: {
+    position: 'absolute',
+    right: 17 * scaleX,
+    bottom: 16 * scaleX,
+    width: 119 * scaleX,
+    height: 44 * scaleX,
+    borderRadius: 41 * scaleX,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  assignRoomText: {
+    fontSize: 14 * scaleX,
+    fontFamily: typography.fontFamily.primary,
+    fontWeight: typography.fontWeights.regular as any,
+    color: '#5a759d',
+    includeFontPadding: false,
   },
 });
 

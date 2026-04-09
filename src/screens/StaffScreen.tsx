@@ -18,12 +18,14 @@ import StaffHeader from '../components/staff/StaffHeader';
 import StaffTabs from '../components/staff/StaffTabs';
 import { STAFF_DEPARTMENTS_LIST } from '../components/staff/StaffDepartmentList';
 import StaffListRow from '../components/staff/StaffListRow';
+import StaffCard from '../components/staff/StaffCard';
 import { StaffTab, StaffMember } from '../types/staff.types';
 import { STAFF_TABS, STAFF_DEPT_CHIP } from '../constants/staffStyles';
 import type { MainTabsParamList, ReturnToTab } from '../app/navigation/types';
 import { getUsersByDepartment } from '../services/user';
 import { isSupabaseConfigured } from '../lib/supabase';
 import type { User } from '../types';
+import { fetchStaffRoomStatsForShift } from '../services/staff';
 
 const DESIGN_WIDTH = 440;
 
@@ -53,10 +55,18 @@ const STAFF_DEPT_DB_NAME: Record<StaffDeptChipId, string> = {
 };
 
 function mapUserToStaffMember(u: User): StaffMember {
+  const name = u.name ?? 'Staff';
+  const parts = name.trim().split(/\s+/);
+  const initials =
+    parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : (name[0] || '?').toUpperCase();
   return {
     id: u.id,
-    name: u.name,
+    name,
     avatar: u.avatar?.trim() ? { uri: u.avatar.trim() } : undefined,
+    initials,
+    avatarColor: '#5a759d',
     department: u.department,
     role: u.role,
     onShift: true,
@@ -79,6 +89,7 @@ export default function StaffScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDepartmentId, setActiveDepartmentId] = useState<StaffDeptChipId>('hsk');
   const [expandedStaffId, setExpandedStaffId] = useState<string | null>(null);
+  const [staffStatsById, setStaffStatsById] = useState<Map<string, any>>(new Map());
 
   const toggleStaffExpand = (id: string) => {
     setExpandedStaffId((prev) => (prev === id ? null : id));
@@ -104,7 +115,7 @@ export default function StaffScreen() {
       } catch {
         if (!cancelled) {
           setDepartmentError('Could not load staff');
-          setDepartmentStaff(mockStaffForDepartment(activeDepartmentId));
+          setDepartmentStaff([]);
         }
       } finally {
         if (!cancelled) setDepartmentLoading(false);
@@ -114,6 +125,23 @@ export default function StaffScreen() {
       cancelled = true;
     };
   }, [activeDepartmentId]);
+
+  // Load staff room stats for AM/PM tabs (housekeeping staff focus).
+  useEffect(() => {
+    let cancelled = false;
+    const shift = selectedTab === 'pm' ? 'PM' : 'AM';
+    if (selectedTab === 'shifts') {
+      setStaffStatsById(new Map());
+      return;
+    }
+    const ids = departmentStaff.map((s) => s.id).filter(Boolean);
+    void fetchStaffRoomStatsForShift(ids, shift).then((map) => {
+      if (!cancelled) setStaffStatsById(map);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTab, departmentStaff]);
 
   // Sync activeTab with current route
   useFocusEffect(
@@ -427,19 +455,47 @@ export default function StaffScreen() {
                 displayedStaff.map((staff) => {
                   const chip = STAFF_DEPT_CHIPS.find((c) => c.id === activeDepartmentId);
                   const dept = staff.department ?? chip?.name ?? 'HSK';
+                  const stats = staffStatsById.get(staff.id);
+                  const staffForCard: StaffMember =
+                    selectedTab === 'am' || selectedTab === 'pm'
+                      ? {
+                          ...staff,
+                          taskStats: {
+                            inProgress: stats?.inProgress ?? 0,
+                            cleaned: stats?.cleaned ?? 0,
+                            dirty: stats?.dirty ?? 0,
+                          },
+                          progressRatio: {
+                            completed: stats?.completed ?? 0,
+                            total: stats?.total ?? 0,
+                          },
+                          currentTask: stats?.currentRoomNumber
+                            ? { roomNumber: String(stats.currentRoomNumber), timer: '00:00:00', isActive: false }
+                            : undefined,
+                        }
+                      : staff;
                   return (
                     <View key={staff.id}>
-                      <StaffListRow
-                        staffId={staff.id}
-                        name={staff.name}
-                        departmentLabel={dept}
-                        avatar={staff.avatar}
-                        initials={staff.initials}
-                        isOnline={!!staff.onShift}
-                        expanded={expandedStaffId === staff.id}
-                        onToggleExpand={() => toggleStaffExpand(staff.id)}
-                        scaleX={scaleX}
-                      />
+                      {(selectedTab === 'am' || selectedTab === 'pm') ? (
+                        <StaffCard
+                          staff={staffForCard}
+                          onAssignRoomPress={() => {
+                            // TODO: wire to assign room flow (matches Figma button)
+                          }}
+                        />
+                      ) : (
+                        <StaffListRow
+                          staffId={staff.id}
+                          name={staff.name}
+                          departmentLabel={dept}
+                          avatar={staff.avatar}
+                          initials={staff.initials}
+                          isOnline={!!staff.onShift}
+                          expanded={expandedStaffId === staff.id}
+                          onToggleExpand={() => toggleStaffExpand(staff.id)}
+                          scaleX={scaleX}
+                        />
+                      )}
                       <View style={styles.listDivider} />
                     </View>
                   );
