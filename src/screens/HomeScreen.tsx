@@ -11,12 +11,10 @@ import { colors } from '../theme';
 import SearchInput from '../components/SearchInput';
 
 import type { ShiftType } from '../types/home.types';
-import { mockHomeData } from '../data/mockHomeData';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserStore } from '../store/useUserStore';
 import { userProfileFromSession } from '../services/user';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
-import { mockAllRoomsData } from '../data/mockAllRoomsData';
 import { useRoomsStore } from '../store/useRoomsStore';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
 import type { MoreMenuItemId } from '../types/more.types';
@@ -37,6 +35,7 @@ import { getFloorFromRoomNumber } from '../utils/formatting';
 import { getRecentActivityLogs } from '../services/activityLogs';
 import { dashboardService } from '../services/dashboard';
 import { supabase } from '../lib/supabase';
+import { getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt } from '../services/rooms';
 
 import type { MainTabsParamList } from '../navigation/types';
 
@@ -53,14 +52,18 @@ export default function HomeScreen() {
   const { open: openAIChatOverlay } = useAIChatOverlay();
   const { session } = useAuth();
   const [homeData, setHomeData] = useState(() => ({
-    ...mockHomeData,
+    // Avoid mock fallbacks — hydrate from Supabase stores/session only.
+    user: undefined as any,
     selectedShift: getShiftFromTime(),
+    date: '',
+    categories: [] as any[],
+    notifications: { chat: 0 },
   }));
   const { data: roomsStoreData, loading: roomsLoading, fetchRooms } = useRoomsStore();
   const roomsForHome = useMemo(
     () => ({
-      rooms: roomsStoreData?.rooms ?? mockAllRoomsData?.rooms ?? [],
-      roomsPM: roomsStoreData?.roomsPM ?? mockAllRoomsData?.roomsPM ?? [],
+      rooms: roomsStoreData?.rooms ?? [],
+      roomsPM: roomsStoreData?.roomsPM ?? [],
     }),
     [roomsStoreData?.rooms, roomsStoreData?.roomsPM]
   );
@@ -71,6 +74,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [assignedRoomIdsOrdered, setAssignedRoomIdsOrdered] = useState<string[]>([]);
 
   // PM should behave like AM during AM hours; PM home categories differ from AM (see derivedCategories).
   const currentShiftFromClock = useMemo(() => getShiftFromTime(), []);
@@ -83,8 +87,8 @@ export default function HomeScreen() {
   const sessionFallback = useMemo(
     () =>
       session?.user
-        ? userProfileFromSession(session.user.user_metadata, session.user.email, mockHomeData.user.hasFlag)
-        : mockHomeData.user,
+        ? userProfileFromSession(session.user.user_metadata, session.user.email, false)
+        : undefined,
     [session?.user]
   );
   useEffect(() => {
@@ -95,12 +99,49 @@ export default function HomeScreen() {
       if (session?.user) fetchProfile(session.user.id, sessionFallback);
     }, [session?.user?.id, sessionFallback, fetchProfile])
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    const uid = session?.user?.id;
+    if (!uid) {
+      setAssignedRoomIdsOrdered([]);
+      return;
+    }
+    void getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt(uid).then((ids) => {
+      if (!cancelled) setAssignedRoomIdsOrdered(ids);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
   useEffect(() => {
     setHomeData((prev) => ({
       ...prev,
-      user: session ? (profile ?? sessionFallback) : mockHomeData.user,
+      user: session ? (profile ?? sessionFallback) : undefined,
     }));
   }, [session, profile, sessionFallback]);
+
+  const safeUser = useMemo(
+    () =>
+      (homeData.user as any) ?? {
+        name: '',
+        role: '',
+        avatar: '',
+        hasFlag: false,
+        department: '',
+      },
+    [homeData.user]
+  );
+
+  const safeDate = useMemo(() => {
+    if (typeof (homeData as any).date === 'string' && (homeData as any).date.trim()) return (homeData as any).date;
+    const d = new Date();
+    const day = d.toLocaleDateString(undefined, { weekday: 'short' });
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mon = d.toLocaleDateString(undefined, { month: 'short' });
+    const yyyy = String(d.getFullYear());
+    return `${day} ${dd} ${mon} ${yyyy}`;
+  }, [(homeData as any).date]);
 
   const isEngineeringUser = (homeData.user?.department ?? '').toLowerCase() === 'engineering';
   const isHskPortierUser = (homeData.user?.department ?? '').toLowerCase() === 'hsk portier';
@@ -128,10 +169,17 @@ export default function HomeScreen() {
 
     try {
       const ticketsData = await dashboardService.getTicketsData();
-      const engineeringTickets = (ticketsData?.tickets ?? []).filter((t: any) => (t?.category ?? '').toLowerCase() === 'engineering');
+      const uid = session?.user?.id;
+      const engineeringTickets = (ticketsData?.tickets ?? [])
+        .filter((t: any) => (t?.category ?? '').toLowerCase() === 'engineering')
+        // Engineering Home: only tickets assigned to the signed-in user.
+        .filter((t: any) => (!!uid ? String(t?.assignedToId ?? '') === String(uid) : false));
 
       const total = engineeringTickets.length;
-      const priority = engineeringTickets.reduce((sum: number, t: any) => sum + ((t?.priority ?? '').toLowerCase() === 'high' ? 1 : 0), 0);
+      const priority = engineeringTickets.reduce(
+        (sum: number, t: any) => sum + ((t?.priority ?? '').toLowerCase() === 'urgent' ? 1 : 0),
+        0
+      );
       const unsolved = engineeringTickets.reduce((sum: number, t: any) => sum + (t?.status === 'unsolved' ? 1 : 0), 0);
       const solved = engineeringTickets.reduce((sum: number, t: any) => sum + (t?.status === 'done' ? 1 : 0), 0);
       const outOfOrder = engineeringTickets.reduce((sum: number, t: any) => sum + (t?.status === 'ofo' ? 1 : 0), 0);
@@ -184,7 +232,7 @@ export default function HomeScreen() {
     } catch (e) {
       console.warn('[HomeScreen] Failed to load engineering recent activity', e);
     }
-  }, [isEngineeringUser]);
+  }, [isEngineeringUser, session?.user?.id]);
 
   useEffect(() => {
     void refreshEngineeringHome();
@@ -226,12 +274,24 @@ export default function HomeScreen() {
     const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
 
-    const dirty = sourceRooms.filter((r) => r.houseKeepingStatus === 'Dirty').length;
-    const inProgress = sourceRooms.filter((r) => r.houseKeepingStatus === 'InProgress').length;
-    const cleaned = sourceRooms.filter((r) => r.houseKeepingStatus === 'Cleaned').length;
-    const inspected = sourceRooms.filter((r) => r.houseKeepingStatus === 'Inspected').length;
+    // HSK Portier: badge figures should reflect only rooms assigned to the logged-in user.
+    // Prefer assignment userId from Supabase; fall back to matching the assigned staff name.
+    const uid = session?.user?.id;
+    const assignedByUserId =
+      uid ? sourceRooms.filter((r) => String(r.roomAttendantAssigned?.userId ?? '') === String(uid)) : [];
+    const normalizedUserName = String(safeUser?.name ?? '').trim().toLowerCase();
+    const assignedByName =
+      normalizedUserName.length > 0
+        ? sourceRooms.filter((r) => String(r.roomAttendantAssigned?.name ?? '').trim().toLowerCase() === normalizedUserName)
+        : [];
+    const workingRooms = assignedByUserId.length > 0 ? assignedByUserId : assignedByName;
+
+    const dirty = workingRooms.filter((r) => r.houseKeepingStatus === 'Dirty').length;
+    const inProgress = workingRooms.filter((r) => r.houseKeepingStatus === 'InProgress').length;
+    const cleaned = workingRooms.filter((r) => r.houseKeepingStatus === 'Cleaned').length;
+    const inspected = workingRooms.filter((r) => r.houseKeepingStatus === 'Inspected').length;
     const total = dirty + inProgress + cleaned + inspected;
-    const priority = sourceRooms.filter((r) => !!r.isPriority).length;
+    const priority = workingRooms.filter((r) => !!r.isPriority).length;
 
     // Figma shows "2/8" as progress text (completed-ish). We treat Cleaned+Inspected as "done".
     const done = cleaned + inspected;
@@ -263,7 +323,7 @@ export default function HomeScreen() {
           const rid = (paused as any)?.room_id as string | undefined;
           const updatedAt = (paused as any)?.updated_at as string | undefined;
           if (rid) {
-            const room = sourceRooms.find((r) => r.id === rid);
+            const room = workingRooms.find((r) => r.id === rid);
             if (room?.roomNumber) pausedRoomLabel = `Room ${room.roomNumber}`;
             // Prefer the persisted pause start time on the room record when available; fallback to assignment updated_at.
             const roomPausedAt = (room as any)?.pausedAt as string | null | undefined;
@@ -277,7 +337,7 @@ export default function HomeScreen() {
 
     // Fallback: show any paused room (persisted on room record) even when assignment isn't paused.
     if (!pausedRoomLabel) {
-      const pausedRooms = sourceRooms
+      const pausedRooms = workingRooms
         .filter((r) => Boolean((r as any)?.pausedAt))
         .map((r) => ({ r, t: new Date(String((r as any).pausedAt)).getTime() }))
         .filter((x) => Number.isFinite(x.t))
@@ -292,7 +352,7 @@ export default function HomeScreen() {
     // Return Later candidate (most recent returnLaterAt)
     let returnLaterRoomLabel: string | undefined;
     let returnLaterAtIso: string | undefined;
-    const returnLaterRooms = sourceRooms
+    const returnLaterRooms = workingRooms
       .filter((r) => Boolean((r as any)?.returnLaterAt))
       .map((r) => ({ r, t: new Date(String((r as any).returnLaterAt)).getTime() }))
       .filter((x) => Number.isFinite(x.t))
@@ -307,7 +367,7 @@ export default function HomeScreen() {
     let refuseServiceRoomLabel: string | undefined;
     let refuseServiceTimeIso: string | undefined;
     let refuseServiceText: string | undefined;
-    const refusedRooms = sourceRooms
+    const refusedRooms = workingRooms
       .filter((r) => Boolean((r as any)?.refuseServiceReason) || Boolean((r as any)?.refuseServiceAt))
       .map((r) => ({ r, t: new Date(String((r as any).refuseServiceAt ?? 0)).getTime() }))
       .sort((a, b) => (Number.isFinite(b.t) ? b.t : 0) - (Number.isFinite(a.t) ? a.t : 0));
@@ -369,11 +429,11 @@ export default function HomeScreen() {
         : undefined,
     });
 
-    const flagged = sourceRooms.filter((r) => !!r.flagged).length;
-    const stayover = sourceRooms.filter((r) => r.frontOfficeStatus === 'Stayover').length;
-    const turndown = sourceRooms.filter((r) => r.frontOfficeStatus === 'Turndown').length;
-    const departures = sourceRooms.filter((r) => r.frontOfficeStatus === 'Departure' || r.frontOfficeStatus === 'Arrival/Departure').length;
-    const arrivals = sourceRooms.filter((r) => r.frontOfficeStatus === 'Arrival' || r.frontOfficeStatus === 'Arrival/Departure').length;
+    const flagged = workingRooms.filter((r) => !!r.flagged).length;
+    const stayover = workingRooms.filter((r) => r.frontOfficeStatus === 'Stayover').length;
+    const turndown = workingRooms.filter((r) => r.frontOfficeStatus === 'Turndown').length;
+    const departures = workingRooms.filter((r) => r.frontOfficeStatus === 'Departure' || r.frontOfficeStatus === 'Arrival/Departure').length;
+    const arrivals = workingRooms.filter((r) => r.frontOfficeStatus === 'Arrival' || r.frontOfficeStatus === 'Arrival/Departure').length;
     const baseRows = [
       { label: 'Flagged', count: flagged, icon: require('../../assets/icons/flag.png'), circleBg: '#ffebeb', iconTint: '#f92424' },
       {
@@ -407,7 +467,7 @@ export default function HomeScreen() {
     ];
 
     setPortierRows(baseRows);
-  }, [isHskPortierUser, roomsForHome, homeData.selectedShift, session?.user?.id]);
+  }, [isHskPortierUser, roomsForHome, homeData.selectedShift, session?.user?.id, safeUser?.name]);
 
   useEffect(() => {
     void refreshPortierHome();
@@ -444,7 +504,7 @@ export default function HomeScreen() {
   };
 
   const handleProfilePress = () => {
-    navigation.navigate('UserProfile', { user: homeData.user });
+    navigation.navigate('UserProfile', { user: safeUser });
   };
 
   const handleTabPress = (tab: string, options?: { fromRoomsAssignmentBadge?: boolean }) => {
@@ -474,32 +534,56 @@ export default function HomeScreen() {
     }
   };
 
-  const handleCategoryPress = () => {
-    // Navigate to All Rooms screen with back button and current shift
-    navigation.navigate('AllRooms', { 
-      showBackButton: true, 
+  const handleCategoryPress = (category: CategorySection) => {
+    const uiShift = homeData.selectedShift;
+    const roomsPM = roomsForHome.roomsPM ?? [];
+    const usePMRooms = uiShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
+    const uid = session?.user?.id;
+    const hasAssignedRooms =
+      !!uid && Array.isArray(sourceRooms) && sourceRooms.some((r) => String(r.roomAttendantAssigned?.userId ?? '') === String(uid));
+    navigation.navigate('AllRooms', {
+      showBackButton: true,
       filters: activeFilters,
+      categoryFilter: { category: category.name },
       selectedShift: effectiveShift,
+      prioritizeMyAssignedRooms: true,
     } as any);
   };
 
   /** When user taps a status badge (e.g. cleaned[2] under Flagged), filter and show only those rooms. */
   const handleStatusPress = (category: CategorySection, roomState: keyof import('../types/home.types').RoomStatus) => {
+    const uiShift = homeData.selectedShift;
+    const roomsPM = roomsForHome.roomsPM ?? [];
+    const usePMRooms = uiShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
+    const uid = session?.user?.id;
+    const hasAssignedRooms =
+      !!uid && Array.isArray(sourceRooms) && sourceRooms.some((r) => String(r.roomAttendantAssigned?.userId ?? '') === String(uid));
     navigation.navigate('AllRooms', {
       showBackButton: true,
       filters: activeFilters,
       categoryFilter: { category: category.name, roomState },
       selectedShift: effectiveShift,
+      prioritizeMyAssignedRooms: true,
     } as any);
   };
 
   /** When user taps priority badge, filter and show only priority rooms for that category. */
   const handlePriorityPress = (category: CategorySection) => {
+    const uiShift = homeData.selectedShift;
+    const roomsPM = roomsForHome.roomsPM ?? [];
+    const usePMRooms = uiShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
+    const uid = session?.user?.id;
+    const hasAssignedRooms =
+      !!uid && Array.isArray(sourceRooms) && sourceRooms.some((r) => String(r.roomAttendantAssigned?.userId ?? '') === String(uid));
     navigation.navigate('AllRooms', {
       showBackButton: true,
       filters: activeFilters,
       categoryFilter: { category: category.name, roomState: 'priority' },
       selectedShift: effectiveShift,
+      prioritizeMyAssignedRooms: true,
     } as any);
   };
 
@@ -562,44 +646,54 @@ export default function HomeScreen() {
     const usePMRooms = uiShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
     
-    // Apply filters to the correct shift's data
-    let rooms = filterRoomsByFloors(sourceRooms, activeFilters);
+    // Home category stats should not be affected by the Home filter modal or search input.
+    // They reflect the signed-in user's assigned workload for the shift.
+    let rooms = sourceRooms;
 
-    // Apply search filter (room number, guest name)
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      rooms = rooms.filter(
-        (r) =>
-          r.roomNumber.toLowerCase().includes(q) ||
-          r.guests.some((g) => g.name.toLowerCase().includes(q))
-      );
-    }
+    // Home stats should only reflect rooms assigned to the logged-in user (for this shift).
+    // Prefer assignment userId from Supabase; fall back to assigned name match.
+    const uid = session?.user?.id;
+    const assignedByUserId =
+      uid ? rooms.filter((r) => String(r.roomAttendantAssigned?.userId ?? '') === String(uid)) : [];
+    const normalizedName = String(safeUser?.name ?? '').trim().toLowerCase();
+    const assignedByName =
+      normalizedName
+        ? rooms.filter((r) => String(r.roomAttendantAssigned?.name ?? '').trim().toLowerCase() === normalizedName)
+        : [];
+    const assignedOnly = assignedByUserId.length > 0 ? assignedByUserId : assignedByName;
+    rooms = assignedOnly;
 
     const categories: CategorySection[] = [];
 
     if (uiShift === 'PM') {
-      // PM shift: Flagged, Arrivals, Turndown
+      // PM shift: Flagged, Arrivals, Departures, Turndown
       const flaggedRooms = rooms.filter((r) => !!r.flagged);
       const arrivalRooms = rooms.filter(
         (r) => r.frontOfficeStatus === 'Arrival' || r.frontOfficeStatus === 'Arrival/Departure'
       );
+      const departureRooms = rooms.filter(
+        (r) => r.frontOfficeStatus === 'Departure' || r.frontOfficeStatus === 'Arrival/Departure'
+      );
       const turndownRooms = rooms.filter((r) => r.frontOfficeStatus === 'Turndown');
       categories.push(buildCategory('Flagged', 'flagged', '#6e1eee', flaggedRooms));
       categories.push(buildCategory('Arrivals', 'arrivals', '#41d541', arrivalRooms));
+      categories.push(buildCategory('Departures', 'departures', '#f92424', departureRooms));
       categories.push(buildCategory('Turndown', 'turndown', '#4a91fc', turndownRooms));
     } else {
-      // AM shift: Flagged, Arrivals, StayOvers — hide Turndown from AM buckets
+      // AM shift: Flagged, Arrivals, Departures, StayOvers — hide Turndown from AM buckets
       rooms = rooms.filter((r) => r.frontOfficeStatus !== 'Turndown');
       const flaggedRooms = rooms.filter((r) => !!r.flagged);
       const arrivalRooms = rooms.filter((r) => r.frontOfficeStatus === 'Arrival' || r.frontOfficeStatus === 'Arrival/Departure');
+      const departureRooms = rooms.filter((r) => r.frontOfficeStatus === 'Departure' || r.frontOfficeStatus === 'Arrival/Departure');
       const stayOverRooms = rooms.filter((r) => r.frontOfficeStatus === 'Stayover');
       categories.push(buildCategory('Flagged', 'flagged', '#6e1eee', flaggedRooms));
       categories.push(buildCategory('Arrivals', 'arrivals', '#41d541', arrivalRooms));
+      categories.push(buildCategory('Departures', 'departures', '#f92424', departureRooms));
       categories.push(buildCategory('StayOvers', 'stayovers', '#8d908d', stayOverRooms));
     }
 
     return categories;
-  }, [activeFilters, homeData.selectedShift, searchQuery, roomsForHome]);
+  }, [homeData.selectedShift, roomsForHome, assignedRoomIdsOrdered, session?.user?.id, safeUser?.name]);
 
   // Sync route filters -> local state
   useEffect(() => {
@@ -654,33 +748,56 @@ export default function HomeScreen() {
     };
     let totalRooms = 0;
 
-    categoriesForCounts.forEach((category) => {
-      // Room state counts
-      roomStates.dirty += category.status.dirty;
-      roomStates.inProgress += category.status.inProgress;
-      roomStates.cleaned += category.status.cleaned;
-      roomStates.inspected += category.status.inspected;
-      if (category.priority) {
-        roomStates.priority += category.priority;
-      }
-
-      // Guest counts based on category name
-      if (category.name === 'Arrivals') {
-        guests.arrivals += category.total;
-      } else if (category.name === 'StayOvers') {
-        guests.stayOver += category.total;
-      } else if (category.name === 'Turndown') {
-        guests.turnDown += category.total;
-      }
-      totalRooms += category.total;
-    });
-
     const roomsPM = roomsForHome.roomsPM ?? [];
     const usePMRooms = homeData.selectedShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
 
+    // HSK Portier: filter stats should reflect rooms assigned to the logged-in staff member.
+    const normalizedUserName = String(homeData.user?.name ?? '').trim().toLowerCase();
+    const roomsAssignedByName =
+      isHskPortierUser && normalizedUserName.length > 0
+        ? sourceRooms.filter(
+            (r) => String(r.roomAttendantAssigned?.name ?? '').trim().toLowerCase() === normalizedUserName
+          )
+        : [];
+    const workingRooms = roomsAssignedByName.length > 0 ? roomsAssignedByName : sourceRooms;
+
+    if (!isHskPortierUser) {
+      categoriesForCounts.forEach((category) => {
+        // Room state counts
+        roomStates.dirty += category.status.dirty;
+        roomStates.inProgress += category.status.inProgress;
+        roomStates.cleaned += category.status.cleaned;
+        roomStates.inspected += category.status.inspected;
+        if (category.priority) {
+          roomStates.priority += category.priority;
+        }
+
+        // Guest counts based on category name
+        if (category.name === 'Arrivals') {
+          guests.arrivals += category.total;
+        } else if (category.name === 'StayOvers') {
+          guests.stayOver += category.total;
+        } else if (category.name === 'Turndown') {
+          guests.turnDown += category.total;
+        }
+        totalRooms += category.total;
+      });
+    } else {
+      roomStates.dirty = workingRooms.filter((r) => r.houseKeepingStatus === 'Dirty').length;
+      roomStates.inProgress = workingRooms.filter((r) => r.houseKeepingStatus === 'InProgress').length;
+      roomStates.cleaned = workingRooms.filter((r) => r.houseKeepingStatus === 'Cleaned').length;
+      roomStates.inspected = workingRooms.filter((r) => r.houseKeepingStatus === 'Inspected').length;
+      roomStates.priority = workingRooms.filter((r) => !!r.isPriority).length;
+
+      guests.arrivals = workingRooms.filter((r) => r.frontOfficeStatus === 'Arrival' || r.frontOfficeStatus === 'Arrival/Departure').length;
+      guests.stayOver = workingRooms.filter((r) => r.frontOfficeStatus === 'Stayover').length;
+      guests.turnDown = workingRooms.filter((r) => r.frontOfficeStatus === 'Turndown').length;
+      totalRooms = workingRooms.length;
+    }
+
     // Persisted room state badges (Pause / Refuse Service / Return Later) live on the room record.
-    sourceRooms.forEach((r) => {
+    workingRooms.forEach((r) => {
       if ((r as any)?.pausedAt) roomStates.paused += 1;
       if ((r as any)?.returnLaterAt) roomStates.returnLater += 1;
       if ((r as any)?.refuseServiceReason || (r as any)?.refuseServiceAt) roomStates.refused += 1;
@@ -690,20 +807,20 @@ export default function HomeScreen() {
       occupied: 0,
       vacant: 0,
     };
-    sourceRooms.forEach((r) => {
+    workingRooms.forEach((r) => {
       if (r.reservationStatus === 'Vacant') reservations.vacant += 1;
       else if (r.reservationStatus === 'Occupied') reservations.occupied += 1;
     });
 
     // Calculate departures from actual room data for current shift
-    const departureRooms = sourceRooms.filter(
+    const departureRooms = workingRooms.filter(
       (r) => r.frontOfficeStatus === 'Departure' || r.frontOfficeStatus === 'Arrival/Departure'
     );
     guests.departures = departureRooms.length;
 
     // Calculate floor counts from first digit of room number (101->1, 305->3, 507->5)
     const floorCounts: Record<number, number> = {};
-    sourceRooms.forEach((room) => {
+    workingRooms.forEach((room) => {
       const floor = getFloorFromRoomNumber(room.roomNumber);
       if (floor !== null) {
         floorCounts[floor] = (floorCounts[floor] || 0) + 1;
@@ -754,7 +871,7 @@ export default function HomeScreen() {
           >
             {isEngineeringUser ? (
               <>
-                <View style={{ paddingTop: 232 * scaleX, paddingBottom: 24 * scaleX }}>
+                <View style={{ paddingTop: 12 * scaleX, paddingBottom: 24 * scaleX }}>
                   <Text style={[styles.engineeringTitle]}>Tickets Overview</Text>
                   <EngineeringTicketsOverviewCard
                     total={engineeringCounts.total}
@@ -762,6 +879,38 @@ export default function HomeScreen() {
                     unsolved={engineeringCounts.unsolved}
                     solved={engineeringCounts.solved}
                     outOfOrder={engineeringCounts.outOfOrder}
+                    onPressPriority={() => {
+                      navigation.navigate('Tickets' as any, {
+                        initialTab: 'myTickets',
+                        assignedToMeOnly: true,
+                        category: 'engineering',
+                        statusFilter: 'priority',
+                      });
+                    }}
+                    onPressUnsolved={() => {
+                      navigation.navigate('Tickets' as any, {
+                        initialTab: 'myTickets',
+                        assignedToMeOnly: true,
+                        category: 'engineering',
+                        statusFilter: 'unsolved',
+                      });
+                    }}
+                    onPressSolved={() => {
+                      navigation.navigate('Tickets' as any, {
+                        initialTab: 'myTickets',
+                        assignedToMeOnly: true,
+                        category: 'engineering',
+                        statusFilter: 'done',
+                      });
+                    }}
+                    onPressOutOfOrder={() => {
+                      navigation.navigate('Tickets' as any, {
+                        initialTab: 'myTickets',
+                        assignedToMeOnly: true,
+                        category: 'engineering',
+                        statusFilter: 'ofo',
+                      });
+                    }}
                   />
 
                   <Text style={styles.engineeringRecentTitle}>Recent Activity</Text>
@@ -786,7 +935,7 @@ export default function HomeScreen() {
                 </View>
               </>
             ) : isHskPortierUser ? (
-              <View style={{ paddingTop: 220 * scaleX, paddingBottom: 24 * scaleX }}>
+              <View style={{ paddingTop: 12 * scaleX, paddingBottom: 24 * scaleX }}>
                 <Text style={styles.portierTitle}>Tasks Overview</Text>
                 <HskPortierTasksOverviewCard
                   total={portierOverview.total}
@@ -797,15 +946,118 @@ export default function HomeScreen() {
                   priority={portierOverview.priority}
                   progressText={portierOverview.progressText}
                   latestPill={portierOverview.latestPill}
+                  onPriorityPress={() => {
+                    const baseRoomStates = {
+                      dirty: false,
+                      inProgress: false,
+                      cleaned: false,
+                      inspected: false,
+                      priority: false,
+                      paused: false,
+                      returnLater: false,
+                      refused: false,
+                    };
+                    const nextFilters: FilterState = {
+                      ...(activeFilters ?? {
+                        roomStates: baseRoomStates,
+                        guests: {
+                          arrivals: false,
+                          departures: false,
+                          turnDown: false,
+                          noTask: false,
+                          stayOver: false,
+                          stayOverWithLinen: false,
+                          stayOverNoLinen: false,
+                          checkedIn: false,
+                          checkedOut: false,
+                          checkedOutDueIn: false,
+                          outOfOrder: false,
+                          outOfService: false,
+                        },
+                        reservations: { occupied: false, vacant: false },
+                        floors: { all: false },
+                      }),
+                      roomStates: { ...baseRoomStates, ...(activeFilters?.roomStates ?? {}), priority: true },
+                    };
+                    navigation.navigate('AllRooms', {
+                      showBackButton: true,
+                      filters: nextFilters,
+                      selectedShift: homeData.selectedShift,
+                      prioritizeMyAssignedRooms: true,
+                    } as any);
+                  }}
+                  onStatusPress={(roomState) => {
+                    const baseRoomStates = {
+                      dirty: false,
+                      inProgress: false,
+                      cleaned: false,
+                      inspected: false,
+                      priority: false,
+                      paused: false,
+                      returnLater: false,
+                      refused: false,
+                    };
+                    const nextFilters: FilterState = {
+                      ...(activeFilters ?? {
+                        roomStates: baseRoomStates,
+                        guests: {
+                          arrivals: false,
+                          departures: false,
+                          turnDown: false,
+                          noTask: false,
+                          stayOver: false,
+                          stayOverWithLinen: false,
+                          stayOverNoLinen: false,
+                          checkedIn: false,
+                          checkedOut: false,
+                          checkedOutDueIn: false,
+                          outOfOrder: false,
+                          outOfService: false,
+                        },
+                        reservations: { occupied: false, vacant: false },
+                        floors: { all: false },
+                      }),
+                      roomStates: { ...baseRoomStates, ...(activeFilters?.roomStates ?? {}), [roomState]: true },
+                    };
+                    navigation.navigate('AllRooms', {
+                      showBackButton: true,
+                      filters: nextFilters,
+                      selectedShift: homeData.selectedShift,
+                      prioritizeMyAssignedRooms: true,
+                    } as any);
+                  }}
                 />
-                <HskPortierCategoryListCard rows={portierRows} />
+                <HskPortierCategoryListCard
+                  rows={portierRows}
+                  onRowPress={(row) => {
+                    const category =
+                      row.label === 'Flagged'
+                        ? 'Flagged'
+                        : row.label === 'Arrivals'
+                          ? 'Arrivals'
+                          : row.label === 'Departures'
+                            ? 'Departures'
+                            : row.label === 'Stayover'
+                              ? 'StayOvers'
+                              : row.label === 'Turndowns'
+                                ? 'Turndown'
+                                : row.label;
+                    navigation.navigate('AllRooms', {
+                      showBackButton: true,
+                      categoryFilter: { category },
+                      // Use the UI-selected shift; AllRooms will apply the "PM behaves like AM during AM hours" rule internally.
+                      selectedShift: homeData.selectedShift,
+                      prioritizeMyAssignedRooms: true,
+                    } as any);
+                  }}
+                />
               </View>
             ) : (
               derivedCategories.map((category) => (
                 <CategoryCard
                   key={category.id}
                   category={category}
-                  onPress={handleCategoryPress}
+                  onPress={() => handleCategoryPress(category)}
                   onStatusPress={handleStatusPress}
                   onPriorityPress={handlePriorityPress}
                   selectedShift={homeData.selectedShift}
@@ -818,9 +1070,9 @@ export default function HomeScreen() {
 
         {/* Header - Fixed at top (no blur) */}
         <HomeHeader
-          user={homeData.user}
+          user={safeUser}
           selectedShift={homeData.selectedShift}
-          date={homeData.date}
+          date={safeDate}
           onShiftToggle={handleShiftToggle}
           onBellPress={handleBellPress}
           onProfilePress={handleProfilePress}
@@ -925,7 +1177,8 @@ function buildHomeScreenStyles(scaleX: number) {
     flex: 1,
   },
   scrollContent: {
-    paddingTop: (153 + 14 + 59) * scaleX, // Header height (153) + margin (14) + search bar height (59)
+    // Match the fixed header + search bar geometry exactly (Figma node 3297:577).
+    paddingTop: (HOME_HEADER_HEIGHT_DESIGN_PX + 14 + 59) * scaleX,
     paddingBottom: 152 * scaleX + 20 * scaleX, // Bottom nav height + extra padding
   },
   engineeringTitle: {
@@ -934,7 +1187,7 @@ function buildHomeScreenStyles(scaleX: number) {
     fontWeight: '700' as any,
     color: '#1e1e1e',
     marginLeft: 20 * scaleX,
-    marginTop: 12 * scaleX,
+    marginTop: 0,
     marginBottom: 16 * scaleX,
   },
   engineeringRecentTitle: {
@@ -953,7 +1206,7 @@ function buildHomeScreenStyles(scaleX: number) {
     color: '#1e1e1e',
     marginLeft: 20 * scaleX,
     marginBottom: 16 * scaleX,
-    marginTop: 8 * scaleX,
+    marginTop: 0,
   },
   contentBlurOverlay: {
     position: 'absolute',

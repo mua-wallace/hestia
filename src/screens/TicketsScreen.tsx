@@ -55,7 +55,17 @@ const DUE_DATE_BOX_W = 175 * scaleX;
 const DUE_FIELDS_GAP = 37 * scaleX;
 
 type MainTabsParamList = MainTabsParamListFromApp & {
-  Tickets: { initialTab?: TicketTab } | undefined;
+  Tickets:
+    | {
+        initialTab?: TicketTab;
+        /** If true, only show tickets assignedTo the signed-in user (stricter than myTickets). */
+        assignedToMeOnly?: boolean;
+        /** Optional category filter (e.g. 'engineering'). */
+        category?: string;
+        /** Optional status filter (supports 'priority' for urgent tickets). */
+        statusFilter?: TicketStatus | 'priority';
+      }
+    | undefined;
 };
 
 type TicketsScreenNavigationProp = BottomTabNavigationProp<MainTabsParamList, 'Tickets'>;
@@ -292,6 +302,32 @@ export default function TicketsScreen() {
 
   // Filter tickets based on selected tab
   const filteredTickets = tickets.filter((ticket) => {
+    const params = (route as any).params as
+      | {
+          assignedToMeOnly?: boolean;
+          category?: string;
+          statusFilter?: TicketStatus | 'priority';
+        }
+      | undefined;
+    const assignedToMeOnly = params?.assignedToMeOnly === true;
+    const categoryFilter = String(params?.category ?? '').trim().toLowerCase();
+    const statusFilter = params?.statusFilter;
+
+    if (categoryFilter) {
+      if (String((ticket as any)?.category ?? '').trim().toLowerCase() !== categoryFilter) return false;
+    }
+    if (assignedToMeOnly) {
+      if (!currentUserId) return false;
+      if (ticket.assignedToId !== currentUserId) return false;
+    }
+    if (statusFilter) {
+      if (statusFilter === 'priority') {
+        if (String((ticket as any)?.priority ?? '').toLowerCase() !== 'urgent') return false;
+      } else {
+        if (ticket.status !== statusFilter) return false;
+      }
+    }
+
     if (selectedTab === 'myTickets') {
       if (!currentUserId) return false;
       return (

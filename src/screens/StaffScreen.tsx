@@ -21,7 +21,6 @@ import StaffListRow from '../components/staff/StaffListRow';
 import { StaffTab, StaffMember } from '../types/staff.types';
 import { STAFF_TABS, STAFF_DEPT_CHIP } from '../constants/staffStyles';
 import type { MainTabsParamList, ReturnToTab } from '../app/navigation/types';
-import { mockStaffData } from '../data/mockStaffData';
 import { getUsersByDepartment } from '../services/user';
 import { isSupabaseConfigured } from '../lib/supabase';
 import type { User } from '../types';
@@ -64,20 +63,6 @@ function mapUserToStaffMember(u: User): StaffMember {
   };
 }
 
-function mockStaffForDepartment(chipId: StaffDeptChipId): StaffMember[] {
-  const dbLabel = STAFF_DEPT_DB_NAME[chipId];
-  return mockStaffData.filter((s) => {
-    const d = (s.department ?? '').toLowerCase();
-    if (chipId === 'hsk') return (s.department ?? '').toUpperCase() === 'HSK' || d.includes('hsk');
-    if (chipId === 'engineering') return d.includes('engineering');
-    if (chipId === 'inRoomDining') return d.includes('dining') || d.includes('f&b') || d.includes('food');
-    if (chipId === 'laundry') return d.includes('laundry');
-    if (chipId === 'concierge') return d.includes('concierge');
-    if (chipId === 'reception') return d.includes('reception');
-    return d === dbLabel.toLowerCase();
-  });
-}
-
 export default function StaffScreen() {
   const navigation = useNavigation<StaffScreenNavigationProp>();
   const route = useRoute();
@@ -107,10 +92,8 @@ export default function StaffScreen() {
       setDepartmentLoading(true);
       setDepartmentError(null);
       if (!isSupabaseConfigured) {
-        if (!cancelled) {
-          setDepartmentStaff(mockStaffForDepartment(activeDepartmentId));
-          setDepartmentLoading(false);
-        }
+        if (!cancelled) setDepartmentError('Supabase is not configured.');
+        if (!cancelled) setDepartmentLoading(false);
         return;
       }
       try {

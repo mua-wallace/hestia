@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { typography } from '../../theme';
 import { useDesignScale } from '../../hooks/useDesignScale';
 
@@ -13,7 +13,13 @@ type Row = {
   flipIconHorizontal?: boolean;
 };
 
-export default function HskPortierCategoryListCard({ rows }: { rows: Row[] }) {
+export default function HskPortierCategoryListCard({
+  rows,
+  onRowPress,
+}: {
+  rows: Row[];
+  onRowPress?: (row: Row) => void;
+}) {
   const { scaleX } = useDesignScale();
   const styles = useMemo(() => buildStyles(scaleX), [scaleX]);
 
@@ -21,7 +27,12 @@ export default function HskPortierCategoryListCard({ rows }: { rows: Row[] }) {
     <View style={styles.card}>
       {rows.map((row, idx) => (
         <View key={row.label}>
-          <View style={styles.row}>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={onRowPress ? () => onRowPress(row) : undefined}
+            activeOpacity={onRowPress ? 0.85 : 1}
+            disabled={!onRowPress}
+          >
             <Text style={styles.label}>{row.label}</Text>
             <View style={styles.right}>
               <View style={[styles.circle, { backgroundColor: row.circleBg }]}>
@@ -39,7 +50,7 @@ export default function HskPortierCategoryListCard({ rows }: { rows: Row[] }) {
                 <Text style={styles.badgeText}>{row.count}</Text>
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
           {idx < rows.length - 1 ? <View style={styles.divider} /> : null}
         </View>
       ))}

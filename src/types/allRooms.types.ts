@@ -52,6 +52,8 @@ export interface StaffInfo {
   avatar?: string; // URL to avatar image, or undefined for initials
   initials?: string; // If no avatar, show initials (e.g., "Z")
   name: string;
+  /** Supabase `users.id` when this staff comes from room_assignments. */
+  userId?: string;
   statusText: string; // "Not Started", "Started: 40 mins", "Finished: 60 mins", etc.
   statusColor: string; // Color for the status text
   promiseTime?: string; // Optional, for departure rooms: "Promise time: 18:00"

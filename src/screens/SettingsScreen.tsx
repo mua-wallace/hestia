@@ -6,7 +6,6 @@ import { BlurView } from 'expo-blur';
 import { colors, typography } from '../theme';
 import BottomTabBar from '../components/navigation/BottomTabBar';
 import { useAuth } from '../contexts/AuthContext';
-import { mockHomeData } from '../data/mockHomeData';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { useMessageModal } from '../contexts/MessageModalContext';
 import type { ReturnToTab } from '../navigation/types';

@@ -87,6 +87,7 @@ const DEFAULT_STAFF: StaffInfo = {
 
 /** Map `room_assignments.work_status` + user row to `StaffInfo` (incl. paused). */
 function staffInfoFromAssignment(row: {
+  user_id?: string | null;
   work_status: string | null;
   users: { full_name: string; avatar_url: string | null } | null;
 }): StaffInfo {
@@ -99,12 +100,14 @@ function staffInfoFromAssignment(row: {
       .slice(0, 2)
       .toUpperCase() || '?';
   const avatar = row.users?.avatar_url ?? undefined;
+  const userId = row.user_id ?? undefined;
   const ws = (row.work_status ?? '').toLowerCase();
   if (ws === 'in_progress') {
     return {
       name,
       initials,
       avatar,
+      userId,
       statusText: 'In Progress',
       statusColor: '#F0BE1B',
       assignmentWorkStatus: 'in_progress',
@@ -115,6 +118,7 @@ function staffInfoFromAssignment(row: {
       name,
       initials,
       avatar,
+      userId,
       statusText: 'Finished',
       statusColor: '#41d541',
       assignmentWorkStatus: 'completed',
@@ -125,6 +129,7 @@ function staffInfoFromAssignment(row: {
       name,
       initials,
       avatar,
+      userId,
       statusText: 'Paused',
       statusColor: '#F0BE1B',
       assignmentWorkStatus: 'paused',
@@ -134,6 +139,7 @@ function staffInfoFromAssignment(row: {
     name,
     initials,
     avatar,
+    userId,
     statusText: 'Not Started',
     statusColor: '#1e1e1e',
     assignmentWorkStatus: null,
@@ -631,6 +637,38 @@ export async function getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt(use
 }
 
 /**
+ * Rooms assigned to the user for a specific shift (AM/PM), ordered by latest `room_assignments.created_at` first.
+ * This is the authoritative source for "my assigned rooms" filtering on AllRooms.
+ */
+export async function getAssignedRoomIdsForUserAndShiftOrderedByAssignmentCreatedAt(
+  userId: string,
+  shift: 'AM' | 'PM'
+): Promise<string[]> {
+  if (!isValidUUID(userId)) return [];
+  const shiftId = await getShiftIdByName(shift);
+  if (!shiftId) return [];
+  const { data, error } = await supabase
+    .from('room_assignments')
+    .select('room_id, created_at')
+    .eq('user_id', userId)
+    .eq('shift_id', shiftId)
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.warn('[rooms] getAssignedRoomIdsForUserAndShiftOrderedByAssignmentCreatedAt', error.message);
+    return [];
+  }
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const row of data ?? []) {
+    const rid = (row as { room_id?: string }).room_id;
+    if (!rid || seen.has(rid)) continue;
+    seen.add(rid);
+    ordered.push(rid);
+  }
+  return ordered;
+}
+
+/**
  * Assign a room to a staff member for the given shift.
  * Uses room_assignments table: upserts by (room_id, shift_id) so one assignee per room per shift.
  * Always returns StaffInfo for the user when both IDs are valid UUIDs (so the room card can update);
@@ -872,6 +910,7 @@ export function fullRoomDetailsToRoomCardData(
   const assignment = full.assignedStaff.find((a) => a.shift_name === shift);
   const attendant: StaffInfo | null = assignment
     ? staffInfoFromAssignment({
+        user_id: assignment.staff.id,
         work_status: assignment.work_status,
         users: {
           full_name: assignment.staff.full_name,

@@ -3,9 +3,6 @@
  * Aggregates data for home, rooms, chat, tickets. Rooms come from Supabase via rooms service.
  */
 
-import { mockHomeData } from '../data/mockHomeData';
-import { mockAllRoomsData } from '../data/mockAllRoomsData';
-import { mockTicketsData } from '../data/mockTicketsData';
 import type { HomeScreenData } from '../types/home.types';
 import type { AllRoomsScreenData } from '../types/allRooms.types';
 import type { TicketsScreenData } from '../types/tickets.types';
@@ -14,7 +11,6 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { fetchAllRooms, updateRoom, assignRoomToStaff as roomsAssignRoomToStaff, type RoomStateUpdate } from './rooms';
 import { getTicketsData as getTicketsDataFromSupabase } from './tickets';
 import type { StaffInfo } from '../types/allRooms.types';
-import { mockStaffData } from '../data/mockStaffData';
 import { getShiftFromTime } from '../utils/shiftUtils';
 import { getToast } from '../utils/toast';
 
@@ -22,20 +18,13 @@ export type { RoomStateUpdate } from './rooms';
 
 const dashboard = {
   async getHomeData(): Promise<HomeScreenData> {
-    return Promise.resolve(mockHomeData);
+    throw new Error('getHomeData is not supported without Supabase-backed endpoint');
   },
 
   async getAllRoomsData(shift?: 'AM' | 'PM'): Promise<AllRoomsScreenData> {
-    if (isSupabaseConfigured) {
-      try {
-        const currentShift = shift ?? getShiftFromTime();
-        return await fetchAllRooms(currentShift);
-      } catch (e) {
-        console.warn('Supabase rooms failed, using mock:', e);
-        return Promise.resolve(mockAllRoomsData);
-      }
-    }
-    return Promise.resolve(mockAllRoomsData);
+    if (!isSupabaseConfigured) throw new Error('Supabase is not configured');
+    const currentShift = shift ?? getShiftFromTime();
+    return await fetchAllRooms(currentShift);
   },
 
   async updateRoomState(roomId: string, updates: RoomStateUpdate): Promise<void> {
@@ -50,16 +39,6 @@ const dashboard = {
    */
   async assignRoomToStaff(roomId: string, userId: string, shift: 'AM' | 'PM'): Promise<StaffInfo | null> {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const staffMember = mockStaffData.find((s) => s.id === userId);
-    const mockStaffInfo: StaffInfo | null = staffMember
-      ? {
-          name: staffMember.name,
-          initials: staffMember.initials ?? staffMember.name.charAt(0).toUpperCase(),
-          avatar: staffMember.avatar,
-          statusText: 'Not Started',
-          statusColor: '#1e1e1e',
-        }
-      : null;
 
     // Build StaffInfo from Supabase user when staff was selected from Supabase list (UUID)
     const buildStaffInfoFromSupabase = async (): Promise<StaffInfo | null> => {
@@ -81,12 +60,12 @@ const dashboard = {
     if (isSupabaseConfigured && uuidRegex.test(roomId) && uuidRegex.test(userId)) {
       try {
         const info = await roomsAssignRoomToStaff(roomId, userId, shift);
-        return info ?? (await buildStaffInfoFromSupabase()) ?? mockStaffInfo;
+        return info ?? (await buildStaffInfoFromSupabase());
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Assignment could not be saved';
         console.warn('Assign room failed:', message, e);
         getToast()?.show(message, { type: 'error', duration: 4000 });
-        return (await buildStaffInfoFromSupabase()) ?? mockStaffInfo;
+        return await buildStaffInfoFromSupabase();
       }
     }
 
@@ -96,7 +75,7 @@ const dashboard = {
       if (fromSupabase) return fromSupabase;
     }
 
-    return mockStaffInfo;
+    return null;
   },
 
   async getChatData(): Promise<ChatItemData[]> {
@@ -104,15 +83,8 @@ const dashboard = {
   },
 
   async getTicketsData(): Promise<TicketsScreenData> {
-    if (isSupabaseConfigured) {
-      try {
-        return await getTicketsDataFromSupabase();
-      } catch (e) {
-        console.warn('[dashboard] Supabase tickets failed, using mock:', e);
-        return Promise.resolve(mockTicketsData);
-      }
-    }
-    return Promise.resolve(mockTicketsData);
+    if (!isSupabaseConfigured) throw new Error('Supabase is not configured');
+    return await getTicketsDataFromSupabase();
   },
 };
 

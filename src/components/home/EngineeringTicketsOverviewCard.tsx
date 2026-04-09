@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { typography } from '../../theme';
 import { useDesignScale } from '../../hooks/useDesignScale';
 
@@ -9,6 +9,10 @@ type Props = {
   unsolved: number;
   solved: number;
   outOfOrder: number;
+  onPressPriority?: () => void;
+  onPressUnsolved?: () => void;
+  onPressSolved?: () => void;
+  onPressOutOfOrder?: () => void;
 };
 
 function clamp01(n: number): number {
@@ -22,6 +26,10 @@ export default function EngineeringTicketsOverviewCard({
   unsolved,
   solved,
   outOfOrder,
+  onPressPriority,
+  onPressUnsolved,
+  onPressSolved,
+  onPressOutOfOrder,
 }: Props) {
   const { scaleX } = useDesignScale();
   const styles = useMemo(() => buildStyles(scaleX), [scaleX]);
@@ -35,7 +43,12 @@ export default function EngineeringTicketsOverviewCard({
       <View style={styles.divider} />
 
       <View style={styles.statsRow}>
-        <View style={styles.statItem}>
+        <TouchableOpacity
+          style={styles.statItem}
+          onPress={onPressPriority}
+          activeOpacity={onPressPriority ? 0.85 : 1}
+          disabled={!onPressPriority}
+        >
           <View style={styles.bubbleWrap}>
             <View style={[styles.bubbleFill, { backgroundColor: '#ffebeb' }]} />
             <Image
@@ -48,8 +61,13 @@ export default function EngineeringTicketsOverviewCard({
             </View>
           </View>
           <Text style={styles.statLabel}>Priority</Text>
-        </View>
-        <View style={styles.statItem}>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.statItem}
+          onPress={onPressUnsolved}
+          activeOpacity={onPressUnsolved ? 0.85 : 1}
+          disabled={!onPressUnsolved}
+        >
           <View style={styles.bubbleWrap}>
             <View style={[styles.bubbleFill, { backgroundColor: '#f92424' }]} />
             <Image
@@ -62,8 +80,13 @@ export default function EngineeringTicketsOverviewCard({
             </View>
           </View>
           <Text style={styles.statLabel}>Unsolved</Text>
-        </View>
-        <View style={styles.statItem}>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.statItem}
+          onPress={onPressSolved}
+          activeOpacity={onPressSolved ? 0.85 : 1}
+          disabled={!onPressSolved}
+        >
           <View style={styles.bubbleWrap}>
             <View style={[styles.bubbleFill, { backgroundColor: '#41d541' }]} />
             <Image
@@ -76,8 +99,13 @@ export default function EngineeringTicketsOverviewCard({
             </View>
           </View>
           <Text style={styles.statLabel}>Solved</Text>
-        </View>
-        <View style={styles.statItem}>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.statItem}
+          onPress={onPressOutOfOrder}
+          activeOpacity={onPressOutOfOrder ? 0.85 : 1}
+          disabled={!onPressOutOfOrder}
+        >
           <View style={styles.bubbleWrap}>
             <View style={[styles.bubbleRingFill, { backgroundColor: '#ffffff', borderColor: '#c6c5c5' }]} />
             <View style={styles.countBadge}>
@@ -85,7 +113,7 @@ export default function EngineeringTicketsOverviewCard({
             </View>
           </View>
           <Text style={styles.statLabel}>Out of Order</Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.progressRow}>

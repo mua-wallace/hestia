@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { typography } from '../../theme';
 import { useDesignScale } from '../../hooks/useDesignScale';
 
@@ -12,6 +12,8 @@ export default function HskPortierTasksOverviewCard({
   priority,
   progressText,
   latestPill,
+  onStatusPress,
+  onPriorityPress,
 }: {
   total: number;
   dirty: number;
@@ -26,6 +28,8 @@ export default function HskPortierTasksOverviewCard({
     timeIso?: string;
     subText?: string;
   };
+  onStatusPress?: (roomState: 'dirty' | 'inProgress' | 'cleaned' | 'inspected') => void;
+  onPriorityPress?: () => void;
 }) {
   const { scaleX } = useDesignScale();
   const styles = useMemo(() => buildStyles(scaleX), [scaleX]);
@@ -54,7 +58,12 @@ export default function HskPortierTasksOverviewCard({
           <Text style={styles.titleLabel}>Tasks</Text>
         </Text>
 
-        <View style={styles.priorityWrap}>
+        <TouchableOpacity
+          style={styles.priorityWrap}
+          onPress={onPriorityPress}
+          activeOpacity={onPriorityPress ? 0.85 : 1}
+          disabled={!onPriorityPress}
+        >
           <View style={styles.priorityCircle}>
             <Image
               source={require('../../../assets/icons/priority-status.png')}
@@ -65,7 +74,7 @@ export default function HskPortierTasksOverviewCard({
           <View style={styles.priorityBadge}>
             <Text style={styles.priorityBadgeText}>{priority}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.divider} />
@@ -77,6 +86,7 @@ export default function HskPortierTasksOverviewCard({
           bg="#f92424"
           icon={require('../../../assets/icons/dirty-status.png')}
           iconStyle={styles.iconDirty}
+          onPress={onStatusPress ? () => onStatusPress('dirty') : undefined}
         />
         <StatusBubble
           label="In Progress"
@@ -84,6 +94,7 @@ export default function HskPortierTasksOverviewCard({
           bg="#f0be1b"
           icon={require('../../../assets/icons/in-progress-icon.png')}
           iconStyle={styles.iconDefault}
+          onPress={onStatusPress ? () => onStatusPress('inProgress') : undefined}
         />
         <StatusBubble
           label="Cleaned"
@@ -91,6 +102,7 @@ export default function HskPortierTasksOverviewCard({
           bg="#4a91fc"
           icon={require('../../../assets/icons/cleaned-icon.png')}
           iconStyle={styles.iconDefault}
+          onPress={onStatusPress ? () => onStatusPress('cleaned') : undefined}
         />
         <StatusBubble
           label="Inspected"
@@ -98,6 +110,7 @@ export default function HskPortierTasksOverviewCard({
           bg="#41d541"
           icon={require('../../../assets/icons/inspected-icon.png')}
           iconStyle={styles.iconDefault}
+          onPress={onStatusPress ? () => onStatusPress('inspected') : undefined}
         />
       </View>
 
@@ -143,17 +156,21 @@ function StatusBubble({
   bg,
   icon,
   iconStyle,
+  onPress,
 }: {
   label: string;
   count: number;
   bg: string;
   icon: any;
   iconStyle: any;
+  onPress?: () => void;
 }) {
   const { scaleX } = useDesignScale();
   const styles = useMemo(() => buildStyles(scaleX), [scaleX]);
+  const Wrapper: any = onPress ? TouchableOpacity : View;
+  const wrapperProps = onPress ? { onPress, activeOpacity: 0.8 } : {};
   return (
-    <View style={styles.statusItem}>
+    <Wrapper style={styles.statusItem} {...wrapperProps}>
       <View style={[styles.statusCircle, { backgroundColor: bg }]}>
         <Image source={icon} style={iconStyle} resizeMode="contain" />
         <View style={styles.statusBadge}>
@@ -161,7 +178,7 @@ function StatusBubble({
         </View>
       </View>
       <Text style={styles.statusLabel}>{label}</Text>
-    </View>
+    </Wrapper>
   );
 }
 

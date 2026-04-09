@@ -5,12 +5,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme';
 import { ShiftType } from '../types/home.types';
-import { mockAllRoomsData } from '../data/mockAllRoomsData';
 import { type RoomStateUpdate } from '../services/dashboard';
 import { useRoomsStore } from '../store/useRoomsStore';
 import { dashboardService } from '../services/dashboard';
 import { LoadingOverlay } from '../components/shared/LoadingOverlay';
-import { mockHomeData } from '../data/mockHomeData';
 import { useAIChatOverlay } from '../contexts/AIChatOverlayContext';
 import { RoomCardData, StatusChangeOption } from '../types/allRooms.types';
 import AllRoomsHeader from '../components/allRooms/AllRoomsHeader';
@@ -25,7 +23,10 @@ import {
   invalidateNotificationBadges,
   markAllRoomAssignmentNotificationsRead,
 } from '../services/inAppNotifications';
-import { getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt } from '../services/rooms';
+import {
+  getAssignedRoomIdsForUserAndShiftOrderedByAssignmentCreatedAt,
+  getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt,
+} from '../services/rooms';
 import { BlurView } from 'expo-blur';
 import { FilterState, FilterCounts } from '../types/filter.types';
 import type { CategoryName } from '../types/home.types';
@@ -39,7 +40,7 @@ import { getFloorFromRoomNumber } from '../utils/formatting';
 /** When user taps a status badge or priority badge on Home. */
 export type CategoryFilterParam = {
   category: CategoryName;
-  roomState: 'dirty' | 'inProgress' | 'cleaned' | 'inspected' | 'priority';
+  roomState?: 'dirty' | 'inProgress' | 'cleaned' | 'inspected' | 'priority';
 };
 
 const DESIGN_WIDTH = 440;
@@ -54,14 +55,16 @@ export default function AllRoomsScreen() {
   const route = useRoute();
   const routeShift = (route.params as any)?.selectedShift as ShiftType | undefined;
   const initialShift = routeShift || getShiftFromTime();
-  // PM should behave like AM during AM hours.
-  const effectiveInitialShift: ShiftType =
-    initialShift === 'PM' && getShiftFromTime() === 'AM' ? 'AM' : initialShift;
   const { data: allRoomsData, loading, refreshing, fetchRooms, updateRoom, setSelectedShift, setRoomAttendant } = useRoomsStore();
 
+  const displayData = allRoomsData ?? { selectedShift: initialShift, rooms: [], roomsPM: [] };
+  // UI shift follows the selected shift. Do not coerce PM->AM during AM hours; that breaks
+  // assignment-based navigation (HSK Portier) and can lead to empty results.
+  const uiShift: ShiftType = (displayData.selectedShift ?? initialShift) as ShiftType;
+
   React.useEffect(() => {
-    fetchRooms(effectiveInitialShift);
-  }, [effectiveInitialShift]);
+    fetchRooms(initialShift);
+  }, [initialShift, fetchRooms]);
 
   const loadRoomsData = React.useCallback((shift: ShiftType) => { fetchRooms(shift); }, [fetchRooms]);
 
@@ -104,26 +107,32 @@ export default function AllRoomsScreen() {
 
   const [assignedRoomIdsOrdered, setAssignedRoomIdsOrdered] = useState<string[]>([]);
   const [assignedRoomOrderLoading, setAssignedRoomOrderLoading] = useState(false);
+  const [assignedRoomIdsForShiftOrdered, setAssignedRoomIdsForShiftOrdered] = useState<string[]>([]);
   const markedRoomAssignmentNotificationsReadRef = useRef(false);
 
   React.useEffect(() => {
     if (!shouldPrioritizeAssignedOnly || !session?.user?.id) {
       setAssignedRoomIdsOrdered([]);
       setAssignedRoomOrderLoading(false);
+      setAssignedRoomIdsForShiftOrdered([]);
       return;
     }
     let cancelled = false;
     setAssignedRoomOrderLoading(true);
-    void getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt(session.user.id).then((ids) => {
+    void Promise.all([
+      getDistinctAssignedRoomIdsOrderedByAssignmentCreatedAt(session.user.id),
+      getAssignedRoomIdsForUserAndShiftOrderedByAssignmentCreatedAt(session.user.id, uiShift),
+    ]).then(([anyShiftIds, shiftIds]) => {
       if (!cancelled) {
-        setAssignedRoomIdsOrdered(ids);
+        setAssignedRoomIdsOrdered(anyShiftIds);
+        setAssignedRoomIdsForShiftOrdered(shiftIds);
         setAssignedRoomOrderLoading(false);
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [shouldPrioritizeAssignedOnly, session?.user?.id]);
+  }, [shouldPrioritizeAssignedOnly, session?.user?.id, uiShift]);
 
   // Opening Rooms from the assignment badge: mark inbox rows read once so the tab badge clears (like Tickets).
   useFocusEffect(
@@ -145,9 +154,14 @@ export default function AllRoomsScreen() {
     const cf = routeCategoryFilter;
     if (cf) {
       const baseRoomStates = { dirty: false, inProgress: false, cleaned: false, inspected: false, priority: false };
+      const roomStates = {
+        ...baseRoomStates,
+        ...(rf?.roomStates || {}),
+        ...(cf.roomState ? { [cf.roomState]: true } : {}),
+      };
       return {
         ...(rf || {}),
-        roomStates: { ...baseRoomStates, ...(rf?.roomStates || {}), [cf.roomState]: true },
+        roomStates,
         guests: rf?.guests ?? { arrivals: false, departures: false, turnDown: false, noTask: false, stayOver: false, stayOverWithLinen: false, stayOverNoLinen: false, checkedIn: false, checkedOut: false, checkedOutDueIn: false, outOfOrder: false, outOfService: false },
         reservations: rf?.reservations ?? { occupied: false, vacant: false },
         floors: rf?.floors ?? { all: false },
@@ -169,20 +183,19 @@ export default function AllRoomsScreen() {
     }, [route.params, allRoomsData?.selectedShift, fetchRooms, setSelectedShift])
   );
 
-  const displayData = allRoomsData ?? { ...mockAllRoomsData, selectedShift: initialShift };
-  const effectiveShift: ShiftType =
-    displayData.selectedShift === 'PM' && getShiftFromTime() === 'AM'
-      ? 'AM'
-      : (displayData.selectedShift ?? 'AM');
-
   // Sync local filters with route params when navigating (e.g. from Home with categoryFilter)
   React.useEffect(() => {
     if (routeCategoryFilter) {
       setLocalFilters((prev) => {
         const baseRoomStates = { dirty: false, inProgress: false, cleaned: false, inspected: false, priority: false };
+        const roomStates = {
+          ...baseRoomStates,
+          ...(prev?.roomStates || routeFilters?.roomStates || {}),
+          ...(routeCategoryFilter.roomState ? { [routeCategoryFilter.roomState]: true } : {}),
+        };
         return {
           ...(prev || routeFilters || {}),
-          roomStates: { ...baseRoomStates, ...(prev?.roomStates || routeFilters?.roomStates || {}), [routeCategoryFilter.roomState]: true },
+          roomStates,
           guests: prev?.guests ?? routeFilters?.guests ?? { arrivals: false, departures: false, turnDown: false, noTask: false, stayOver: false, stayOverWithLinen: false, stayOverNoLinen: false, checkedIn: false, checkedOut: false, checkedOutDueIn: false, outOfOrder: false, outOfService: false },
           reservations: prev?.reservations ?? routeFilters?.reservations ?? { occupied: false, vacant: false },
           floors: prev?.floors ?? routeFilters?.floors ?? { all: false },
@@ -251,7 +264,7 @@ export default function AllRoomsScreen() {
   // Calculate filter counts from current shift's room list (AM: rooms, PM: roomsPM)
   const filterCounts: FilterCounts = useMemo(() => {
     const roomsPM = displayData.roomsPM ?? [];
-    const usePMRooms = effectiveShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const usePMRooms = uiShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     const sourceRooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
 
     const roomStates = {
@@ -340,7 +353,7 @@ export default function AllRoomsScreen() {
     };
 
     return { roomStates, guests, reservations, floors, totalRooms };
-  }, [displayData.rooms, displayData.roomsPM, effectiveShift]);
+  }, [displayData.rooms, displayData.roomsPM, uiShift]);
 
   const handleApplyFilters = (appliedFilters: FilterState) => {
     setLocalFilters(appliedFilters);
@@ -623,14 +636,12 @@ export default function AllRoomsScreen() {
   };
 
   const onRefresh = React.useCallback(() => {
-    const desired = allRoomsData?.selectedShift ?? getShiftFromTime();
-    const effective: ShiftType = desired === 'PM' && getShiftFromTime() === 'AM' ? 'AM' : desired;
-    fetchRooms(effective);
-  }, [fetchRooms, allRoomsData?.selectedShift]);
+    fetchRooms(uiShift);
+  }, [fetchRooms, uiShift]);
 
   const filteredRooms = useMemo(() => {
     const roomsPM = displayData.roomsPM ?? [];
-    const usePMRooms = effectiveShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
+    const usePMRooms = uiShift === 'PM' && Array.isArray(roomsPM) && roomsPM.length > 0;
     let rooms = usePMRooms ? roomsPM : (displayData.rooms ?? []);
 
     // When user tapped a status badge or priority badge on Home
@@ -640,11 +651,15 @@ export default function AllRoomsScreen() {
         const matchesCategory =
           category === 'Flagged' ? !!room.flagged
           : category === 'Arrivals' ? (room.frontOfficeStatus === 'Arrival' || room.frontOfficeStatus === 'Arrival/Departure')
+          : category === 'Departures' ? (room.frontOfficeStatus === 'Departure' || room.frontOfficeStatus === 'Arrival/Departure')
           : category === 'StayOvers' ? room.frontOfficeStatus === 'Stayover'
           : category === 'Turndown' ? room.frontOfficeStatus === 'Turndown'
           : category === 'No Task' ? room.frontOfficeStatus === 'No Task'
           : category === 'Vacant' ? (room.reservationStatus || '').toLowerCase() === 'vacant'
           : false;
+        if (!roomState) {
+          return matchesCategory;
+        }
         if (roomState === 'priority') {
           return matchesCategory && !!room.isPriority;
         }
@@ -746,18 +761,50 @@ export default function AllRoomsScreen() {
       );
     }
 
-    if (effectiveShift === 'AM') {
+    if (uiShift === 'AM') {
       rooms = rooms.filter((room) => room.frontOfficeStatus !== 'Turndown');
     }
 
     // Tab badge: show only rooms assigned to this user, newest assignment first (room_assignments.created_at).
     if (shouldPrioritizeAssignedOnly && !assignedRoomOrderLoading) {
-      if (assignedRoomIdsOrdered.length === 0) {
-        rooms = [];
+      // Authoritative: filter by assignments from DB for the current shift.
+      if (assignedRoomIdsForShiftOrdered.length > 0) {
+        const idSet = new Set(assignedRoomIdsForShiftOrdered.map(String));
+        rooms = rooms.filter((r) => idSet.has(String(r.id)));
+        const orderIndex = new Map(assignedRoomIdsForShiftOrdered.map((id, i) => [String(id), i]));
+        rooms.sort((a, b) => (orderIndex.get(String(a.id))! - orderIndex.get(String(b.id))!));
       } else {
-        const orderIndex = new Map(assignedRoomIdsOrdered.map((id, i) => [id, i]));
-        rooms = rooms.filter((r) => orderIndex.has(r.id));
-        rooms.sort((a, b) => (orderIndex.get(a.id)! - orderIndex.get(b.id)!));
+        // Fallback: use the assignment info already embedded on the room card.
+        const uid = session?.user?.id;
+        const assignedByUserId =
+          uid ? rooms.filter((r) => String(r.roomAttendantAssigned?.userId ?? '') === String(uid)) : [];
+
+        const sessionName = String(
+          (session as any)?.user?.user_metadata?.full_name ??
+            (session as any)?.user?.user_metadata?.name ??
+            ''
+        )
+          .trim()
+          .toLowerCase();
+        const assignedByName = sessionName
+          ? rooms.filter((r) => String(r.roomAttendantAssigned?.name ?? '').trim().toLowerCase() === sessionName)
+          : [];
+
+        const assignedOnly = assignedByUserId.length > 0 ? assignedByUserId : assignedByName;
+        rooms = assignedOnly;
+
+        // Optional sort by recency across any shift.
+        if (assignedRoomIdsOrdered.length > 0) {
+          const orderIndex = new Map(assignedRoomIdsOrdered.map((id, i) => [String(id), i]));
+          rooms.sort((a, b) => {
+            const ai = orderIndex.get(String(a.id));
+            const bi = orderIndex.get(String(b.id));
+            if (ai === undefined && bi === undefined) return 0;
+            if (ai === undefined) return 1;
+            if (bi === undefined) return -1;
+            return ai - bi;
+          });
+        }
       }
     }
 
@@ -765,13 +812,14 @@ export default function AllRoomsScreen() {
   }, [
     displayData.rooms,
     displayData.roomsPM,
-    effectiveShift,
+    uiShift,
     activeFilters,
     searchQuery,
     routeCategoryFilter,
     shouldPrioritizeAssignedOnly,
     assignedRoomOrderLoading,
     assignedRoomIdsOrdered,
+    assignedRoomIdsForShiftOrdered,
   ]);
 
   const showNoMatchingRoomsEmptyState =
