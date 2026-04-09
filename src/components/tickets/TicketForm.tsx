@@ -42,7 +42,7 @@ const FREQUENT_CASES = [
 const DEPARTMENTS = [
   { id: 'Engineering', name: 'Engineering', icon: require('../../../assets/icons/engineering.png'), noTint: false },
   { id: 'HSK Portier', name: 'HSK Portier', icon: require('../../../assets/icons/hsk-portier.png'), noTint: true },
-  { id: 'In Room Dining', name: 'In Room Dining', icon: require('../../../assets/icons/in-room-dining.png'), noTint: true },
+  { id: 'In Room Dining', name: 'In Room Dining', icon: require('../../../assets/icons/in-room-dining-icon.png'), noTint: true },
   { id: 'Laundry', name: 'Laundry', icon: require('../../../assets/icons/laundry-icon.png'), noTint: false },
   { id: 'Concierge', name: 'Concierge', icon: require('../../../assets/icons/concierge.png'), noTint: false },
   { id: 'Reception', name: 'Reception', icon: require('../../../assets/icons/reception.png'), noTint: false },

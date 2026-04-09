@@ -187,13 +187,13 @@ export const DEPARTMENT_GRID_LAYOUT = {
 export const DEPARTMENT_NAME_TO_ICON: Record<string, { icon: any; noTint?: boolean }> = {
   Engineering: { icon: require('../../assets/icons/engineering.png'), noTint: false },
   'HSK Portier': { icon: require('../../assets/icons/hsk-portier.png'), noTint: true },
-  'In Room Dining': { icon: require('../../assets/icons/in-room-dining.png'), noTint: true },
+  'In Room Dining': { icon: require('../../assets/icons/in-room-dining-icon.png'), noTint: true },
   Laundry: { icon: require('../../assets/icons/laundry-icon.png'), noTint: false },
   Concierge: { icon: require('../../assets/icons/concierge.png'), noTint: false },
   Reception: { icon: require('../../assets/icons/reception.png'), noTint: false },
   IT: { icon: require('../../assets/icons/it.png'), noTint: false },
   'Front Office': { icon: require('../../assets/icons/reception.png'), noTint: false },
-  'Food and Beverage': { icon: require('../../assets/icons/in-room-dining.png'), noTint: true },
+  'Food and Beverage': { icon: require('../../assets/icons/in-room-dining-icon.png'), noTint: true },
   'Executive Administration': { icon: require('../../assets/icons/reception.png'), noTint: false },
 };
 

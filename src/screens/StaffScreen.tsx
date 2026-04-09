@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   useWindowDimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,13 +19,64 @@ import StaffTabs from '../components/staff/StaffTabs';
 import { STAFF_DEPARTMENTS_LIST } from '../components/staff/StaffDepartmentList';
 import StaffListRow from '../components/staff/StaffListRow';
 import { StaffTab, StaffMember } from '../types/staff.types';
-import { STAFF_TABS } from '../constants/staffStyles';
+import { STAFF_TABS, STAFF_DEPT_CHIP } from '../constants/staffStyles';
 import type { MainTabsParamList, ReturnToTab } from '../app/navigation/types';
 import { mockStaffData } from '../data/mockStaffData';
+import { getUsersByDepartment } from '../services/user';
+import { isSupabaseConfigured } from '../lib/supabase';
+import type { User } from '../types';
 
 const DESIGN_WIDTH = 440;
 
 type StaffScreenNavigationProp = NativeStackNavigationProp<MainTabsParamList, 'Staff'>;
+
+export type StaffDeptChipId = 'hsk' | 'engineering' | 'inRoomDining' | 'laundry' | 'concierge' | 'reception';
+
+const STAFF_DEPT_CHIPS: { id: StaffDeptChipId; name: string; icon: number }[] = [
+  { id: 'hsk', name: 'HSK', icon: require('../../assets/icons/in-progress-icon.png') },
+  ...STAFF_DEPARTMENTS_LIST.filter((d) =>
+    ['engineering', 'inRoomDining', 'laundry', 'concierge', 'reception'].includes(d.id)
+  ).map((d) => ({
+    id: d.id as Exclude<StaffDeptChipId, 'hsk'>,
+    name: d.name,
+    icon: d.icon,
+  })),
+];
+
+/** DB `departments.name` for getUsersByDepartment */
+const STAFF_DEPT_DB_NAME: Record<StaffDeptChipId, string> = {
+  hsk: 'HSK Portier',
+  engineering: 'Engineering',
+  inRoomDining: 'In Room Dining',
+  laundry: 'Laundry',
+  concierge: 'Concierge',
+  reception: 'Reception',
+};
+
+function mapUserToStaffMember(u: User): StaffMember {
+  return {
+    id: u.id,
+    name: u.name,
+    avatar: u.avatar?.trim() ? { uri: u.avatar.trim() } : undefined,
+    department: u.department,
+    role: u.role,
+    onShift: true,
+  };
+}
+
+function mockStaffForDepartment(chipId: StaffDeptChipId): StaffMember[] {
+  const dbLabel = STAFF_DEPT_DB_NAME[chipId];
+  return mockStaffData.filter((s) => {
+    const d = (s.department ?? '').toLowerCase();
+    if (chipId === 'hsk') return (s.department ?? '').toUpperCase() === 'HSK' || d.includes('hsk');
+    if (chipId === 'engineering') return d.includes('engineering');
+    if (chipId === 'inRoomDining') return d.includes('dining') || d.includes('f&b') || d.includes('food');
+    if (chipId === 'laundry') return d.includes('laundry');
+    if (chipId === 'concierge') return d.includes('concierge');
+    if (chipId === 'reception') return d.includes('reception');
+    return d === dbLabel.toLowerCase();
+  });
+}
 
 export default function StaffScreen() {
   const navigation = useNavigation<StaffScreenNavigationProp>();
@@ -35,15 +87,50 @@ export default function StaffScreen() {
   
   const [activeTab, setActiveTab] = useState('Staff');
   const [selectedTab, setSelectedTab] = useState<StaffTab>('shifts');
-  const [staffMembers] = useState<StaffMember[]>(mockStaffData);
+  const [departmentStaff, setDepartmentStaff] = useState<StaffMember[]>([]);
+  const [departmentLoading, setDepartmentLoading] = useState(true);
+  const [departmentError, setDepartmentError] = useState<string | null>(null);
   const [searchExpanded, setSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeDepartmentId, setActiveDepartmentId] = useState<'hsk' | 'engineering' | 'inRoomDining' | 'laundry' | 'concierge' | 'reception'>('hsk');
+  const [activeDepartmentId, setActiveDepartmentId] = useState<StaffDeptChipId>('hsk');
   const [expandedStaffId, setExpandedStaffId] = useState<string | null>(null);
 
   const toggleStaffExpand = (id: string) => {
     setExpandedStaffId((prev) => (prev === id ? null : id));
   };
+
+  useEffect(() => {
+    setExpandedStaffId(null);
+    let cancelled = false;
+    (async () => {
+      const dbName = STAFF_DEPT_DB_NAME[activeDepartmentId];
+      setDepartmentLoading(true);
+      setDepartmentError(null);
+      if (!isSupabaseConfigured) {
+        if (!cancelled) {
+          setDepartmentStaff(mockStaffForDepartment(activeDepartmentId));
+          setDepartmentLoading(false);
+        }
+        return;
+      }
+      try {
+        const res = await getUsersByDepartment(dbName, { limit: 100 });
+        if (!cancelled) {
+          setDepartmentStaff(res.data.map(mapUserToStaffMember));
+        }
+      } catch {
+        if (!cancelled) {
+          setDepartmentError('Could not load staff');
+          setDepartmentStaff(mockStaffForDepartment(activeDepartmentId));
+        }
+      } finally {
+        if (!cancelled) setDepartmentLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeDepartmentId]);
 
   // Sync activeTab with current route
   useFocusEffect(
@@ -99,38 +186,31 @@ export default function StaffScreen() {
     setSearchQuery('');
   };
 
-  const filteredStaffForSearch = React.useMemo(() => {
-    if (!searchQuery.trim()) return staffMembers;
+  const filteredStaffForSearch = useMemo(() => {
+    if (!searchQuery.trim()) return departmentStaff;
     const q = searchQuery.trim().toLowerCase();
-    return staffMembers.filter((s) => s.name.toLowerCase().includes(q));
-  }, [staffMembers, searchQuery]);
+    return departmentStaff.filter((s) => s.name.toLowerCase().includes(q));
+  }, [departmentStaff, searchQuery]);
 
-  const filteredStaffForTab = React.useMemo(() => {
-    if (selectedTab === 'am') return staffMembers.filter((s) => (s.shift ?? '').toUpperCase() === 'AM');
-    if (selectedTab === 'pm') return staffMembers.filter((s) => (s.shift ?? '').toUpperCase() === 'PM');
-    return staffMembers.filter((s) => s.onShift !== false);
-  }, [selectedTab, staffMembers]);
+  /** Staff is already scoped to the selected department; apply Shifts / AM / PM tab rules. */
+  const displayedStaff = useMemo(() => {
+    const base = departmentStaff;
+    const hasShift = base.some((s) => !!s.shift?.trim());
+    if (selectedTab === 'am') {
+      if (!hasShift) return base;
+      return base.filter((s) => (s.shift ?? '').toUpperCase() === 'AM');
+    }
+    if (selectedTab === 'pm') {
+      if (!hasShift) return base;
+      return base.filter((s) => (s.shift ?? '').toUpperCase() === 'PM');
+    }
+    return base.filter((s) => s.onShift !== false);
+  }, [selectedTab, departmentStaff]);
 
-  const filteredStaffForDepartment = React.useMemo(() => {
-    if (activeDepartmentId === 'hsk') return filteredStaffForTab.filter((s) => (s.department ?? '').toUpperCase() === 'HSK');
-    if (activeDepartmentId === 'engineering') return filteredStaffForTab.filter((s) => (s.department ?? '').toLowerCase().includes('engineering'));
-    if (activeDepartmentId === 'inRoomDining') return filteredStaffForTab.filter((s) => (s.department ?? '').toLowerCase().includes('dining'));
-    if (activeDepartmentId === 'laundry') return filteredStaffForTab.filter((s) => (s.department ?? '').toLowerCase().includes('laundry'));
-    if (activeDepartmentId === 'concierge') return filteredStaffForTab.filter((s) => (s.department ?? '').toLowerCase().includes('concierge'));
-    if (activeDepartmentId === 'reception') return filteredStaffForTab.filter((s) => (s.department ?? '').toLowerCase().includes('reception'));
-    return filteredStaffForTab;
-  }, [activeDepartmentId, filteredStaffForTab]);
-
-  const sectionTitle = React.useMemo(() => {
-    const map: Record<string, string> = {
-      hsk: 'HSK',
-      engineering: 'Engineering',
-      inRoomDining: 'In Room Dining',
-      laundry: 'Laundry',
-      concierge: 'Concierge',
-      reception: 'Reception',
-    };
-    return `${map[activeDepartmentId] ?? 'HSK'} Staff and Shifts`;
+  const sectionTitle = useMemo(() => {
+    const chip = STAFF_DEPT_CHIPS.find((c) => c.id === activeDepartmentId);
+    const label = chip?.name ?? 'HSK';
+    return `${label} Staff and Shifts`;
   }, [activeDepartmentId]);
 
   const styles = StyleSheet.create({
@@ -179,16 +259,26 @@ export default function StaffScreen() {
       alignItems: 'center',
     },
     deptIconWrap: {
-      width: 55.482 * scaleX,
-      height: 55.482 * scaleX,
-      borderRadius: 37 * scaleX,
+      width: STAFF_DEPT_CHIP.iconWrapSize * scaleX,
+      height: STAFF_DEPT_CHIP.iconWrapSize * scaleX,
+      borderRadius: STAFF_DEPT_CHIP.borderRadius * scaleX,
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 8 * scaleX,
     },
     deptIcon: {
-      width: 28 * scaleX,
-      height: 28 * scaleX,
+      width: STAFF_DEPT_CHIP.iconInnerSize * scaleX,
+      height: STAFF_DEPT_CHIP.iconInnerSize * scaleX,
+    },
+    deptLoading: {
+      paddingVertical: 28 * scaleX,
+      alignItems: 'center',
+    },
+    deptError: {
+      paddingHorizontal: 21 * scaleX,
+      paddingBottom: 8 * scaleX,
+      fontSize: 13 * scaleX,
+      color: '#9ca3af',
     },
     deptLabel: {
       fontSize: 14 * scaleX,
@@ -264,7 +354,8 @@ export default function StaffScreen() {
                 <View style={styles.searchSection}>
                   <Text style={styles.searchSectionTitle}>Staff</Text>
                   {filteredStaffForSearch.map((staff) => {
-                    const dept = staff.department ?? 'HSK';
+                    const chip = STAFF_DEPT_CHIPS.find((c) => c.id === activeDepartmentId);
+                    const dept = staff.department ?? chip?.name ?? 'HSK';
                     return (
                       <View key={staff.id}>
                         <StaffListRow
@@ -293,75 +384,84 @@ export default function StaffScreen() {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.deptScroller}
                 >
-                  {[
-                    {
-                      id: 'hsk' as const,
-                      name: 'HSK',
-                      icon: require('../../assets/icons/in-progress-icon.png'),
-                      bg: '#5a759d',
-                      tint: '#ffffff',
-                      noTint: false,
-                    },
-                    ...STAFF_DEPARTMENTS_LIST.filter((d) =>
-                      ['engineering', 'inRoomDining', 'laundry', 'concierge', 'reception'].includes(d.id)
-                    ).map((d) => ({
-                      id: d.id as 'engineering' | 'inRoomDining' | 'laundry' | 'concierge' | 'reception',
-                      name: d.name,
-                      icon: d.icon,
-                      bg: d.id === 'concierge' || d.id === 'reception' ? '#ffebeb' : '#e4eefe',
-                      tint: d.id === 'inRoomDining' ? undefined : '#5a759d',
-                      noTint: d.id === 'inRoomDining',
-                    })),
-                  ].map((dept) => (
-                    <TouchableOpacity
-                      key={dept.id}
-                      style={styles.deptItem}
-                      activeOpacity={0.7}
-                      onPress={() => setActiveDepartmentId(dept.id)}
-                    >
-                      <View style={[styles.deptIconWrap, { backgroundColor: dept.bg }]}>
-                        <Image
-                          source={dept.icon}
+                  {STAFF_DEPT_CHIPS.map((dept) => {
+                    const active = activeDepartmentId === dept.id;
+                    return (
+                      <TouchableOpacity
+                        key={dept.id}
+                        style={styles.deptItem}
+                        activeOpacity={0.7}
+                        onPress={() => setActiveDepartmentId(dept.id)}
+                      >
+                        <View
                           style={[
-                            styles.deptIcon,
-                            dept.tint ? { tintColor: dept.tint } : null,
+                            styles.deptIconWrap,
+                            {
+                              backgroundColor: active
+                                ? STAFF_DEPT_CHIP.activeBackgroundColor
+                                : STAFF_DEPT_CHIP.inactiveBackgroundColor,
+                            },
                           ]}
-                          resizeMode="contain"
-                        />
-                      </View>
-                      <Text style={styles.deptLabel} numberOfLines={2}>
-                        {dept.name === 'HSK Portier' ? 'HSK' : dept.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        >
+                          <Image
+                            source={dept.icon}
+                            style={[
+                              styles.deptIcon,
+                              {
+                                tintColor: active
+                                  ? STAFF_DEPT_CHIP.activeIconTint
+                                  : STAFF_DEPT_CHIP.inactiveIconTint,
+                              },
+                            ]}
+                            resizeMode="contain"
+                          />
+                        </View>
+                        <Text style={styles.deptLabel} numberOfLines={2}>
+                          {dept.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </ScrollView>
               </View>
 
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>{sectionTitle}</Text>
-                <Text style={styles.sectionCount}>{filteredStaffForDepartment.length}</Text>
+                <Text style={styles.sectionCount}>
+                  {departmentLoading ? '—' : displayedStaff.length}
+                </Text>
               </View>
+              {departmentError ? <Text style={styles.deptError}>{departmentError}</Text> : null}
               <View style={styles.listDivider} />
 
-              {filteredStaffForDepartment.map((staff) => {
-                const dept = staff.department ?? 'HSK';
-                return (
-                  <View key={staff.id}>
-                    <StaffListRow
-                      staffId={staff.id}
-                      name={staff.name}
-                      departmentLabel={dept}
-                      avatar={staff.avatar}
-                      initials={staff.initials}
-                      isOnline={!!staff.onShift}
-                      expanded={expandedStaffId === staff.id}
-                      onToggleExpand={() => toggleStaffExpand(staff.id)}
-                      scaleX={scaleX}
-                    />
-                    <View style={styles.listDivider} />
-                  </View>
-                );
-              })}
+              {departmentLoading ? (
+                <View style={styles.deptLoading}>
+                  <ActivityIndicator size="small" color="#5a759d" />
+                </View>
+              ) : displayedStaff.length === 0 ? (
+                <Text style={styles.searchEmptyText}>No staff in this department</Text>
+              ) : (
+                displayedStaff.map((staff) => {
+                  const chip = STAFF_DEPT_CHIPS.find((c) => c.id === activeDepartmentId);
+                  const dept = staff.department ?? chip?.name ?? 'HSK';
+                  return (
+                    <View key={staff.id}>
+                      <StaffListRow
+                        staffId={staff.id}
+                        name={staff.name}
+                        departmentLabel={dept}
+                        avatar={staff.avatar}
+                        initials={staff.initials}
+                        isOnline={!!staff.onShift}
+                        expanded={expandedStaffId === staff.id}
+                        onToggleExpand={() => toggleStaffExpand(staff.id)}
+                        scaleX={scaleX}
+                      />
+                      <View style={styles.listDivider} />
+                    </View>
+                  );
+                })
+              )}
             </>
           )}
         </ScrollView>

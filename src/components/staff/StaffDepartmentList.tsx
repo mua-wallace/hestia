@@ -22,7 +22,7 @@ export interface StaffDepartmentItem {
 export const STAFF_DEPARTMENTS_LIST: StaffDepartmentItem[] = [
   { id: 'engineering', name: 'Engineering', icon: require('../../../assets/icons/engineering.png') },
   { id: 'hskPortier', name: 'HSK Portier', icon: require('../../../assets/icons/hsk-portier.png') },
-  { id: 'inRoomDining', name: 'In Room Dining', icon: require('../../../assets/icons/in-room-dining.png') },
+  { id: 'inRoomDining', name: 'In Room Dining', icon: require('../../../assets/icons/in-room-dining-icon.png') },
   { id: 'laundry', name: 'Laundry', icon: require('../../../assets/icons/laundry-icon.png') },
   { id: 'concierge', name: 'Concierge', icon: require('../../../assets/icons/concierge.png') },
   { id: 'reception', name: 'Reception', icon: require('../../../assets/icons/reception.png') },

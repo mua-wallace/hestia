@@ -1,9 +1,35 @@
 import React, { useMemo } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 import { typography } from '../../theme';
 import { scaleX as defaultScaleX, STAFF_SHIFT_CALENDAR } from '../../constants/staffStyles';
 import StaffShiftMonthCalendar from './StaffShiftMonthCalendar';
+
+/** Chevron: scaled-up from 21×11; stroke #BCB4B4 */
+const CHEVRON_STROKE = '#BCB4B4';
+const CHEVRON_W = 32;
+const CHEVRON_H = 17;
+
+function StaffListChevron({ direction, scaleX: sx }: { direction: 'down' | 'up'; scaleX: number }) {
+  const w = CHEVRON_W * sx;
+  const h = CHEVRON_H * sx;
+  const strokeW = 1.25 * sx;
+  // Between “too open” (full width) and “too close” (narrow) — ~20px span at top/bottom
+  const d =
+    direction === 'down' ? 'M6.5 4 L16 11.5 L25.5 4' : 'M6.5 13 L16 5.5 L25.5 13';
+  return (
+    <Svg width={w} height={h} viewBox={`0 0 ${CHEVRON_W} ${CHEVRON_H}`}>
+      <Path
+        d={d}
+        fill="none"
+        stroke={CHEVRON_STROKE}
+        strokeWidth={strokeW}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 
 type StaffListRowProps = {
   staffId: string;
@@ -182,7 +208,7 @@ export default function StaffListRow({
               <Text style={[styles.editPillText, { fontSize: edit.fontSize * sx }]}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={onToggleExpand} hitSlop={12} style={styles.chevronBtn}>
-              <Ionicons name="chevron-up" size={20 * sx} color="#c8c8c8" />
+              <StaffListChevron direction="up" scaleX={sx} />
             </TouchableOpacity>
           </View>
           <StaffShiftMonthCalendar staffId={staffId} scaleX={sx} />
@@ -220,7 +246,7 @@ export default function StaffListRow({
         </View>
       </View>
 
-      <Ionicons name="chevron-down" size={18 * sx} color="#c8c8c8" />
+      <StaffListChevron direction="down" scaleX={sx} />
     </TouchableOpacity>
   );
 }

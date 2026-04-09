@@ -380,3 +380,14 @@ export const STAFF_SHIFT_DAY_COLORS = ['#28c76f', '#f92424', '#ff4dd8', '#f0be1b
 
 export const STAFF_SHIFT_DAY_NEUTRAL = '#e8ecf2';
 
+/** Department chips on Staff screen — active/inactive use same sizes and paired colors. */
+export const STAFF_DEPT_CHIP = {
+  iconWrapSize: 55.482,
+  iconInnerSize: 28,
+  borderRadius: 37,
+  activeBackgroundColor: '#5a759d',
+  inactiveBackgroundColor: '#e4eefe',
+  activeIconTint: '#ffffff',
+  inactiveIconTint: '#5a759d',
+} as const;
+
