@@ -552,7 +552,7 @@ export default function HomeScreen() {
       filters: activeFilters,
       categoryFilter: { category: category.name },
       selectedShift: effectiveShift,
-      prioritizeMyAssignedRooms: true,
+      prioritizeMyAssignedRooms: isHskPortierUser ? true : false,
     } as any);
   };
 
@@ -570,7 +570,7 @@ export default function HomeScreen() {
       filters: activeFilters,
       categoryFilter: { category: category.name, roomState },
       selectedShift: effectiveShift,
-      prioritizeMyAssignedRooms: true,
+      prioritizeMyAssignedRooms: isHskPortierUser ? true : false,
     } as any);
   };
 
@@ -588,7 +588,7 @@ export default function HomeScreen() {
       filters: activeFilters,
       categoryFilter: { category: category.name, roomState: 'priority' },
       selectedShift: effectiveShift,
-      prioritizeMyAssignedRooms: true,
+      prioritizeMyAssignedRooms: isHskPortierUser ? true : false,
     } as any);
   };
 
@@ -652,21 +652,22 @@ export default function HomeScreen() {
     const sourceRooms = usePMRooms ? roomsPM : (roomsForHome.rooms ?? []);
     
     // Home category stats should not be affected by the Home filter modal or search input.
-    // They reflect the signed-in user's assigned workload for the shift.
     let rooms = sourceRooms;
 
-    // Home stats should only reflect rooms assigned to the logged-in user (for this shift).
-    // Prefer assignment userId from Supabase; fall back to assigned name match.
-    const uid = session?.user?.id;
-    const assignedByUserId =
-      uid ? rooms.filter((r) => String(r.roomAttendantAssigned?.userId ?? '') === String(uid)) : [];
-    const normalizedName = String(safeUser?.name ?? '').trim().toLowerCase();
-    const assignedByName =
-      normalizedName
-        ? rooms.filter((r) => String(r.roomAttendantAssigned?.name ?? '').trim().toLowerCase() === normalizedName)
-        : [];
-    const assignedOnly = assignedByUserId.length > 0 ? assignedByUserId : assignedByName;
-    rooms = assignedOnly;
+    // Only HSK Portier stats are scoped to the signed-in user's assigned rooms.
+    if (isHskPortierUser) {
+      // Prefer assignment userId from Supabase; fall back to assigned name match.
+      const uid = session?.user?.id;
+      const assignedByUserId =
+        uid ? rooms.filter((r) => String(r.roomAttendantAssigned?.userId ?? '') === String(uid)) : [];
+      const normalizedName = String(safeUser?.name ?? '').trim().toLowerCase();
+      const assignedByName =
+        normalizedName
+          ? rooms.filter((r) => String(r.roomAttendantAssigned?.name ?? '').trim().toLowerCase() === normalizedName)
+          : [];
+      const assignedOnly = assignedByUserId.length > 0 ? assignedByUserId : assignedByName;
+      rooms = assignedOnly;
+    }
 
     const categories: CategorySection[] = [];
 
@@ -698,7 +699,7 @@ export default function HomeScreen() {
     }
 
     return categories;
-  }, [homeData.selectedShift, roomsForHome, assignedRoomIdsOrdered, session?.user?.id, safeUser?.name]);
+  }, [homeData.selectedShift, roomsForHome, assignedRoomIdsOrdered, session?.user?.id, safeUser?.name, isHskPortierUser]);
 
   // Sync route filters -> local state
   useEffect(() => {
