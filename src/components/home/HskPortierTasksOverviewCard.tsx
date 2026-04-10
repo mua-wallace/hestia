@@ -14,6 +14,7 @@ export default function HskPortierTasksOverviewCard({
   latestPill,
   onStatusPress,
   onPriorityPress,
+  onResumePause,
 }: {
   total: number;
   dirty: number;
@@ -25,11 +26,13 @@ export default function HskPortierTasksOverviewCard({
   latestPill?: {
     type: 'paused' | 'returnLater' | 'refused';
     roomLabel: string;
+    roomId?: string;
     timeIso?: string;
     subText?: string;
   };
   onStatusPress?: (roomState: 'dirty' | 'inProgress' | 'cleaned' | 'inspected') => void;
   onPriorityPress?: () => void;
+  onResumePause?: (roomId: string) => void;
 }) {
   const { scaleX } = useDesignScale();
   const styles = useMemo(() => buildStyles(scaleX), [scaleX]);
@@ -138,12 +141,21 @@ export default function HskPortierTasksOverviewCard({
             <Text style={styles.pausedRoom}>{latestPill.roomLabel}</Text>
             <Text style={styles.pausedTimer}>{displaySubText}</Text>
           </View>
-          <View style={styles.pausedRight}>
+          <TouchableOpacity
+            style={styles.pausedRight}
+            onPress={
+              latestPill.type === 'paused' && onResumePause && latestPill.roomId
+                ? () => onResumePause(latestPill.roomId as string)
+                : undefined
+            }
+            activeOpacity={latestPill.type === 'paused' && onResumePause ? 0.85 : 1}
+            disabled={!(latestPill.type === 'paused' && onResumePause && latestPill.roomId)}
+          >
             <Image source={require('../../../assets/icons/pause.png')} style={styles.pausedRightIcon} resizeMode="contain" />
             <Text style={styles.pausedRightText}>
               {latestPill.type === 'paused' ? 'Paused' : latestPill.type === 'returnLater' ? 'Return Later' : 'Refused'}
             </Text>
-          </View>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -391,8 +403,8 @@ function buildStyles(scaleX: number) {
       gap: 6 * scaleX,
     },
     pausedRightIcon: {
-      width: 14 * scaleX,
-      height: 14 * scaleX,
+      width: 18 * scaleX,
+      height: 18 * scaleX,
       tintColor: '#5a759d',
     },
     pausedRightText: {

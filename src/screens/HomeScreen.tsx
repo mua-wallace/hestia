@@ -59,7 +59,7 @@ export default function HomeScreen() {
     categories: [] as any[],
     notifications: { chat: 0 },
   }));
-  const { data: roomsStoreData, loading: roomsLoading, fetchRooms } = useRoomsStore();
+  const { data: roomsStoreData, loading: roomsLoading, fetchRooms, updateRoom } = useRoomsStore();
   const roomsForHome = useMemo(
     () => ({
       rooms: roomsStoreData?.rooms ?? [],
@@ -382,6 +382,7 @@ export default function HomeScreen() {
 
     const candidates: Array<{
       type: 'paused' | 'returnLater' | 'refused';
+      roomId?: string;
       roomLabel?: string;
       timeIso?: string;
       timeMs: number;
@@ -389,18 +390,21 @@ export default function HomeScreen() {
     }> = [
       {
         type: 'paused',
+        roomId: pausedRoomLabel ? (workingRooms.find((r) => `Room ${r.roomNumber}` === pausedRoomLabel)?.id ?? undefined) : undefined,
         roomLabel: pausedRoomLabel,
         timeIso: pausedStartedAtIso,
         timeMs: pausedStartedAtIso ? new Date(pausedStartedAtIso).getTime() : -1,
       },
       {
         type: 'returnLater',
+        roomId: returnLaterRoomLabel ? (workingRooms.find((r) => `Room ${r.roomNumber}` === returnLaterRoomLabel)?.id ?? undefined) : undefined,
         roomLabel: returnLaterRoomLabel,
         timeIso: returnLaterAtIso,
         timeMs: returnLaterAtIso ? new Date(returnLaterAtIso).getTime() : -1,
       },
       {
         type: 'refused',
+        roomId: refuseServiceRoomLabel ? (workingRooms.find((r) => `Room ${r.roomNumber}` === refuseServiceRoomLabel)?.id ?? undefined) : undefined,
         roomLabel: refuseServiceRoomLabel,
         timeIso: refuseServiceTimeIso,
         timeMs: refuseServiceTimeIso ? new Date(refuseServiceTimeIso).getTime() : -1,
@@ -422,6 +426,7 @@ export default function HomeScreen() {
       latestPill: latest?.roomLabel
         ? {
             type: latest.type,
+            roomId: latest.roomId,
             roomLabel: latest.roomLabel,
             timeIso: latest.timeIso,
             subText: latest.subText,
@@ -946,6 +951,12 @@ export default function HomeScreen() {
                   priority={portierOverview.priority}
                   progressText={portierOverview.progressText}
                   latestPill={portierOverview.latestPill}
+                  onResumePause={(roomId) => {
+                    // Match Room Detail "Resume": clear paused_at on the room record.
+                    updateRoom(roomId, { paused_at: null }).catch((e) =>
+                      console.warn('[HomeScreen] Failed to resume pause', e)
+                    );
+                  }}
                   onPriorityPress={() => {
                     const baseRoomStates = {
                       dirty: false,
