@@ -8,25 +8,30 @@ import type { Session } from '@supabase/supabase-js';
 import { authService } from '../services/auth';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { registerAndSyncPushToken } from '../services/notifications';
+import { clearCachedHotelId, getMyHotelId } from '../services/tenant';
 
 interface AuthState {
   session: Session | null;
+  hotelId: string | null;
   isLoading: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   setSession: (session: Session | null) => void;
+  setHotelId: (hotelId: string | null) => void;
   setLoading: (loading: boolean) => void;
   init: () => () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
+  hotelId: null,
   isLoading: true,
   error: null,
 
   setSession: (session) => set({ session }),
+  setHotelId: (hotelId) => set({ hotelId }),
   setLoading: (isLoading) => set({ isLoading }),
 
   signIn: async (email: string, password: string) => {
@@ -53,7 +58,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ error: error.message });
         return { error: error as Error };
       }
-      set({ session: null });
+      clearCachedHotelId();
+      set({ session: null, hotelId: null });
       return { error: null };
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
@@ -78,21 +84,44 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   init: () => {
     authService.getSession().then((session) => {
-      set({ session, isLoading: false });
+      set({ session, isLoading: false, hotelId: null });
       if (session) {
         registerAndSyncPushToken().catch(() => {});
+        getMyHotelId()
+          .then((hotelId) => {
+            if (!hotelId) set({ error: 'This account is not assigned to a hotel.' });
+            set({ hotelId: hotelId ?? null });
+          })
+          .catch(() => {
+            set({ error: 'Could not load hotel assignment.' });
+          });
       }
     }).catch(() => {
-      set({ session: null, isLoading: false });
+      clearCachedHotelId();
+      set({ session: null, hotelId: null, isLoading: false });
     });
 
     if (!isSupabaseConfigured) return () => {};
 
     const { data: { subscription } } = authService.onAuthStateChange((_event, session) => {
-      set({ session });
+      if (!session) {
+        clearCachedHotelId();
+        set({ session: null, hotelId: null });
+        return;
+      }
+
+      set({ session, hotelId: null });
       if (session) {
         registerAndSyncPushToken().catch(() => {});
       }
+      getMyHotelId()
+        .then((hotelId) => {
+          if (!hotelId) set({ error: 'This account is not assigned to a hotel.' });
+          set({ hotelId: hotelId ?? null });
+        })
+        .catch(() => {
+          set({ error: 'Could not load hotel assignment.' });
+        });
     });
     return () => subscription.unsubscribe();
   },

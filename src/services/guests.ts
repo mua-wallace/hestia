@@ -5,6 +5,7 @@
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { base64ToArrayBuffer } from '../utils/encoding';
+import { getMyHotelId } from './tenant';
 
 export const GUEST_IMAGES_BUCKET = 'guest-images';
 
@@ -30,7 +31,9 @@ export async function uploadGuestImage(
     throw new Error('Guest image upload requires Supabase to be configured.');
   }
 
-  const path = `${guestId}/avatar.${fileExtension.replace(/^\./, '')}`;
+  const hotelId = await getMyHotelId();
+  if (!hotelId) throw new Error('No hotel assigned to this user.');
+  const path = `${hotelId}/${guestId}/avatar.${fileExtension.replace(/^\./, '')}`;
   const arrayBuffer = base64ToArrayBuffer(imageBase64);
   const contentType = `image/${fileExtension.replace(/^\./, '')}`;
 

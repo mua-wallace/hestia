@@ -14,7 +14,7 @@ const MIN_SPLASH_DURATION_MS = 2000;
 
 export default function SplashScreen() {
   const navigation = useNavigation<SplashScreenNavigationProp>();
-  const { session, isLoading } = useAuth();
+  const { session, hotelId, error, isLoading } = useAuth();
   const { width, height } = useWindowDimensions();
   const scale = useMemo(
     () => Math.min(width / DESIGN_WIDTH, height / DESIGN_HEIGHT),
@@ -24,6 +24,7 @@ export default function SplashScreen() {
 
   useEffect(() => {
     if (isLoading) return;
+    if (session && !hotelId && !error) return;
 
     const timer = setTimeout(() => {
       if (session) {
@@ -34,7 +35,7 @@ export default function SplashScreen() {
     }, MIN_SPLASH_DURATION_MS);
 
     return () => clearTimeout(timer);
-  }, [isLoading, session, navigation]);
+  }, [isLoading, session, hotelId, error, navigation]);
 
   return (
     <View style={styles.container}>
@@ -50,10 +51,15 @@ export default function SplashScreen() {
 
         <Text style={styles.subtitle}>Build by Housekeepers</Text>
         <Text style={styles.tagline}>For Housekeeping</Text>
+        {!!error && (
+          <Text style={styles.errorText}>
+            {error}
+          </Text>
+        )}
       </View>
 
       <View style={styles.indicator} />
-      {isLoading && (
+      {(isLoading || (session && !hotelId && !error)) && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={colors.text.white} />
         </View>
@@ -111,6 +117,15 @@ function buildSplashStyles(scale: number) {
       lineHeight: 24 * scale,
       textAlign: 'center',
       marginTop: 6 * scale,
+    },
+    errorText: {
+      marginTop: 16 * scale,
+      paddingHorizontal: 18 * scale,
+      fontSize: 14 * scale,
+      fontFamily: typography.fontFamily.primary,
+      color: colors.text.white,
+      textAlign: 'center',
+      opacity: 0.95,
     },
     loadingOverlay: {
       position: 'absolute',

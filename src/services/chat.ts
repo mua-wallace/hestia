@@ -11,6 +11,7 @@ import type { ChatMessage } from '../types';
 import type { ChatItemData } from '../components/chat/ChatItem';
 import { base64ToArrayBuffer } from '../utils/encoding';
 import { notifyServer } from './notifications';
+import { getMyHotelId } from './tenant';
 
 const MESSAGE_TYPE = 'text'; // DB: text, image, system
 export const CHAT_ATTACHMENTS_BUCKET = 'chat-attachments';
@@ -138,6 +139,8 @@ export async function uploadChatAttachment(
   if (!isSupabaseConfigured) throw new Error('Supabase not configured');
   const userId = await getCurrentUserId();
   if (!userId) throw new Error('Not authenticated');
+  const hotelId = await getMyHotelId();
+  if (!hotelId) throw new Error('No hotel assigned to this user.');
 
   // content:// and ph:// URIs (e.g. from Android picker) must be copied to cache before reading
   let uriToRead = localUri;
@@ -152,7 +155,7 @@ export async function uploadChatAttachment(
   const arrayBuffer = base64ToArrayBuffer(base64);
   const ext = options.fileName?.includes('.') ? options.fileName.replace(/^.*\./, '') : (options.type === 'image' ? 'jpg' : 'bin');
   const safeName = (options.fileName || `attachment.${ext}`).replace(/[^a-zA-Z0-9._-]/g, '_');
-  const path = `${userId}/${Date.now()}_${safeName}`;
+  const path = `${hotelId}/${userId}/${Date.now()}_${safeName}`;
   const mimeType = options.mimeType ?? (options.type === 'image' ? `image/${ext === 'jpg' ? 'jpeg' : ext}` : 'application/octet-stream');
 
   const { error } = await supabase.storage

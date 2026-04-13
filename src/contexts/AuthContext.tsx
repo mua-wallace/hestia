@@ -7,8 +7,10 @@ import { useAuthStore } from '../store/useAuthStore';
 
 interface AuthContextType {
   session: Session | null;
+  hotelId: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  error: string | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
@@ -17,7 +19,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { session, isLoading, signIn, signOut, resetPassword, init } = useAuthStore();
+  const { session, hotelId, isLoading, error, signIn, signOut, resetPassword, init } = useAuthStore();
 
   useEffect(() => {
     const cleanup = init();
@@ -26,8 +28,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value: AuthContextType = {
     session,
+    hotelId,
     isLoading,
     isAuthenticated: !!session,
+    error,
     signIn,
     signOut,
     resetPassword,

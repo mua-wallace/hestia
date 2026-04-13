@@ -5,6 +5,7 @@ import { getDepartmentIdByName } from './user';
 import * as FileSystem from 'expo-file-system/legacy';
 import { base64ToArrayBuffer } from '../utils/encoding';
 import { notifyServer } from './notifications';
+import { getMyHotelId } from './tenant';
 import { buildFriendlyRoomHistoryMessage } from './roomHistory';
 
 type TicketsRow = {
@@ -383,6 +384,8 @@ async function uploadTicketImages(
   localUris: string[]
 ): Promise<string[]> {
   const urls: string[] = [];
+  const hotelId = await getMyHotelId();
+  if (!hotelId) throw new Error('No hotel assigned to this user.');
   for (const localUri of localUris) {
     if (!localUri) continue;
     // Ensure we can read the file (copy to cache if needed)
@@ -395,7 +398,7 @@ async function uploadTicketImages(
 
     const base64 = await FileSystem.readAsStringAsync(uriToRead, { encoding: FileSystem.EncodingType.Base64 });
     const arrayBuffer = base64ToArrayBuffer(base64);
-    const path = `${userId}/${Date.now()}_${Math.random().toString(16).slice(2)}.jpg`;
+    const path = `${hotelId}/${userId}/${Date.now()}_${Math.random().toString(16).slice(2)}.jpg`;
 
     const { error: uploadError } = await supabase.storage
       .from(TICKET_ATTACHMENTS_BUCKET)

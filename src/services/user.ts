@@ -7,6 +7,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { base64ToArrayBuffer } from '../utils/encoding';
 import type { UserProfile } from '../types/home.types';
 import type { User } from '../types';
+import { getMyHotelId } from './tenant';
 
 export type UserProfileRow = {
   full_name?: string;
@@ -75,7 +76,11 @@ export async function updateAvatar(
   const normalizedExt = fileExtension.toLowerCase() === 'jpg' ? 'jpeg' : fileExtension.toLowerCase();
   const contentType = normalizedExt === 'png' ? 'image/png' : 'image/jpeg';
   // Use unique file names to avoid stale CDN/image cache showing old avatar.
-  const fileName = `avatars/${userId}-${Date.now()}.${normalizedExt}`;
+  const hotelId = await getMyHotelId();
+  if (!hotelId) {
+    throw new Error('No hotel assigned to this user.');
+  }
+  const fileName = `${hotelId}/${userId}-${Date.now()}.${normalizedExt}`;
   const arrayBuffer = base64ToArrayBuffer(imageBase64);
 
   const { error: uploadError } = await supabase.storage

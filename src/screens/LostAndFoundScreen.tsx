@@ -25,6 +25,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { typography } from '../theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { base64ToArrayBuffer } from '../utils/encoding';
+import { getMyHotelId } from '../services/tenant';
 
 type MainTabsParamList = {
   Home: undefined;
@@ -484,7 +485,9 @@ export default function LostAndFoundScreen() {
               body = base64ToArrayBuffer(base64);
             }
 
-            const fileName = `items/${Date.now()}-${Math.random()
+            const hotelId = await getMyHotelId();
+            if (!hotelId) throw new Error('No hotel assigned to this user.');
+            const fileName = `${hotelId}/items/${Date.now()}-${Math.random()
               .toString(36)
               .slice(2)}.${normalizedExt}`;
 

@@ -5,8 +5,21 @@
 -- Function to handle new user signup
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  resolved_hotel_id UUID;
 BEGIN
-  INSERT INTO public.users (id, full_name, avatar_url)
+  -- Single-tenant-per-user:
+  -- - Prefer explicit hotel_id passed in auth user metadata (invite-based onboarding)
+  -- - Fallback to the Default Hotel for local/dev setups
+  SELECT (NEW.raw_user_meta_data->>'hotel_id')::uuid INTO resolved_hotel_id;
+  IF resolved_hotel_id IS NULL THEN
+    SELECT id INTO resolved_hotel_id
+    FROM public.hotels
+    WHERE name = 'Default Hotel'
+    LIMIT 1;
+  END IF;
+
+  INSERT INTO public.users (id, full_name, avatar_url, hotel_id)
   VALUES (
     NEW.id,
     COALESCE(
@@ -15,9 +28,14 @@ BEGIN
       split_part(COALESCE(NEW.email, 'user'), '@', 1),
       'User'
     ),
-    NEW.raw_user_meta_data->>'avatar_url'
+    NEW.raw_user_meta_data->>'avatar_url',
+    resolved_hotel_id
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE
+  SET
+    full_name = EXCLUDED.full_name,
+    avatar_url = EXCLUDED.avatar_url,
+    hotel_id = COALESCE(public.users.hotel_id, EXCLUDED.hotel_id);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
